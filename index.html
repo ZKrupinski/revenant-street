@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revenant Street - Project Z-Action</title>
+    <style>
+        body {
+            margin: 0;
+            background: #08080f;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 40px rgba(255, 0, 85, 0.5);
+            border: 4px solid #ff3366;
+            border-radius: 6px;
+            background: #000;
+        }
+        canvas {
+            display: block;
+        }
+        #instructions {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 13px;
+            color: #8a8a9a;
+            line-height: 1.6;
+            max-width: 960px;
+        }
+        .key {
+            background: #1e1e2e;
+            color: #ff3366;
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid #ff3366;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="960" height="540"></canvas>
+    </div>
+
+    <div id="instructions">
+        <strong>[조작]</strong> <span class="key">← ↑ ↓ →</span> 이동 | 
+        <span class="key">Z</span> 공격 | 
+        <span class="key">X</span> 점프 | 
+        <span class="key">C</span> 가드 (타이밍 맞춰 <strong>패링!</strong>) | 
+        <span class="key">V</span> 필살 처형 (체간 그로기 시 근접 발동)<br>
+        <strong>[규칙]</strong> 서울 뒷골목의 추격자들을 쓰러트리고 <strong>사이버 카타나</strong>를 파밍하세요. 죽으면 기지에서 영구히 강화됩니다.
+    </div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// 게임 시스템 상수
+const GRAVITY = 0.45;
+const SCREEN_WIDTH = canvas.width;
+const SCREEN_HEIGHT = canvas.height;
+const PLAYABLE_Y_MIN = 300; 
+const PLAYABLE_Y_MAX = 510;
+
+// 글로벌 게임 상태
+let gameState = "INTRO"; // INTRO, PLAY, GAME_OVER, HUB, STAGE_CLEAR
+let loopCoins = 0;
+let persistentResources = 0; 
+let loopCount = 1;
+let currentStage = 1;
+
+// 영구 업그레이드 스탯
+let upgradeStats = {
+    maxHp: 100,
+    attackPower: 12,
+    parryWindow: 12, // 프레임
+    extraDmg: 0
+};
+
+// 카메라 & 화면 효과
+let cameraX = 0;
+let zoomFactor = 1.0;
+let screenShake = 0;
+let flashWhiteFrames = 0;
+let cinZoomX = 0, cinZoomY = 0;
+let cinematicSlowdown = 1.0; 
+
+// 콤보 및 피드백 시스템
+let comboCount = 0;
+let comboTimer = 0;
+
+// 엔티티 관리
+let player = {};
+let enemies = [];
+let drops = [];
+let particles = [];
+
+// 무기 데이터
+const WeaponTypes = {
+    PIPE: { name: "고주파 쇠파이프", color: "#ff3a3a", dmgMult: 1.0, durability: 25 },
+    KATANA: { name: "사이버 카타나", color: "#3af2ff", dmgMult: 1.7, durability: 40 },
+};
+
+// 상태 열거형
+const State = {
+    IDLE: 0, MOVE: 1, ATTACK: 2, JUMP: 3, GUARD: 4, 
+    PARRY_SUCCESS: 5, HITSTUN: 6, STAGGERED: 7, EXECUTION_STRIKE: 8, DEAD: 9
+};
+
+// 사운드 효과 (Web Audio API 활용 비프음)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(type) {
+    try {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        if (type === "hit") {
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        } else if (type === "parry") {
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1500, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+        } else if (type === "execute") {
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+        }
+    } catch(e) {}
+}
+
+// 파티클 생성
+function spawnParticles(x, y, color, count = 10, speedMultiplier = 1) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 8 * speedMultiplier,
+            vy: (Math.random() - 0.5) * 8 * speedMultiplier,
+            size: Math.random() * 4 + 2,
+            life: Math.random() * 20 + 10,
+            color: color
+        });
+    }
+}
+
+// 게임 엔티티 초기화
+function initPlayer() {
+    player = {
+        x: 100, y: 400, z: 0, vz: 0,
+        width: 44, height: 74,
+        dir: 1, 
+        hp: upgradeStats.maxHp, maxHp: upgradeStats.maxHp,
+        activeWeapon: "PIPE",
+        durability: WeaponTypes.PIPE.durability,
+        maxDurability: WeaponTypes.PIPE.durability,
+        state: State.IDLE,
+        stateTimer: 0,
+        color: "#00ffcc",
+        invincible: 0,
+        justGuardTimer: 0
+    };
+}
+
+function spawnWave() {
+    enemies = [];
+    drops = [];
+    particles = [];
+
+    let count = 2 + currentStage;
+    for (let i = 0; i < count; i++) {
+        enemies.push({
+            id: i,
+            x: 500 + i * 160,
+            y: 330 + (i % 3) * 50,
+            z: 0, width: 44, height: 74,
+            hp: 50 + currentStage * 10, maxHp: 50 + currentStage * 10,
+            stagger: 0, maxStagger: 80,
+            state: State.IDLE, stateTimer: 0,
+            color: "#ff3366", type: "NORMAL", dir: -1,
+            speed: 1.5 + Math.random() * 0.5,
+            actionCooldown: Math.random() * 80,
+            isBoss: false
+        });
+    }
+
+    // 보스 생성 (스테이지 1: HUNTER, 스테이지 2+: SUPER HUNTER)
+    enemies.push({
+        id: 99,
+        x: 1100, y: 410, z: 0,
+        width: 58, height: 94,
+        hp: 200 + currentStage * 80, maxHp: 200 + currentStage * 80,
+        stagger: 0, maxStagger: 150,
+        state: State.IDLE, stateTimer: 0,
+        color: "#ff8800", type: "BOSS", dir: -1,
+        speed: 1.2, actionCooldown: 60,
+        isBoss: true
+    });
+}
+
+function startNewRun() {
+    initPlayer();
+    spawnWave();
+    cameraX = 0;
+    gameState = "PLAY";
+    comboCount = 0;
+}
+
+// 히트박스 충돌 감지 (Z축 포함)
+function checkHitbox(attacker, hitWidth, hitHeight, hitZHeight) {
+    let hits = [];
+    let attX1 = attacker.dir === 1 ? attacker.x : attacker.x - hitWidth;
+    let attX2 = attacker.dir === 1 ? attacker.x + hitWidth : attacker.x;
+    
+    let attY1 = attacker.y - 18;
+    let attY2 = attacker.y + 18;
+    
+    let attZ1 = attacker.z;
+    let attZ2 = attacker.z + hitZHeight;
+
+    enemies.forEach(target => {
+        if (target.state === State.DEAD) return;
+        
+        let tarX1 = target.x - target.width/2;
+        let tarX2 = target.x + target.width/2;
+        let tarY1 = target.y - 15;
+        let tarY2 = target.y + 15;
+        let tarZ1 = target.z;
+        let tarZ2 = target.z + target.height;
+
+        let collideX = (attX2 >= tarX1 && attX1 <= tarX2);
+        let collideY = (attY2 >= tarY1 && attY1 <= tarY2);
+        let collideZ = (attZ2 >= tarZ1 && attZ1 <= tarZ2);
+
+        if (collideX && collideY && collideZ) {
+            hits.push(target);
+        }
+    });
+    return hits;
+}
+
+function checkPlayerHitbox(attacker, hitWidth, hitHeight, hitZHeight) {
+    if (player.state === State.DEAD || player.invincible > 0) return false;
+
+    let attX1 = attacker.dir === 1 ? attacker.x : attacker.x - hitWidth;
+    let attX2 = attacker.dir === 1 ? attacker.x + hitWidth : attacker.x;
+    let attY1 = attacker.y - 18;
+    let attY2 = attacker.y + 18;
+    let attZ1 = attacker.z;
+    let attZ2 = attacker.z + hitZHeight;
+
+    let tarX1 = player.x - player.width/2;
+    let tarX2 = player.x + player.width/2;
+    let tarY1 = player.y - 15;
+    let tarY2 = player.y + 15;
+    let tarZ1 = player.z;
+    let tarZ2 = player.z + player.height;
+
+    return (attX2 >= tarX1 && attX1 <= tarX2) &&
+           (attY2 >= tarY1 && attY1 <= tarY2) &&
+           (attZ2 >= tarZ1 && attZ1 <= tarZ2);
+}
+
+// 키 입력 상태 관리
+const keys = {
+    ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false,
+    z: false, x: false, c: false, v: false
+};
+
+window.addEventListener('keydown', e => {
+    if (e.key === "ArrowLeft") keys.ArrowLeft = true;
+    if (e.key === "ArrowRight") keys.ArrowRight = true;
+    if (e.key === "ArrowUp") keys.ArrowUp = true;
+    if (e.key === "ArrowDown") keys.ArrowDown = true;
+    
+    if (e.key === 'z' || e.key === 'Z') {
+        if (!keys.z && (player.state === State.IDLE || player.state === State.MOVE || player.state === State.JUMP)) {
+            triggerAttack();
+        }
+        keys.z = true;
+    }
+    
+    if (e.key === 'x' || e.key === 'X') {
+        if (!keys.x && player.z === 0 && (player.state === State.IDLE || player.state === State.MOVE)) {
+            player.state = State.JUMP;
+            player.vz = 8.5;
+        }
+        keys.x = true;
+    }
+
+    if (e.key === 'c' || e.key === 'C') {
+        if (!keys.c && player.z === 0) {
+            player.state = State.GUARD;
+            player.justGuardTimer = upgradeStats.parryWindow; 
+        }
+        keys.c = true;
+    }
+
+    if (e.key === 'v' || e.key === 'V') {
+        if (!keys.v) {
+            triggerExecution();
+        }
+        keys.v = true;
+    }
+
+    // 엔터 및 스페이스 입력 분기
+    if (e.key === "Enter" || e.key === " ") {
+        if (gameState === "INTRO") {
+            startNewRun();
+        } else if (gameState === "GAME_OVER") {
+            gameState = "HUB";
+        } else if (gameState === "STAGE_CLEAR") {
+            currentStage++;
+            startNewRun();
+        } else if (gameState === "HUB") {
+            executeHubOption();
+        }
+    }
+
+    // HUB 상태 키 조절
+    if (gameState === "HUB") {
+        if (e.key === "ArrowUp") selectedHubBtn = (selectedHubBtn - 1 + hubButtons.length) % hubButtons.length;
+        if (e.key === "ArrowDown") selectedHubBtn = (selectedHubBtn + 1) % hubButtons.length;
+    }
+});
+
+window.addEventListener('keyup', e => {
+    if (e.key === "ArrowLeft") keys.ArrowLeft = false;
+    if (e.key === "ArrowRight") keys.ArrowRight = false;
+    if (e.key === "ArrowUp") keys.ArrowUp = false;
+    if (e.key === "ArrowDown") keys.ArrowDown = false;
+    if (e.key === 'z' || e.key === 'Z') keys.z = false;
+    if (e.key === 'x' || e.key === 'X') keys.x = false;
+    if (e.key === 'v' || e.key === 'V') keys.v = false;
+    if (e.key === 'c' || e.key === 'C') {
+        keys.c = false;
+        if (player.state === State.GUARD) player.state = State.IDLE;
+    }
+});
+
+function triggerAttack() {
+    player.state = State.ATTACK;
+    player.stateTimer = 16; 
+    screenShake = 3;
+
+    let weapon = WeaponTypes[player.activeWeapon];
+    let baseDmg = (upgradeStats.attackPower + upgradeStats.extraDmg) * weapon.dmgMult;
+    
+    let hits = checkHitbox(player, 80, 50, 50);
+
+    if (hits.length > 0) {
+        playSound("hit");
+        comboCount++;
+        comboTimer = 120; // 2초 유지
+
+        hits.forEach(target => {
+            let actualDmg = Math.floor(baseDmg * (Math.random() * 0.3 + 0.85));
+            target.hp -= actualDmg;
+            target.stagger += 30; // 체간 축적
+
+            spawnParticles(target.x, target.y - 40, weapon.color, 12, 1.2);
+
+            if (target.hp <= 0) {
+                target.state = State.DEAD;
+                loopCoins += target.isBoss ? 50 : 10;
+                persistentResources += target.isBoss ? 15 : 2;
+                
+                // 전리품 스폰
+                if (Math.random() < 0.4 || target.isBoss) {
+                    drops.push({
+                        x: target.x, y: target.y,
+                        type: target.isBoss ? "KATANA" : "HP_PACK",
+                        life: 600
+                    });
+                }
+                
+                // 보스 사망 검증 (모두 전멸 시 스테이지 클리어)
+                checkVictory();
+            } else {
+                if (target.stagger >= target.maxStagger) {
+                    target.state = State.STAGGERED;
+                    target.stateTimer = 150; 
+                    spawnParticles(target.x, target.y - 45, "#ffd700", 25, 2.0);
+                } else {
+                    target.state = State.HITSTUN;
+                    target.stateTimer = 14;
+                }
+                target.x += player.dir * 16; // 밀어내기
+            }
+        });
+
+        // 무기 내구도 관리
+        player.durability--;
+        if (player.durability <= 0) {
+            spawnParticles(player.x, player.y - 45, weapon.color, 35, 2);
+            player.activeWeapon = "PIPE";
+            player.durability = WeaponTypes.PIPE.durability;
+            player.maxDurability = WeaponTypes.PIPE.durability;
+            screenShake = 15;
+            
+            // 파쇄 광역 피해(Overload)
+            let expHits = checkHitbox(player, 110, 80, 60);
+            expHits.forEach(t => {
+                t.hp -= 15; t.stagger += 40; t.x += player.dir * 25;
+                if(t.hp <= 0) t.state = State.DEAD;
+            });
+            checkVictory();
+        }
+    }
+}
+
+function triggerExecution() {
+    let target = null;
+    enemies.forEach(e => {
+        if (e.state === State.STAGGERED) {
+            let d = Math.abs(e.x - player.x);
+            let dy = Math.abs(e.y - player.y);
+            if (d < 75 && dy < 25) target = e;
+        }
+    });
+
+    if (target) {
+        playSound("execute");
+        player.state = State.EXECUTION_STRIKE;
+        player.stateTimer = 80; 
+        target.stateTimer = 80;
+
+        cinematicSlowdown = 0.12; 
+        cinZoomX = (player.x + target.x) / 2;
+        cinZoomY = (player.y + target.y) / 2 - 40;
+        zoomFactor = 1.35;
+
+        setTimeout(() => {
+            target.hp = 0;
+            target.state = State.DEAD;
+            loopCoins += target.isBoss ? 150 : 30;
+            persistentResources += target.isBoss ? 35 : 8;
+            spawnParticles(target.x, target.y - 40, "#ff003c", 60, 4);
+            flashWhiteFrames = 12;
+            screenShake = 22;
+
+            cinematicSlowdown = 1.0;
+            zoomFactor = 1.0;
+            checkVictory();
+        }, 750);
+    }
+}
+
+function checkVictory() {
+    let alive = enemies.filter(e => e.state !== State.DEAD);
+    if (alive.length === 0) {
+        setTimeout(() => {
+            gameState = "STAGE_CLEAR";
+        }, 1200);
+    }
+}
+
+// 적 AI 처리
+function updateEnemies() {
+    enemies.forEach(target => {
+        if (target.state === State.DEAD) return;
+
+        if (target.stateTimer > 0) {
+            target.stateTimer--;
+            if (target.stateTimer === 0) {
+                if (target.state === State.STAGGERED) target.stagger = 0;
+                target.state = State.IDLE;
+            }
+        }
+
+        if (target.state === State.HITSTUN || target.state === State.STAGGERED) return;
+
+        let dx = player.x - target.x;
+        let dy = player.y - target.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+
+        target.dir = dx > 0 ? 1 : -1;
+
+        if (dist > 55) {
+            target.state = State.MOVE;
+            target.x += Math.sign(dx) * target.speed;
+            target.y += Math.sign(dy) * target.speed * 0.6;
+        } else {
+            target.state = State.IDLE;
+            if (target.actionCooldown > 0) {
+                target.actionCooldown--;
+            } else {
+                target.actionCooldown = target.isBoss ? 70 : 100;
+                triggerEnemyAttack(target);
+            }
+        }
+        target.y = Math.max(PLAYABLE_Y_MIN, Math.min(PLAYABLE_Y_MAX, target.y));
+    });
+}
+
+function triggerEnemyAttack(attacker) {
+    attacker.state = State.ATTACK;
+    attacker.stateTimer = 28;
+
+    setTimeout(() => {
+        if (attacker.state === State.DEAD || attacker.state === State.STAGGERED || attacker.state === State.HITSTUN) return;
+
+        let range = attacker.isBoss ? 85 : 55;
+        let isHit = checkPlayerHitbox(attacker, range, 50, 50);
+
+        if (isHit) {
+            if (player.state === State.GUARD && player.justGuardTimer > 0) {
+                // 저스트 패링 성공!
+                playSound("parry");
+                spawnParticles(player.x + player.dir * 22, player.y - 45, "#ffd700", 25, 2.5);
+                screenShake = 12;
+                attacker.state = State.STAGGERED;
+                attacker.stateTimer = 110; 
+                attacker.stagger = attacker.maxStagger; 
+                player.state = State.PARRY_SUCCESS;
+                player.stateTimer = 16;
+            } else if (player.state === State.GUARD) {
+                // 일반 가드
+                player.hp -= attacker.isBoss ? 4 : 1;
+                spawnParticles(player.x, player.y - 40, "#ffffff", 6, 0.4);
+                player.x += attacker.dir * 5;
+            } else {
+                // 데미지 직격
+                let dmg = attacker.isBoss ? 20 + currentStage*5 : 10;
+                player.hp -= dmg;
+                player.state = State.HITSTUN;
+                player.stateTimer = 22;
+                player.x += attacker.dir * 22;
+                spawnParticles(player.x, player.y - 45, "#ff0000", 16, 1.4);
+                screenShake = 7;
+
+                if (player.hp <= 0) {
+                    player.state = State.DEAD;
+                    setTimeout(() => {
+                        gameState = "GAME_OVER";
+                        loopCount++;
+                    }, 1400);
+                }
+            }
+        }
+    }, 380);
+}
+
+// 아이템 드롭 업데이트
+function updateDrops() {
+    for (let i = drops.length - 1; i >= 0; i--) {
+        let d = drops[i];
+        d.life--;
+        if (d.life <= 0) {
+            drops.splice(i, 1);
+            continue;
+        }
+
+        let dx = player.x - d.x;
+        let dy = player.y - d.y;
+        if (Math.abs(dx) < 32 && Math.abs(dy) < 22 && player.z === 0) {
+            if (d.type === "KATANA") {
+                player.activeWeapon = "KATANA";
+                player.durability = WeaponTypes.KATANA.durability;
+                player.maxDurability = WeaponTypes.KATANA.maxDurability;
+                spawnParticles(player.x, player.y - 45, "#3af2ff", 35, 1.8);
+            } else if (d.type === "HP_PACK") {
+                player.hp = Math.min(player.maxHp, player.hp + 30);
+                spawnParticles(player.x, player.y - 45, "#00ff66", 20, 1.0);
+            }
+            drops.splice(i, 1);
+        }
+    }
+}
+
+// 물리 업데이트 루프
+function update() {
+    if (screenShake > 0) screenShake -= 0.4;
+    if (flashWhiteFrames > 0) flashWhiteFrames--;
+    if (player.justGuardTimer > 0) player.justGuardTimer--;
+    if (player.invincible > 0) player.invincible--;
+
+    if (comboTimer > 0) {
+        comboTimer--;
+        if (comboTimer === 0) comboCount = 0;
+    }
+
+    if (gameState === "PLAY") {
+        if (player.stateTimer > 0) {
+            player.stateTimer--;
+            if (player.stateTimer === 0 && player.state !== State.DEAD) {
+                player.state = State.IDLE;
+            }
+        }
+
+        // 3차원 점프 중력
+        if (player.z > 0 || player.vz !== 0) {
+            player.z += player.vz;
+            player.vz -= GRAVITY;
+            if (player.z <= 0) {
+                player.z = 0; player.vz = 0;
+                if (player.state === State.JUMP) player.state = State.IDLE;
+            }
+        }
+
+        // 인풋 처리
+        if (player.state !== State.DEAD && player.state !== State.HITSTUN && player.state !== State.EXECUTION_STRIKE) {
+            let spd = 3.6;
+            let moving = false;
+            if (keys.ArrowLeft) { player.x -= spd; player.dir = -1; moving = true; }
+            if (keys.ArrowRight) { player.x += spd; player.dir = 1; moving = true; }
+            if (keys.ArrowUp) { player.y -= spd * 0.65; moving = true; }
+            if (keys.ArrowDown) { player.y += spd * 0.65; moving = true; }
+
+            player.x = Math.max(20, Math.min(cameraX + SCREEN_WIDTH - 20, player.x));
+            player.y = Math.max(PLAYABLE_Y_MIN, Math.min(PLAYABLE_Y_MAX, player.y));
+
+            if (player.z === 0 && (player.state === State.IDLE || player.state === State.MOVE)) {
+                player.state = moving ? State.MOVE : State.IDLE;
+            }
+        }
+
+        updateEnemies();
+        updateDrops();
+
+        // 파티클
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx; p.y += p.vy; p.life--;
+            if (p.life <= 0) particles.splice(i, 1);
+        }
+
+        // 카메라 보간
+        let targetCamX = player.x - SCREEN_WIDTH * 0.35;
+        cameraX += (targetCamX - cameraX) * 0.08;
+        cameraX = Math.max(0, Math.min(1000, cameraX)); 
+    }
+}
+
+// 그림자 그리기
+function drawShadow(ctx, x, y, size) {
+    ctx.beginPath();
+    ctx.ellipse(x, y, size, size * 0.38, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+    ctx.fill();
+    ctx.closePath();
+}
+
+// 렌더링 루프
+function draw() {
+    ctx.save();
+    
+    if (screenShake > 0) {
+        ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+    }
+
+    if (zoomFactor > 1.0) {
+        ctx.translate(SCREEN_WIDTH/2, SCREEN_HEIGHT/2);
+        ctx.scale(zoomFactor, zoomFactor);
+        ctx.translate(-cinZoomX, -cinZoomY);
+    } else {
+        ctx.translate(-cameraX, 0);
+    }
+
+    // 90년대 서울 가상 사이버펑크 을지로 배경 그리기
+    ctx.fillStyle = "#0c0a12";
+    ctx.fillRect(0, 0, 2000, SCREEN_HEIGHT);
+    
+    // 원경 및 실루엣
+    ctx.fillStyle = "#06050a";
+    ctx.fillRect(0, 0, 2000, 270);
+
+    // 빌딩 및 창문 네온 브러쉬
+    for(let x=40; x<2000; x+=160) {
+        ctx.fillStyle = "#120e1e";
+        ctx.fillRect(x, 70, 95, 200);
+        
+        ctx.fillStyle = "rgba(255, 0, 80, 0.15)";
+        ctx.fillRect(x + 10, 90, 20, 25);
+        ctx.fillStyle = "rgba(0, 255, 200, 0.12)";
+        ctx.fillRect(x + 40, 90, 20, 25);
+        ctx.fillRect(x + 10, 140, 20, 25);
+    }
+
+    // 전선줄 네트워크
+    ctx.strokeStyle = "#1a122e";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let x = 0; x < 2000; x += 150) {
+        ctx.quadraticCurveTo(x + 75, 50, x + 150, 25);
+    }
+    ctx.stroke();
+
+    // 네온 전선 간판
+    ctx.fillStyle = "#ff0044";
+    ctx.font = "bold 15px 'Malgun Gothic', Courier";
+    ctx.fillText("노래방", 150, 100);
+    ctx.fillText("포장마차", 480, 90);
+    ctx.fillStyle = "#00ffcc";
+    ctx.fillText("지하상가", 780, 105);
+
+    // 플레이 도로
+    ctx.fillStyle = "#191522";
+    ctx.fillRect(0, PLAYABLE_Y_MIN, 2000, PLAYABLE_Y_MAX - PLAYABLE_Y_MIN);
+    
+    // 외곽 그리드 효과선
+    ctx.strokeStyle = "#351e4a";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, PLAYABLE_Y_MIN);
+    ctx.lineTo(2000, PLAYABLE_Y_MIN);
+    ctx.moveTo(0, PLAYABLE_Y_MAX);
+    ctx.lineTo(2000, PLAYABLE_Y_MAX);
+    ctx.stroke();
+
+    // 보스 경보 표지판
+    ctx.strokeStyle = "#ff3366";
+    ctx.strokeRect(1000, PLAYABLE_Y_MIN + 20, 10, 40);
+
+    // 전리품 렌더링
+    drops.forEach(d => {
+        drawShadow(ctx, d.x, d.y, 14);
+        ctx.fillStyle = d.type === "KATANA" ? "#3af2ff" : "#00ff66";
+        ctx.fillRect(d.x - 7, d.y - 12, 14, 11);
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 8px monospace";
+        ctx.fillText(d.type === "KATANA" ? "KATANA" : "HP", d.x - 10, d.y - 15);
+    });
+
+    // Z-Sorting 렌더러 (깊이 우선 배열)
+    let sortedGroup = [];
+    if (player.state !== State.DEAD) sortedGroup.push(player);
+    enemies.forEach(e => {
+        if(e.state !== State.DEAD) sortedGroup.push(e);
+    });
+    sortedGroup.sort((a, b) => a.y - b.y);
+
+    sortedGroup.forEach(obj => {
+        if (obj === player) {
+            drawShadow(ctx, player.x, player.y, 16);
+            
+            // 3D 셀 렌더링 느낌의 그라데이션 및 명암 기법
+            let py = player.y - player.z - player.height;
+            let grad = ctx.createLinearGradient(player.x - 15, py, player.x + 15, py + player.height);
+            grad.addColorStop(0, player.state === State.HITSTUN ? "#ff3333" : "#00cca8");
+            grad.addColorStop(1, "#03322b");
+            ctx.fillStyle = grad;
+            ctx.fillRect(player.x - player.width/2, py, player.width, player.height);
+
+            // 헤어 울프컷
+            ctx.fillStyle = "#161620";
+            ctx.fillRect(player.x - player.width/2 - 2, py - 6, player.width + 4, 12);
+            
+            // MA-1 항공점퍼
+            ctx.fillStyle = "#3e4d29";
+            ctx.fillRect(player.x - player.width/2 + 2, py + 12, player.width - 4, 30);
+            ctx.fillStyle = "#ff3366"; // 빨간 네온 포인트
+            ctx.fillRect(player.x - player.width/2 + 4, py + 18, 4, 6);
+
+            // 가로 무기 시선
+            if (player.state === State.ATTACK) {
+                ctx.strokeStyle = WeaponTypes[player.activeWeapon].color;
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(player.x, py + 30);
+                ctx.lineTo(player.x + (65 * player.dir), py + 15 + (Math.random()*20));
+                ctx.stroke();
+            } else {
+                ctx.strokeStyle = WeaponTypes[player.activeWeapon].color;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(player.x + (6 * player.dir), py + 26);
+                ctx.lineTo(player.x + (22 * player.dir), py + 48);
+                ctx.stroke();
+            }
+
+            if (player.state === State.PARRY_SUCCESS) {
+                ctx.strokeStyle = "#ffe600";
+                ctx.lineWidth = 4.5;
+                ctx.strokeRect(player.x - player.width, py - 10, player.width * 2, player.height + 15);
+            }
+        } else {
+            // 적군 & 보스
+            drawShadow(ctx, obj.x, obj.y, obj.isBoss ? 23 : 15);
+
+            let ey = obj.y - obj.z - obj.height;
+            let grad = ctx.createLinearGradient(obj.x - 15, ey, obj.x + 15, ey + obj.height);
+            if (obj.state === State.HITSTUN) {
+                grad.addColorStop(0, "#ffffff");
+                grad.addColorStop(1, "#8a8a8a");
+            } else if (obj.state === State.STAGGERED) {
+                grad.addColorStop(0, "#ffe600");
+                grad.addColorStop(1, "#3c2a00");
+            } else {
+                grad.addColorStop(0, obj.color);
+                grad.addColorStop(1, "#26000a");
+            }
+            ctx.fillStyle = grad;
+            ctx.fillRect(obj.x - obj.width/2, ey, obj.width, obj.height);
+
+            // 디테일 무장 묘사
+            if (obj.isBoss) {
+                ctx.fillStyle = "#15141c";
+                ctx.fillRect(obj.x - obj.width/2 - 4, ey + 42, obj.width + 8, 20); // 거대 무기
+                
+                // 보스 체간 바
+                ctx.fillStyle = "#2a0800";
+                ctx.fillRect(obj.x - obj.width/2, ey - 10, obj.width, 4);
+                ctx.fillStyle = "#ffaa00";
+                ctx.fillRect(obj.x - obj.width/2, ey - 10, (obj.stagger / obj.maxStagger) * obj.width, 4);
+            } else {
+                // 일반 스태거 바
+                ctx.fillStyle = "#2c0c16";
+                ctx.fillRect(obj.x - obj.width/2, ey - 7, obj.width, 3.5);
+                ctx.fillStyle = "#ffd700";
+                ctx.fillRect(obj.x - obj.width/2, ey - 7, (obj.stagger / obj.maxStagger) * obj.width, 3.5);
+            }
+
+            if (obj.state === State.ATTACK) {
+                ctx.fillStyle = "#ff003c";
+                ctx.fillRect(obj.x + (35 * obj.dir) - 5, ey + 25, 10, 20);
+            }
+        }
+    });
+
+    // 파티클
+    particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+    });
+
+    ctx.restore();
+
+    // 시네마틱 피격 효과 백색 섬광
+    if (flashWhiteFrames > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${flashWhiteFrames / 12})`;
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    }
+
+    drawHUD();
+}
+
+// 스크롤과 독립적인 HUD 드로잉
+function drawHUD() {
+    if (gameState === "PLAY") {
+        // P1 스탯 HUD
+        ctx.fillStyle = "rgba(10, 8, 20, 0.85)";
+        ctx.fillRect(15, 15, 250, 52);
+        ctx.strokeStyle = "#ff3366";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(15, 15, 250, 52);
+
+        ctx.fillStyle = "#00ffcc";
+        ctx.font = "bold 13px 'Courier New'";
+        ctx.fillText("PLAYER 1: CODE_Z", 25, 31);
+        
+        // HP Bar
+        ctx.fillStyle = "#4a0010";
+        ctx.fillRect(25, 41, 140, 11);
+        ctx.fillStyle = "#00ffcc";
+        ctx.fillRect(25, 41, 140 * Math.max(0, player.hp / player.maxHp), 11);
+
+        // 내구도 Bar
+        ctx.fillStyle = "#101f18";
+        ctx.fillRect(180, 41, 70, 7);
+        ctx.fillStyle = WeaponTypes[player.activeWeapon].color;
+        ctx.fillRect(180, 41, 70 * Math.max(0, player.durability / player.maxDurability), 7);
+        ctx.fillStyle = "#fff";
+        ctx.font = "8px monospace";
+        ctx.fillText(WeaponTypes[player.activeWeapon].name, 180, 31);
+
+        // 점수판
+        ctx.fillStyle = "#ffd700";
+        ctx.font = "bold 13px monospace";
+        ctx.fillText(`영구 자원: ${persistentResources}  코인: ${loopCoins}`, 15, 85);
+        ctx.fillText(`STAGE ${currentStage}`, 15, 105);
+
+        // 콤보 피드백
+        if (comboCount >= 2) {
+            ctx.fillStyle = "#ff3366";
+            ctx.font = "bold 20px 'Courier New'";
+            ctx.fillText(`${comboCount} HITS!`, 25, 145);
+        }
+
+        // 보스 HUD
+        let boss = enemies.find(e => e.isBoss);
+        if (boss && boss.state !== State.DEAD) {
+            ctx.fillStyle = "rgba(25, 8, 12, 0.85)";
+            ctx.fillRect(SCREEN_WIDTH - 315, 15, 300, 45);
+            ctx.strokeStyle = "#ff003c";
+            ctx.strokeRect(SCREEN_WIDTH - 315, 15, 300, 45);
+
+            ctx.fillStyle = "#ff3366";
+            ctx.font = "bold 11px monospace";
+            ctx.fillText("추격대장: 사이보그 보스 'HUNTER'", SCREEN_WIDTH - 305, 29);
+
+            ctx.fillStyle = "#3e000c";
+            ctx.fillRect(SCREEN_WIDTH - 305, 38, 280, 9);
+            ctx.fillStyle = "#ff1100";
+            ctx.fillRect(SCREEN_WIDTH - 305, 38, 280 * Math.max(0, boss.hp / boss.maxHp), 9);
+
+            if (boss.state === State.STAGGERED) {
+                ctx.fillStyle = "#ffd700";
+                ctx.font = "bold 13px 'Courier New'";
+                ctx.fillText("!그로기 검출! 사거리 진입 시 [V] 필살 처형!", SCREEN_WIDTH - 305, 75);
+            }
+        }
+    } else if (gameState === "INTRO") {
+        ctx.fillStyle = "rgba(5, 5, 10, 0.95)";
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        
+        ctx.fillStyle = "#ff3366";
+        ctx.font = "bold 38px 'Courier New'";
+        ctx.textAlign = "center";
+        ctx.fillText("레버넌트 스트리트 (REVENANT STREET)", SCREEN_WIDTH/2, 170);
+        
+        ctx.fillStyle = "#00ffcc";
+        ctx.font = "16px 'Courier New'";
+        ctx.fillText("- Project Z-Action 3D Cel-Rendering Prototype -", SCREEN_WIDTH/2, 215);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "14px 'Courier New'";
+        ctx.fillText("[ENTER 또는 SPACE] 키를 눌러 지옥의 서울 뒷골목으로 돌입", SCREEN_WIDTH/2, 350);
+        ctx.textAlign = "left";
+    } else if (gameState === "GAME_OVER") {
+        ctx.fillStyle = "rgba(25, 5, 8, 0.93)";
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        
+        ctx.fillStyle = "#ff003c";
+        ctx.font = "bold 44px 'Courier New'";
+        ctx.textAlign = "center";
+        ctx.fillText("전투 중 해체됨 (WASTED)", SCREEN_WIDTH/2, 160);
+        
+        ctx.fillStyle = "#8a8a9a";
+        ctx.font = "15px 'Courier New'";
+        ctx.fillText(`작전 수행 ${loopCount}회차 종료  - 현재 ${currentStage}단계 구역`, SCREEN_WIDTH/2, 210);
+        
+        ctx.fillStyle = "#ffd700";
+        ctx.fillText(`영구 자원 ${persistentResources}개, 코인 ${loopCoins}를 가지고 귀환합니다.`, SCREEN_WIDTH/2, 245);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "13px 'Courier New'";
+        ctx.fillText("[ENTER]를 눌러 사이버네틱 지하 기지(HUB)에서 신체를 영구 강화하세요.", SCREEN_WIDTH/2, 360);
+        ctx.textAlign = "left";
+    } else if (gameState === "STAGE_CLEAR") {
+        ctx.fillStyle = "rgba(5, 18, 12, 0.92)";
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        
+        ctx.fillStyle = "#00ff66";
+        ctx.font = "bold 42px 'Courier New'";
+        ctx.textAlign = "center";
+        ctx.fillText(`STAGE ${currentStage} 클리어!`, SCREEN_WIDTH/2, 170);
+        
+        ctx.fillStyle = "#a0a0b0";
+        ctx.font = "16px 'Courier New'";
+        ctx.fillText("추격대를 따돌리고 한 단계 더 깊숙한 구역으로 진출합니다.", SCREEN_WIDTH/2, 220);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "14px 'Courier New'";
+        ctx.fillText("[ENTER 또는 SPACE] 키를 눌러 다음 격전지 진출", SCREEN_WIDTH/2, 350);
+        ctx.textAlign = "left";
+    } else if (gameState === "HUB") {
+        ctx.fillStyle = "#090810";
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+        ctx.fillStyle = "#00ffcc";
+        ctx.font = "bold 28px 'Courier New'";
+        ctx.textAlign = "center";
+        ctx.fillText("사이버네틱 지하 기지 (REBEL HUB)", SCREEN_WIDTH/2, 80);
+
+        ctx.fillStyle = "#ffd700";
+        ctx.font = "15px 'Courier New'";
+        ctx.fillText(`영구 자원: ${persistentResources}`, SCREEN_WIDTH/2, 125);
+        ctx.textAlign = "left";
+
+        for (let i = 0; i < hubButtons.length; i++) {
+            let opt = hubButtons[i];
+            if (i === selectedHubBtn) {
+                ctx.fillStyle = "#ff3366";
+                ctx.font = "bold 16px 'Courier New'";
+                ctx.fillText(`> ${opt.text}`, SCREEN_WIDTH/2 - 190, 190 + i*42);
+            } else {
+                ctx.fillStyle = "#7a7a8a";
+                ctx.font = "15px 'Courier New'";
+                ctx.fillText(`  ${opt.text}`, SCREEN_WIDTH/2 - 190, 190 + i*42);
+            }
+        }
+    }
+}
+
+let hubButtons = [
+    { text: "나노 외골격 개조 (최대 체력 +20) - 20 자원", cost: 20, type: "hp" },
+    { text: "동력 보조 관절 증설 (공격력 +4) - 30 자원", cost: 30, type: "dmg" },
+    { text: "인공 반사신경 주입 (패링 타이밍 +3f) - 25 자원", cost: 25, type: "parry" },
+    { text: "작전 구역으로 진출 (게임 시작)", cost: 0, type: "start" }
+];
+let selectedHubBtn = 0;
+
+function executeHubOption() {
+    let opt = hubButtons[selectedHubBtn];
+    if (opt.type === "start") {
+        gameState = "PLAY";
+        startNewRun();
+        return;
+    }
+
+    if (persistentResources >= opt.cost) {
+        persistentResources -= opt.cost;
+        if (opt.type === "hp") upgradeStats.maxHp += 20;
+        else if (opt.type === "dmg") upgradeStats.extraDmg += 4;
+        else if (opt.type === "parry") upgradeStats.parryWindow += 3;
+        
+        opt.cost = Math.floor(opt.cost * 1.55); 
+        opt.text = getHubText(opt.type, opt.cost);
+    }
+}
+
+function getHubText(type, cost) {
+    if(type === "hp") return `나노 외골격 개조 (최대 체력 +20) - ${cost} 자원`;
+    if(type === "dmg") return `동력 보조 관절 증설 (공격력 +4) - ${cost} 자원`;
+    if(type === "parry") return `인공 반사신경 주입 (패링 타이밍 +3f) - ${cost} 자원`;
+}
+
+// 게임 틱 프레임 관리
+let lastTime = 0;
+function gameLoop(timestamp) {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+startNewRun();
+gameState = "INTRO"; // 최초 진입 인트로 처리
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
