@@ -249,7 +249,7 @@ function syncZSprite(){if(zArtNode)zArtNode.style.display='none'}
 loadZMove('idle');loadZMove('walk');loadZMove('backwalk');loadZMove('jab');
 
 const STAGE_WIDTH=12800;let cameraX=0;const WAVE_GATES=[0,4230,8850,12715]; // entire ten-screen world, no per-encounter movement clamp
-let enemies=[],drops=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,screenShake=0,hitStop=0,screenTint=0,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
+let enemies=[],drops=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
 let perma={core:0,servo:0,reflex:0,shards:0};
 try{const stored=JSON.parse(localStorage.getItem('revenant-perma-v1')||'null');if(stored&&typeof stored.shards==='number')perma={...perma,...stored}}catch(_){}
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),near=(a,b,d)=>Math.abs(a-b)<=d;
@@ -263,6 +263,7 @@ function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<di
 function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.damageBoost=perma.servo*2;level=1;runKills=0}
 function startRun(){resetPlayer();wave=0;fx=[];drops=[];enemies=[];gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();flash('CHAPTER 01 : 침수된 거리',2);sound('attack')}
 function spawnWave(){
+ waveClearNotified=false;
  wave++;
  // Distributed encounters demand forward traversal rather than one static arena.
  const spawns={
@@ -356,10 +357,10 @@ function updateEnemies(dt){for(const e of enemies){if(e.dead){e.fade-=dt*.7;cont
   }
  }
  enemies=enemies.filter(e=>!e.dead||e.fade>0);
- if(gameState==='playing'&&enemies.every(e=>e.dead)&&enemies.length===0){gameState='reward';if(wave<3)rewardMenu();else completeMenu()}}
+ if(gameState==='playing'&&enemies.length===0){if(!waveClearNotified){waveClearNotified=true;flash('구역 확보 — 오른쪽으로 전진!',2)}if(p.x>=WAVE_GATES[wave]){gameState='reward';if(wave<3)rewardMenu();else completeMenu()}}}
 function updateEffects(dt){for(const f of fx)f.life-=dt;fx=fx.filter(f=>f.life>0);for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const d of drops)d.glow+=dt;for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
 function updateHud(){ $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'UNARMED';$('modName').textContent=p.mod==='neuro'?'NEURO':p.mod==='none'?'NONE':p.mods.map(n=>({fire:'FIRE',shock:'VOLT',bleed:'BLEED',ice:'ICE'})[n]).join('+');$('credits').textContent=String(p.credits).padStart(4,'0');$('combo').innerHTML=`${p.hits} <small>HITS</small>`;$('enemyCount').textContent=`REMAINING ${String(enemies.filter(e=>!e.dead).length).padStart(2,'0')}`;$('level').textContent=String(level).padStart(2,'0');if(wave===3){const b=enemies.find(e=>e.type==='boss');$('bossHud').hidden=!b||b.dead;if(b){$('bossFill').style.width=`${clamp(100*b.hp/b.maxHp,0,100)}%`;$('bossPhase').textContent=String(b.phase).padStart(2,'0')}} }
-function update(dt){time+=dt;messageUpdate(dt);const pad=pollPad();updateEffects(dt);if(gameState!=='playing')return;if(hitStop>0){hitStop-=dt;updateHud();return}control(dt,pad);cameraX+=(clamp(p.x-465,0,STAGE_WIDTH-W)-cameraX)*Math.min(1,dt*6.5);updateEnemies(dt);updateHud();const d=drops.find(o=>Math.hypot(o.x-p.x,(o.y-p.y)*1.7)<107);$('hint').hidden=!d;if(d)$('hint').textContent='E / RB — 쇠파이프 획득';}
+function update(dt){time+=dt;messageUpdate(dt);const pad=pollPad();updateEffects(dt);if(gameState!=='playing')return;if(hitStop>0){hitStop-=dt;updateHud();return}control(dt,pad);cameraX+=(clamp(p.x-465,0,STAGE_WIDTH-W)-cameraX)*Math.min(1,dt*6.5);updateEnemies(dt);updateHud();const d=drops.find(o=>Math.hypot(o.x-p.x,(o.y-p.y)*1.7)<107);const cleared=waveClearNotified&&enemies.length===0;$('hint').hidden=!d&&!cleared;if(d)$('hint').textContent='E / RB — 쇠파이프 획득';else if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
 function drawBackdrop(){
  const bg=img.street_pano;
  if(bg&&bg.complete&&bg.naturalWidth&&bg.naturalHeight){
