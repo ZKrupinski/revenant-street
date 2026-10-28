@@ -83,7 +83,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 </head>
 <body>
 <div id="app">
-  <header class="masthead"><div class="brand"><span class="brand-kicker">PROJECT Z–ACTION / PLAYABLE COMBAT PROTOTYPE</span><strong>REVENANT <em>STREET</em></strong></div><div class="status"><span class="status-dot"></span><span id="statusLabel">STANDBY</span><span class="ver">ALPHA 1.7.4</span></div></header>
+  <header class="masthead"><div class="brand"><span class="brand-kicker">PROJECT Z–ACTION / PLAYABLE COMBAT PROTOTYPE</span><strong>REVENANT <em>STREET</em></strong></div><div class="status"><span class="status-dot"></span><span id="statusLabel">STANDBY</span><span class="ver">ALPHA 1.8</span></div></header>
   <main class="stage-wrap" id="stageWrap">
     <canvas id="game" width="1280" height="720" aria-label="레버넌트 스트리트 게임 화면"></canvas>
 <svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs><filter id="z-alpha-key" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  4 -5 4 0 1"/></filter></defs></svg>
@@ -94,7 +94,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
         <div class="hud-name"><span class="player-mark">Z</span><span>REVENANT <small>Lv. <b id="level">01</b></small></span></div>
         <div class="bar hp"><div class="bar-fill" id="hpFill"></div><span id="hpText">100 / 100</span></div>
         <div class="bar stamina"><div class="bar-fill" id="staminaFill"></div><span>STAMINA</span></div>
-        <div class="player-stats"><span>PIPE <b id="weaponCount">18/18</b></span><span>MOD <b id="modName">NONE</b></span></div>
+        <div class="player-stats"><span>STYLE <b id="weaponCount">BARE FISTS</b></span><span>MOD <b id="modName">NONE</b></span></div>
       </div>
       <div class="hud-center"><div class="chapter" id="chapter">01 / 침수된 거리</div><div class="wave-label" id="waveLabel">WAVE 01 — 침입자</div><div class="kill-count" id="enemyCount">REMAINING 03</div></div>
       <div class="hud-right"><div class="currency">₩ <b id="credits">0000</b></div><div class="combo" id="combo">0 <small>HITS</small></div><button class="small-button" id="pauseButton" aria-label="일시정지">Ⅱ</button></div>
@@ -109,7 +109,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
     <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 콤보/자동 처형 · K 점프 · L 패링 · SHIFT 대쉬</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.7.4 — DISTANCE GAIT · CLEAN CHROMA</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.8 — ATTACK DRIVE · GRUNT AI · HIT VARIETY</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -755,7 +755,7 @@ function updateEnemies(dt){
  }
 }
 function updateEffects(dt){for(const f of fx)f.life-=dt;fx=fx.filter(f=>f.life>0);for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
-function updateHud(){ $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'UNARMED';$('modName').textContent=p.mod==='neuro'?'NEURO':p.mod==='none'?'NONE':p.mods.map(n=>({fire:'FIRE',shock:'VOLT',bleed:'BLEED',ice:'ICE'})[n]).join('+');$('credits').textContent=String(p.credits).padStart(4,'0');$('combo').innerHTML=`${p.hits} <small>HITS</small>`;$('enemyCount').textContent=`REMAINING ${String(enemies.filter(e=>!e.dead).length).padStart(2,'0')}`;$('level').textContent=String(level).padStart(2,'0');if(wave===3){const b=enemies.find(e=>e.type==='boss');$('bossHud').hidden=!b||b.dead;if(b){$('bossFill').style.width=`${clamp(100*b.hp/b.maxHp,0,100)}%`;$('bossPhase').textContent=String(b.phase).padStart(2,'0')}} }
+function updateHud(){ $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'BARE FISTS';$('modName').textContent=p.mod==='neuro'?'NEURO':p.mod==='none'?'NONE':p.mods.map(n=>({fire:'FIRE',shock:'VOLT',bleed:'BLEED',ice:'ICE'})[n]).join('+');$('credits').textContent=String(p.credits).padStart(4,'0');$('combo').innerHTML=`${p.hits} <small>HITS</small>`;$('enemyCount').textContent=`REMAINING ${String(enemies.filter(e=>!e.dead).length).padStart(2,'0')}`;$('level').textContent=String(level).padStart(2,'0');if(wave===3){const b=enemies.find(e=>e.type==='boss');$('bossHud').hidden=!b||b.dead;if(b){$('bossFill').style.width=`${clamp(100*b.hp/b.maxHp,0,100)}%`;$('bossPhase').textContent=String(b.phase).padStart(2,'0')}} }
 function update(dt){time+=dt;messageUpdate(dt);const pad=pollPad();updateEffects(dt);if(gameState!=='playing')return;warmZSprites(dt);if(hitStop>0){hitStop-=dt;updateHud();return}control(dt,pad);cameraX+=(clamp(p.x-465,0,STAGE_WIDTH-W)-cameraX)*Math.min(1,dt*6.5);updateEnemies(dt*(slowMotion>0?.19:1));slowMotion=Math.max(0,slowMotion-dt);updateHud();const cleared=waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
 function drawBackdrop(){
  const bg=img.street_pano;
