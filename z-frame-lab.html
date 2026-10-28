@@ -25,7 +25,7 @@ button.control{font:800 13px system-ui;min-height:40px;border:1px solid #415769;
 @media(max-width:740px){.app{padding:13px 9px}.layout{grid-template-columns:1fr}.left{min-height:0;max-height:195px}.stage{height:370px}.character{width:min(75vw,300px)}.film{grid-template-columns:repeat(8,minmax(60px,1fr))}.frame{min-width:60px;height:99px}.intro{font-size:13px}}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true"><defs><filter id="keygreen" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  4 -5 4 0 1"/></filter></defs></svg>
-<div class="app"><header><div><div class="eyebrow">REBELTREE / Z-ACTION PIPELINE</div><h1>REVENANT STREET <span style="color:#ef5269">Z FRAME LAB</span></h1></div><div class="pill">20 ACTION SHEETS · ALPHA 1.3 MASK QA</div></header>
+<div class="app"><header><div><div class="eyebrow">REBELTREE / Z-ACTION PIPELINE</div><h1>REVENANT STREET <span style="color:#ef5269">Z FRAME LAB</span></h1></div><div class="pill">20 ACTION SHEETS · ALPHA 1.4 MASK QA</div></header>
 <p class="intro">주인공 Z의 독립 동작 원화 시트 20종을 직접 선택해 재생하는 <b>리소스 검토용 프리뷰</b>입니다. 각 시트는 게임과 동일한 정밀 프레임 분리 및 크로마키 알고리즘으로 표시하며, 각 컷의 자세와 오염을 검수할 수 있습니다. 각 컷은 4열×2행 기준으로 표시됩니다.</p>
 <div class="layout"><aside class="left" id="menu" aria-label="동작 선택"></aside><section class="center"><div class="topline"><h2 id="action-title">전투 대기</h2><span class="count" id="info">01 / 20 · 8F</span></div><div class="stage" id="stage"><div class="urban"></div><div class="floor"></div><div class="floorline"></div><div class="hud">Z // FRAME <span id="cur-num">01</span></div><div class="character" id="char"></div><div class="info-label" id="assetstatus">원본 이미지 로드 중…</div><div class="canvas-warn">투명화: 게임 공통 정밀 컷팅</div></div>
 <div class="controls"><button class="control primary" id="play">⏸ 일시정지</button><button class="control" id="prev">◀ 이전 컷</button><button class="control" id="next">다음 컷 ▶</button><label for="fps">속도 <output id="fpsval">12</output> FPS</label><input aria-label="프레임 속도" type="range" id="fps" min="3" max="24" step="1" value="12"><button class="control" id="green">원본 초록색 보기</button><button class="control" id="flip">좌우 반전</button><a id="openorig" class="control" target="_blank" rel="noopener" style="margin-left:auto;color:#8ddcea" href="#">원본 PNG 열기 ↗</a></div>
@@ -100,6 +100,39 @@ function prepareZCells(im){
      if(spill>12&&green(r,g,b)){
       d[k+1]=Math.min(g,Math.max(r,b)+Math.round(spill*.16));
       if(spill>65&&a===255)d[k+3]=232;
+     }
+    }
+   }
+   // Remove enclosed regions of matching lime-green (e.g. holes behind Z's chain).
+   // Unlike edge flood-fill, this pass accepts SMALL interior screen-colored islands,
+   // while declining dark green costume details and all large foreground regions.
+   if(greenBack.length){
+    const bg=avg,interiorCandidate=new Uint8Array(w*h),checked=new Uint8Array(w*h);
+    const screenColored=(n)=>{
+     const k=n*4,r=d[k],g=d[k+1],b=d[k+2];
+     return d[k+3]>0&&green(r,g,b)&&
+      Math.abs(r-bg[0])<45&&Math.abs(g-bg[1])<49&&Math.abs(b-bg[2])<53;
+    };
+    for(let y=Math.floor(h*.11);y<Math.ceil(h*.92);y++)
+     for(let x=Math.floor(w*.10);x<Math.ceil(w*.90);x++){
+      const n=y*w+x;if(!visited[n]&&screenColored(n))interiorCandidate[n]=1;
+     }
+    const segmentQueue=new Int32Array(w*h),maxHole=Math.max(100,Math.round(w*h*.027));
+    for(let n=0;n<w*h;n++){
+     if(!interiorCandidate[n]||checked[n])continue;
+     let head2=0,tail2=1,touchesMargin=false;
+     segmentQueue[0]=n;checked[n]=1;
+     while(head2<tail2){
+      const id=segmentQueue[head2++],x=id%w,y=(id/w)|0;
+      if(x<=w*.12||x>=w*.88||y<=h*.13||y>=h*.90)touchesMargin=true;
+      for(let yy=Math.max(0,y-1);yy<=Math.min(h-1,y+1);yy++)
+       for(let xx=Math.max(0,x-1);xx<=Math.min(w-1,x+1);xx++){
+        const next=yy*w+xx;
+        if(!checked[next]&&interiorCandidate[next]){checked[next]=1;segmentQueue[tail2++]=next}
+       }
+     }
+     if(!touchesMargin&&tail2<=maxHole){
+      for(let k=0;k<tail2;k++){const id=segmentQueue[k];d[id*4+3]=0;visited[id]=1;}
      }
     }
    }
