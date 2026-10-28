@@ -429,7 +429,7 @@ function startAttack(){
   p.vz=Math.max(p.vz,115);p.inv=Math.max(p.inv,.14);
   sound('attack');return;
  }
- const finisher=findExecutionTarget();
+ const finisher=p.riposteWindow>0?null:findExecutionTarget();
  if(finisher){execute(finisher);return}
  if(p.riposteWindow>0&&p.riposteTarget&&!p.riposteTarget.dead){
   const target=p.riposteTarget;p.facing=target.x>=p.x?1:-1;
