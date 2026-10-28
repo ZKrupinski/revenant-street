@@ -129,7 +129,17 @@ function prepareZCells(im){
   c.clearRect(0,0,canvas.width,canvas.height);
   c.drawImage(im,sx,sy,canvas.width,canvas.height,0,0,canvas.width,canvas.height);
   const pixels=c.getImageData(0,0,canvas.width,canvas.height),d=pixels.data,w=canvas.width,h=canvas.height;
-  const corners=[0,w-1,(h-1)*w,h*w-1].map(v=>[d[v*4],d[v*4+1],d[v*4+2]]);
+  // Sample *inside* a possible black grid stroke; corner-only detection mistakes frame lines for the background.
+  const points=[];
+  const addSample=(x,y)=>{const k=(Math.floor(y)*w+Math.floor(x))*4;points.push([d[k],d[k+1],d[k+2]])};
+  for(const t of [.03,.08,.16,.28,.5,.72,.84,.92,.97]){
+   const x=Math.max(0,Math.min(w-1,Math.floor(t*(w-1))));
+   const y=Math.max(0,Math.min(h-1,Math.floor(t*(h-1))));
+   for(const q of [.02,.08]){const ex=Math.max(0,Math.min(w-1,Math.floor(q*(w-1)))),ey=Math.max(0,Math.min(h-1,Math.floor(q*(h-1))));
+    addSample(x,ey);addSample(x,h-1-ey);addSample(ex,y);addSample(w-1-ex,y);
+   }
+  }
+  const corners=points;
   const green=(r,g,b)=>g>80&&g>r*1.38&&g>b*1.19&&(g-r)>33;
   const greenBack=corners.filter(v=>green(v[0],v[1],v[2]));
   const samples=greenBack.length?greenBack:corners;
@@ -140,7 +150,7 @@ function prepareZCells(im){
    const nearSample=samples.some(v=>Math.max(Math.abs(r-v[0]),Math.abs(g-v[1]),Math.abs(b-v[2]))<(greenBack.length?49:28));
    const saturatedChroma=greenBack.length&&green(r,g,b)&&nearSample;
    const outerEdge=Math.min(x,y,w-1-x,h-1-y);
-   const frameLine=outerEdge<Math.max(3,Math.round(Math.min(w,h)*.016))&&Math.max(r,g,b)<50;
+   const frameLine=outerEdge<Math.max(8,Math.round(Math.min(w,h)*.034))&&Math.max(r,g,b)<50;
    return saturatedChroma||(!greenBack.length&&nearSample)||frameLine;
   };
   const visited=new Uint8Array(w*h),queue=new Int32Array(w*h);let head=0,tail=0;
