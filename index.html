@@ -150,7 +150,8 @@ function getZMove(){
  if(p.dodge>0)return p.evadeBackstep?'dodge':'dash';
  if(p.parry>0)return 'guard';
  if(p.attack>0)return p.airAttack?(p.moveName||'airkick'):(p.moveName||'jab');
- if(p.z>3)return p.jumpStartTimer>0?'jumpstart':'airborne';
+ if(p.jumpStartTimer>0&&(p.z>0||p.vz>0))return 'jumpstart';
+ if(p.z>3)return 'airborne';
  if(p.landingTimer>0)return 'landing';
  if(Math.hypot(p.moveDX||0,p.moveDY||0)>.18)return p.backstepping?'backwalk':p.running?'run':'walk';
  return 'idle';
