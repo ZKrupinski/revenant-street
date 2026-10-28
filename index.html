@@ -472,31 +472,78 @@ function control(dt,pad){if(gameState!=='playing')return;let dx=(keys.has('d')||
  p.stun=Math.max(0,p.stun-dt);p.inv=Math.max(0,p.inv-dt);p.parry=Math.max(0,p.parry-dt);p.dodge=Math.max(0,p.dodge-dt);p.stamina=clamp(p.stamina+17*dt,0,100);p.comboWindow=Math.max(0,p.comboWindow-dt);p.hitTimeout=Math.max(0,p.hitTimeout-dt);if(p.hitTimeout===0)p.hits=0;
  if(p.attack>0){p.attack-=dt;if(!p.hitDone&&p.attack<p.attackDuration*.58){p.hitDone=true;attackCheck()}p.attack=Math.max(0,p.attack)}
  if(p.attackQueued&&p.attack===0&&p.stun<=0){p.attackQueued=false;startAttack()}}
-function updateEnemies(dt){for(const e of enemies){if(e.dead){e.fade-=dt*.7;continue}e.stun=Math.max(0,e.stun-dt);e.inv=Math.max(0,e.inv-dt);e.hitFlash=Math.max(0,e.hitFlash-dt);e.shock=Math.max(0,e.shock-dt);e.freeze=Math.max(0,e.freeze-dt);e.bleed=Math.max(0,e.bleed-dt);if(e.groggy>0){e.groggy-=dt;if(e.groggy<=0){e.poise=0;e.stun=0}}if(e.bleed>0)e.hp-=dt*2.5;if(e.hp<=0){e.dead=true;runKills++;p.credits+=40;continue}if(e.stun>0||e.shock>.35||e.groggy>0)continue;const dx=p.x-e.x,dy=p.y-e.y;if(Math.abs(dx)>790)continue;e.face=dx>=0?1:-1;e.cooldown=Math.max(0,e.cooldown-dt);if(e.windup>0){e.windup-=dt;if(e.windup<=0){enemyAttack(e);e.cooldown=e.type==='boss'?.9:1.3;e.attackDone=true}continue}if(Math.abs(dx)<e.reach+35&&Math.abs(dy)<46&&e.cooldown===0){e.windup=e.type==='boss'?.8:.56;e.attackDone=false;continue}
- const speed=e.speed*(e.freeze>0?.45:1)*(e.phase===2?1.12:1);
- const positions=[[83,0],[205,63],[222,-60],[-174,45]];
- const [offX,offY]=positions[e.slot%positions.length];
- // Keep opponents on distinct depth lanes, except the active engager.
- const tx=clamp(p.x+(e.slot===0?Math.sign(e.x-p.x)*83:offX),60,STAGE_WIDTH-62);
- const ty=clamp(p.y+offY,485,653);
- const moveX=tx-e.x,moveY=ty-e.y;
- if(Math.abs(moveX)>9)e.x+=Math.sign(moveX)*Math.min(Math.abs(moveX),speed*dt);
- if(Math.abs(moveY)>9)e.y+=Math.sign(moveY)*Math.min(Math.abs(moveY),speed*.57*dt);
- if(Math.abs(e.y-p.y)<43&&Math.abs(e.x-p.x)<73&&p.dodge<=0){
-  e.x=clamp(p.x+(e.x>=p.x?73:-73),55,STAGE_WIDTH-55);
+function updateEnemies(dt){
+ // Impulse-based knockbacks continue through stun and death.
+ for(const e of enemies){
+  if(Math.abs(e.knockVX)>1||Math.abs(e.knockVY)>1){
+   e.x=clamp(e.x+e.knockVX*dt,45,STAGE_WIDTH-45);
+   e.y=clamp(e.y+e.knockVY*dt,480,665);
+   const drag=Math.exp(-3.9*dt);
+   e.knockVX*=drag;e.knockVY*=drag;
+  }
+  if(e.z>0||e.vz>0){
+   e.z=Math.max(0,e.z+e.vz*dt);
+   e.vz-=820*dt;
+   if(e.z<=0){e.z=0;e.vz=0}
+  }
+  if(e.dead){e.fade-=dt*.62;continue}
+  e.stun=Math.max(0,e.stun-dt);
+  e.inv=Math.max(0,e.inv-dt);
+  e.hitFlash=Math.max(0,e.hitFlash-dt);
+  e.shock=Math.max(0,e.shock-dt);
+  e.freeze=Math.max(0,e.freeze-dt);
+  e.bleed=Math.max(0,e.bleed-dt);
+  if(e.groggy>0){e.groggy-=dt;if(e.groggy<=0){e.poise=0;e.stun=0}}
+  if(e.bleed>0)e.hp-=dt*2.5;
+  if(e.hp<=0){e.dead=true;runKills++;p.credits+=40;continue}
+  if(e.stun>0||e.shock>.35||e.groggy>0)continue;
+  const dx=p.x-e.x,dy=p.y-e.y,dist=Math.abs(dx);
+  if(dist>840)continue;
+  e.face=dx>=0?1:-1;
+  e.cooldown=Math.max(0,e.cooldown-dt);
+  if(e.windup>0){
+   e.windup-=dt;
+   if(e.windup<=0){enemyAttack(e);e.cooldown=e.type==='boss'?.98:1.08+(e.slot%3)*.19;e.attackDone=true}
+   continue;
+  }
+  // Every active mob wants to close, not flee into distant staging slots.
+  const side=e.x>=p.x?1:-1;
+  const targetX=clamp(p.x+side*(e.type==='boss'?112:49+(e.slot%3)*13),55,STAGE_WIDTH-55);
+  const targetY=clamp(p.y+(e.type==='boss'?0:[-28,10,31][e.slot%3]),484,656);
+  const packCount=enemies.filter(o=>o!==e&&!o.dead&&o.type!=='boss'&&Math.abs(o.x-e.x)<190).length;
+  const surge=packCount>=1&&e.type!=='boss'?1.27:1.13;
+  const speed=e.speed*surge*(e.freeze>0?.48:1)*(e.phase===2?1.12:1);
+  const readyToHit=dist<e.reach+45&&Math.abs(dy)<55&&e.z<42;
+  const activeWindups=enemies.filter(o=>o!==e&&!o.dead&&o.windup>0&&Math.abs(o.x-p.x)<190).length;
+  if(readyToHit&&e.cooldown===0&&activeWindups<2){
+   e.windup=e.type==='boss'?.77:.42+(e.slot%3)*.075;
+   e.attackDone=false;continue;
+  }
+  if(Math.abs(targetX-e.x)>8)e.x+=Math.sign(targetX-e.x)*Math.min(Math.abs(targetX-e.x),speed*dt);
+  if(Math.abs(targetY-e.y)>6)e.y+=Math.sign(targetY-e.y)*Math.min(Math.abs(targetY-e.y),speed*.75*dt);
+  if(Math.abs(e.x-p.x)<38&&Math.abs(e.y-p.y)<32)e.x=clamp(p.x+side*38,45,STAGE_WIDTH-45);
+  e.x=clamp(e.x,45,STAGE_WIDTH-45);e.y=clamp(e.y,480,665);
  }
- e.x=clamp(e.x,45,STAGE_WIDTH-45);e.y=clamp(e.y,480,665)}
- // Soft collision avoidance: keep enemies from collapsing into one stack in belt lanes.
+ // Nearby fodder jostle, but remain close enough for a multi-target combo.
  for(let i=0;i<enemies.length;i++)for(let j=i+1;j<enemies.length;j++){
-  const a=enemies[i],b=enemies[j];if(a.dead||b.dead)continue;
-  let dx=a.x-b.x,dy=(a.y-b.y)*1.6,dist=Math.hypot(dx,dy),min=a.type==='boss'||b.type==='boss'?155:112;
-  if(dist<min){if(dist<1){dx=1;dist=1}const push=Math.min((min-dist)*dt*3,5.5);
-   a.x=clamp(a.x+dx/dist*push,55,STAGE_WIDTH-55);b.x=clamp(b.x-dx/dist*push,55,STAGE_WIDTH-55);
-   a.y=clamp(a.y+dy/dist*push*.38,480,664);b.y=clamp(b.y-dy/dist*push*.38,480,664);
+  const a=enemies[i],b=enemies[j];if(a.dead||b.dead||a.z>35||b.z>35)continue;
+  let dx=a.x-b.x,dy=(a.y-b.y)*1.4,dist=Math.hypot(dx,dy);
+  const min=a.type==='boss'||b.type==='boss'?110:69;
+  if(dist<min){
+   if(dist<1){dx=1;dist=1}
+   const push=Math.min((min-dist)*dt*4.2,7.5);
+   a.x=clamp(a.x+dx/dist*push,45,STAGE_WIDTH-45);
+   b.x=clamp(b.x-dx/dist*push,45,STAGE_WIDTH-45);
+   a.y=clamp(a.y+dy/dist*push*.25,480,665);
+   b.y=clamp(b.y-dy/dist*push*.25,480,665);
   }
  }
  enemies=enemies.filter(e=>!e.dead||e.fade>0);
- if(gameState==='playing'&&enemies.length===0){if(!waveClearNotified){waveClearNotified=true;flash('구역 확보 — 오른쪽으로 전진!',2)}if(p.x>=WAVE_GATES[wave]){gameState='reward';if(wave<3)rewardMenu();else completeMenu()}}}
+ if(gameState==='playing'&&enemies.length===0){
+  if(!waveClearNotified){waveClearNotified=true;flash('구역 확보 — 오른쪽으로 전진!',2)}
+  if(p.x>=WAVE_GATES[wave]){gameState='reward';if(wave<3)rewardMenu();else completeMenu()}
+ }
+}
 function updateEffects(dt){for(const f of fx)f.life-=dt;fx=fx.filter(f=>f.life>0);for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const d of drops)d.glow+=dt;for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
 function updateHud(){ $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'UNARMED';$('modName').textContent=p.mod==='neuro'?'NEURO':p.mod==='none'?'NONE':p.mods.map(n=>({fire:'FIRE',shock:'VOLT',bleed:'BLEED',ice:'ICE'})[n]).join('+');$('credits').textContent=String(p.credits).padStart(4,'0');$('combo').innerHTML=`${p.hits} <small>HITS</small>`;$('enemyCount').textContent=`REMAINING ${String(enemies.filter(e=>!e.dead).length).padStart(2,'0')}`;$('level').textContent=String(level).padStart(2,'0');if(wave===3){const b=enemies.find(e=>e.type==='boss');$('bossHud').hidden=!b||b.dead;if(b){$('bossFill').style.width=`${clamp(100*b.hp/b.maxHp,0,100)}%`;$('bossPhase').textContent=String(b.phase).padStart(2,'0')}} }
 function update(dt){time+=dt;messageUpdate(dt);const pad=pollPad();updateEffects(dt);if(gameState!=='playing')return;if(hitStop>0){hitStop-=dt;updateHud();return}control(dt,pad);cameraX+=(clamp(p.x-465,0,STAGE_WIDTH-W)-cameraX)*Math.min(1,dt*6.5);updateEnemies(dt);updateHud();const d=drops.find(o=>Math.hypot(o.x-p.x,(o.y-p.y)*1.7)<107);const cleared=waveClearNotified&&enemies.length===0;$('hint').hidden=!d&&!cleared;if(d)$('hint').textContent='E / RB — 쇠파이프 획득';else if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
