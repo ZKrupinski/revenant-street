@@ -144,12 +144,15 @@ const Z_REMOTE_ATLAS={"idle":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRI
 const zArtState={},zArtNode=$('z-art-sprite'), zStage=$('stageWrap');
 let zArtLastKey='',zArtFrame=-1,zLastGoodFrame=null;
 function getZMove(){
- if(p.stun>0)return p.stun>.42?'heavyhit':'hit';
- if(p.dodge>0)return 'dash';
+ if(p.downTimer>0)return 'knockdown';
+ if(p.getupTimer>0)return 'getup';
+ if(p.stun>0)return p.hitHeavyTimer>0?'heavyhit':'hit';
+ if(p.dodge>0)return p.evadeBackstep?'dodge':'dash';
  if(p.parry>0)return 'guard';
  if(p.attack>0)return p.airAttack?'airkick':p.moveName||'jab';
- if(p.z>3)return p.vz>180?'jumpstart':p.vz< -200?'landing':'airborne';
- if(Math.abs(p.moveDX)+Math.abs(p.moveDY)>.18)return p.running?'run':'walk';
+ if(p.z>3)return p.jumpStartTimer>0?'jumpstart':'airborne';
+ if(p.landingTimer>0)return 'landing';
+ if(Math.hypot(p.moveDX||0,p.moveDY||0)>.18)return p.backstepping?'backwalk':p.running?'run':'walk';
  return 'idle';
 }
 // Frame isolation: source atlas -> eight independent transparent canvases.
@@ -317,20 +320,23 @@ function loadZMove(key){
  return zArtState[key];
 }
 function currentZFrameIndex(key){
- if(p.attack>0)return Math.min(7,Math.floor(8*(1-p.attack/Math.max(.001,p.attackDuration))));
- if(p.dodge>0)return Math.min(7,Math.floor(8*(1-p.dodge/.30)));
- if(p.parry>0)return Math.min(7,Math.floor(8*(1-p.parry/Math.max(.001,p.parryDuration||.34))));
- if(p.stun>0)return Math.min(7,Math.max(0,Math.floor((.6-p.stun)/.075)));
- return Math.floor(time*(key==='idle'?5.8:key==='walk'?10:key==='run'?14:11))%8;
+ const oneshot=t=>Math.max(0,Math.min(7,Math.floor(t*8)));
+ if(key==='knockdown')return oneshot(1-p.downTimer/.83);
+ if(key==='getup')return oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64));
+ if(key==='hit'||key==='heavyhit')return oneshot(1-p.stun/Math.max(.001,p.hitDuration||.4));
+ if(key==='dash'||key==='dodge')return oneshot(1-p.dodge/.30);
+ if(key==='guard')return oneshot(1-p.parry/Math.max(.001,p.parryDuration||.34));
+ if(key==='jumpstart')return oneshot(1-p.jumpStartTimer/.23);
+ if(key==='landing')return oneshot(1-p.landingTimer/.24);
+ if(Z_ALL_ATTACKS.includes(key)||key==='airkick')return oneshot(1-p.attack/Math.max(.001,p.attackDuration||.4));
+ const speed=key==='idle'?5.8:key==='run'?14:key==='walk'||key==='backwalk'?10:key==='airborne'?8:10;
+ return Math.floor(Math.max(0,p.motionTime||0)*speed)%8;
 }
 function paintZ(x,y,z){
  const key=getZMove(),atlas=loadZMove(key);
- let fr=atlas&&atlas.ready?atlas.frames[currentZFrameIndex(key)]:null;
+ if(p.motionKey!==key){p.motionKey=key;p.motionTime=0}
+ const fr=atlas&&atlas.ready?atlas.frames[currentZFrameIndex(key)]:null;
  if(fr)zLastGoodFrame=fr;
- if(!fr){
-  const idle=loadZMove('idle');
-  fr=(key==='airkick'?loadZMove('frontkick')?.frames?.[Math.min(7,currentZFrameIndex(key))]:null)||(idle&&idle.ready?idle.frames[Math.floor(time*5.8)%8]:null)||null;
- }
  ctx.save();ctx.translate(x,Math.round(y-z+8));ctx.scale(p.facing<0?-1:1,1);
  if(fr){
   const b=fr.bounds,sc=fr.unitScale;
@@ -363,7 +369,7 @@ function showMenu(html){if(typeof resetAnalog==='function')resetAnalog();gameSta
 function hideMenu(){ $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;$('bottomTip').style.display='flex';showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1><p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p><div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div><div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button><button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div><p class="micro">가로 10화면 탐험 · 3웨이브 · 엘리트 보스 · 성장 허브 구현 / 키보드·게임패드·드래그 조이스틱</p>`)}
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>좌우 + 깊이 이동</div><div><kbd>J / X</kbd>펀치·킥 콤보 / 자동 처형</div><div><kbd>K / A</kbd>점프 (지상 횡베기 회피)</div><div><kbd>L / LB</kbd>저스트 가드 (패링)</div><div><kbd>SHIFT / B</kbd>대쉬</div><div><kbd>J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>E / RB</kbd>무기 줍기</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
-function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.airAttack=false;p.airKickUsed=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.damageBoost=perma.servo*2;level=1;runKills=0}
+function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.damageBoost=perma.servo*2;level=1;runKills=0}
 function startRun(){resetPlayer();wave=0;fx=[];drops=[];enemies=[];gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();flash('CHAPTER 01 : 침수된 거리',2);sound('attack')}
 function spawnWave(){
  waveClearNotified=false;
@@ -433,7 +439,7 @@ function findExecutionTarget(){
  .sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0]||null;
 }
 function startAttack(){
- if(gameState!=='playing'||p.stun>0||p.dodge>0)return;
+ if(gameState!=='playing'||p.stun>0||p.dodge>0||p.downTimer>0||p.getupTimer>0)return;
  if(p.attack>0){p.attackQueued=true;return}
  if(p.z>16){
   if(p.airKickUsed||p.stamina<15)return;
@@ -464,19 +470,20 @@ function startAttack(){
  sound('attack');
 }
 function parry(){
- if(gameState!=='playing'||p.stun>0||p.parry>0||p.stamina<7)return;
+ if(gameState!=='playing'||p.stun>0||p.parry>0||p.downTimer>0||p.getupTimer>0||p.stamina<7)return;
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.counterRush=0;
  p.parryDuration=.34+perma.reflex*.035;p.parry=p.parryDuration;
  p.inv=Math.max(p.inv,.08);p.stamina-=7;
  fxBurst(p.x+46*p.facing,p.y-130,'blue',.65);sound('parry');
 }
 function dodge(){
- if(gameState!=='playing'||p.dodge>0||p.stun>0||p.stamina<19)return;
+ if(gameState!=='playing'||p.dodge>0||p.stun>0||p.downTimer>0||p.getupTimer>0||p.stamina<19)return;
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.parry=0;
- p.dodge=.30;p.inv=.34;p.dodgeX=p.facing;p.stamina-=19;
+ const backInput=analog.dx*p.facing<-.42||(keys.has('a')&&p.facing>0)||(keys.has('d')&&p.facing<0);
+ p.evadeBackstep=backInput;p.dodge=.30;p.inv=.34;p.dodgeX=backInput?-p.facing:p.facing;p.stamina-=19;
  fxBurst(p.x-p.facing*22,p.y-24,'blue',.42);sound('attack');
 }
-function jump(){if(gameState!=='playing'||p.z>1||p.stun>0)return;p.vz=530;p.z=2;p.airKickUsed=false;sound('attack')}
+function jump(){if(gameState!=='playing'||p.z>1||p.stun>0||p.downTimer>0||p.getupTimer>0)return;p.vz=530;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;p.airKickUsed=false;sound('attack')}
 function pickup(){if(gameState!=='playing')return;const idx=drops.findIndex(d=>Math.hypot(d.x-p.x,(d.y-p.y)*1.7)<110);if(idx!==-1){const d=drops.splice(idx,1)[0];p.weapon=d.type==='charged'?24:18;p.maxWeapon=p.weapon;floatText('PIPE EQUIPPED',p.x,p.y-150,'#8df5ff');sound('parry')}}
 function execute(target){
  if(gameState!=='playing'||p.stun>0||!target||target.dead||target.groggy<=0)return false;
@@ -514,7 +521,7 @@ function attackCheck(){
  if(armed){p.weapon--;if(p.weapon<=0){flash('OVERLOAD SHATTER!',1.7);screenShake=27;screenTint=.9;sound('break');fxBurst(p.x+75*p.facing,p.y-120,'red',3);for(const e of enemies)if(!e.dead&&Math.hypot(e.x-p.x,(e.y-p.y)*1.4)<310){hurtEnemy(e,85,105)}drops.push({x:clamp(p.x+210*p.facing,85,STAGE_WIDTH-85),y:clamp(p.y+10,480,660),type:'pipe',glow:0})}}
  if(!hits)fxBurst(p.x+p.facing*105,p.y-123,'red',.6)
 }
-function enemyAttack(e){if(e.dead||e.groggy>0)return;const dx=Math.abs(e.x-p.x),dy=Math.abs(e.y-p.y);if(dx>e.reach+55||dy>57||p.z>76)return;
+function enemyAttack(e){if(e.dead||e.groggy>0||p.downTimer>0||p.getupTimer>0)return;const dx=Math.abs(e.x-p.x),dy=Math.abs(e.y-p.y);if(dx>e.reach+55||dy>57||p.z>76)return;
  const parryWindow=p.parry>0&&((e.x-p.x)*p.facing)>-35;
  if(parryWindow){
   e.stun=e.type==='boss'?.88:1.65;
@@ -531,7 +538,16 @@ function enemyAttack(e){if(e.dead||e.groggy>0)return;const dx=Math.abs(e.x-p.x),
   if(e.poise>=e.maxPoise){e.groggy=3.4;e.stun=3.4;floatText('GROGGY',e.x,e.y-185,'#8fe6ff')}
   return;
  }
- if(p.inv>0||p.dodge>0)return;const dmg=e.damage;p.hp=Math.max(0,p.hp-dmg);p.stun=.24;p.inv=.75;p.stamina=clamp(p.stamina-20,0,100);screenShake=e.type==='boss'?20:11;screenTint=.37;p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(dmg),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)deadMenu()}
+ if(p.inv>0||p.dodge>0)return;const dmg=e.damage;p.hp=Math.max(0,p.hp-dmg);p.receivedHits=(p.receivedHits||0)+1;
+ const heavy=e.type==='boss'||e.type==='guard'&&p.receivedHits%3===0;
+ p.attack=0;p.attackQueued=false;p.airAttack=false;p.counterBoost=false;
+ if(heavy&&p.hp>0&&p.z<70){
+  p.downTimer=.83;p.getupTimer=0;p.stun=.83;p.hitDuration=.83;
+  p.hitHeavyTimer=.83;p.inv=1.52;p.recoveryDuration=.64;p.vz=0;p.z=0;
+ }else{
+  p.stun=heavy?.49:.28;p.hitDuration=p.stun;p.hitHeavyTimer=heavy?p.stun:0;p.inv=.75;
+ }
+ p.stamina=clamp(p.stamina-20,0,100);screenShake=e.type==='boss'?20:11;screenTint=.37;p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(dmg),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)deadMenu()}
 function fxBurst(x,y,color='red',scale=1){fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8)})}
 function floatText(text,x,y,color){floating.push({text,x,y,color,life:1.05})}
 function messageUpdate(dt){if(messageTime>0){messageTime-=dt;if(messageTime<=0)$('gameMessage').classList.remove('active')}}
@@ -545,10 +561,12 @@ function control(dt,pad){
  dx=clamp(dx+pad.dx+analog.dx,-1,1);dy=clamp(dy+pad.dy+analog.dy,-1,1);
  const mag=Math.hypot(dx,dy);if(mag>1){dx/=mag;dy/=mag}
  p.moveDX=dx;p.moveDY=dy;
+ const closeEnemy=enemies.find(e=>!e.dead&&Math.abs(e.x-p.x)<300&&Math.abs(e.y-p.y)<85);
+ p.backstepping=!!(closeEnemy&&((closeEnemy.x-p.x)*p.facing)>0&&dx*p.facing<-.13);
  const stickMag=Math.hypot(analog.dx,analog.dy);
  const gamepadMag=Math.hypot(pad.dx,pad.dy);
  p.running=(stickMag>.84||gamepadMag>.92)&&p.z<=2&&p.attack<=0&&p.dodge<=0&&p.parry<=0;
- if(p.stun<=0){
+ if(p.stun<=0&&p.downTimer<=0&&p.getupTimer<=0){
   let speed=p.running?395:218;
   if(p.dodge>0){dx=p.dodgeX;dy=0;speed=880}
   if(p.counterRush>0){dx=p.facing;dy=0;speed=980;p.counterRush=Math.max(0,p.counterRush-dt)}
@@ -556,13 +574,19 @@ function control(dt,pad){
   if(p.airAttack){dx=p.facing;dy=0;speed=470}
   p.x=clamp(p.x+dx*speed*dt,64,STAGE_WIDTH-64);
   p.y=clamp(p.y+dy*speed*.52*dt,480,664);
-  if(p.dodge<=0&&p.counterRush<=0&&dx>.1)p.facing=1;
-  else if(p.dodge<=0&&p.counterRush<=0&&dx<-.1)p.facing=-1;
+  if(p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx>.1)p.facing=1;
+  else if(p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx<-.1)p.facing=-1;
  }
  if(p.z>0||p.vz>0){
   p.z+=p.vz*dt;p.vz-=1320*dt;
-  if(p.z<=0){p.z=0;p.vz=0;p.airKickUsed=false;p.airAttack=false}
+  if(p.z<=0){const landed=p.z<0||p.vz<0;p.z=0;p.vz=0;p.airKickUsed=false;p.airAttack=false;if(landed)p.landingTimer=.24}
  }
+ p.jumpStartTimer=Math.max(0,p.jumpStartTimer-dt);
+ p.landingTimer=Math.max(0,p.landingTimer-dt);
+ p.hitHeavyTimer=Math.max(0,p.hitHeavyTimer-dt);
+ if(p.downTimer>0){p.downTimer=Math.max(0,p.downTimer-dt);
+  if(p.downTimer===0){p.getupTimer=p.recoveryDuration||.64;p.stun=0;p.inv=Math.max(p.inv,p.getupTimer)}
+ }else if(p.getupTimer>0)p.getupTimer=Math.max(0,p.getupTimer-dt);
  p.stun=Math.max(0,p.stun-dt);p.inv=Math.max(0,p.inv-dt);
  p.parry=Math.max(0,p.parry-dt);p.dodge=Math.max(0,p.dodge-dt);
  p.riposteWindow=Math.max(0,p.riposteWindow-dt);
@@ -570,13 +594,14 @@ function control(dt,pad){
  p.stamina=clamp(p.stamina+17*dt,0,100);
  p.comboWindow=Math.max(0,p.comboWindow-dt);
  p.hitTimeout=Math.max(0,p.hitTimeout-dt);if(p.hitTimeout===0)p.hits=0;
+ p.motionTime=(p.motionTime||0)+dt;
  if(p.attack>0){
   p.attack-=dt;
   if(!p.hitDone&&p.attack<p.attackDuration*(p.airAttack?.47:.58)){p.hitDone=true;attackCheck()}
   p.attack=Math.max(0,p.attack);
   if(p.attack===0){p.counterBoost=false;if(!p.z)p.airAttack=false}
  }
- if((p.attackQueued||keys.has('j')||padPrev.attack)&&p.attack===0&&p.stun<=0&&p.dodge<=0&&p.parry<=0){p.attackQueued=false;startAttack()}
+ if((p.attackQueued||keys.has('j')||padPrev.attack)&&p.attack===0&&p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){p.attackQueued=false;startAttack()}
 }
 function updateEnemies(dt){
  // Impulse-based knockbacks continue through stun and death.
@@ -686,7 +711,7 @@ function drawTravelMeter(){
 }
 function ellipseShadow(x,y,s=1,alpha=.36){ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle='#01040b';ctx.beginPath();ctx.ellipse(x,y,49*s,11*s,0,0,Math.PI*2);ctx.fill();ctx.restore()}
 function drawDrop(d){const a=Math.sin(time*4+d.glow)*3;ellipseShadow(d.x,d.y,.5,.4);const picture=img[d.type==='pipe'?'pipe_metal':'pipe_charged'];if(!picture.complete)return;ctx.save();ctx.translate(d.x,d.y-14+a);ctx.rotate(-.16);ctx.drawImage(picture,-48,-11,96,27);ctx.restore();ctx.fillStyle='#a7f3fe';ctx.font='bold 10px Arial';ctx.textAlign='center';ctx.fillText('PICK UP',d.x,d.y-34+a)}
-function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const x=Math.round(a.x),y=Math.round(a.y),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?(p.stun>0?'hurt':p.attack>0?p.moveName:p.dodge>0?'dash':p.parry>0?'guard':p.z>3?'jump':Math.abs(p.moveDX)+Math.abs(p.moveDY)>.2?'walk':'idle'):'';
+function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const x=Math.round(a.x),y=Math.round(a.y),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?getZMove():'';
  if(isP){ellipseShadow(x,y,1.06,.45);paintZ(x,y,z);return;}
  const picture=img[a.type];if(!picture?.complete||!picture.naturalWidth)return;const w=isP?128:boss?340:(a.type==='guard'?148:a.type==='assassin'?120:122);const h=isP?260:boss?328:186;ellipseShadow(x,y,boss?2.05:isP?1.06:.85,1/(1+z*.022)*.45);
  ctx.save();ctx.globalAlpha=a.dead?clamp(a.fade,0,1):isP&&p.inv>0&&Math.sin(time*33)>0?.64:1;ctx.translate(x,Math.round(y-z));ctx.scale(a.facing||a.face||1,1);let bob=isP?Math.sin(time*10)*1.6:Math.sin(time*5+a.x)*1.5;const lean=isP&&p.attack>0?.08*Math.sin((1-p.attack/p.attackDuration)*Math.PI):!isP&&Math.abs(a.knockVX||0)>18?clamp(a.knockVX/1100,-.38,.38):a.windup>0?-.08:0;
