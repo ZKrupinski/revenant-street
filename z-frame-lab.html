@@ -25,7 +25,7 @@ button.control{font:800 13px system-ui;min-height:40px;border:1px solid #415769;
 @media(max-width:740px){.app{padding:13px 9px}.layout{grid-template-columns:1fr}.left{min-height:0;max-height:195px}.stage{height:370px}.character{width:min(75vw,300px)}.film{grid-template-columns:repeat(8,minmax(60px,1fr))}.frame{min-width:60px;height:99px}.intro{font-size:13px}}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true"><defs><filter id="keygreen" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  4 -5 4 0 1"/></filter></defs></svg>
-<div class="app"><header><div><div class="eyebrow">REBELTREE / Z-ACTION PIPELINE</div><h1>REVENANT STREET <span style="color:#ef5269">Z FRAME LAB</span></h1></div><div class="pill">20 ACTION SHEETS · ALPHA 1.2 MASK QA</div></header>
+<div class="app"><header><div><div class="eyebrow">REBELTREE / Z-ACTION PIPELINE</div><h1>REVENANT STREET <span style="color:#ef5269">Z FRAME LAB</span></h1></div><div class="pill">20 ACTION SHEETS · ALPHA 1.3 MASK QA</div></header>
 <p class="intro">주인공 Z의 독립 동작 원화 시트 20종을 직접 선택해 재생하는 <b>리소스 검토용 프리뷰</b>입니다. 각 시트는 게임과 동일한 정밀 프레임 분리 및 크로마키 알고리즘으로 표시하며, 각 컷의 자세와 오염을 검수할 수 있습니다. 각 컷은 4열×2행 기준으로 표시됩니다.</p>
 <div class="layout"><aside class="left" id="menu" aria-label="동작 선택"></aside><section class="center"><div class="topline"><h2 id="action-title">전투 대기</h2><span class="count" id="info">01 / 20 · 8F</span></div><div class="stage" id="stage"><div class="urban"></div><div class="floor"></div><div class="floorline"></div><div class="hud">Z // FRAME <span id="cur-num">01</span></div><div class="character" id="char"></div><div class="info-label" id="assetstatus">원본 이미지 로드 중…</div><div class="canvas-warn">투명화: 게임 공통 정밀 컷팅</div></div>
 <div class="controls"><button class="control primary" id="play">⏸ 일시정지</button><button class="control" id="prev">◀ 이전 컷</button><button class="control" id="next">다음 컷 ▶</button><label for="fps">속도 <output id="fpsval">12</output> FPS</label><input aria-label="프레임 속도" type="range" id="fps" min="3" max="24" step="1" value="12"><button class="control" id="green">원본 초록색 보기</button><button class="control" id="flip">좌우 반전</button><a id="openorig" class="control" target="_blank" rel="noopener" style="margin-left:auto;color:#8ddcea" href="#">원본 PNG 열기 ↗</a></div>
@@ -40,7 +40,7 @@ const groups=[...new Set(list.map(a=>a.group))];
 function prepareZCells(im){
  const cells=[],cw=im.naturalWidth/4,ch=im.naturalHeight/2;
  if(cw<70||ch<80)throw new Error('Z atlas too small');
- const inset=Math.max(3,Math.round(Math.min(cw,ch)*.012));
+ const inset=1; // Preserve hair and limbs up to the frame grid edge
  const raw=[];let globalMaxW=1,globalMaxH=1;
  for(let i=0;i<8;i++){
   const canvas=document.createElement('canvas');
@@ -62,7 +62,7 @@ function prepareZCells(im){
    }
   }
   const corners=points;
-  const green=(r,g,b)=>g>80&&g>r*1.38&&g>b*1.19&&(g-r)>33;
+  const green=(r,g,b)=>g>70&&g>r*1.10&&g>b*1.08&&(g-r)>17;
   const greenBack=corners.filter(v=>green(v[0],v[1],v[2]));
   const avg=greenBack.length?greenBack.reduce((a,v)=>[a[0]+v[0],a[1]+v[1],a[2]+v[2]],[0,0,0]).map(v=>Math.round(v/greenBack.length)):null;
   const samples=greenBack.length?[greenBack[0],greenBack[Math.floor(greenBack.length/2)],greenBack[greenBack.length-1],avg]:corners.filter((_,i)=>i%12===0);
@@ -71,10 +71,10 @@ function prepareZCells(im){
    const r=d[k],g=d[k+1],b=d[k+2],a=d[k+3];
    if(a<18)return true;
    const isGreen=green(r,g,b);
-   const nearSample=(!greenBack.length||isGreen)&&samples.some(v=>Math.max(Math.abs(r-v[0]),Math.abs(g-v[1]),Math.abs(b-v[2]))<(greenBack.length?49:28));
+   const nearSample=(!greenBack.length||isGreen)&&samples.some(v=>Math.abs(r-v[0])<(greenBack.length?65:28)&&Math.abs(g-v[1])<(greenBack.length?58:28)&&Math.abs(b-v[2])<(greenBack.length?70:28));
    const saturatedChroma=greenBack.length&&green(r,g,b)&&nearSample;
    const outerEdge=Math.min(x,y,w-1-x,h-1-y);
-   const frameLine=outerEdge<Math.max(8,Math.round(Math.min(w,h)*.034))&&Math.max(r,g,b)<50;
+   const frameLine=outerEdge<Math.max(7,Math.round(Math.min(w,h)*.027))&&Math.max(r,g,b)<50;
    return saturatedChroma||(!greenBack.length&&nearSample)||frameLine;
   };
   const visited=new Uint8Array(w*h),queue=new Int32Array(w*h);let head=0,tail=0;
@@ -86,7 +86,24 @@ function prepareZCells(im){
    if(x>0)seed(x-1,y);if(x+1<w)seed(x+1,y);if(y>0)seed(x,y-1);if(y+1<h)seed(x,y+1);
   }
   // Reject detached fragments from adjacent 4x2 tiles, but preserve nearby accessories.
-  const labels=new Uint8Array(w*h),groups=[],stack=new Int32Array(w*h);
+  // Keep solid interior pixels (including green costume details) untouched.
+   // Desaturate only foreground pixels bordering exterior chroma removal.
+   if(greenBack.length){
+    const alphaSnapshot=new Uint8Array(w*h);
+    for(let n=0;n<w*h;n++)alphaSnapshot[n]=d[n*4+3];
+    for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+     const n=y*w+x,k=n*4,a=alphaSnapshot[n];if(!a)continue;
+     const adjacent=seen[n-1]||seen[n+1]||seen[n-w]||seen[n+w]||
+       seen[n-w-1]||seen[n-w+1]||seen[n+w-1]||seen[n+w+1];
+     if(!adjacent)continue;
+     const r=d[k],g=d[k+1],b=d[k+2],spill=Math.max(0,g-Math.max(r,b));
+     if(spill>12&&green(r,g,b)){
+      d[k+1]=Math.min(g,Math.max(r,b)+Math.round(spill*.16));
+      if(spill>65&&a===255)d[k+3]=232;
+     }
+    }
+   }
+   const labels=new Uint8Array(w*h),groups=[],stack=new Int32Array(w*h);
   for(let pos=0;pos<w*h;pos++){
    if(labels[pos]||d[pos*4+3]<68)continue;
    let count=0,qt=0,parts=[],minx=w,miny=h,maxx=-1,maxy=-1;
@@ -106,8 +123,8 @@ function prepareZCells(im){
    const keep=new Uint8Array(w*h);
    for(const n of primary.parts)keep[n]=1;
    for(let j=1;j<groups.length;j++){
-    const g=groups[j],prox=g.minx<=primary.maxx+13&&g.maxx>=primary.minx-13&&g.miny<=primary.maxy+13&&g.maxy>=primary.miny-13;
-    if(prox&&g.area>=primary.area*.055)for(const n of g.parts)keep[n]=1;
+    const g=groups[j],prox=g.minx<=primary.maxx+27&&g.maxx>=primary.minx-27&&g.miny<=primary.maxy+27&&g.maxy>=primary.miny-27;
+    if(prox&&(g.area>=12||(g.minx>=primary.minx-8&&g.maxx<=primary.maxx+8&&g.miny>=primary.miny-26&&g.maxy<=primary.maxy+10)))for(const n of g.parts)keep[n]=1;
    }
    for(let n=0;n<w*h;n++)if(d[n*4+3]>0&&!keep[n])d[n*4+3]=0;
   }
@@ -123,7 +140,17 @@ function prepareZCells(im){
   globalMaxW=Math.max(globalMaxW,bounds.w);globalMaxH=Math.max(globalMaxH,bounds.h);
   raw.push({canvas,bounds});
  }
- for(const r of raw)cells.push({...r,unitScale:Math.min(240/globalMaxW,254/globalMaxH)});
+ // Common union bounds + generous head padding. No independent per-frame recentering.
+  const frameW=raw[0].canvas.width,frameH=raw[0].canvas.height;
+  const union={
+   x:Math.max(0,Math.min(...raw.map(r=>r.bounds.x))-7),
+   y:Math.max(0,Math.min(...raw.map(r=>r.bounds.y))-13)
+  };
+  const right=Math.min(frameW-1,Math.max(...raw.map(r=>r.bounds.x+r.bounds.w-1))+7);
+  const bottom=Math.min(frameH-1,Math.max(...raw.map(r=>r.bounds.y+r.bounds.h-1))+7);
+  union.w=right-union.x+1;union.h=bottom-union.y+1;
+  const unitScale=Math.min(240/union.w,254/union.h);
+  for(const r of raw)cells.push({...r,bounds:union,unitScale});
  return cells;
 }
 const cleanedCache=new Map(),loadingMap=new Map();
