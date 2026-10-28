@@ -94,7 +94,7 @@ function prepareZCells(im){
     for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
      const n=y*w+x,k=n*4,a=alphaSnapshot[n];if(!a)continue;
      const adjacent=visited[n-1]||visited[n+1]||visited[n-w]||visited[n+w]||
-       seen[n-w-1]||visited[n-w+1]||visited[n+w-1]||visited[n+w+1];
+       visited[n-w-1]||visited[n-w+1]||visited[n+w-1]||visited[n+w+1];
      if(!adjacent)continue;
      const r=d[k],g=d[k+1],b=d[k+2],spill=Math.max(0,g-Math.max(r,b));
      if(spill>12&&green(r,g,b)){
