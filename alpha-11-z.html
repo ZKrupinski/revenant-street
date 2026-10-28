@@ -83,7 +83,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 </head>
 <body>
 <div id="app">
-  <header class="masthead"><div class="brand"><span class="brand-kicker">PROJECT Z–ACTION / PLAYABLE COMBAT PROTOTYPE</span><strong>REVENANT <em>STREET</em></strong></div><div class="status"><span class="status-dot"></span><span id="statusLabel">STANDBY</span><span class="ver">ALPHA 1.5.1</span></div></header>
+  <header class="masthead"><div class="brand"><span class="brand-kicker">PROJECT Z–ACTION / PLAYABLE COMBAT PROTOTYPE</span><strong>REVENANT <em>STREET</em></strong></div><div class="status"><span class="status-dot"></span><span id="statusLabel">STANDBY</span><span class="ver">ALPHA 1.6</span></div></header>
   <main class="stage-wrap" id="stageWrap">
     <canvas id="game" width="1280" height="720" aria-label="레버넌트 스트리트 게임 화면"></canvas>
 <svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs><filter id="z-alpha-key" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  4 -5 4 0 1"/></filter></defs></svg>
@@ -109,7 +109,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
     <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 콤보/자동 처형 · K 점프 · L 패링 · SHIFT 대쉬 · E 줍기</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.5.1 — FIXED FACE BUTTONS · SWARM AI</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.6 — NEW 8F MOTIONS · RIPOSTE</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -140,16 +140,16 @@ const p={x:270,y:570,z:0,vz:0,facing:1,hp:100,maxHp:100,stamina:100,stagger:0,in
 // Alpha 1.0: 20 separately drawn character action sheets.
 // Remote raw assets: chroma-key SVG filter; original embedded sprites are the fallback.
 // ==================================================
-const Z_REMOTE_ATLAS={"idle":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061657_d8dd1920-bd0a-4e40-9a58-b71b5432977f.png","walk":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061816_c377947f-a4bb-41bb-9eb2-355d3b8c90f5.png","backwalk":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063246_e5155eaf-f2a0-44bb-9a7d-c6e37814e6df.png","dash":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061816_f0455f34-e26b-4c5d-a3e7-95ee765a48e6.png","jumpstart":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063245_35f4b12c-03f1-4b7e-8ebf-e35111c166d1.png","airborne":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063245_26c99422-8810-42a4-ba21-126fb96980a9.png","landing":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063246_d709f223-e287-42fd-975b-8d9849d19f5d.png","guard":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061815_432d91da-3fda-4234-821e-56bc5603f940.png","dodge":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063330_f955ce92-d569-46ae-be5f-82ce5cb00db0.png","jab":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061658_87ef484c-a558-493e-9170-c410b107adfe.png","cross":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061657_e14c2d1b-9d10-4e7c-bdcd-28f14bad7ad5.png","hook":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061815_8319db21-34e1-4e95-ac0a-eff0e91c6317.png","uppercut":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061658_64ddcc90-ec0c-4574-b6bc-0513f18621c1.png","frontkick":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061658_100a9d4d-dce4-48b1-9332-e41febfaa8ad.png","roundkick":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061658_9a02878d-6909-494e-8d51-51eaea2f49e8.png","lowkick":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061815_17ed6d67-a115-4479-bd51-e685e5fa8ddd.png","hit":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061816_a468fee7-f23e-4d31-af3d-d6e0cfbe9bdc.png","heavyhit":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063247_744384e7-147a-48c5-a57c-91dcbaeebc70.png","knockdown":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063247_e4ac51b8-6808-4bb9-940c-ed8e16bfafac.png","getup":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063331_0507f700-67ae-42a1-9328-5893e217f040.png"};
+const Z_REMOTE_ATLAS={"idle":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_130226_7752b518-b184-47aa-8e89-7c64e1509129.png","walk":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_130226_1ee06806-6af8-4420-8ad3-b88eed12358f.png","backwalk":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063246_e5155eaf-f2a0-44bb-9a7d-c6e37814e6df.png","dash":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_130227_f0066698-3c5d-417b-ad1a-d9fd7593ce84.png","run":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_130226_ef6df6f1-0b65-4122-9b2b-ee2a10048260.png","airkick":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_130227_b789a21c-f04a-45f2-8d8e-7e104f83b979.png","jumpstart":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063245_35f4b12c-03f1-4b7e-8ebf-e35111c166d1.png","airborne":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063245_26c99422-8810-42a4-ba21-126fb96980a9.png","landing":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063246_d709f223-e287-42fd-975b-8d9849d19f5d.png","guard":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_130227_d36826b9-ca60-49f8-8f2b-053edda363d5.png","dodge":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063330_f955ce92-d569-46ae-be5f-82ce5cb00db0.png","jab":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061658_87ef484c-a558-493e-9170-c410b107adfe.png","cross":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061657_e14c2d1b-9d10-4e7c-bdcd-28f14bad7ad5.png","hook":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061815_8319db21-34e1-4e95-ac0a-eff0e91c6317.png","uppercut":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061658_64ddcc90-ec0c-4574-b6bc-0513f18621c1.png","frontkick":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061658_100a9d4d-dce4-48b1-9332-e41febfaa8ad.png","roundkick":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061658_9a02878d-6909-494e-8d51-51eaea2f49e8.png","lowkick":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061815_17ed6d67-a115-4479-bd51-e685e5fa8ddd.png","hit":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_061816_a468fee7-f23e-4d31-af3d-d6e0cfbe9bdc.png","heavyhit":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063247_744384e7-147a-48c5-a57c-91dcbaeebc70.png","knockdown":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063247_e4ac51b8-6808-4bb9-940c-ed8e16bfafac.png","getup":"https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_063331_0507f700-67ae-42a1-9328-5893e217f040.png"};
 const zArtState={},zArtNode=$('z-art-sprite'), zStage=$('stageWrap');
 let zArtLastKey='',zArtFrame=-1,zLastGoodFrame=null;
 function getZMove(){
  if(p.stun>0)return p.stun>.42?'heavyhit':'hit';
- if(p.attack>0)return p.moveName||'jab';
- if(p.dodge>0)return 'dodge';
+ if(p.dodge>0)return 'dash';
  if(p.parry>0)return 'guard';
+ if(p.attack>0)return p.airAttack?'airkick':p.moveName||'jab';
  if(p.z>3)return p.vz>180?'jumpstart':p.vz< -200?'landing':'airborne';
- if(Math.abs(p.moveDX)+Math.abs(p.moveDY)>.18)return p.moveDX < -.1?'backwalk': 'walk';
+ if(Math.abs(p.moveDX)+Math.abs(p.moveDY)>.18)return p.running?'run':'walk';
  return 'idle';
 }
 // Frame isolation: source atlas -> eight independent transparent canvases.
@@ -318,10 +318,10 @@ function loadZMove(key){
 }
 function currentZFrameIndex(key){
  if(p.attack>0)return Math.min(7,Math.floor(8*(1-p.attack/Math.max(.001,p.attackDuration))));
- if(p.dodge>0)return Math.min(7,Math.floor(8*(1-p.dodge/.28)));
- if(p.parry>0)return Math.min(7,Math.floor(8*(1-p.parry/.28)));
+ if(p.dodge>0)return Math.min(7,Math.floor(8*(1-p.dodge/.30)));
+ if(p.parry>0)return Math.min(7,Math.floor(8*(1-p.parry/Math.max(.001,p.parryDuration||.34))));
  if(p.stun>0)return Math.min(7,Math.max(0,Math.floor((.6-p.stun)/.075)));
- return Math.floor(time*(key==='idle'?7:key==='walk'||key==='backwalk'?10:11))%8;
+ return Math.floor(time*(key==='idle'?5.8:key==='walk'?10:key==='run'?14:11))%8;
 }
 function paintZ(x,y,z){
  const key=getZMove(),atlas=loadZMove(key);
@@ -329,7 +329,7 @@ function paintZ(x,y,z){
  if(fr)zLastGoodFrame=fr;
  if(!fr){
   const idle=loadZMove('idle');
-  fr=(key.endsWith('kick')?['frontkick','lowkick','roundkick'].map(k=>loadZMove(k)).find(a=>a?.ready)?.frames?.[Math.min(7,currentZFrameIndex(key))]:null)||zLastGoodFrame||(idle&&idle.ready?idle.frames[0]:null);
+  fr=(key==='airkick'?loadZMove('frontkick')?.frames?.[Math.min(7,currentZFrameIndex(key))]:null)||(idle&&idle.ready?idle.frames[Math.floor(time*5.8)%8]:null)||null;
  }
  ctx.save();ctx.translate(x,Math.round(y-z+8));ctx.scale(p.facing<0?-1:1,1);
  if(fr){
@@ -349,7 +349,7 @@ function paintZ(x,y,z){
  ctx.restore();return true;
 }
 function syncZSprite(){if(zArtNode)zArtNode.style.display='none'}
-loadZMove('idle');loadZMove('walk');loadZMove('backwalk');loadZMove('jab');loadZMove('frontkick');loadZMove('lowkick');loadZMove('roundkick');
+loadZMove('idle');loadZMove('walk');loadZMove('run');loadZMove('dash');loadZMove('guard');loadZMove('airkick');loadZMove('jab');loadZMove('frontkick');loadZMove('lowkick');loadZMove('roundkick');
 
 const STAGE_WIDTH=12800;let cameraX=0;const WAVE_GATES=[0,4230,8850,12715]; // entire ten-screen world, no per-encounter movement clamp
 let enemies=[],drops=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
