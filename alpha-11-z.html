@@ -342,7 +342,7 @@ function paintZ(x,y,z){
   ctx.beginPath();ctx.arc(0,-215,21,0,Math.PI*2);ctx.fill();
  }
  ctx.globalAlpha=1;
- if(p.weapon>0&&!(p.attack>0&&p.moveName.endsWith('kick'))){const weapon=img.pipe_charged;
+ if(p.weapon>0&&!(p.attack>0&&(p.moveName.endsWith('kick')||p.airAttack))){const weapon=img.pipe_charged;
   if(weapon&&weapon.complete&&weapon.naturalWidth){ctx.save();ctx.rotate(p.attack>0?-.5:-.8);ctx.drawImage(weapon,15,-135,148,32);ctx.restore()}
  }
  if(p.parry>0){const effect=img.burst_blue;if(effect&&effect.complete&&effect.naturalWidth){ctx.globalAlpha=clamp(p.parry*3.5,0,.8);ctx.drawImage(effect,-40,-218,128,128)}}
@@ -480,29 +480,43 @@ function hurtEnemy(e,dmg,poise){if(e.dead)return;e.hp-=dmg;e.poise=clamp(e.poise
  e.knockVX=p.facing*(e.type==='boss'?(smash?130:63):(smash?530:305));
  e.knockVY=rnd(-85,85);e.vz=e.type==='boss'?0:(smash?285:185);
  e.x=clamp(e.x+p.facing*(e.type==='boss'?8:22),55,STAGE_WIDTH-55);fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:1);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');screenShake=clamp(screenShake+5,0,21);hitStop=.055;sound('hit');p.hits++;p.hitTimeout=2.2;
- if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=3.6;e.stun=3.6;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY / I',e.x,e.y-207,'#90e3ff')}
+ if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=3.6;e.stun=3.6;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
  if(e.type==='boss'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
  if(e.hp<=0){e.dead=true;e.fade=1;runKills++;p.credits+=e.type==='boss'?250:e.type==='guard'?58:30;perma.shards+=0;fxBurst(e.x,e.y-70,'gold',1.1);if(Math.random()<.24)drops.push({x:e.x,y:e.y,type:'pipe',glow:0})}}
 function attackCheck(){
- const armed=p.weapon>0&&!p.moveName.endsWith('kick');
- const baseDamage={jab:15,cross:19,hook:22,uppercut:26,frontkick:20,lowkick:18,roundkick:29};
- const baseReach={jab:94,cross:112,hook:105,uppercut:100,frontkick:133,lowkick:132,roundkick:151};
- const damage=(armed?([22,27,38][p.comboIdx]||22):baseDamage[p.moveName]||15)+p.damageBoost;
- const reach=armed?([134,145,170][p.comboIdx]||135):(baseReach[p.moveName]||100);
- const poise={jab:21,cross:29,hook:38,uppercut:53,frontkick:43,lowkick:34,roundkick:57};
+ const armed=p.weapon>0&&!p.moveName.endsWith('kick')&&!p.airAttack;
+ const baseDamage={jab:15,cross:19,hook:22,uppercut:26,frontkick:20,lowkick:18,roundkick:29,airkick:37};
+ const baseReach={jab:94,cross:112,hook:105,uppercut:100,frontkick:133,lowkick:132,roundkick:151,airkick:174};
+ const damage=((armed?([22,27,38][p.comboIdx]||22):baseDamage[p.moveName]||15)+p.damageBoost)*(p.counterBoost?2.05:1);
+ const reach=p.counterBoost?220:armed?([134,145,170][p.comboIdx]||135):(baseReach[p.moveName]||100);
+ const poise={jab:21,cross:29,hook:38,uppercut:53,frontkick:43,lowkick:34,roundkick:57,airkick:78};
  let hits=0;
- for(const e of enemies){if(e.dead||e.inv>0)continue;const dx=e.x-p.x,dy=Math.abs(e.y-p.y);if((dx*p.facing)>-25&&(dx*p.facing)<reach&&dy<56&&Math.abs(e.z-p.z)<82){let dmg=damage;if(p.mods.includes('fire')){dmg*=1.3;e.bleed=Math.max(e.bleed,2)}
+ for(const e of enemies){if(e.dead||e.inv>0)continue;const dx=e.x-p.x,dy=Math.abs(e.y-p.y);if((dx*p.facing)>-25&&(dx*p.facing)<reach&&dy<(p.airAttack?78:56)&&(p.airAttack?p.z<225:Math.abs(e.z-p.z)<82)){let dmg=damage;if(p.mods.includes('fire')){dmg*=1.3;e.bleed=Math.max(e.bleed,2)}
  if(p.mods.includes('ice')){dmg*=.94;e.freeze=1.6}
  if(p.mods.includes('bleed')){dmg*=.95;e.bleed=Math.max(e.bleed,4)}
  if(p.mods.includes('shock')){dmg*=1.08;e.shock=1.4}
  if(p.mod==='neuro') {dmg*=1.35;e.shock=2;e.bleed=4;enemies.filter(o=>o!==e&&!o.dead&&Math.abs(o.x-e.x)<180).forEach(o=>{o.stun=.8;o.hp-=18;fxBurst(o.x,o.y-90,'blue',.8)})}
- hurtEnemy(e,dmg,armed?([28,31,47][p.comboIdx]||28):(poise[p.moveName]||28));hits++}}
+ hurtEnemy(e,dmg,p.counterBoost?100:armed?([28,31,47][p.comboIdx]||28):(poise[p.moveName]||28));hits++}}
  if(armed){p.weapon--;if(p.weapon<=0){flash('OVERLOAD SHATTER!',1.7);screenShake=27;screenTint=.9;sound('break');fxBurst(p.x+75*p.facing,p.y-120,'red',3);for(const e of enemies)if(!e.dead&&Math.hypot(e.x-p.x,(e.y-p.y)*1.4)<310){hurtEnemy(e,85,105)}drops.push({x:clamp(p.x+210*p.facing,85,STAGE_WIDTH-85),y:clamp(p.y+10,480,660),type:'pipe',glow:0})}}
  if(!hits)fxBurst(p.x+p.facing*105,p.y-123,'red',.6)
 }
 function enemyAttack(e){if(e.dead||e.groggy>0)return;const dx=Math.abs(e.x-p.x),dy=Math.abs(e.y-p.y);if(dx>e.reach+55||dy>57||p.z>76)return;
  const parryWindow=p.parry>0&&((e.x-p.x)*p.facing)>-35;
- if(parryWindow){e.stun=e.type==='boss'?.65:1.25;e.poise=clamp(e.poise+(e.type==='boss'?48:95),0,e.maxPoise);fxBurst((p.x+e.x)/2,p.y-115,'blue',1.6);floatText('JUST PARRY!',p.x,p.y-210,'#7df7ff');screenShake=16;hitStop=.095;p.stamina=clamp(p.stamina+25,0,100);sound('parry');if(e.poise>=e.maxPoise){e.groggy=3.4;e.stun=3.4;floatText('GROGGY / I',e.x,e.y-185,'#8fe6ff')}return}
+ if(parryWindow){
+  e.stun=e.type==='boss'?.88:1.65;
+  e.windup=0;e.cooldown=1.2;e.poise=clamp(e.poise+(e.type==='boss'?48:95),0,e.maxPoise);
+  e.knockVX=p.facing*(e.type==='boss'?255:590);e.knockVY=rnd(-65,65);
+  e.vz=e.type==='boss'?85:235;
+  p.parry=Math.max(p.parry,.30);p.parryDuration=Math.max(p.parryDuration,.34);
+  p.riposteWindow=1.25;p.riposteTarget=e;p.inv=Math.max(p.inv,.35);
+  fxBurst((p.x+e.x)/2,p.y-125,'blue',2.2);
+  floatText('JUST PARRY!',p.x,p.y-220,'#7df7ff');
+  flash('패링 성공! 지금 공격!',1.2);
+  screenShake=18;hitStop=.11;slowMotion=.86;
+  p.stamina=clamp(p.stamina+25,0,100);sound('parry');
+  if(e.poise>=e.maxPoise){e.groggy=3.4;e.stun=3.4;floatText('GROGGY',e.x,e.y-185,'#8fe6ff')}
+  return;
+ }
  if(p.inv>0||p.dodge>0)return;const dmg=e.damage;p.hp=Math.max(0,p.hp-dmg);p.stun=.24;p.inv=.75;p.stamina=clamp(p.stamina-20,0,100);screenShake=e.type==='boss'?20:11;screenTint=.37;p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(dmg),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)deadMenu()}
 function fxBurst(x,y,color='red',scale=1){fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8)})}
 function floatText(text,x,y,color){floating.push({text,x,y,color,life:1.05})}
