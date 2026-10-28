@@ -355,9 +355,21 @@ function spawnWave(){
  wave++;
  // Distributed encounters demand forward traversal rather than one static arena.
  const spawns={
- 1:[['raider',1010,555],['assassin',1930,610],['raider',3120,515]],
- 2:[['guard',4800,550],['assassin',5900,610],['raider',6980,530],['guard',8230,520]],
- 3:[['guard',11180,610],['boss',11920,555]]
+ 1:[
+  ['raider',1030,548],['assassin',1120,592],['raider',1200,561],
+  ['raider',2180,592],['assassin',2260,549],['raider',2340,615],
+  ['raider',3350,550],['assassin',3430,593],['raider',3510,574]
+ ],
+ 2:[
+  ['guard',4840,554],['raider',4920,604],['assassin',5010,575],
+  ['raider',5950,547],['assassin',6030,595],['guard',6110,565],
+  ['raider',7030,612],['guard',7110,552],['assassin',7190,578],
+  ['guard',8220,552],['raider',8300,595],['assassin',8380,570]
+ ],
+ 3:[
+  ['raider',11110,544],['assassin',11200,600],['guard',11290,562],
+  ['boss',11920,555],['guard',12070,594],['raider',12150,551]
+ ]
  };
  enemies=(spawns[wave]||[]).map(([type,x,y],i)=>makeEnemy(type,x,y,i));
  const weaponX=wave===1?650:wave===2?Math.min(p.x+340,8700):11080;
@@ -366,7 +378,15 @@ function spawnWave(){
  $('waveLabel').textContent=['','WAVE 01 — 젖은 골목','WAVE 02 — 공사 구역','WAVE 03 — 헌터의 공장'][wave];
  $('chapter').textContent=`0${wave} / 끝없는 거리`;
 }
-function makeEnemy(type,x,y,index){const map={raider:[52,80,95,12,29],assassin:[42,65,150,11,25],guard:[95,120,80,16,33],boss:[640,340,68,27,90]};const [hp,poise,speed,damage,reach]=map[type];return{type,slot:index,x,y,z:0,vz:0,face:-1,hp,maxHp:hp,poise:0,maxPoise:poise,speed,damage,reach,stun:0,inv:0,windup:0,cooldown:1.1+index*.4,attackDone:false,hitFlash:0,groggy:0,phase:1,dead:false,fade:1,decision:0,strafe:Math.random()>.5?1:-1, bleed:0,shock:0,freeze:0}}
+function makeEnemy(type,x,y,index){
+ const map={raider:[52,80,118,9,33],assassin:[42,65,163,9,31],guard:[95,120,101,13,41],boss:[640,340,76,27,90]};
+ const [hp,poise,speed,damage,reach]=map[type];
+ return {type,slot:index,x,y,z:0,vz:0,knockVX:0,knockVY:0,face:-1,hp,maxHp:hp,
+ poise:0,maxPoise:poise,speed,damage,reach,stun:0,inv:0,windup:0,
+ cooldown:(index%3)*.23+.38,attackDone:false,hitFlash:0,groggy:0,phase:1,
+ dead:false,fade:1,decision:0,strafe:Math.random()>.5?1:-1,
+ bleed:0,shock:0,freeze:0}
+}
 function pickComboMove(step,last,armed){
  // Every 3rd connected attack uses a kick; choose a different kick style at random.
  const kicks=[['frontkick',40],['lowkick',35],['roundkick',25]];
@@ -413,7 +433,11 @@ function execute(target){
  fxBurst(target.x,target.y-130,target.type==='boss'?'red':'gold',2.4);
  flash('EXECUTION!',1.1);sound('execution');return true
 }
-function hurtEnemy(e,dmg,poise){if(e.dead)return;e.hp-=dmg;e.poise=clamp(e.poise+poise,0,e.maxPoise);e.stun=e.type==='boss'?.14:.32;e.hitFlash=.14;e.x=clamp(e.x+p.facing*(e.type==='boss'?10:29),55,STAGE_WIDTH-55);fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:1);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');screenShake=clamp(screenShake+5,0,21);hitStop=.055;sound('hit');p.hits++;p.hitTimeout=2.2;
+function hurtEnemy(e,dmg,poise){if(e.dead)return;e.hp-=dmg;e.poise=clamp(e.poise+poise,0,e.maxPoise);e.stun=e.type==='boss'?.19:.52;e.hitFlash=.14;
+ const smash=p.moveName.endsWith('kick')||p.moveName==='uppercut'||dmg>=60;
+ e.knockVX=p.facing*(e.type==='boss'?(smash?130:63):(smash?530:305));
+ e.knockVY=rnd(-85,85);e.vz=e.type==='boss'?0:(smash?285:185);
+ e.x=clamp(e.x+p.facing*(e.type==='boss'?8:22),55,STAGE_WIDTH-55);fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:1);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');screenShake=clamp(screenShake+5,0,21);hitStop=.055;sound('hit');p.hits++;p.hitTimeout=2.2;
  if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=3.6;e.stun=3.6;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY / I',e.x,e.y-207,'#90e3ff')}
  if(e.type==='boss'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
  if(e.hp<=0){e.dead=true;e.fade=1;runKills++;p.credits+=e.type==='boss'?250:e.type==='guard'?58:30;perma.shards+=0;fxBurst(e.x,e.y-70,'gold',1.1);if(Math.random()<.24)drops.push({x:e.x,y:e.y,type:'pipe',glow:0})}}
@@ -512,7 +536,7 @@ function drawDrop(d){const a=Math.sin(time*4+d.glow)*3;ellipseShadow(d.x,d.y,.5,
 function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const x=Math.round(a.x),y=Math.round(a.y),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?(p.stun>0?'hurt':p.attack>0?p.moveName:p.dodge>0?'dash':p.parry>0?'guard':p.z>3?'jump':Math.abs(p.moveDX)+Math.abs(p.moveDY)>.2?'walk':'idle'):'';
  if(isP){ellipseShadow(x,y,1.06,.45);paintZ(x,y,z);return;}
  const picture=img[a.type];if(!picture?.complete||!picture.naturalWidth)return;const w=isP?128:boss?340:(a.type==='guard'?148:a.type==='assassin'?120:122);const h=isP?260:boss?328:186;ellipseShadow(x,y,boss?2.05:isP?1.06:.85,1/(1+z*.022)*.45);
- ctx.save();ctx.globalAlpha=a.dead?clamp(a.fade,0,1):isP&&p.inv>0&&Math.sin(time*33)>0?.64:1;ctx.translate(x,Math.round(y-z));ctx.scale(a.facing||a.face||1,1);let bob=isP?Math.sin(time*10)*1.6:Math.sin(time*5+a.x)*1.5;const lean=isP&&p.attack>0?.08*Math.sin((1-p.attack/p.attackDuration)*Math.PI):a.windup>0?-.08:0;
+ ctx.save();ctx.globalAlpha=a.dead?clamp(a.fade,0,1):isP&&p.inv>0&&Math.sin(time*33)>0?.64:1;ctx.translate(x,Math.round(y-z));ctx.scale(a.facing||a.face||1,1);let bob=isP?Math.sin(time*10)*1.6:Math.sin(time*5+a.x)*1.5;const lean=isP&&p.attack>0?.08*Math.sin((1-p.attack/p.attackDuration)*Math.PI):!isP&&Math.abs(a.knockVX||0)>18?clamp(a.knockVX/1100,-.38,.38):a.windup>0?-.08:0;
  ctx.rotate(lean);
  ctx.drawImage(picture,-w/2,-h+bob,w,h);
  if(isP){const swing=p.attack>0?(1-p.attack/p.attackDuration):0;const offsetX=29,offsetY=-120;ctx.save();ctx.translate(offsetX,offsetY);ctx.rotate(p.attack>0?(-.85+2.2*swing):-.88);const weapon=img['pipe_charged'];if(p.weapon>0&&weapon.complete)ctx.drawImage(weapon,-12,-18,150,38);ctx.restore();if(p.parry>0){ctx.globalAlpha=clamp(p.parry*4,0,1);const ef=img.burst_blue;ctx.drawImage(ef,5,-230,125,125)}}
