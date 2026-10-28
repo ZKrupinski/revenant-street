@@ -805,6 +805,7 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const x=Math.r
  const knockLean=!isP&&Math.abs(a.knockVX||0)>18?clamp(a.knockVX/1400,-.28,.28):a.windup>0?-.08:0;
  ctx.rotate(knockLean+(impacted?tilts[variant]*snap:0));
  if(impacted)ctx.scale(1+(scalesX[variant]-1)*snap,1+(scalesY[variant]-1)*snap);
+ const bob=Math.sin(time*5+a.x)*1.5;
  ctx.drawImage(picture,-w/2,-h+bob,w,h);
  if(isP){const swing=p.attack>0?(1-p.attack/p.attackDuration):0;const offsetX=29,offsetY=-120;ctx.save();ctx.translate(offsetX,offsetY);ctx.rotate(p.attack>0?(-.85+2.2*swing):-.88);const weapon=img['pipe_charged'];if(p.weapon>0&&weapon.complete)ctx.drawImage(weapon,-12,-18,150,38);ctx.restore();if(p.parry>0){ctx.globalAlpha=clamp(p.parry*4,0,1);const ef=img.burst_blue;ctx.drawImage(ef,5,-230,125,125)}}
  if(a.hitFlash>0){ctx.globalAlpha=clamp(a.hitFlash*3,0,.4);ctx.fillStyle='#ffb2bc';ctx.fillRect(-w*.35,-h*.95,w*.7,h*.81)}
