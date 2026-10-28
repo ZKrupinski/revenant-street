@@ -40,10 +40,35 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 @media(max-width:650px){.touch-controls{bottom:5px;padding:0 6px;gap:5px}.analog-pad{flex-basis:105px;width:105px;height:123px}.analog-ring{width:96px;height:96px}.analog-thumb{width:39px;height:39px}.touch-actions{max-width:190px}.touch-actions button{min-width:46px;min-height:47px;font-size:11px}}
 @media(max-height:540px){.touch-controls{bottom:4px}.analog-pad{height:102px;width:105px;flex-basis:105px}.analog-ring{width:90px;height:90px}.analog-thumb{width:40px;height:40px}.analog-caption{display:none}}
 </style>
+<style id="alpha15-pad">
+/* Alpha 1.5 — genuine four-button gamepad diamond, no finisher key. */
+.touch-actions{--face-btn:clamp(49px,5.6vw,72px);display:grid!important;
+ grid-template-areas:". top ." "left . right" ". bottom .";
+ grid-template-columns:repeat(3,var(--face-btn));grid-template-rows:repeat(3,var(--face-btn));
+ width:max-content;max-width:none!important;gap:2px;align-content:end;justify-content:end;pointer-events:none}
+.touch-actions button{width:var(--face-btn);height:var(--face-btn);
+ min-width:0!important;min-height:0!important;padding:0;
+ display:flex;align-items:center;justify-content:center;
+ border-radius:50%!important;font-size:clamp(11px,1.3vw,15px);
+ font-weight:900;border:2px solid #d2d9e3ba;touch-action:none;user-select:none;
+ text-shadow:0 2px 3px #000;
+ background:radial-gradient(circle at 35% 27%,#3e4b67e8,#121b2cf2 72%);
+ box-shadow:inset 0 2px 5px #ffffff27,0 3px 0 #010711,0 5px 12px #000b}
+.touch-actions [data-key="k"]{grid-area:top}
+.touch-actions [data-key="l"]{grid-area:left}
+.touch-actions [data-key="j"]{grid-area:right}
+.touch-actions [data-key="Shift"]{grid-area:bottom}
+.touch-actions button.attack{background:radial-gradient(circle at 35% 27%,#f55c72,#9e172f 72%);
+ border-color:#ffe4e8;box-shadow:inset 0 2px 8px #ffd0d090,0 3px 0 #3e0d1c,0 0 12px #ff4d6466}
+.touch-actions button.pressed,.touch-actions button:active{filter:brightness(1.45);transform:translateY(2px)}
+@media(max-width:790px){.touch-actions{--face-btn:clamp(48px,6vw,57px)}}
+@media(max-width:590px) and (orientation:portrait){.touch-actions{--face-btn:clamp(46px,12vw,58px);gap:1px}.touch-controls{padding:0 5px}}
+@media(max-height:440px) and (orientation:landscape){.touch-actions{--face-btn:clamp(45px,11.4vh,54px);gap:1px}}
+</style>
 </head>
 <body>
 <div id="app">
-  <header class="masthead"><div class="brand"><span class="brand-kicker">PROJECT Z–ACTION / PLAYABLE COMBAT PROTOTYPE</span><strong>REVENANT <em>STREET</em></strong></div><div class="status"><span class="status-dot"></span><span id="statusLabel">STANDBY</span><span class="ver">ALPHA 1.4</span></div></header>
+  <header class="masthead"><div class="brand"><span class="brand-kicker">PROJECT Z–ACTION / PLAYABLE COMBAT PROTOTYPE</span><strong>REVENANT <em>STREET</em></strong></div><div class="status"><span class="status-dot"></span><span id="statusLabel">STANDBY</span><span class="ver">ALPHA 1.5</span></div></header>
   <main class="stage-wrap" id="stageWrap">
     <canvas id="game" width="1280" height="720" aria-label="레버넌트 스트리트 게임 화면"></canvas>
 <svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs><filter id="z-alpha-key" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  4 -5 4 0 1"/></filter></defs></svg>
@@ -64,12 +89,12 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="hint" id="hint" hidden></div>
     <div class="touch-controls" id="touchControls" hidden>
       <div class="analog-pad" id="analogPad" role="group" aria-label="드래그 조이스틱"><div class="analog-ring"><div class="analog-axis"></div><div class="analog-thumb" id="analogThumb"></div></div><span class="analog-caption">MOVE</span></div>
-      <div class="touch-actions"><button data-key="Shift" class="touch-small">회피</button><button data-key="k">점프</button><button data-key="l">패링</button><button data-key="i" class="finisher">처형</button><button data-key="j" class="attack">공격</button></div>
+      <div class="touch-actions" role="group" aria-label="4버튼 게임패드"><button data-key="k" aria-label="점프">점프</button><button data-key="l" aria-label="패링">패링</button><button data-key="j" class="attack" aria-label="공격, 그로기 적 앞에서 처형">공격</button><button data-key="Shift" aria-label="회피">회피</button></div>
     </div>
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
-    <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 펀치/킥 랜덤 콤보 · K 점프 · L 패링 · SHIFT 회피 · I 처형 · E 줍기</span><span>GAMEPAD 지원</span></div>
+    <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 콤보/자동 처형 · K 점프 · L 패링 · SHIFT 회피 · E 줍기</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.4 — KICK GUARANTEE · BELT MATTE</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.5 — DIAMOND PAD · SWARM AI</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -322,7 +347,7 @@ function setStatus(s){$('statusLabel').textContent=s}function flash(text,duratio
 function showMenu(html){if(typeof resetAnalog==='function')resetAnalog();gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;$('hud').hidden=gameState==='menu';$('touchControls').hidden=true}
 function hideMenu(){ $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;$('bottomTip').style.display='flex';showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1><p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p><div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div><div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button><button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div><p class="micro">가로 10화면 탐험 · 3웨이브 · 엘리트 보스 · 성장 허브 구현 / 키보드·게임패드·드래그 조이스틱</p>`)}
-function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>좌우 + 깊이 이동</div><div><kbd>J / X</kbd>펀치 + 킥 랜덤 콤보</div><div><kbd>K / A</kbd>점프 (지상 횡베기 회피)</div><div><kbd>L / LB</kbd>저스트 가드 (패링)</div><div><kbd>SHIFT / B</kbd>회피 대시</div><div><kbd>I / Y</kbd>그로기 적 처형</div><div><kbd>E / RB</kbd>무기 줍기</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
+function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>좌우 + 깊이 이동</div><div><kbd>J / X</kbd>펀치·킥 콤보 / 자동 처형</div><div><kbd>K / A</kbd>점프 (지상 횡베기 회피)</div><div><kbd>L / LB</kbd>저스트 가드 (패링)</div><div><kbd>SHIFT / B</kbd>회피 대시</div><div><kbd>J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>E / RB</kbd>무기 줍기</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
 function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.damageBoost=perma.servo*2;level=1;runKills=0}
 function startRun(){resetPlayer();wave=0;fx=[];drops=[];enemies=[];gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();flash('CHAPTER 01 : 침수된 거리',2);sound('attack')}
 function spawnWave(){
@@ -353,9 +378,16 @@ function pickComboMove(step,last,armed){
  for(const [name,weight] of pool){roll-=weight;if(roll<=0)return name}
  return pool[pool.length-1][0];
 }
+function findExecutionTarget(){
+ return enemies.filter(e=>!e.dead&&e.groggy>0&&(e.x-p.x)*p.facing>=-16&&
+ (e.x-p.x)*p.facing<142&&Math.abs(e.y-p.y)<67)
+ .sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0]||null;
+}
 function startAttack(){
  if(gameState!=='playing'||p.stun>0||p.dodge>0)return;
  if(p.attack>0){p.attackQueued=true;return}
+ const finisher=findExecutionTarget();
+ if(finisher){execute(finisher);return}
  const step=p.comboWindow>0?(p.comboIdx+1)%4:0;
  const move=pickComboMove(step,p.moveName,p.weapon>0);
  const isKick=move.endsWith('kick'),cost=isKick?16:12;
@@ -370,7 +402,17 @@ function parry(){if(gameState!=='playing'||p.stun>0||p.parry>0)return;p.parry=.2
 function dodge(){if(gameState!=='playing'||p.dodge>0||p.stun>0||p.stamina<19)return;p.dodge=.28;p.inv=.33;p.dodgeX=p.facing;p.stamina-=19;sound('attack')}
 function jump(){if(gameState!=='playing'||p.z>1||p.stun>0)return;p.vz=530;p.z=2;sound('attack')}
 function pickup(){if(gameState!=='playing')return;const idx=drops.findIndex(d=>Math.hypot(d.x-p.x,(d.y-p.y)*1.7)<110);if(idx!==-1){const d=drops.splice(idx,1)[0];p.weapon=d.type==='charged'?24:18;p.maxWeapon=p.weapon;floatText('PIPE EQUIPPED',p.x,p.y-150,'#8df5ff');sound('parry')}}
-function execute(){if(gameState!=='playing'||p.stun>0)return;const t=enemies.find(e=>!e.dead&&e.groggy>0&&Math.abs(e.x-p.x)<125&&Math.abs(e.y-p.y)<67);if(!t){floatText('NO EXECUTION TARGET',p.x,p.y-150,'#e8a9af');return}p.facing=t.x>p.x?1:-1;p.inv=.9;p.z=0;p.vz=0;p.attack=0;p.hp=clamp(p.hp+14,0,p.maxHp);p.credits+=t.type==='boss'?190:65;hurtEnemy(t,t.type==='boss'?260:999,100);screenShake=25;screenTint=.6;hitStop=.15;fxBurst(t.x,t.y-130,t.type==='boss'?'red':'gold',2.4);flash('EXECUTION!',1.1);sound('execution')}
+function execute(target){
+ if(gameState!=='playing'||p.stun>0||!target||target.dead||target.groggy<=0)return false;
+ p.facing=target.x>=p.x?1:-1;p.inv=.9;p.z=0;p.vz=0;
+ p.moveName='uppercut';p.attackDuration=.48;p.attack=.48;p.hitDone=true;
+ p.attackQueued=false;p.comboWindow=0;
+ p.hp=clamp(p.hp+14,0,p.maxHp);p.credits+=target.type==='boss'?190:65;
+ hurtEnemy(target,target.type==='boss'?260:999,100);
+ screenShake=25;screenTint=.6;hitStop=.15;
+ fxBurst(target.x,target.y-130,target.type==='boss'?'red':'gold',2.4);
+ flash('EXECUTION!',1.1);sound('execution');return true
+}
 function hurtEnemy(e,dmg,poise){if(e.dead)return;e.hp-=dmg;e.poise=clamp(e.poise+poise,0,e.maxPoise);e.stun=e.type==='boss'?.14:.32;e.hitFlash=.14;e.x=clamp(e.x+p.facing*(e.type==='boss'?10:29),55,STAGE_WIDTH-55);fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:1);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');screenShake=clamp(screenShake+5,0,21);hitStop=.055;sound('hit');p.hits++;p.hitTimeout=2.2;
  if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=3.6;e.stun=3.6;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY / I',e.x,e.y-207,'#90e3ff')}
  if(e.type==='boss'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
@@ -399,8 +441,8 @@ function enemyAttack(e){if(e.dead||e.groggy>0)return;const dx=Math.abs(e.x-p.x),
 function fxBurst(x,y,color='red',scale=1){fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8)})}
 function floatText(text,x,y,color){floating.push({text,x,y,color,life:1.05})}
 function messageUpdate(dt){if(messageTime>0){messageTime-=dt;if(messageTime<=0)$('gameMessage').classList.remove('active')}}
-function pollPad(){const g=navigator.getGamepads?.()?.find(Boolean);if(!g){lastGamepad=false;return{dx:0,dy:0}};lastGamepad=true;let dx=Math.abs(g.axes[0])>.19?g.axes[0]:0;let dy=Math.abs(g.axes[1])>.19?g.axes[1]:0;dx+=(g.buttons[15]?.pressed?1:0)-(g.buttons[14]?.pressed?1:0);dy+=(g.buttons[13]?.pressed?1:0)-(g.buttons[12]?.pressed?1:0);const a={attack:g.buttons[2]?.pressed||g.buttons[5]?.pressed,jump:g.buttons[0]?.pressed,parry:g.buttons[4]?.pressed,execute:g.buttons[3]?.pressed,dodge:g.buttons[1]?.pressed,pickup:g.buttons[6]?.pressed,pause:g.buttons[9]?.pressed};for(const [k,v] of Object.entries(a)){if(v&&!padPrev[k])action(k);padPrev[k]=!!v}return{dx:clamp(dx,-1,1),dy:clamp(dy,-1,1)}}
-function action(a){if(a==='start')startRun();else if(a==='attack')startAttack();else if(a==='parry')parry();else if(a==='jump')jump();else if(a==='dodge')dodge();else if(a==='execute')execute();else if(a==='pickup')pickup();else if(a==='pause')pauseToggle()}
+function pollPad(){const g=navigator.getGamepads?.()?.find(Boolean);if(!g){lastGamepad=false;return{dx:0,dy:0}};lastGamepad=true;let dx=Math.abs(g.axes[0])>.19?g.axes[0]:0;let dy=Math.abs(g.axes[1])>.19?g.axes[1]:0;dx+=(g.buttons[15]?.pressed?1:0)-(g.buttons[14]?.pressed?1:0);dy+=(g.buttons[13]?.pressed?1:0)-(g.buttons[12]?.pressed?1:0);const a={attack:g.buttons[2]?.pressed||g.buttons[5]?.pressed,jump:g.buttons[0]?.pressed,parry:g.buttons[4]?.pressed,dodge:g.buttons[1]?.pressed,pickup:g.buttons[6]?.pressed,pause:g.buttons[9]?.pressed};for(const [k,v] of Object.entries(a)){if(v&&!padPrev[k])action(k);padPrev[k]=!!v}return{dx:clamp(dx,-1,1),dy:clamp(dy,-1,1)}}
+function action(a){if(a==='start')startRun();else if(a==='attack')startAttack();else if(a==='parry')parry();else if(a==='jump')jump();else if(a==='dodge')dodge();else if(a==='pickup')pickup();else if(a==='pause')pauseToggle()}
 const analog={dx:0,dy:0,pointerId:null};
 function control(dt,pad){if(gameState!=='playing')return;let dx=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);let dy=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);dx=clamp(dx+pad.dx+analog.dx,-1,1);dy=clamp(dy+pad.dy+analog.dy,-1,1);const mag=Math.hypot(dx,dy);if(mag>1){dx/=mag;dy/=mag}p.moveDX=dx;p.moveDY=dy;if(p.stun<=0){let speed=p.dodge>0?650:240;if(p.dodge>0){dx=p.dodgeX;dy=0}if(p.attack>0)speed*=.52;p.x=clamp(p.x+dx*speed*dt,64,STAGE_WIDTH-64);p.y=clamp(p.y+dy*speed*.52*dt,480,664);if(dx>.1)p.facing=1;else if(dx<-.1)p.facing=-1}if(p.z>0||p.vz>0){p.z+=p.vz*dt;p.vz-=1320*dt;if(p.z<=0){p.z=0;p.vz=0}}
  p.stun=Math.max(0,p.stun-dt);p.inv=Math.max(0,p.inv-dt);p.parry=Math.max(0,p.parry-dt);p.dodge=Math.max(0,p.dodge-dt);p.stamina=clamp(p.stamina+17*dt,0,100);p.comboWindow=Math.max(0,p.comboWindow-dt);p.hitTimeout=Math.max(0,p.hitTimeout-dt);if(p.hitTimeout===0)p.hits=0;
@@ -476,7 +518,7 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const x=Math.r
  if(isP){const swing=p.attack>0?(1-p.attack/p.attackDuration):0;const offsetX=29,offsetY=-120;ctx.save();ctx.translate(offsetX,offsetY);ctx.rotate(p.attack>0?(-.85+2.2*swing):-.88);const weapon=img['pipe_charged'];if(p.weapon>0&&weapon.complete)ctx.drawImage(weapon,-12,-18,150,38);ctx.restore();if(p.parry>0){ctx.globalAlpha=clamp(p.parry*4,0,1);const ef=img.burst_blue;ctx.drawImage(ef,5,-230,125,125)}}
  if(a.hitFlash>0){ctx.globalAlpha=clamp(a.hitFlash*3,0,.4);ctx.fillStyle='#ffb2bc';ctx.fillRect(-w*.35,-h*.95,w*.7,h*.81)}
  ctx.restore();
- if(!isP&&!a.dead){const y0=y-z-h-13;const bw=boss?220:96;ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,y0,bw,7);ctx.fillStyle=boss?'#fe3c54':'#d9aeb2';ctx.fillRect(x-bw/2,y0,bw*clamp(a.hp/a.maxHp,0,1),7);if(a.poise>0){ctx.fillStyle='#7ee5fa';ctx.fillRect(x-bw/2,y0+9,bw*(a.poise/a.maxPoise),4)}if(a.windup>0){ctx.textAlign='center';ctx.fillStyle='#ff697b';ctx.font=`900 ${boss?40:27}px Arial`;ctx.fillText('!',x,y0-13)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('I · EXECUTE',x,y0-12)}}}
+ if(!isP&&!a.dead){const y0=y-z-h-13;const bw=boss?220:96;ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,y0,bw,7);ctx.fillStyle=boss?'#fe3c54':'#d9aeb2';ctx.fillRect(x-bw/2,y0,bw*clamp(a.hp/a.maxHp,0,1),7);if(a.poise>0){ctx.fillStyle='#7ee5fa';ctx.fillRect(x-bw/2,y0+9,bw*(a.poise/a.maxPoise),4)}if(a.windup>0){ctx.textAlign='center';ctx.fillStyle='#ff697b';ctx.font=`900 ${boss?40:27}px Arial`;ctx.fillText('!',x,y0-13)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('공격 → 처형',x,y0-12)}}}
 function drawEffects(){for(const f of fx){let a=img['burst_'+f.color];if(!a?.complete)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}for(const f of floating){ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;ctx.lineWidth=4;ctx.strokeStyle='#10131c';ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);ctx.restore()}}
 function draw(){
  ctx.clearRect(0,0,W,H);ctx.save();
@@ -498,7 +540,7 @@ function deadMenu(){if(gameState==='dead')return;gameState='dead';setStatus('SIG
 function hubMenu(){gameState='hub';$('bossHud').hidden=true;setStatus('REBEL HUB');const opts=[['core','외골격 증설','최대 체력 +20','20 HP'],['servo','동력 관절 보정','모든 공격 피해 +2','ATK +2'],['reflex','인공 반사신경','패링 유효시간 +0.035초','PARRY +']];const html=opts.map(([id,title,txt,short])=>`<button class="upgrade-btn" data-perma="${id}" ${perma.shards<2?'disabled':''}><span class="sym">${short}</span><strong>${title} <small>Lv.${perma[id]}</small></strong><small>${txt} / 비용 2 파편</small></button>`).join('');showMenu(`<div class="eyebrow">SAFE ZONE / CYBERNETIC UNDERGROUND</div><h2>REBEL HUB</h2><p>사망 이후에도 남는 사이버네틱 신체 업그레이드. 파편을 소비해 다음 런을 준비합니다.</p><div class="hub-stat"><span>영구 강화 자원</span><strong>${perma.shards} SHARDS</strong></div><div class="choice-grid">${html}</div><div class="buttons"><button class="main-btn" data-action="start">다시 거리로</button><button class="secondary-btn" data-action="title">타이틀로</button></div>`)}
 function buyUpgrade(k){if(perma.shards<2)return;perma.shards-=2;perma[k]++;save();hubMenu();sound('parry')}
 function pauseToggle(){if(gameState==='playing'){gameState='paused';setStatus('PAUSED');showMenu(`<div class="eyebrow">SYSTEM SUSPENDED</div><h2>일시 정지</h2><p>전투가 일시 정지되었습니다.</p><div class="buttons"><button class="main-btn" data-action="resume">▶ 계속 플레이</button><button class="secondary-btn" data-action="guideResume">조작 안내</button><button class="secondary-btn" data-action="title">타이틀로</button></div>`)}else if(gameState==='paused'){gameState='playing';setStatus('COMBAT LIVE');hideMenu()}}
-function keyDown(ev){const k=ev.key.toLowerCase();if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(k))ev.preventDefault();if(keys.has(k))return;keys.add(k);if(k==='j')startAttack();else if(k==='k'||k===' ')jump();else if(k==='l')parry();else if(k==='i')execute();else if(k==='shift')dodge();else if(k==='e')pickup();else if(k==='escape'||k==='p')pauseToggle();else if(k==='enter'&&gameState==='menu'&&!$('overlay').querySelector('[data-action="start"]')?.disabled)startRun()}
+function keyDown(ev){const k=ev.key.toLowerCase();if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(k))ev.preventDefault();if(keys.has(k))return;keys.add(k);if(k==='j')startAttack();else if(k==='k'||k===' ')jump();else if(k==='l')parry();else if(k==='shift')dodge();else if(k==='e')pickup();else if(k==='escape'||k==='p')pauseToggle();else if(k==='enter'&&gameState==='menu'&&!$('overlay').querySelector('[data-action="start"]')?.disabled)startRun()}
 window.addEventListener('keydown',keyDown);window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
 const analogPad=$('analogPad'),analogThumb=$('analogThumb');
 function resetAnalog(){analog.dx=0;analog.dy=0;analog.pointerId=null;analogThumb.style.translate='0px 0px';analogPad.classList.remove('engaged')}
@@ -524,7 +566,7 @@ window.addEventListener('blur',()=>{keys.clear();resetAnalog()});
 
 $('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.action;if(a==='start')startRun();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')hubMenu();else if(b.dataset.mod)selectMod(b.dataset.mod);else if(b.dataset.perma)buyUpgrade(b.dataset.perma)});
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
-for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='i')execute();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('pointerleave',release)}
+for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('pointerleave',release)}
 for(let i=0;i<110;i++)rain.push({x:rnd(0,1280),y:rnd(0,720),s:rnd(220,590),len:rnd(5,18)});
 window.__revenant={getState:()=>({gameState,wave,player:{x:p.x,y:p.y,z:p.z,hp:p.hp,stamina:p.stamina,weapon:p.weapon,mod:p.mod,mods:[...p.mods]},enemies:enemies.map(e=>({type:e.type,x:e.x,y:e.y,hp:e.hp,poise:e.poise,groggy:e.groggy})),perma}),startRun,attack:startAttack,parry,execute,selectMod,buyUpgrade,forceClear:()=>{enemies=[];updateEnemies(0)},getWorld:()=>({x:p.x,cameraX,wave,stageWidth:STAGE_WIDTH,enemyPositions:enemies.filter(e=>!e.dead).map(e=>e.x)}),getAnalog:()=>({...analog}),getArtStatus:(key)=>{const v=loadZMove(key||'idle');return{ready:v.ready,failed:v.failed,loading:v.loading,frames:v.frames?.length,error:v.error}}};
 titleMenu();requestAnimationFrame(loop);
