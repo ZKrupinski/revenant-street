@@ -352,7 +352,7 @@ function syncZSprite(){if(zArtNode)zArtNode.style.display='none'}
 loadZMove('idle');loadZMove('walk');loadZMove('run');loadZMove('dash');loadZMove('guard');loadZMove('airkick');loadZMove('jab');loadZMove('frontkick');loadZMove('lowkick');loadZMove('roundkick');
 
 const STAGE_WIDTH=12800;let cameraX=0;const WAVE_GATES=[0,4230,8850,12715]; // entire ten-screen world, no per-encounter movement clamp
-let enemies=[],drops=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
+let enemies=[],drops=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
 let perma={core:0,servo:0,reflex:0,shards:0};
 try{const stored=JSON.parse(localStorage.getItem('revenant-perma-v1')||'null');if(stored&&typeof stored.shards==='number')perma={...perma,...stored}}catch(_){}
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),near=(a,b,d)=>Math.abs(a-b)<=d;
@@ -363,7 +363,7 @@ function showMenu(html){if(typeof resetAnalog==='function')resetAnalog();gameSta
 function hideMenu(){ $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;$('bottomTip').style.display='flex';showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1><p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p><div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div><div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button><button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div><p class="micro">가로 10화면 탐험 · 3웨이브 · 엘리트 보스 · 성장 허브 구현 / 키보드·게임패드·드래그 조이스틱</p>`)}
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>좌우 + 깊이 이동</div><div><kbd>J / X</kbd>펀치·킥 콤보 / 자동 처형</div><div><kbd>K / A</kbd>점프 (지상 횡베기 회피)</div><div><kbd>L / LB</kbd>저스트 가드 (패링)</div><div><kbd>SHIFT / B</kbd>대쉬</div><div><kbd>J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>E / RB</kbd>무기 줍기</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
-function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.damageBoost=perma.servo*2;level=1;runKills=0}
+function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.running=false;p.airAttack=false;p.airKickUsed=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.damageBoost=perma.servo*2;level=1;runKills=0}
 function startRun(){resetPlayer();wave=0;fx=[];drops=[];enemies=[];gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();flash('CHAPTER 01 : 침수된 거리',2);sound('attack')}
 function spawnWave(){
  waveClearNotified=false;
@@ -421,21 +421,48 @@ function findExecutionTarget(){
 function startAttack(){
  if(gameState!=='playing'||p.stun>0||p.dodge>0)return;
  if(p.attack>0){p.attackQueued=true;return}
+ if(p.z>16){
+  if(p.airKickUsed||p.stamina<15)return;
+  p.airAttack=true;p.airKickUsed=true;p.counterBoost=false;p.stamina-=15;
+  p.attackDuration=.55;p.attack=.55;p.moveName='airkick';
+  p.hitDone=false;p.attackQueued=false;p.comboWindow=0;
+  p.vz=Math.max(p.vz,115);p.inv=Math.max(p.inv,.14);
+  sound('attack');return;
+ }
  const finisher=findExecutionTarget();
  if(finisher){execute(finisher);return}
+ if(p.riposteWindow>0&&p.riposteTarget&&!p.riposteTarget.dead){
+  const target=p.riposteTarget;p.facing=target.x>=p.x?1:-1;
+  p.riposteWindow=0;p.riposteTarget=null;p.counterRush=.23;p.counterBoost=true;
+  p.airAttack=false;p.attackQueued=false;p.moveName='cross';p.attackDuration=.44;p.attack=.44;
+  p.hitDone=false;p.comboWindow=0;p.stamina=Math.max(0,p.stamina-8);
+  screenShake=Math.max(screenShake,9);fxBurst(p.x+p.facing*70,p.y-115,'blue',1.3);
+  flash('PARRY COUNTER!',.7);sound('attack');return;
+ }
  const step=p.comboWindow>0?(p.comboIdx+1)%4:0;
  const move=pickComboMove(step,p.moveName,p.weapon>0);
  const isKick=move.endsWith('kick'),cost=isKick?16:12;
  if(p.stamina<cost)return;
- p.stamina-=cost;p.comboIdx=step;p.moveName=move;p.attackQueued=false;
+ p.stamina-=cost;p.comboIdx=step;p.moveName=move;p.attackQueued=false;p.airAttack=false;p.counterBoost=false;
  const durations={jab:.31,cross:.37,hook:.41,uppercut:.44,frontkick:.48,lowkick:.40,roundkick:.54};
  p.attackDuration=durations[move]||.36;
  p.attack=p.attackDuration;p.animAge=0;p.hitDone=false;p.glow=.18;p.comboWindow=.95;
  sound('attack');
 }
-function parry(){if(gameState!=='playing'||p.stun>0||p.parry>0)return;p.parry=.24+perma.reflex*.035;p.stamina=clamp(p.stamina-7,0,100);fxBurst(p.x+45*p.facing,p.y-118,'blue',.8);sound('parry')}
-function dodge(){if(gameState!=='playing'||p.dodge>0||p.stun>0||p.stamina<19)return;p.dodge=.28;p.inv=.33;p.dodgeX=p.facing;p.stamina-=19;sound('attack')}
-function jump(){if(gameState!=='playing'||p.z>1||p.stun>0)return;p.vz=530;p.z=2;sound('attack')}
+function parry(){
+ if(gameState!=='playing'||p.stun>0||p.parry>0||p.stamina<7)return;
+ p.attack=0;p.attackQueued=false;p.airAttack=false;p.counterRush=0;
+ p.parryDuration=.34+perma.reflex*.035;p.parry=p.parryDuration;
+ p.inv=Math.max(p.inv,.08);p.stamina-=7;
+ fxBurst(p.x+46*p.facing,p.y-130,'blue',.65);sound('parry');
+}
+function dodge(){
+ if(gameState!=='playing'||p.dodge>0||p.stun>0||p.stamina<19)return;
+ p.attack=0;p.attackQueued=false;p.airAttack=false;p.parry=0;
+ p.dodge=.30;p.inv=.34;p.dodgeX=p.facing;p.stamina-=19;
+ fxBurst(p.x-p.facing*22,p.y-24,'blue',.42);sound('attack');
+}
+function jump(){if(gameState!=='playing'||p.z>1||p.stun>0)return;p.vz=530;p.z=2;p.airKickUsed=false;sound('attack')}
 function pickup(){if(gameState!=='playing')return;const idx=drops.findIndex(d=>Math.hypot(d.x-p.x,(d.y-p.y)*1.7)<110);if(idx!==-1){const d=drops.splice(idx,1)[0];p.weapon=d.type==='charged'?24:18;p.maxWeapon=p.weapon;floatText('PIPE EQUIPPED',p.x,p.y-150,'#8df5ff');sound('parry')}}
 function execute(target){
  if(gameState!=='playing'||p.stun>0||!target||target.dead||target.groggy<=0)return false;
