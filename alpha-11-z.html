@@ -602,6 +602,13 @@ function hurtEnemy(e,dmg,poise){
  const risingStrike=p.moveName==='uppercut'||p.moveName==='rising_elbow'||p.moveName==='rising_headbutt';
  const options=lowStrike?[2,3,8,9]:risingStrike?[1,5,6,10]:[0,1,2,3,4,5,6,7,8,9,10,11];
  e.reactionVariant=options[Math.floor(Math.random()*options.length)];
+ if(e.type==='raider'){
+  const r=e.reactionVariant;
+  e.hitAnimation=r===2||r===8?'hitBody':r===3||r===4||r===11?'hitSpin':
+    r===5||r===10?'hitLaunch':r===6||r===7?'hitFly':'hitHead';
+  e.pendingFall=smash&&e.hp>0&&(r===5||r===6||r===7||r===10);
+  e.proneTime=0;e.riseTime=0;
+ }
  const reactions=[
   [150,0,0,.35],[270,70,35,.43],[105,0,-20,.52],[220,50,-110,.46],
   [390,115,90,.48],[520,330,10,.65],[350,205,120,.60],[460,270,-80,.61],
@@ -611,14 +618,14 @@ function hurtEnemy(e,dmg,poise){
  e.reactionTime=e.reactionDuration=life;
  e.reactionDir=p.facing;
  e.stun=e.type==='boss'?.19:life;
- e.hitFlash=.20;e.windup=0;e.chargePrep=0;e.chargeTime=0;
+ e.hitFlash=.20;e.windup=0;e.chargePrep=0;e.chargeTime=0;e.attackPoseTime=0;
  e.knockVX=p.facing*(e.type==='boss'?vx*.30:vx*(smash?1.20:1));
  e.knockVY=e.type==='boss'?vy*.24:vy;
  e.vz=e.type==='boss'?0:vz*(smash?1.17:1);
  e.x=clamp(e.x+p.facing*(e.type==='boss'?8:22),55,STAGE_WIDTH-55);fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:1);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');screenShake=clamp(screenShake+5,0,21);hitStop=.055;sound('hit');p.hits++;p.hitTimeout=2.2;
  if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=3.6;e.stun=3.6;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
  if(e.type==='boss'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
- if(e.hp<=0){e.dead=true;e.fade=1;runKills++;p.credits+=e.type==='boss'?250:e.type==='guard'?58:30;perma.shards+=0;fxBurst(e.x,e.y-70,'gold',1.1);}}
+ if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;p.credits+=e.type==='boss'?250:e.type==='guard'?58:30;perma.shards+=0;fxBurst(e.x,e.y-70,'gold',1.1);}}
 function attackCheck(){
  const armed=p.weapon>0&&!Z_KICK_MOVES.has(p.moveName)&&!Z_HEAD_MOVES.has(p.moveName)&&!p.airAttack;
  const baseDamage={jab:15,cross:19,hook:22,uppercut:26,backfist:20,hammerfist:30,spinning_elbow:28,rising_elbow:26,superman_punch:32,shovel_hook:23,frontkick:20,lowkick:18,roundkick:29,axe_kick:32,sidekick:27,spinning_heel:34,crescent_kick:28,diagonal_airkick:35,rising_headbutt:27,forward_headbutt:25,airkick:37};
@@ -773,7 +780,24 @@ function updateEnemies(dt){
    if(e.z<=0){e.z=0;e.vz=0}
   }
   e.reactionTime=Math.max(0,(e.reactionTime||0)-dt);
-  if(e.dead){e.fade-=dt*.62;continue}
+  e.spriteTime=(e.spriteTime||0)+dt;
+  e.attackPoseTime=Math.max(0,(e.attackPoseTime||0)-dt);
+  e.visualMoving=false;e.visualSpeed=0;
+  if(e.dead){
+   e.deathAge=(e.deathAge||0)+dt;
+   if(e.deathAge>.72)e.fade-=dt*.74;
+   continue;
+  }
+  if(e.type==='raider'){
+   if(e.pendingFall&&e.reactionTime<=0&&e.z<=4){
+    e.pendingFall=false;e.proneTime=.62;e.riseTime=0;
+    e.stun=Math.max(e.stun,1.3);
+   }
+   if(e.proneTime>0){
+    e.proneTime=Math.max(0,e.proneTime-dt);
+    if(e.proneTime===0)e.riseTime=.67;
+   }else if(e.riseTime>0)e.riseTime=Math.max(0,e.riseTime-dt);
+  }
   e.stun=Math.max(0,e.stun-dt);
   e.inv=Math.max(0,e.inv-dt);
   e.hitFlash=Math.max(0,e.hitFlash-dt);
@@ -782,8 +806,8 @@ function updateEnemies(dt){
   e.bleed=Math.max(0,e.bleed-dt);
   if(e.groggy>0){e.groggy-=dt;if(e.groggy<=0){e.poise=0;e.stun=0}}
   if(e.bleed>0)e.hp-=dt*2.5;
-  if(e.hp<=0){e.dead=true;runKills++;p.credits+=40;continue}
-  if(e.stun>0||e.shock>.35||e.groggy>0)continue;
+  if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;p.credits+=40;continue}
+  if(e.stun>0||e.shock>.35||e.groggy>0||e.proneTime>0||e.riseTime>0)continue;
   let dx=p.x-e.x,dy=p.y-e.y,dist=Math.abs(dx);
   if(dist>920)continue;
   e.face=dx>=0?1:-1;
@@ -791,7 +815,7 @@ function updateEnemies(dt){
   e.chargeCooldown=Math.max(0,e.chargeCooldown-dt);
   if(e.windup>0){
    e.windup-=dt;
-   if(e.windup<=0){enemyAttack(e);e.cooldown=e.type==='boss'?.98:1.18+(e.slot%3)*.22;e.attackDone=true}
+   if(e.windup<=0){enemyAttack(e);e.attackPoseTime=.17;e.cooldown=e.type==='boss'?.98:1.18+(e.slot%3)*.22;e.attackDone=true}
    continue;
   }
   const frozenSpeed=e.freeze>0?.52:1;
@@ -803,18 +827,21 @@ function updateEnemies(dt){
    continue;
   }
   if(e.chargeTime>0){
+   const lastX=e.x,lastY=e.y;
    e.chargeTime-=dt;
    const rush=Math.max(365,speed*3.25);
    const side=dx>=0?1:-1;
    e.x=clamp(e.x+side*Math.min(Math.abs(dx),rush*dt),45,STAGE_WIDTH-45);
    e.y=clamp(e.y+Math.sign(dy)*Math.min(Math.abs(dy),rush*.35*dt),480,665);
    if(Math.abs(e.x-p.x)<e.reach+62&&Math.abs(e.y-p.y)<55){
-    e.chargeTime=0;e.windup=.16;e.chargeReady=false;
+    e.chargeTime=0;e.windup=.16;e.windupDuration=.16;e.chargeReady=false;
    }
+   const moved=Math.hypot(e.x-lastX,(e.y-lastY)*1.7);
+   e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
    continue;
   }
   if((e.brain==='charger'||e.brain==='feint')&&e.chargeCooldown<=0&&dist>145&&dist<420&&Math.abs(dy)<135){
-   e.chargePrep=e.brain==='charger'?.34:.48;
+   e.chargePrep=e.brain==='charger'?.34:.48;e.chargePrepDuration=e.chargePrep;
    e.chargeCooldown=2.7+(e.slot%5)*.63;
    continue;
   }
@@ -828,12 +855,16 @@ function updateEnemies(dt){
   const readyToHit=dist<e.reach+64&&Math.abs(dy)<55&&e.z<40;
   const activeWindups=enemies.filter(o=>o!==e&&!o.dead&&(o.windup>0||o.chargeTime>0)&&Math.abs(o.x-p.x)<200).length;
   if(readyToHit&&e.cooldown<=0&&activeWindups<2){
-   e.windup=e.type==='boss'?.75:.42+(e.slot%3)*.065;
+   e.windup=e.type==='boss'?.75:.42+(e.slot%3)*.065;e.windupDuration=e.windup;
    e.attackDone=false;continue;
   }
+  const lastX=e.x,lastY=e.y;
   if(Math.abs(targetX-e.x)>4)e.x+=Math.sign(targetX-e.x)*Math.min(Math.abs(targetX-e.x),moveSpeed*dt);
   if(Math.abs(targetY-e.y)>5)e.y+=Math.sign(targetY-e.y)*Math.min(Math.abs(targetY-e.y),moveSpeed*.78*dt);
   e.x=clamp(e.x,45,STAGE_WIDTH-45);e.y=clamp(e.y,480,665);
+  const moved=Math.hypot(e.x-lastX,(e.y-lastY)*1.7);
+  e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
+  e.spriteDistance+=moved;
  }
  resolveBodyCollisions();
  enemies=enemies.filter(e=>!e.dead||e.fade>0);
