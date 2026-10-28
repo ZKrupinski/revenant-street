@@ -202,7 +202,8 @@ function prepareZCells(im){
    for(const n of primary.parts)keep[n]=1;
    for(let j=1;j<groups.length;j++){
     const g=groups[j],prox=g.minx<=primary.maxx+27&&g.maxx>=primary.minx-27&&g.miny<=primary.maxy+27&&g.maxy>=primary.miny-27;
-    if(prox&&(g.area>=12||(g.minx>=primary.minx-8&&g.maxx<=primary.maxx+8&&g.miny>=primary.miny-26&&g.maxy<=primary.maxy+10)))for(const n of g.parts)keep[n]=1;
+    const closeToBody=g.minx>=primary.minx-17&&g.maxx<=primary.maxx+17&&g.miny>=primary.miny-32&&g.maxy<=primary.maxy+18;
+    if(prox&&closeToBody&&(g.area>=7||(g.minx>=primary.minx-8&&g.maxx<=primary.maxx+8)))for(const n of g.parts)keep[n]=1;
    }
    for(let n=0;n<w*h;n++)if(d[n*4+3]>0&&!keep[n])d[n*4+3]=0;
   }
