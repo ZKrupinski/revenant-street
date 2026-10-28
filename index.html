@@ -400,7 +400,10 @@ function makeEnemy(type,x,y,index){
  poise:0,maxPoise:poise,speed,damage,reach,stun:0,inv:0,windup:0,
  cooldown:(index%3)*.23+.38,attackDone:false,hitFlash:0,groggy:0,phase:1,
  dead:false,fade:1,decision:0,strafe:Math.random()>.5?1:-1,
- bleed:0,shock:0,freeze:0}
+ bleed:0,shock:0,freeze:0,
+  brain:type==='boss'?'boss':['swarm','feint','charger','swarm','feint','charger'][index%6],
+  chargeCooldown:1.6+(index%5)*.48,chargePrep:0,chargeTime:0,
+  reactionVariant:0,reactionTime:0,reactionDuration:.48,reactionDir:1}
 }
 const Z_FIST_NAMES=['jab','cross','hook','uppercut','backfist','hammerfist','spinning_elbow','rising_elbow','superman_punch','shovel_hook'];
 const Z_KICK_NAMES=['frontkick','roundkick','lowkick','axe_kick','sidekick','spinning_heel','crescent_kick','diagonal_airkick'];
@@ -501,10 +504,29 @@ function execute(target){
  fxBurst(target.x,target.y-130,target.type==='boss'?'red':'gold',2.4);
  flash('EXECUTION!',1.1);sound('execution');return true
 }
-function hurtEnemy(e,dmg,poise){if(e.dead)return;e.hp-=dmg;e.poise=clamp(e.poise+poise,0,e.maxPoise);e.stun=e.type==='boss'?.19:.52;e.hitFlash=.14;
+function hurtEnemy(e,dmg,poise){
+ if(e.dead)return;
+ e.hp-=dmg;e.poise=clamp(e.poise+poise,0,e.maxPoise);
+ // Twelve distinct impacts: head snaps, gut folds, ankle buckles, spins,
+ // side stumbles and aerial knockdowns. Keep the existing enemy bitmap.
  const smash=Z_KICK_MOVES.has(p.moveName)||Z_HEAD_MOVES.has(p.moveName)||p.moveName==='uppercut'||dmg>=60;
- e.knockVX=p.facing*(e.type==='boss'?(smash?130:63):(smash?530:305));
- e.knockVY=rnd(-85,85);e.vz=e.type==='boss'?0:(smash?285:185);
+ const lowStrike=p.moveName==='lowkick'||p.moveName==='shovel_hook';
+ const risingStrike=p.moveName==='uppercut'||p.moveName==='rising_elbow'||p.moveName==='rising_headbutt';
+ const options=lowStrike?[2,3,8,9]:risingStrike?[1,5,6,10]:[0,1,2,3,4,5,6,7,8,9,10,11];
+ e.reactionVariant=options[Math.floor(Math.random()*options.length)];
+ const reactions=[
+  [150,0,0,.35],[270,70,35,.43],[105,0,-20,.52],[220,50,-110,.46],
+  [390,115,90,.48],[520,330,10,.65],[350,205,120,.60],[460,270,-80,.61],
+  [105,10,65,.53],[255,95,-140,.46],[450,285,55,.62],[310,155,-60,.55]
+ ];
+ const [vx,vz,vy,life]=reactions[e.reactionVariant];
+ e.reactionTime=e.reactionDuration=life;
+ e.reactionDir=p.facing;
+ e.stun=e.type==='boss'?.19:life;
+ e.hitFlash=.20;e.windup=0;e.chargePrep=0;e.chargeTime=0;
+ e.knockVX=p.facing*(e.type==='boss'?vx*.30:vx*(smash?1.20:1));
+ e.knockVY=e.type==='boss'?vy*.24:vy;
+ e.vz=e.type==='boss'?0:vz*(smash?1.17:1);
  e.x=clamp(e.x+p.facing*(e.type==='boss'?8:22),55,STAGE_WIDTH-55);fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:1);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');screenShake=clamp(screenShake+5,0,21);hitStop=.055;sound('hit');p.hits++;p.hitTimeout=2.2;
  if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=3.6;e.stun=3.6;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
  if(e.type==='boss'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
@@ -622,20 +644,47 @@ function control(dt,pad){
  }
  if((p.attackQueued||keys.has('j')||padPrev.attack)&&p.attack===0&&p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){p.attackQueued=false;startAttack()}
 }
+function resolveBodyCollisions(){
+ // Physics uses compact footprint ellipses at floor height, not full sprite
+ // bounding rectangles. Shallow Y lanes let crowds pass without stacking.
+ const bodies=[p,...enemies.filter(e=>!e.dead&&e.z<37)];
+ const rx=a=>a===p?39:a.type==='boss'?82:a.type==='guard'?43:a.type==='assassin'?32:35;
+ const ry=a=>a===p?21:a.type==='boss'?33:a.type==='guard'?23:19;
+ for(let pass=0;pass<3;pass++){
+  for(let i=0;i<bodies.length;i++)for(let j=i+1;j<bodies.length;j++){
+   const a=bodies[i],b=bodies[j];
+   if((a===p&&p.z>38)||b.z>38||a.z>38)continue;
+   const wx=rx(a)+rx(b),wy=ry(a)+ry(b);
+   let dx=a.x-b.x,dy=a.y-b.y;
+   if(Math.abs(dx)>wx||Math.abs(dy)>wy)continue;
+   let dist=Math.hypot(dx/wx,dy/wy);
+   if(dist>=1)continue;
+   if(dist<.001){dx=(i+j)%2?1:-1;dy=(i%3-1)*.45;dist=Math.hypot(dx/wx,dy/wy)}
+   const gap=1-dist+.006;
+   const shiftX=(dx/wx)/dist*wx*gap,shiftY=(dy/wy)/dist*wy*gap;
+   const playerBoss=(a===p||b===p)&&(a.type==='boss'||b.type==='boss');
+   const weightA=playerBoss?(a===p?.80:.20):a===p?.36:b===p?.64:.5;
+   a.x=clamp(a.x+shiftX*weightA,55,STAGE_WIDTH-55);
+   b.x=clamp(b.x-shiftX*(1-weightA),55,STAGE_WIDTH-55);
+   a.y=clamp(a.y+shiftY*weightA,480,664);
+   b.y=clamp(b.y-shiftY*(1-weightA),480,664);
+  }
+ }
+}
 function updateEnemies(dt){
- // Impulse-based knockbacks continue through stun and death.
  for(const e of enemies){
   if(Math.abs(e.knockVX)>1||Math.abs(e.knockVY)>1){
    e.x=clamp(e.x+e.knockVX*dt,45,STAGE_WIDTH-45);
    e.y=clamp(e.y+e.knockVY*dt,480,665);
-   const drag=Math.exp(-3.9*dt);
+   const drag=Math.exp(-4.0*dt);
    e.knockVX*=drag;e.knockVY*=drag;
   }
   if(e.z>0||e.vz>0){
    e.z=Math.max(0,e.z+e.vz*dt);
-   e.vz-=820*dt;
+   e.vz-=840*dt;
    if(e.z<=0){e.z=0;e.vz=0}
   }
+  e.reactionTime=Math.max(0,(e.reactionTime||0)-dt);
   if(e.dead){e.fade-=dt*.62;continue}
   e.stun=Math.max(0,e.stun-dt);
   e.inv=Math.max(0,e.inv-dt);
@@ -647,47 +696,58 @@ function updateEnemies(dt){
   if(e.bleed>0)e.hp-=dt*2.5;
   if(e.hp<=0){e.dead=true;runKills++;p.credits+=40;continue}
   if(e.stun>0||e.shock>.35||e.groggy>0)continue;
-  const dx=p.x-e.x,dy=p.y-e.y,dist=Math.abs(dx);
-  if(dist>840)continue;
+  let dx=p.x-e.x,dy=p.y-e.y,dist=Math.abs(dx);
+  if(dist>920)continue;
   e.face=dx>=0?1:-1;
   e.cooldown=Math.max(0,e.cooldown-dt);
+  e.chargeCooldown=Math.max(0,e.chargeCooldown-dt);
   if(e.windup>0){
    e.windup-=dt;
-   if(e.windup<=0){enemyAttack(e);e.cooldown=e.type==='boss'?.98:1.08+(e.slot%3)*.19;e.attackDone=true}
+   if(e.windup<=0){enemyAttack(e);e.cooldown=e.type==='boss'?.98:1.18+(e.slot%3)*.22;e.attackDone=true}
    continue;
   }
-  // Every active mob wants to close, not flee into distant staging slots.
+  const frozenSpeed=e.freeze>0?.52:1;
+  const speed=e.speed*frozenSpeed*(e.phase===2?1.12:1);
+  if(e.chargePrep>0){
+   e.chargePrep-=dt;
+   // Hold position for a readable tell, then suddenly accelerate.
+   if(e.chargePrep<=0){e.chargePrep=0;e.chargeTime=.44;e.chargeReady=true}
+   continue;
+  }
+  if(e.chargeTime>0){
+   e.chargeTime-=dt;
+   const rush=Math.max(365,speed*3.25);
+   const side=dx>=0?1:-1;
+   e.x=clamp(e.x+side*Math.min(Math.abs(dx),rush*dt),45,STAGE_WIDTH-45);
+   e.y=clamp(e.y+Math.sign(dy)*Math.min(Math.abs(dy),rush*.35*dt),480,665);
+   if(Math.abs(e.x-p.x)<e.reach+62&&Math.abs(e.y-p.y)<55){
+    e.chargeTime=0;e.windup=.16;e.chargeReady=false;
+   }
+   continue;
+  }
+  if((e.brain==='charger'||e.brain==='feint')&&e.chargeCooldown<=0&&dist>145&&dist<420&&Math.abs(dy)<135){
+   e.chargePrep=e.brain==='charger'?.34:.48;
+   e.chargeCooldown=2.7+(e.slot%5)*.63;
+   continue;
+  }
   const side=e.x>=p.x?1:-1;
-  const targetX=clamp(p.x+side*(e.type==='boss'?112:49+(e.slot%3)*13),55,STAGE_WIDTH-55);
-  const targetY=clamp(p.y+(e.type==='boss'?0:[-28,10,31][e.slot%3]),484,656);
-  const packCount=enemies.filter(o=>o!==e&&!o.dead&&o.type!=='boss'&&Math.abs(o.x-e.x)<190).length;
-  const surge=packCount>=1&&e.type!=='boss'?1.27:1.13;
-  const speed=e.speed*surge*(e.freeze>0?.48:1)*(e.phase===2?1.12:1);
-  const readyToHit=dist<e.reach+45&&Math.abs(dy)<55&&e.z<42;
-  const activeWindups=enemies.filter(o=>o!==e&&!o.dead&&o.windup>0&&Math.abs(o.x-p.x)<190).length;
-  if(readyToHit&&e.cooldown===0&&activeWindups<2){
-   e.windup=e.type==='boss'?.77:.42+(e.slot%3)*.075;
+  const spacing=e.brain==='feint'?145+(e.slot%3)*16:e.brain==='charger'?121+(e.slot%3)*13:e.type==='boss'?132:77+(e.slot%3)*12;
+  const lanes=[-47,-19,24,47,-31,10];
+  const targetX=clamp(p.x+side*spacing,55,STAGE_WIDTH-55);
+  const targetY=clamp(p.y+lanes[e.slot%6],484,656);
+  const friends=enemies.filter(o=>o!==e&&!o.dead&&o.type!=='boss'&&Math.abs(o.x-e.x)<180).length;
+  const moveSpeed=speed*(friends?1.21:1.08);
+  const readyToHit=dist<e.reach+64&&Math.abs(dy)<55&&e.z<40;
+  const activeWindups=enemies.filter(o=>o!==e&&!o.dead&&(o.windup>0||o.chargeTime>0)&&Math.abs(o.x-p.x)<200).length;
+  if(readyToHit&&e.cooldown<=0&&activeWindups<2){
+   e.windup=e.type==='boss'?.75:.42+(e.slot%3)*.065;
    e.attackDone=false;continue;
   }
-  if(Math.abs(targetX-e.x)>8)e.x+=Math.sign(targetX-e.x)*Math.min(Math.abs(targetX-e.x),speed*dt);
-  if(Math.abs(targetY-e.y)>6)e.y+=Math.sign(targetY-e.y)*Math.min(Math.abs(targetY-e.y),speed*.75*dt);
-  if(Math.abs(e.x-p.x)<38&&Math.abs(e.y-p.y)<32)e.x=clamp(p.x+side*38,45,STAGE_WIDTH-45);
+  if(Math.abs(targetX-e.x)>4)e.x+=Math.sign(targetX-e.x)*Math.min(Math.abs(targetX-e.x),moveSpeed*dt);
+  if(Math.abs(targetY-e.y)>5)e.y+=Math.sign(targetY-e.y)*Math.min(Math.abs(targetY-e.y),moveSpeed*.78*dt);
   e.x=clamp(e.x,45,STAGE_WIDTH-45);e.y=clamp(e.y,480,665);
  }
- // Nearby fodder jostle, but remain close enough for a multi-target combo.
- for(let i=0;i<enemies.length;i++)for(let j=i+1;j<enemies.length;j++){
-  const a=enemies[i],b=enemies[j];if(a.dead||b.dead||a.z>35||b.z>35)continue;
-  let dx=a.x-b.x,dy=(a.y-b.y)*1.4,dist=Math.hypot(dx,dy);
-  const min=a.type==='boss'||b.type==='boss'?110:69;
-  if(dist<min){
-   if(dist<1){dx=1;dist=1}
-   const push=Math.min((min-dist)*dt*4.2,7.5);
-   a.x=clamp(a.x+dx/dist*push,45,STAGE_WIDTH-45);
-   b.x=clamp(b.x-dx/dist*push,45,STAGE_WIDTH-45);
-   a.y=clamp(a.y+dy/dist*push*.25,480,665);
-   b.y=clamp(b.y-dy/dist*push*.25,480,665);
-  }
- }
+ resolveBodyCollisions();
  enemies=enemies.filter(e=>!e.dead||e.fade>0);
  if(gameState==='playing'&&enemies.length===0){
   if(!waveClearNotified){waveClearNotified=true;flash('구역 확보 — 오른쪽으로 전진!',2)}
@@ -732,13 +792,25 @@ function ellipseShadow(x,y,s=1,alpha=.36){ctx.save();ctx.globalAlpha=alpha;ctx.f
 function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const x=Math.round(a.x),y=Math.round(a.y),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?getZMove():'';
  if(isP){ellipseShadow(x,y,1.06,.45);paintZ(x,y,z);return;}
  const picture=img[a.type];if(!picture?.complete||!picture.naturalWidth)return;const w=isP?128:boss?340:(a.type==='guard'?148:a.type==='assassin'?120:122);const h=isP?260:boss?328:186;ellipseShadow(x,y,boss?2.05:isP?1.06:.85,1/(1+z*.022)*.45);
- ctx.save();ctx.globalAlpha=a.dead?clamp(a.fade,0,1):isP&&p.inv>0&&Math.sin(time*33)>0?.64:1;ctx.translate(x,Math.round(y-z));ctx.scale(a.facing||a.face||1,1);let bob=isP?Math.sin(time*10)*1.6:Math.sin(time*5+a.x)*1.5;const lean=isP&&p.attack>0?.08*Math.sin((1-p.attack/p.attackDuration)*Math.PI):!isP&&Math.abs(a.knockVX||0)>18?clamp(a.knockVX/1100,-.38,.38):a.windup>0?-.08:0;
- ctx.rotate(lean);
+ ctx.save();ctx.globalAlpha=a.dead?clamp(a.fade,0,1):1;
+ const impacted=!isP&&(a.reactionTime||0)>0;
+ const phase=impacted?clamp(1-a.reactionTime/Math.max(.001,a.reactionDuration||.5),0,1):0;
+ const snap=Math.sin(phase*Math.PI),variant=impacted?(a.reactionVariant%12):0;
+ const tilts=[-.15,-.31,.38,.22,-.44,-.66,-1.35,-.88,.48,-.28,-1.13,.63];
+ const scalesX=[1.05,1.10,1.18,.94,1.06,1.10,.90,1.13,1.24,1.06,.86,1.12];
+ const scalesY=[.96,.90,.80,1.03,.93,.87,.91,.89,.76,.96,.88,.91];
+ const offsetY=impacted?(variant===8?24:variant===2?13:variant===6?-22:0)*snap:0;
+ ctx.translate(x+((a.reactionDir||1)*snap*(variant===9?13:variant===3?-10:0)),Math.round(y-z+offsetY));
+ ctx.scale(a.facing||a.face||1,1);
+ const knockLean=!isP&&Math.abs(a.knockVX||0)>18?clamp(a.knockVX/1400,-.28,.28):a.windup>0?-.08:0;
+ ctx.rotate(knockLean+(impacted?tilts[variant]*snap:0));
+ if(impacted)ctx.scale(1+(scalesX[variant]-1)*snap,1+(scalesY[variant]-1)*snap);
  ctx.drawImage(picture,-w/2,-h+bob,w,h);
  if(isP){const swing=p.attack>0?(1-p.attack/p.attackDuration):0;const offsetX=29,offsetY=-120;ctx.save();ctx.translate(offsetX,offsetY);ctx.rotate(p.attack>0?(-.85+2.2*swing):-.88);const weapon=img['pipe_charged'];if(p.weapon>0&&weapon.complete)ctx.drawImage(weapon,-12,-18,150,38);ctx.restore();if(p.parry>0){ctx.globalAlpha=clamp(p.parry*4,0,1);const ef=img.burst_blue;ctx.drawImage(ef,5,-230,125,125)}}
  if(a.hitFlash>0){ctx.globalAlpha=clamp(a.hitFlash*3,0,.4);ctx.fillStyle='#ffb2bc';ctx.fillRect(-w*.35,-h*.95,w*.7,h*.81)}
  ctx.restore();
- if(!isP&&!a.dead){const y0=y-z-h-13;const bw=boss?220:96;ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,y0,bw,7);ctx.fillStyle=boss?'#fe3c54':'#d9aeb2';ctx.fillRect(x-bw/2,y0,bw*clamp(a.hp/a.maxHp,0,1),7);if(a.poise>0){ctx.fillStyle='#7ee5fa';ctx.fillRect(x-bw/2,y0+9,bw*(a.poise/a.maxPoise),4)}if(a.windup>0){ctx.textAlign='center';ctx.fillStyle='#ff697b';ctx.font=`900 ${boss?40:27}px Arial`;ctx.fillText('!',x,y0-13)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('공격 → 처형',x,y0-12)}}}
+ if(!isP&&!a.dead){const y0=y-z-h-13;const bw=boss?220:96;ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,y0,bw,7);ctx.fillStyle=boss?'#fe3c54':'#d9aeb2';ctx.fillRect(x-bw/2,y0,bw*clamp(a.hp/a.maxHp,0,1),7);if(a.poise>0){ctx.fillStyle='#7ee5fa';ctx.fillRect(x-bw/2,y0+9,bw*(a.poise/a.maxPoise),4)}if(a.windup>0){ctx.textAlign='center';ctx.fillStyle='#ff697b';ctx.font=`900 ${boss?40:27}px Arial`;ctx.fillText('!',x,y0-13)}
+ if(a.chargePrep>0){ctx.textAlign='center';ctx.fillStyle='#ffb842';ctx.font='900 31px Arial';ctx.fillText('!!',x,y0-18)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('공격 → 처형',x,y0-12)}}}
 function drawEffects(){for(const f of fx){let a=img['burst_'+f.color];if(!a?.complete)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}for(const f of floating){ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;ctx.lineWidth=4;ctx.strokeStyle='#10131c';ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);ctx.restore()}}
 function draw(){
  ctx.clearRect(0,0,W,H);ctx.save();
