@@ -1002,7 +1002,7 @@ function parry(){
 function dodge(){
  if(gameState!=='playing'||p.dodge>0||p.stun>0||p.downTimer>0||p.getupTimer>0||p.stamina<19)return;
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.attackDriveRemaining=0;p.parry=0;
- const backInput=p.moveDX*p.facing<-.42||analog.dx*p.facing<-.42||((keys.has('a')||keys.has('arrowleft'))&&p.facing>0)||((keys.has('d')||keys.has('arrowright'))&&p.facing<0);
+ const backInput=p.moveDX*p.facing<-.42||analog.dx*p.facing<-.42||(keys.has('a')&&p.facing>0)||(keys.has('d')&&p.facing<0);
  p.evadeBackstep=backInput;p.dodge=.30;p.inv=.34;p.dodgeX=backInput?-p.facing:p.facing;p.stamina-=19;
  fxBurst(p.x-p.facing*22,p.y-24,'blue',.42);sound('attack');
 }
