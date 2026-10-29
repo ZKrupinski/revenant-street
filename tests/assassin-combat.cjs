@@ -177,6 +177,9 @@ test('new black-hoodie protagonist maps gameplay motions to eight local original
  assert(html.includes('Z_HOODIE_HERO?prepareTransparentHeroCells'),'transparent new art must avoid green-screen flood fill');
  assert(lab.includes('preclearedHeroFrames'),'lab must preview black clothing safely');
  assert(lab.includes('isBlackHoodieHero'),'lab must show new hero by default');
- assert.equal(t.currentZFrameIndex('getup'),7,'new hero get-up must reverse death animation');
+ t.p.getupTimer=.64;t.p.recoveryDuration=.64;
+ assert.equal(t.currentZFrameIndex('getup'),7,'new hero get-up must start with the last fallen frame');
+ t.p.getupTimer=0;
+ assert.equal(t.currentZFrameIndex('getup'),0,'new hero get-up must finish on the first upright frame');
 });
 console.log(`${checks} combat regression checks passed`);
