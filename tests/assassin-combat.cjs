@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,control,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,control,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('existing wave composition preserves assassin slots',()=>{g.startRun();assert.equal(t.getEnemies().filter(e=>e.type==='assassin').length,6)});
@@ -218,5 +218,42 @@ test('original armored Z uses four local Higgsfield sprite motions and retains r
  assert(game.includes("const Z_HF_ART=!/(?:[?&])zart=original"),'game needs one-click original-Z art rollback');
  assert(game.includes("if(!zUsePreviousGait)"),'old walking and running must remain selectable');
  assert(game.includes("const Z_HOODIE_HERO=/(?:[?&])hero=hoodie"),'do not change the playable character identity');
+});
+
+test('successful heavy hits trigger actor vibration and decay without gameplay movement',()=>{
+ g.startRun();
+ const e=t.makeEnemy('raider',t.p.x+100,t.p.y,0);t.setEnemies([e]);
+ t.p.moveName='roundkick';
+ const startX=e.x,startY=e.y;
+ t.hurtEnemy(e,24,23);
+ assert(e.bodyShakeDuration>=.23,'heavy strike must have sustained body shake');
+ assert(e.bodyShakePower>=11,'kick impact should visibly shake sprite');
+ const [sx,sy]=t.actorShakeOffset(e);
+ assert(Math.abs(sx)<=e.bodyShakePower&&Math.abs(sy)<=e.bodyShakePower);
+ assert.equal(e.x-startX,22,'body shaking must not change physical x position beyond original knockback');
+ assert.equal(e.y,startY,'body shaking must be render-only');
+ t.updateEnemies(.3);
+ assert.equal(e.bodyShakeTime,0,'body vibration must fade without looping');
+});
+test('ordinary punches trigger a lighter visual impact without changing hero scale',()=>{
+ g.startRun();
+ const e=t.makeEnemy('assassin',t.p.x+100,t.p.y,1);t.setEnemies([e]);
+ t.p.moveName='jab';t.hurtEnemy(e,12,9);
+ assert(e.bodyShakeDuration<=.18);
+ assert(e.bodyShakePower<10);
+ t.applyImpactFeedback(t.p,true,'heavy');
+ assert(t.p.bodyShakePower>e.bodyShakePower);
+});
+test('Android or gamepad rumble is optional and rapid-hit bursts are rate-limited',()=>{
+ const old=world.navigator.vibrate;
+ const felt=[];
+ world.navigator.vibrate=pattern=>{felt.push(pattern);return true};
+ try{
+  assert.equal(t.vibrateImpact('heavy'),true,'supported devices should vibrate');
+  assert(Array.isArray(felt[0])&&felt[0].length>=3,'heavy collision needs dual pulse');
+  assert.equal(t.vibrateImpact('punch'),false,'near-simultaneous hits should not spam device');
+  assert.equal(felt.length,1);
+ }finally{if(old)world.navigator.vibrate=old;else delete world.navigator.vibrate}
+ assert.equal(t.playImpactSound('heavy'),false,'missing Web Audio API should not crash combat');
 });
 console.log(`${checks} combat regression checks passed`);
