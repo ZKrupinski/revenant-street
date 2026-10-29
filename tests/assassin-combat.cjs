@@ -53,8 +53,8 @@ test('elite appears once in the first wave and uses a separate combat type',()=>
  g.startRun();
  const elite=t.getEnemies().filter(e=>e.type==='elite');
  assert.equal(elite.length,1);
- assert.equal(elite[0].maxHp,210);
- assert.equal(elite[0].maxPoise,185);
+ assert.equal(elite[0].maxHp,430);
+ assert.equal(elite[0].maxPoise,260);
  assert(elite[0].x>2000&&elite[0].x<2500);
 });
 test('elite battle telegraphs and rushes before a strong attack',()=>{
@@ -84,7 +84,7 @@ test('parrying elite power attack creates execution vulnerability',()=>{
 test('elite overdrive at critical health and independent sprite module',()=>{
  g.startRun();
  const e=t.makeEnemy('elite',t.p.x+125,t.p.y,0);
- t.setEnemies([e]);t.hurtEnemy(e,120,20);
+ t.setEnemies([e]);t.hurtEnemy(e,e.maxHp*.62,20);
  assert.equal(e.phase,2);
  const art=fs.readFileSync(path.join(__dirname,'../assets/elite-ironmask.js'),'utf8');
  new vm.Script(art);
@@ -324,9 +324,9 @@ test('guard action state tracks motion, bracing, attacks, injury and falling',()
 test('guard keeps its own original combat stats and previous actor systems intact',()=>{
  g.startRun();
  const e=t.makeEnemy('guard',t.p.x+110,t.p.y,0);
- assert.equal(e.maxHp,95);
- assert.equal(e.maxPoise,120);
- assert.equal(e.speed,101);
+ assert.equal(e.maxHp,100);
+ assert.equal(e.maxPoise,132);
+ assert.equal(e.speed,99);
  assert.equal(e.reach,41);
  assert.equal(e.damage,13);
 });
