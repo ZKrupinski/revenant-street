@@ -256,4 +256,34 @@ test('Android or gamepad rumble is optional and rapid-hit bursts are rate-limite
  }finally{if(old)world.navigator.vibrate=old;else delete world.navigator.vibrate}
  assert.equal(t.playImpactSound('heavy'),false,'missing Web Audio API should not crash combat');
 });
+
+test('rear-side enemy attacks are caught by parry and hero immediately turns',()=>{
+ g.startRun();
+ const e=t.makeEnemy('raider',t.p.x-72,t.p.y,0);
+ t.setEnemies([e]);t.p.facing=1;t.p.inv=0;t.p.stamina=100;
+ const hp=t.p.hp;
+ t.parry();
+ assert(t.p.parry>0);
+ t.enemyAttack(e);
+ assert.equal(t.p.facing,-1,'rear strike must flip guard facing toward attacker');
+ assert.equal(t.p.hp,hp,'timed rear parry must negate hit damage');
+ assert(e.stun>1,'rear attacker must be staggered');
+ assert(e.knockVX<0,'rear attacker must be knocked away to the left');
+ assert.equal(t.p.riposteTarget,e,'counter must target the enemy that attacked from behind');
+});
+test('parry button pre-turns to a winding-up enemy behind',()=>{
+ g.startRun();
+ const e=t.makeEnemy('assassin',t.p.x-115,t.p.y,0);e.windup=.12;
+ t.setEnemies([e]);t.p.facing=1;t.p.stamina=100;
+ t.parry();assert.equal(t.p.facing,-1,'a pending rear attack must be faced before contact');
+ t.control(1/60,{dx:1,dy:0});
+ assert.equal(t.p.facing,-1,'joystick movement must not force parry guard away from attacker');
+});
+test('rear enemy still damages hero without an active parry',()=>{
+ g.startRun();
+ const e=t.makeEnemy('raider',t.p.x-75,t.p.y,0);t.setEnemies([e]);
+ t.p.facing=1;t.p.parry=0;t.p.inv=0;
+ const hp=t.p.hp;t.enemyAttack(e);
+ assert(t.p.hp<hp,'rear protection must not become automatic invulnerability');
+});
 console.log(`${checks} combat regression checks passed`);
