@@ -62,5 +62,5 @@ function draw(e,x,y,z,api){
  if(e.windup>0){ctx.fillStyle='#f36f7d';ctx.font='900 27px Arial';ctx.fillText('!',x,top-25)}
  if(e.groggy>0){ctx.fillStyle='#a0efff';ctx.font='900 14px Arial';ctx.fillText('처형 가능',x,top-30)}
 }
-window.RZElite={move,draw};
+window.RZElite={move,draw,colored};
 })();
