@@ -1,0 +1,55 @@
+name: Import and process new black hoodie hero sprites
+on:
+  push:
+    paths:
+      - '.github/workflows/import-blackhoodie-hero.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-hero:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Import eight original high-resolution sprite sheets
+        run: |
+          mkdir -p assets/new-hero/source
+          curl -fL --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_045219_c9586ab1-d6ec-449e-9ed7-69d6a07e87ae.png' -o assets/new-hero/source/idle.png
+          curl -fL --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_045309_d7a90de5-e7fd-40ce-962c-beaeb30f4946.png' -o assets/new-hero/source/walk.png
+          curl -fL --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_045309_0956924b-7d21-47f8-8f1e-9494fe9bda02.png' -o assets/new-hero/source/run.png
+          curl -fL --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_045307_2fc15fcf-e04e-47aa-b393-617df7a456b4.png' -o assets/new-hero/source/jump.png
+          curl -fL --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_045308_b1ed898c-8219-45c5-95b6-847d82c14bf4.png' -o assets/new-hero/source/punch.png
+          curl -fL --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_045307_9c511006-4086-49c2-b53f-cbc97649979e.png' -o assets/new-hero/source/kick.png
+          curl -fL --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_045307_3acfd8d3-9870-4aad-88da-fb91b8f0b488.png' -o assets/new-hero/source/hit.png
+          curl -fL --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_045325_451f5bcc-1195-4b1b-b0fb-065fbc6dbbff.png' -o assets/new-hero/source/death.png
+      - name: Isolate eight frames and preserve full-body aspect
+        run: |
+          python3 -m pip install -q Pillow numpy scipy
+          python3 scripts/pack-blackhoodie-hero.py
+      - name: Assert exact eight-frame local replacement atlas geometry
+        run: |
+          python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          for name in ['idle','walk','run','jump','punch','kick','hit','death']:
+              p=Path(f'assets/new-hero/{name}.png')
+              img=Image.open(p)
+              assert img.size==(1536,832),(p,img.size)
+              assert img.mode=='RGBA'
+              assert p.stat().st_size>30000,(name,'suspiciously blank')
+              print(name,'OK',p.stat().st_size)
+          PY
+      - name: Commit cleaned game sprites
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/new-hero/
+          if git diff --cached --quiet; then
+            echo 'New hero assets are already current'
+          else
+            git commit -m 'Art: package eight black-hoodie hero sprite atlases with stable dimensions'
+            git push
+          fi
