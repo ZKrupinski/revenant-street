@@ -126,7 +126,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
     <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 콤보/자동 처형 · K 점프 · L 패링 · SHIFT 대쉬</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.26 — PRELOADING + SOLO HUNTER + SHARD ECONOMY</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.27 — AGGRESSIVE RUSH + AIRBORNE KNOCKBACK</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -919,7 +919,8 @@ function startAttack(){
  if(finisher){execute(finisher);return}
  if(p.riposteWindow>0&&p.riposteTarget&&!p.riposteTarget.dead){
   const target=p.riposteTarget;p.facing=target.x>=p.x?1:-1;
-  p.riposteWindow=0;p.riposteTarget=null;p.counterRush=.23;p.counterBoost=true;
+  p.riposteWindow=0;p.riposteTarget=null;p.counterRush=.29;p.counterBoost=true;
+  p.attackDriveTotal=0;p.attackDriveRemaining=0;
   p.airAttack=false;p.attackQueued=false;p.moveName='cross';p.attackDuration=.44;p.attack=.44;
   p.hitDone=false;p.comboWindow=0;p.stamina=Math.max(0,p.stamina-8);
   screenShake=Math.max(screenShake,9);fxBurst(p.x+p.facing*70,p.y-115,'blue',1.3);
@@ -943,7 +944,10 @@ function startAttack(){
  // Even with no joystick input the hero surges forward into his punches.
  // Each move gets its own travel distance; directional input adds intent,
  // not an on/off gate for attacking momentum.
- p.attackDriveTotal=Math.round((advance[move]||32)*(hasInput?2.08:1.88));
+ // Bigger intentional chase step on every strike. Kicks and finishers drive
+ // farther than jabs; keep a hard cap to prevent a one-tap screen teleport.
+ const impactStep=isKick?1.20:move==='superman_punch'?1.14:1;
+ p.attackDriveTotal=Math.min(242,Math.round((advance[move]||32)*(hasInput?2.68:2.42)*impactStep));
  p.attackDriveRemaining=p.attackDriveTotal;
  p.attack=p.attackDuration;p.animAge=0;p.hitDone=false;p.glow=.18;p.comboWindow=.95;
  sound('attack');
@@ -1000,19 +1004,32 @@ function hurtEnemy(e,dmg,poise){
  const smash=Z_KICK_MOVES.has(p.moveName)||Z_HEAD_MOVES.has(p.moveName)||p.moveName==='uppercut'||dmg>=60;
  const lowStrike=p.moveName==='lowkick'||p.moveName==='shovel_hook';
  const risingStrike=p.moveName==='uppercut'||p.moveName==='rising_elbow'||p.moveName==='rising_headbutt';
- const options=lowStrike?[2,3,8,9]:risingStrike?[1,5,6,10]:[0,1,2,3,4,5,6,7,8,9,10,11];
- e.reactionVariant=options[Math.floor(Math.random()*options.length)];
+ // Twelve distinct impacts: horizontal skids, short hops, diagonal
+ // flights, upward pops and tumbling. Avoid repeating the previous variant.
+ const heavyStrike=smash||p.counterBoost;
+ const options=lowStrike?[2,3,8,9,11]:risingStrike?[1,5,6,7,10]:
+  heavyStrike?[1,4,5,6,7,8,10,11]:[0,1,2,3,4,5,6,7,8,9,10,11];
+ const prior=e.previousReactionVariant;
+ const fresh=options.filter(v=>v!==prior);
+ e.reactionVariant=fresh[Math.floor(Math.random()*fresh.length)];
+ e.previousReactionVariant=e.reactionVariant;
  if(e.type==='raider'||e.type==='assassin'||e.type==='elite'){
   const r=e.reactionVariant;
   e.hitAnimation=r===2||r===8?'hitBody':r===3||r===4||r===11?'hitSpin':
     r===5||r===10?'hitLaunch':r===6||r===7?'hitFly':'hitHead';
-  e.pendingFall=smash&&e.hp>0&&(r===5||r===6||r===7||r===10);
+  // Strong strikes now frequently end in a ground tumble; some lighter
+  // strikes can trip a target too, giving the brawl varied follow-through.
+  e.pendingFall=e.hp>0&&((smash&&(r===4||r===5||r===6||r===7||r===10||r===11))||(!smash&&(r===5||r===6||r===10)));
   e.proneTime=0;e.riseTime=0;
  }
+ // [horizontal thrust, upward launch, lane drift, reaction time]
+ // Keep the motion in world coordinates, so hit reaction and sprite travel
+ // agree rather than shaking the body while standing still.
  const reactions=[
-  [150,0,0,.35],[270,70,35,.43],[105,0,-20,.52],[220,50,-110,.46],
-  [390,115,90,.48],[520,330,10,.65],[350,205,120,.60],[460,270,-80,.61],
-  [105,10,65,.53],[255,95,-140,.46],[450,285,55,.62],[310,155,-60,.55]
+  [300,0,0,.39], [440,175,38,.47], [275,15,-42,.51],
+  [420,85,-135,.49], [600,150,112,.57], [725,430,22,.71],
+  [580,365,155,.71], [760,325,-115,.69], [290,65,78,.52],
+  [510,0,-172,.52], [690,390,65,.72], [615,245,-155,.68]
  ];
  const [vx,vz,vy,life]=reactions[e.reactionVariant];
  e.reactionTime=e.reactionDuration=life;
@@ -1020,10 +1037,23 @@ function hurtEnemy(e,dmg,poise){
  e.stun=e.type==='boss'?.19:e.type==='elite'?life*.82:life;
  e.hitFlash=.20;e.windup=0;e.chargePrep=0;e.chargeTime=0;e.attackPoseTime=0;
  if(e.type==='elite'){e.eliteTell=0;e.eliteRush=0;e.eliteAttack=false;e.eliteCooldown=Math.max(e.eliteCooldown,1.8)}
- e.knockVX=p.facing*(e.type==='boss'?vx*.32:e.type==='elite'?vx*.65:vx*(smash?1.40:1.13));
- e.knockVY=e.type==='boss'?vy*.24:e.type==='elite'?vy*.6:vy;
- e.vz=e.type==='boss'?0:vz*(smash?1.17:1)*(e.type==='elite'?.73:1);
- e.x=clamp(e.x+p.facing*(e.type==='boss'?8:22),55,STAGE_WIDTH-55);fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:1);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');applyImpactFeedback(e,smash,smash?'heavy':'punch');p.hits++;p.hitTimeout=2.2;
+ // Couple enemy displacement to the attacker's actual forward drive.
+ // At the same 4/s drag coefficient, the enemy travels at least as far as
+ // the hero's step, with a heavier knock on kicks and counter blows.
+ const drive=p.counterBoost?210:Math.max(0,p.attackDriveTotal||0);
+ const kick=Z_KICK_MOVES.has(p.moveName);
+ const force=clamp(Math.max(vx*(smash?1.27:1.05),
+    drive*(kick?5.1:4.55)+(smash?105:35)),260,1300);
+ const resistance=e.type==='boss'?.34:e.type==='elite'?.78:e.type==='guard'?.88:1;
+ const carry=Math.max(0,(e.knockVX||0)*p.facing)*.29;
+ e.knockVX=p.facing*clamp(force*resistance+carry,0,1360);
+ e.knockVY=(e.type==='boss'?.2:e.type==='elite'?.67:.84)*vy;
+ // Juggle an already airborne enemy instead of snapping it to the floor.
+ const lift=e.type==='boss'?0:vz*(smash?1.13:1)*(e.type==='elite'?.80:1);
+ e.vz=lift?Math.min(520,Math.max(lift,(e.z>14?e.vz*.60:0))):Math.max(0,e.vz*.30);
+ const contactPush=e.type==='boss'?12:clamp(drive*.21+(smash?17:9),22,61);
+ e.x=clamp(e.x+p.facing*contactPush,55,STAGE_WIDTH-55);
+ fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:smash?1.65:1.2);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');applyImpactFeedback(e,smash,smash?'heavy':'punch');p.hits++;p.hitTimeout=2.2;
  if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=3.6;e.stun=3.6;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
  if(e.type==='elite'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.14;e.eliteCooldown=Math.min(e.eliteCooldown,1.6);fxBurst(e.x,e.y-150,'gold',1.8);floatText('OVERDRIVE',e.x,e.y-255,'#f9c26a')}
  if(e.type==='boss'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.bossPhasePending=true;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
@@ -1045,9 +1075,13 @@ function attackCheck(){
  if(armed){p.weapon--;if(p.weapon<=0){flash('OVERLOAD SHATTER!',1.7);screenShake=27;screenTint=.9;sound('break');fxBurst(p.x+75*p.facing,p.y-120,'red',3);for(const e of enemies)if(!e.dead&&Math.hypot(e.x-p.x,(e.y-p.y)*1.4)<310){hurtEnemy(e,85,105)}}}
  if(hits>0&&p.attackDriveRemaining>0&&p.attackDriveTotal>0){
   // Commit the hit's momentum into forward pressure; avoid backward recoil.
-  const carry=Math.min(p.attackDriveRemaining,14);
+  const carry=Math.min(p.attackDriveRemaining,21);
   p.x=clamp(p.x+p.attackDriveX*carry,64,STAGE_WIDTH-64);
   p.attackDriveRemaining=Math.max(0,p.attackDriveRemaining-carry);
+  // Avoid passing through the victim when a follow-up step closes fast.
+  const next=enemies.filter(e=>!e.dead&&e.z<80&&Math.abs(e.y-p.y)<59&&
+   (e.x-p.x)*p.facing>=0).sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0];
+  if(next&&Math.abs(next.x-p.x)<45)p.x=clamp(next.x-p.facing*45,64,STAGE_WIDTH-64);
  }
  if(!hits)fxBurst(p.x+p.facing*105,p.y-123,'red',.6)
 }
@@ -1149,9 +1183,9 @@ function control(dt,pad){
    if(phase<.75){
     // A short preload and explosive drive at the strike frame. Do not
     // teleport on slow/uneven device frame rates.
-    const burstRate=phase<.09?.70:phase<.46?1.38:.76;
+    const burstRate=phase<.085?.82:phase<.48?1.57:.95;
     const desired=p.attackDriveTotal*dt/(p.attackDuration*.62)*burstRate;
-    const burst=Math.min(p.attackDriveRemaining,Math.min(32,desired));
+    const burst=Math.min(p.attackDriveRemaining,Math.min(35,desired));
     const before=p.x;
     p.x=clamp(p.x+p.attackDriveX*burst,64,STAGE_WIDTH-64);
     p.y=clamp(p.y+p.attackDriveY*burst*.31,480,664);
@@ -1263,12 +1297,12 @@ function updateEnemies(dt){
   if(Math.abs(e.knockVX)>1||Math.abs(e.knockVY)>1){
    e.x=clamp(e.x+e.knockVX*dt,45,STAGE_WIDTH-45);
    e.y=clamp(e.y+e.knockVY*dt,480,665);
-   const drag=Math.exp(-4.0*dt);
+   const drag=Math.exp(-3.55*dt);
    e.knockVX*=drag;e.knockVY*=drag;
   }
   if(e.z>0||e.vz>0){
    e.z=Math.max(0,e.z+e.vz*dt);
-   e.vz-=840*dt;
+   e.vz-=895*dt;
    if(e.z<=0){e.z=0;e.vz=0}
   }
   e.bodyShakeTime=Math.max(0,(e.bodyShakeTime||0)-dt);
