@@ -479,12 +479,28 @@ function drawAssassin(e,x,y,z){
  if(e.groggy>0){ctx.fillStyle='#9ef4ff';ctx.font='900 14px Arial';ctx.fillText('공격 → 처형',x,top-12)}
 }
 
+// Pre-matted new protagonist atlases: do NOT run the old green-screen flood
+// fill on transparent frames. It would classify black clothing as background.
+function prepareTransparentHeroCells(im){
+ const cells=[],cw=im.naturalWidth/4,ch=im.naturalHeight/2;
+ if(cw<120||ch<150)throw new Error('New hero atlas size is invalid');
+ const scale=Math.min(255/cw,280/ch);
+ const W=Math.round(cw*scale),H=Math.round(ch*scale);
+ for(let i=0;i<8;i++){
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  const c=cv.getContext('2d');
+  const sx=(i%4)*cw,sy=Math.floor(i/4)*ch;
+  c.drawImage(im,sx,sy,cw,ch,0,0,W,H);
+  cells.push({canvas:cv,bounds:{x:0,y:0,w:W,h:H},unitScale:1});
+ }
+ return cells;
+}
 function loadZMove(key){
  if(!Z_REMOTE_ATLAS[key])key='idle';
  if(!zArtState[key]){
   const obj={ready:false,failed:false,loading:true,url:Z_REMOTE_ATLAS[key],frames:[]};zArtState[key]=obj;
   const im=new Image();im.crossOrigin='anonymous';
-  im.onload=()=>{try{obj.frames=prepareZCells(im);obj.ready=obj.frames.length===8;obj.failed=false}
+  im.onload=()=>{try{obj.frames=Z_HOODIE_HERO?prepareTransparentHeroCells(im):prepareZCells(im);obj.ready=obj.frames.length===8;obj.failed=false}
    catch(err){obj.ready=false;obj.failed=true;obj.error=String(err);console.warn('Z atlas rejected:',key,err)}obj.loading=false;obj.image=null;im.onload=null;im.onerror=null;};
   im.onerror=()=>{obj.failed=true;obj.ready=false;obj.loading=false;obj.image=null;im.onload=null;im.onerror=null};im.src=obj.url;obj.image=im;
  }
