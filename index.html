@@ -109,7 +109,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
     <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 콤보/자동 처형 · K 점프 · L 패링 · SHIFT 대쉬</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.16 — CROSSING-STEP WALK + RUN</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.18 — NEW BLACK HOODIE HERO</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -157,6 +157,21 @@ const Z_GAIT_VERSIONS={
 const zGaitParam=window.location?.search||'';
 const zUsePreviousGait=/(?:[?&])gait=previous(?:&|$)/.test(zGaitParam);
 Object.assign(Z_REMOTE_ATLAS,zUsePreviousGait?Z_GAIT_VERSIONS.previous:Z_GAIT_VERSIONS.crossing);
+// New approved protagonist. The original remains selectable with ?hero=original.
+const Z_HOODIE_HERO=!/(?:[?&])hero=original(?:&|$)/.test(zGaitParam);
+const Z_HOODIE_KEYS={idle:'idle',walk:'walk',backwalk:'walk',run:'run',
+ dash:'run',dodge:'run',jumpstart:'jump',airborne:'jump',landing:'jump',
+ guard:'idle',jab:'punch',cross:'punch',hook:'punch',uppercut:'punch',
+ frontkick:'kick',roundkick:'kick',lowkick:'kick',airkick:'kick',
+ hit:'hit',heavyhit:'hit',knockdown:'death',getup:'death'};
+if(Z_HOODIE_HERO){
+ for(const key of Object.keys(Z_REMOTE_ATLAS)){
+  let motion=Z_HOODIE_KEYS[key];
+  if(!motion)motion=/kick/i.test(key)?'kick':/hit|hurt|stun/i.test(key)?'hit':
+   /jump|air|land/i.test(key)?'jump':/punch|jab|hook|cross|upper|attack/i.test(key)?'punch':'idle';
+  Z_REMOTE_ATLAS[key]='./assets/new-hero/'+motion+'.png';
+ }
+}
 const zArtState={},zArtNode=$('z-art-sprite'), zStage=$('stageWrap');
 let zArtLastKey='',zArtFrame=-1,zLastGoodFrame=null;
 function getZMove(){
@@ -478,7 +493,7 @@ function loadZMove(key){
 function currentZFrameIndex(key){
  const oneshot=zOneShotFrame;
  if(key==='knockdown')return oneshot(1-p.downTimer/.83);
- if(key==='getup')return oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64));
+ if(key==='getup')return Z_HOODIE_HERO?7-oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64)):oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64));
  if(key==='hit'||key==='heavyhit')return oneshot(1-p.stun/Math.max(.001,p.hitDuration||.4));
  if(key==='dash'||key==='dodge')return oneshot(1-p.dodge/.30);
  if(key==='guard')return oneshot(1-p.parry/Math.max(.001,p.parryDuration||.34));
