@@ -154,7 +154,8 @@ test('crossing-step original Z art is locally packaged with old gait rollback',(
   assert(lab.includes(source),kind+' missing from Frame Lab');
  }
  assert(main.includes('gait=previous'),'older gait A/B fallback must remain available');
- assert(lab.includes("get('gait')==='previous'"),'Frame Lab must support previous-gait comparison');
+ assert(lab.includes("requestedGait==='previous'"),'Frame Lab must support previous-gait comparison');
+ assert(lab.includes("requestedGait==='poseguided'"),'Pose-guided candidates should remain QA-only');
  assert(main.includes('const Z_ANIM_RATE=.72'),'animation cadence must remain slower');
  assert(main.includes('const zStride=key=>(key===\'run\'?32'),'running stride should reduce frame jumps');
  assert(lab.includes('value="8"'),'Frame Lab default speed should be 8 FPS');
