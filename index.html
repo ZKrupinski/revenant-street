@@ -187,6 +187,8 @@ if(Z_HF_ART){
   if(zGaitChoice==='v3'){
    Z_REMOTE_ATLAS.walk='./assets/original-z-hf/walk-v3.webp';
    Z_REMOTE_ATLAS.run='./assets/original-z-hf/run-v3.webp';
+    // Use the same approved original-Z body art when stepping backwards.
+    Z_REMOTE_ATLAS.backwalk=Z_REMOTE_ATLAS.walk;
   }else if(zGaitChoice==='crossing'){
    Z_REMOTE_ATLAS.walk=Z_GAIT_VERSIONS.crossing.walk;
    Z_REMOTE_ATLAS.run=Z_GAIT_VERSIONS.crossing.run;
@@ -579,7 +581,7 @@ function loadZMove(key){
  if(!zArtState[key]){
   const obj={ready:false,failed:false,loading:true,url:Z_REMOTE_ATLAS[key],frames:[]};zArtState[key]=obj;
   const im=new Image();im.crossOrigin='anonymous';
-  im.onload=()=>{try{obj.frames=Z_HOODIE_HERO?prepareTransparentHeroCells(im):(Z_HF_ART&&zGaitChoice==='v3'&&(key==='walk'||key==='run')?preparePremattedGaitCells(im):prepareZCells(im));obj.ready=obj.frames.length===8;obj.failed=false}
+  im.onload=()=>{try{obj.frames=Z_HOODIE_HERO?prepareTransparentHeroCells(im):(Z_HF_ART&&zGaitChoice==='v3'&&(key==='walk'||key==='run'||key==='backwalk')?preparePremattedGaitCells(im):prepareZCells(im));obj.ready=obj.frames.length===8;obj.failed=false}
    catch(err){obj.ready=false;obj.failed=true;obj.error=String(err);console.warn('Z atlas rejected:',key,err)}obj.loading=false;obj.image=null;im.onload=null;im.onerror=null;};
   im.onerror=()=>{obj.failed=true;obj.ready=false;obj.loading=false;obj.image=null;im.onload=null;im.onerror=null};im.src=obj.url;obj.image=im;
  }
@@ -598,7 +600,9 @@ function currentZFrameIndex(key){
  // The legs only advance in proportion to actual world travel.
  // This prevents the rapid 'shaking in place' caused by a slow joystick tilt.
  if(key==='walk'||key==='run'||key==='backwalk'){
-  return Math.floor(Math.max(0,p.gaitDistance||0)/zStride(key))%8;
+  const step=Math.floor(Math.max(0,p.gaitDistance||0)/zStride(key))%8;
+   // Reverse the eight-frame gait for deliberate backward foot placement.
+   return key==='backwalk'&&Z_HF_ART&&zGaitChoice==='v3'?(8-step)%8:step;
  }
  const speed=key==='idle'?5.8:key==='airborne'?8:10;
  return Math.floor(Math.max(0,p.motionTime||0)*speed*Z_ANIM_RATE)%8;
