@@ -58,6 +58,7 @@ if(isBlackHoodieHero){
  for(const a of list){
   if(!Object.hasOwn(remap,a.id))continue;
   a.sheet_url='./assets/new-hero/'+remap[a.id]+'.png';
+  a.precleared=true;
   a.label='NEW HERO · '+a.label;
  }
 }
@@ -218,13 +219,23 @@ function styleFrame(node,f,url){
  else{node.style.backgroundImage='none';node.style.backgroundSize='contain';node.style.backgroundPosition='center bottom';}
 }
 function refreshPreview(){const url=list[index].sheet_url;styleFrame(character,frame,url);film.querySelectorAll('.mini').forEach((n,j)=>styleFrame(n,j,url))}
+function preclearedHeroFrames(im){
+ const frames=[],cw=im.naturalWidth/4,ch=im.naturalHeight/2;
+ const scale=Math.min(255/cw,280/ch),w=Math.round(cw*scale),h=Math.round(ch*scale);
+ for(let i=0;i<8;i++){
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  c.getContext('2d').drawImage(im,(i%4)*cw,Math.floor(i/4)*ch,cw,ch,0,0,w,h);
+  frames.push({canvas:c});
+ }
+ return frames;
+}
 function preloadClean(i){
  const a=list[i],url=a.sheet_url,cacheKey=a.variant==='elite'?'elite:'+url:url;
  if(cleanedCache.has(cacheKey)){const c=cleanedCache.get(cacheKey);assetstatus.textContent='정밀 컷팅 8프레임 완료 · '+c.w+'×'+c.h+'px';refreshPreview();return}
  if(loadingMap.has(cacheKey))return;
  const im=new Image();im.crossOrigin='anonymous';loadingMap.set(cacheKey,im);
  im.onload=()=>{try{
-  const isolated=a.packed?RZAssassinArt.split(im):prepareZCells(im);if(isolated.length!==8)throw Error('8프레임 추출 실패');
+  const isolated=a.precleared?preclearedHeroFrames(im):(a.packed?RZAssassinArt.split(im):prepareZCells(im));if(isolated.length!==8)throw Error('8프레임 추출 실패');
   const frames=isolated.map(c=>(a.variant==='elite'?RZElite.colored(c):c.canvas).toDataURL('image/png'));
   cleanedCache.set(cacheKey,{frames,w:im.naturalWidth,h:im.naturalHeight});
   while(cleanedCache.size>4)cleanedCache.delete(cleanedCache.keys().next().value);
