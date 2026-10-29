@@ -280,5 +280,12 @@ document.getElementById('green').onclick=()=>{raw=!raw;character.classList.toggl
 document.getElementById('flip').onclick=()=>{flipped=!flipped;character.style.transform=`translateX(-50%) scaleX(${flipped?-1:1})`};
 const slider=document.getElementById('fps');slider.oninput=()=>document.getElementById('fpsval').textContent=slider.value;
 document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;if(e.code==='Space'){e.preventDefault();playing=!playing;syncPlay()}if(e.code==='ArrowRight')setFrame(frame+1);if(e.code==='ArrowLeft')setFrame(frame-1)});
-function tick(t){if(playing && t-last>1000/Number(slider.value)){last=t;setFrame(frame+1)}requestAnimationFrame(tick)}const enemyParam=new URLSearchParams(location.search).get('enemy');select(enemyParam==='elite'?59:enemyParam==='b'?47:enemyParam!==null?35:0);requestAnimationFrame(tick);
+function tick(t){if(playing && t-last>1000/Number(slider.value)){last=t;setFrame(frame+1)}requestAnimationFrame(tick)}const params=new URLSearchParams(location.search);
+const enemyParam=params.get('enemy'),actionParam=params.get('action');
+const selectedById=actionParam?list.findIndex(a=>a.id===actionParam):-1;
+const selectedByEnemy=enemyParam==='shield'?list.findIndex(a=>a.id==='riot_idle'):
+ enemyParam==='elite'?list.findIndex(a=>a.id==='elite_idle'):
+ enemyParam==='b'?list.findIndex(a=>a.id==='assassin_idle'):
+ enemyParam!==null?list.findIndex(a=>a.id==='assassin_idle'):0;
+select(Math.max(0,selectedById>=0?selectedById:selectedByEnemy));requestAnimationFrame(tick);
 </script></body></html>
