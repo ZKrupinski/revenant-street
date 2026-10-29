@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1019"><title>REVENANT STREET — Z FRAME LAB / 59 ACTIONS</title>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1019"><title>REVENANT STREET — Z FRAME LAB / 66 ACTIONS</title>
 <style>
 :root{color-scheme:dark;--bg:#080b13;--panel:#121825;--line:#2b3c4c;--accent:#ff4b60;--cyan:#71d9e8;--text:#eaf0f5;--muted:#a0b3c3}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font:500 15px/1.45 system-ui,-apple-system,'Noto Sans KR',sans-serif}body{background-image:radial-gradient(ellipse 60% 30% at 56% 3%,#20375477,transparent),linear-gradient(160deg,#080a12,#0a101c 60%,#100d18)}
@@ -77,6 +77,20 @@ if(isBlackHoodieHero){
 const assassinLabels=["대기", "걷기", "달리기", "돌진 찌르기", "단검 베기", "머리 피격", "복부 피격", "회전 피격", "공중 피격", "넉백", "다운·사망", "기상"];
 RZAssassinArt.keys.forEach((key,i)=>list.push({id:'assassin_'+key,label:assassinLabels[i],group:i<5?'새 적 B · 쌍단검':'새 적 B · 피격·다운',frames_target:8,sheet_url:RZAssassinArt.source(key),packed:true,frame_ms:90}));
 RZAssassinArt.keys.forEach((key,i)=>list.push({id:'elite_'+key,label:'철가면 엘리트 · '+assassinLabels[i],group:i<5?'철가면 엘리트 · 기본·공격':'철가면 엘리트 · 피격·다운',frames_target:8,sheet_url:RZAssassinArt.source(key),packed:true,variant:'elite',frame_ms:90}));
+const riotShieldActions=[
+ ['idle','방패병 대기 / 방패 경계'],
+ ['walk','방패병 걷기 / 전진'],
+ ['run','방패병 돌진 / 전력 추격'],
+ ['block','방패병 방패 방어 / 충격 흡수'],
+ ['attack','방패병 방패 밀치기·곤봉 공격'],
+ ['hit','방패병 피격 / 넉백'],
+ ['fall','방패병 다운 / 사망']
+];
+for(const [key,label] of riotShieldActions)list.push({
+ id:'riot_'+key,label,group:'방패병 · Higgsfield 56프레임',
+ frames_target:8,sheet_url:'./assets/riot-shield/'+key+'.webp',
+ precleared:true,frame_ms:key==='walk'?110:key==='run'?74:key==='idle'?165:95
+});
 const menu=document.getElementById('menu'),character=document.getElementById('char'),film=document.getElementById('film');
 const title=document.getElementById('action-title'),info=document.getElementById('info'),cur=document.getElementById('cur-num'),assetstatus=document.getElementById('assetstatus');
 let index=0,frame=0,playing=true,raw=false,flipped=false,last=0;
