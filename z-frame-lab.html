@@ -52,10 +52,17 @@ if(!previousGait)for(const key of ['walk','run'])list.find(a=>a.id===key).sheet_
 const hfOriginalArt=!/(?:[?&])zart=original(?:&|$)/.test(location.search);
 if(hfOriginalArt){
  const map={jab:'punch',cross:'punch',backfist:'punch',frontkick:'kick',roundkick:'kick',sidekick:'kick'};
- if(!previousGait){map.walk='walk';map.run='run'}
+ const useIndividualGait=!['previous','poseguided','crossing'].includes(requestedGait);
+ if(useIndividualGait){
+  const suffix=requestedGait==='v1'?'':'-v2';
+  map.walk='walk'+suffix;map.run='run'+suffix;
+ }
  for(const [key,value] of Object.entries(map)){
   const art=list.find(a=>a.id===key);
-  if(art){art.sheet_url='./assets/original-z-hf/'+value+'.webp';art.label='ORIGINAL Z · '+art.label}
+  if(art){
+   art.sheet_url='./assets/original-z-hf/'+value+'.webp';
+   art.label=(value.endsWith('-v2')?'Z 8F 개별제작 · ':'ORIGINAL Z · ')+art.label;
+  }
  }
 }
 // Archived original protagonist is once again the default in both the game and lab.
