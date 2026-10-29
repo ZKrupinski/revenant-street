@@ -1,0 +1,75 @@
+name: Generate true alternating-leg pose guides
+on:
+  push:
+    paths:
+      - '.github/workflows/z-gait-pose-guides.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  gait-guide:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render eight anatomically distinct gait phases
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 - <<'PY'
+          from PIL import Image,ImageDraw,ImageFont
+          from pathlib import Path
+          Path('assets/project-z-hero').mkdir(parents=True,exist_ok=True)
+          # Coordinates: one side-view actor per cell, all facing right.
+          # Each entry is (near-red knee, near-red shoe, far-blue knee, far-blue shoe, hipYOffset).
+          walk=[
+           ((226,293),(264,364),(143,300),(99,364),0),
+           ((211,309),(221,364),(162,306),(166,361),0),
+           ((189,318),(185,364),(203,275),(230,313),0),
+           ((157,313),(133,363),(228,279),(265,350),0),
+           ((143,303),(101,364),(227,297),(265,364),0),
+           ((165,310),(161,362),(212,313),(225,364),0),
+           ((216,279),(245,319),(189,314),(184,364),0),
+           ((233,288),(265,352),(156,301),(136,364),0)]
+          run=[
+           ((227,291),(270,356),(135,265),(93,337),-8),
+           ((220,301),(222,357),(226,247),(248,288),-18),
+           ((144,264),(100,307),(230,255),(275,300),-36),
+           ((150,288),(121,335),(231,276),(273,356),-17),
+           ((139,276),(93,337),(230,301),(270,357),-8),
+           ((232,257),(250,294),(209,302),(217,356),-18),
+           ((238,254),(280,304),(142,267),(102,305),-38),
+           ((232,279),(272,352),(144,277),(117,333),-19)]
+          colors={'near':(232,76,68),'far':(47,117,236),'body':(31,35,43),'light':(244,244,244)}
+          for kind,poses in [('walk',walk),('run',run)]:
+           img=Image.new('RGB',(1440,800),(247,249,250))
+           d=ImageDraw.Draw(img)
+           for i,(kn,fn,kf,ff,lift) in enumerate(poses):
+            col,row=i%4,i//4
+            offx=col*360;offy=row*400
+            def xy(q):return (offx+q[0],offy+q[1]+lift)
+            hip=xy((180,241));shoulder=xy((174,144));head=xy((185,105))
+            # Distinct far leg in BLUE, near leg in RED, alternates lead feet.
+            d.line([hip,xy(kf),xy(ff)],fill=colors['far'],width=17,joint='curve')
+            d.ellipse((xy(kf)[0]-9,xy(kf)[1]-9,xy(kf)[0]+9,xy(kf)[1]+9),fill=colors['far'])
+            d.line([hip,xy(kn),xy(fn)],fill=colors['near'],width=17,joint='curve')
+            d.ellipse((xy(kn)[0]-9,xy(kn)[1]-9,xy(kn)[0]+9,xy(kn)[1]+9),fill=colors['near'])
+            d.line([xy(ff),(xy(ff)[0]+22,xy(ff)[1])],fill=colors['far'],width=11)
+            d.line([xy(fn),(xy(fn)[0]+22,xy(fn)[1])],fill=colors['near'],width=11)
+            d.line([shoulder,hip],fill=colors['body'],width=42)
+            d.ellipse((head[0]-22,head[1]-24,head[0]+22,head[1]+24),fill=colors['body'])
+            d.line([shoulder,xy((222,189)),xy((233,231))],fill=(80,80,85),width=12,joint='curve')
+            d.line([shoulder,xy((129,202)),xy((119,238))],fill=(80,80,85),width=12,joint='curve')
+            d.line([(offx+15,offy+380),(offx+343,offy+380)],fill=(165,169,175),width=2)
+            d.text((offx+16,offy+12),f'PHASE {i+1} / '+('RED FRONT' if i in (0,1,6,7) else 'BLUE FRONT'),fill=(15,16,20))
+           out=f'assets/project-z-hero/{kind}-gait-poseguide.png'
+           img.save(out,optimize=True)
+           print(kind,out,img.size)
+          PY
+      - name: Commit pose guides as production references (not game assets)
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/project-z-hero/walk-gait-poseguide.png assets/project-z-hero/run-gait-poseguide.png
+          if ! git diff --cached --quiet; then
+            git commit -m 'Art QA: add eight-phase near/far leg anatomy gait reference sheets'
+            git push
+          fi
