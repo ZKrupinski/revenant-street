@@ -342,7 +342,7 @@ test('eight new boss animation atlases exist and are genuinely used by boss draw
  }
  assert(game.includes("if(a.type==='boss'&&window.RZBossHunter?.draw"),'boss must render new sprite');
  assert(game.includes("window.RZBossHunter?.update(e,p,dt"),'boss behavior state machine not active');
- assert(script.includes("e.bossPhasePending")&&script.includes("'slam'")&&script.includes("'combo'"));
+ assert(script.includes("e.bossPhasePending")&&script.includes("'slam'"));assert(!script.includes("start(e,'combo'"),'removed rapid combo must not be selected');
 });
 test('boss introduction, charge, phase 2 and death select real animations',()=>{
  const script=fs.readFileSync(path.join(__dirname,'../assets/boss-hunter.js'),'utf8');
@@ -405,4 +405,38 @@ test('gamepad D-pad/left stick can choose and confirm upgrade options without au
  }finally{m.querySelectorAll=old;world.navigator.getGamepads=()=>[]}
 });
 
+
+test('final hunter fight is boss only, without a performance-heavy entourage',()=>{
+ g.startRun();
+ t.setEnemies([]);const code=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ const wave3=code.match(/  3:\[([\s\S]*?)\n  \]/);
+ assert(wave3,'wave 3 should be found');
+ assert(wave3[1].includes("['boss',11880,561]"));
+ assert(!/\['(?:raider|guard|assassin|elite)'/.test(wave3[1]));
+});
+test('real combat currency and shards are paid exactly once, including DOT kills',()=>{
+ g.startRun();
+ const money=t.p.credits,shards=world.__revenant.getState().perma.shards;
+ const e=t.makeEnemy('guard',t.p.x+75,t.p.y,0);t.setEnemies([e]);
+ t.hurtEnemy(e,999,3);
+ assert(t.p.credits>=money+65);
+ assert.equal(world.__revenant.getState().perma.shards,shards+1);
+ const oldMoney=t.p.credits;
+ t.hurtEnemy(e,5,5);
+ assert.equal(t.p.credits,oldMoney,'dead guard cannot pay twice');
+ const burn=t.makeEnemy('raider',t.p.x+90,t.p.y,1);
+ t.setEnemies([burn]);burn.hp=1;burn.burn=1;burn.stun=1;
+ t.updateEnemies(.3);
+ assert(burn.dead);
+ assert(t.p.credits>=oldMoney+45,'DOT kill must award credits too');
+});
+test('loading gate is present, checks mandatory sprites and disables live animation warmup',()=>{
+ const code=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ assert(code.includes('async function requestRunStart()'));
+ assert(code.includes('function waitSceneArt(preview,onProgress)'));
+ assert(code.includes("canvas.style.visibility='hidden'"));
+ assert(code.includes("if(gameState==='loading'||gameState==='menu'||gameState==='hub')return"));
+ assert(!code.includes('function update(dt){RZAssassinArt.warm(dt)'));
+ assert(code.includes("if(a==='start')requestRunStart()"));
+});
 console.log(`${checks} combat regression checks passed`);
