@@ -126,7 +126,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
     <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 콤보/자동 처형 · K 점프 · L 패링 · SHIFT 대쉬</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.27 — AGGRESSIVE RUSH + AIRBORNE KNOCKBACK</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.28 — GROUNDED STREETS + GROWTH + DIRECTION FINDER</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -640,6 +640,10 @@ function drawHeroModAura(x,y,z){
   ctx.drawImage(a,x-sz*.5,y-z-126-sz*.5,sz,sz);ctx.restore();
  }
 }
+// Road art: keep all standing feet on the foreground road, not the raised
+// sidewalk/buildings in the upper half of the 720p backdrop.
+const ROAD_TOP=551,ROAD_BOTTOM=658;
+const groundY=y=>clamp(y,ROAD_TOP,ROAD_BOTTOM);
 const WAVE_GATES=[0,4230,8850,12715]; // entire ten-screen world, no per-encounter movement clamp
 let enemies=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
 let perma={core:0,servo:0,reflex:0,shards:0};
@@ -859,13 +863,24 @@ function spawnWave(){
  $('chapter').textContent=`0${wave} / 끝없는 거리`;
 }
 function makeEnemy(type,x,y,index){
- const map={raider:[52,80,118,9,33],assassin:[42,65,163,9,31],elite:[210,185,133,17,62],guard:[95,120,101,13,41],boss:[640,340,76,27,90]};
- const [hp,poise,speed,damage,reach]=map[type];
- return {type,slot:index,x,y,z:0,vz:0,knockVX:0,knockVY:0,face:-1,hp,maxHp:hp,
+ // Grunts stay punchy and quick to defeat. Specials gain real durability.
+ // Normal enemies gain moderate health/damage each wave, unlike the boss.
+ const map={raider:[43,70,114,8,33],assassin:[38,68,159,9,31],
+  elite:[430,260,144,22,66],guard:[100,132,99,13,41],
+  boss:[3400,920,87,35,92]};
+ const difficulty=type==='boss'?1:type==='elite'?(wave===2?1.36:1):
+  wave===2?1.30:1;
+ const attackGrowth=type==='boss'?1:wave===2?1.19:1;
+ let [hp,poise,speed,damage,reach]=map[type];
+ hp=Math.round(hp*difficulty);
+ poise=Math.round(poise*(type==='elite'?difficulty:1+Math.max(0,wave-1)*.18));
+ damage=Math.round(damage*attackGrowth);
+ if(type!=='boss')speed=Math.round(speed*(wave===2?1.08:1));
+ return {type,slot:index,x,y:groundY(y),z:0,vz:0,knockVX:0,knockVY:0,face:-1,hp,maxHp:hp,
  poise:0,maxPoise:poise,speed,damage,reach,stun:0,inv:0,windup:0,
  cooldown:(index%3)*.23+.38,attackDone:false,hitFlash:0,groggy:0,phase:1,
  dead:false,fade:1,decision:0,strafe:Math.random()>.5?1:-1,
- bleed:0,burn:0,shock:0,freeze:0,spriteKey:'',spriteTime:0,spriteDistance:0,visualMoving:false,visualSpeed:0,visualSpeedSmooth:0,locomotionMode:'walk',visualHold:0,renderX:x,renderY:y,
+ bleed:0,burn:0,shock:0,freeze:0,spriteKey:'',spriteTime:0,spriteDistance:0,visualMoving:false,visualSpeed:0,visualSpeedSmooth:0,locomotionMode:'walk',visualHold:0,renderX:x,renderY:groundY(y),
   attackPoseTime:0,windupDuration:.45,hitAnimation:'hitHead',proneTime:0,riseTime:0,pendingFall:false,deathAge:0,
   brain:type==='boss'?'boss':type==='elite'?'elite':['swarm','feint','charger','swarm','feint','charger'][index%6],
   chargeCooldown:1.6+(index%5)*.48,chargePrep:0,chargeTime:0,
@@ -998,7 +1013,7 @@ function awardEnemyKill(e){
 }
 function hurtEnemy(e,dmg,poise){
  if(e.dead)return;
- e.hp-=dmg;e.poise=clamp(e.poise+poise,0,e.maxPoise);
+ e.hp-=dmg;e.poise=clamp(e.poise+poise*(e.type==='boss'?.35:e.type==='elite'?.80:1),0,e.maxPoise);
  // Twelve distinct impacts: head snaps, gut folds, ankle buckles, spins,
  // side stumbles and aerial knockdowns. Keep the existing enemy bitmap.
  const smash=Z_KICK_MOVES.has(p.moveName)||Z_HEAD_MOVES.has(p.moveName)||p.moveName==='uppercut'||dmg>=60;
@@ -1054,9 +1069,9 @@ function hurtEnemy(e,dmg,poise){
  const contactPush=e.type==='boss'?12:clamp(drive*.21+(smash?17:9),22,61);
  e.x=clamp(e.x+p.facing*contactPush,55,STAGE_WIDTH-55);
  fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:smash?1.65:1.2);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');applyImpactFeedback(e,smash,smash?'heavy':'punch');p.hits++;p.hitTimeout=2.2;
- if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=3.6;e.stun=3.6;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
+ if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=e.type==='boss'?1.30:e.type==='elite'?2.4:3.6;e.stun=e.groggy;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
  if(e.type==='elite'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.14;e.eliteCooldown=Math.min(e.eliteCooldown,1.6);fxBurst(e.x,e.y-150,'gold',1.8);floatText('OVERDRIVE',e.x,e.y-255,'#f9c26a')}
- if(e.type==='boss'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.bossPhasePending=true;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
+ if(e.type==='boss'&&e.hp<e.maxHp*.55&&e.phase===1){e.phase=2;e.bossPhasePending=true;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
  if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);fxBurst(e.x,e.y-70,'gold',1.1);}}
 function attackCheck(){
  const armed=p.weapon>0&&!Z_KICK_MOVES.has(p.moveName)&&!Z_HEAD_MOVES.has(p.moveName)&&!p.airAttack;
@@ -1177,7 +1192,7 @@ function control(dt,pad){
   if(p.attack>0&&!p.airAttack&&p.counterRush<=0)speed*=.28;
   if(p.airAttack){dx=p.facing;dy=0;speed=470}
   p.x=clamp(p.x+dx*speed*dt,64,STAGE_WIDTH-64);
-  p.y=clamp(p.y+dy*speed*.52*dt,480,664);
+  p.y=groundY(p.y+dy*speed*.52*dt);
   if(p.attack>0&&p.attackDriveRemaining>0&&!p.airAttack&&p.counterRush<=0){
    const phase=1-p.attack/Math.max(.001,p.attackDuration);
    if(phase<.75){
@@ -1199,7 +1214,7 @@ function control(dt,pad){
       if((nextX-limit)*p.attackDriveX>0)nextX=(limit-before)*p.attackDriveX>=0?limit:before;
     }
     p.x=clamp(nextX,64,STAGE_WIDTH-64);
-    p.y=clamp(p.y+p.attackDriveY*burst*.31,480,664);
+    p.y=groundY(p.y+p.attackDriveY*burst*.31);
     p.attackDriveRemaining=Math.max(0,p.attackDriveRemaining-Math.abs(p.x-before));
    }
   }
@@ -1261,8 +1276,8 @@ function resolveBodyCollisions(dt){
    const weightA=a===p?(playerBoss?.22:.12):b===p?(playerBoss?.78:.88):.5;
    a.x=clamp(a.x+shiftX*weightA,55,STAGE_WIDTH-55);
    b.x=clamp(b.x-shiftX*(1-weightA),55,STAGE_WIDTH-55);
-   a.y=clamp(a.y+shiftY*weightA,480,664);
-   b.y=clamp(b.y-shiftY*(1-weightA),480,664);
+   a.y=groundY(a.y+shiftY*weightA);
+   b.y=groundY(b.y-shiftY*(1-weightA));
   }
  }
 }
@@ -1285,7 +1300,7 @@ function updateEliteAI(e,dt,dx,dy,dist){
   const startX=e.x,startY=e.y,targetX=p.x-e.face*56;
   const rush=Math.min(Math.abs(targetX-e.x),Math.max(430,e.speed*3.6)*dt);
   e.x=clamp(e.x+Math.sign(targetX-e.x)*rush,45,STAGE_WIDTH-45);
-  e.y=clamp(e.y+Math.sign(dy)*Math.min(Math.abs(dy),210*dt),480,665);
+  e.y=groundY(e.y+Math.sign(dy)*Math.min(Math.abs(dy),210*dt));
   const moved=Math.hypot(e.x-startX,(e.y-startY)*1.7);
   e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
   if((Math.abs(e.x-p.x)<e.reach+80&&Math.abs(e.y-p.y)<63)||e.eliteRush===0){
@@ -1307,7 +1322,7 @@ function updateEnemies(dt){
  for(const e of enemies){
   if(Math.abs(e.knockVX)>1||Math.abs(e.knockVY)>1){
    e.x=clamp(e.x+e.knockVX*dt,45,STAGE_WIDTH-45);
-   e.y=clamp(e.y+e.knockVY*dt,480,665);
+   e.y=groundY(e.y+e.knockVY*dt);
    const drag=Math.exp(-3.55*dt);
    e.knockVX*=drag;e.knockVY*=drag;
   }
@@ -1384,7 +1399,7 @@ function updateEnemies(dt){
    const rush=Math.max(365,speed*3.25);
    const side=dx>=0?1:-1;
    e.x=clamp(e.x+side*Math.min(Math.abs(dx),rush*dt),45,STAGE_WIDTH-45);
-   e.y=clamp(e.y+Math.sign(dy)*Math.min(Math.abs(dy),rush*.35*dt),480,665);
+   e.y=groundY(e.y+Math.sign(dy)*Math.min(Math.abs(dy),rush*.35*dt));
    if(Math.abs(e.x-p.x)<e.reach+62&&Math.abs(e.y-p.y)<55){
     e.chargeTime=0;e.windup=.16;e.windupDuration=.16;e.chargeReady=false;
    }
@@ -1401,7 +1416,7 @@ function updateEnemies(dt){
   const spacing=e.type==='boss'?132:Math.min(e.reach+43,77+(e.slot%3)*12); // All roles must be able to close to their real attack range.
   const lanes=[-47,-19,24,47,-31,10];
   const targetX=clamp(p.x+side*spacing,55,STAGE_WIDTH-55);
-  const targetY=clamp(p.y+lanes[e.slot%6],484,656);
+  const targetY=groundY(p.y+lanes[e.slot%6]);
   const friends=enemies.filter(o=>o!==e&&!o.dead&&o.type!=='boss'&&Math.abs(o.x-e.x)<180).length;
   const moveSpeed=speed*(friends?1.21:1.08);
   const readyToHit=dist<e.reach+64&&Math.abs(dy)<55&&e.z<40;
@@ -1413,7 +1428,7 @@ function updateEnemies(dt){
   const lastX=e.x,lastY=e.y;
   if(Math.abs(targetX-e.x)>4)e.x+=Math.sign(targetX-e.x)*Math.min(Math.abs(targetX-e.x),moveSpeed*dt);
   if(Math.abs(targetY-e.y)>5)e.y+=Math.sign(targetY-e.y)*Math.min(Math.abs(targetY-e.y),moveSpeed*.78*dt);
-  e.x=clamp(e.x,45,STAGE_WIDTH-45);e.y=clamp(e.y,480,665);
+  e.x=clamp(e.x,45,STAGE_WIDTH-45);e.y=groundY(e.y);
   const moved=Math.hypot(e.x-lastX,(e.y-lastY)*1.7);
   e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
   e.spriteDistance+=moved;
