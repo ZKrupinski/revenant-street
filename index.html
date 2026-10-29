@@ -126,7 +126,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
     <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 콤보/자동 처형 · K 점프 · L 패링 · SHIFT 대쉬</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.25 — HUNTER BOSS AND ELEMENTAL UPGRADES</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.26 — PRELOADING + SOLO HUNTER + SHARD ECONOMY</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -765,11 +765,64 @@ function selectMenuItem(step=0){
 }
 function menuConfirm(){const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
 function menuBack(){const items=menuButtons();const back=items.find(b=>['resume','title','pauseMenu','hub'].includes(b.dataset.action));if(back){back.click();return true}return false}
-function showMenu(html){resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;selectMenuItem(0)}
-function hideMenu(){ $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
+function showMenu(html){canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;selectMenuItem(0)}
+function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;$('bottomTip').style.display='flex';showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1><p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p><div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div><div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button><button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div><p class="micro">가로 10화면 · 마스크 잡몹 A + 쌍단검 암살자 B + 철가면 엘리트 / 키보드·게임패드·드래그 조이스틱</p>`)}
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>앞뒤/깊이 이동 · 조이스틱 끝까지 달리기</div><div><kbd>J / X</kbd>20종 랜덤 공격 · 길게 누르면 연속 · 공중 차기</div><div><kbd>K / Y / △</kbd>점프 (지상 횡베기 회피)</div><div><kbd>L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
 function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0}
+let loadingRun=false;
+function requiredSceneArt(preview=false){
+ const checks=[
+  ['배경',()=>({ready:img.street_pano?.complete&&img.street_pano.naturalWidth>0,failed:false})],
+  ['이펙트',()=>({ready:['burst_red','burst_blue','burst_gold'].every(k=>img[k]?.complete&&img[k].naturalWidth>0),failed:false})],
+  ...['idle','walk','run','jab','frontkick','hit'].map(k=>['Z '+k,()=>loadZMove(k)]),
+  ...['idle','walk','attack'].map(k=>['잡몹 '+k,()=>loadMaskedMove(k)]),
+  ...['idle','walk','attack'].map(k=>['암살자 '+k,()=>RZAssassinArt.load(k)]),
+  ...['idle','walk'].map(k=>['방패 '+k,()=>loadRiotGuard(k)])
+ ];
+ if(preview)for(const k of ['idle','taunt','dash','slam','death','hit'])checks.push(['보스 '+k,()=>window.RZBossHunter.load(k)]);
+ return checks;
+}
+function waitSceneArt(preview,onProgress){
+ const checks=requiredSceneArt(preview),started=performance.now();
+ let cursor=0;
+ return new Promise((resolve,reject)=>{
+  const timer=setInterval(()=>{
+   if(cursor<checks.length){
+    for(let i=0;i<2&&cursor<checks.length;i++,cursor++){
+     try{checks[cursor][1]()}catch(err){clearInterval(timer);reject(err);return}
+    }
+   }
+   let completed=0,failed=[];
+   for(let i=0;i<cursor;i++){
+    const [name,fetch]=checks[i],a=fetch();
+    if(a.ready)completed++;else if(a.failed)failed.push(name);
+   }
+   onProgress?.(completed,checks.length,cursor<checks.length?checks[cursor][0]:'마지막 리소스 확인');
+   if(completed===checks.length){clearInterval(timer);resolve(true)}
+   else if(failed.length||performance.now()-started>35000){
+    clearInterval(timer);reject(Error(failed.length?'리소스 로딩 실패: '+failed.join(', '):'리소스 로딩 시간 초과'));
+   }
+  },90);
+ });
+}
+async function requestRunStart(){
+ if(loadingRun)return;
+ loadingRun=true;gameState='loading';
+ const preview=/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'');
+ showMenu(`<div class="eyebrow">PROJECT Z / RESOURCE PREPARATION</div><h2>게임 리소스 준비 중</h2><p id="loadStatus">스프라이트와 배경을 불러옵니다. 전투 화면은 모두 준비된 뒤 표시됩니다.</p><div class="bar hp"><div class="bar-fill" id="loadBar" style="width:0%"></div></div><p class="micro">고해상도 비트맵 압축 해제 · 프레임 8장 정렬 중</p>`);
+ try{
+  await waitSceneArt(preview,(done,total,name)=>{
+   const status=$('loadStatus'),bar=$('loadBar');
+   if(status)status.textContent=`준비 ${done}/${total} — ${name}`;
+   if(bar)bar.style.width=`${Math.floor(100*done/total)}%`;
+  });
+  loadingRun=false;startRun();
+ }catch(err){
+  loadingRun=false;
+  showMenu(`<div class="eyebrow">RESOURCE ERROR</div><h2>리소스 로딩 중단</h2><p>${String(err.message).replace(/[<>]/g,'')}</p><p>불완전한 캐릭터가 보이지 않도록 게임 실행을 막았습니다.</p><div class="buttons"><button class="main-btn" data-action="start">다시 불러오기</button><button class="secondary-btn" data-action="title">타이틀</button></div>`);
+ }
+}
 function startRun(){resetInputs();resetPlayer();wave=0;fx=[];floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
  if(/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'')){
   // Explicit QA shortcut: test the actual final encounter without traversing
@@ -1068,7 +1121,7 @@ function pollPad(){
  for(const [k,v] of Object.entries(a)){if(v&&!padPrev[k])action(k);padPrev[k]=!!v}
  return{dx:clamp(dx,-1,1),dy:clamp(dy,-1,1)};
 }
-function action(a){if(a==='start')startRun();else if(a==='attack')startAttack();else if(a==='parry')parry();else if(a==='jump')jump();else if(a==='dodge')dodge();else if(a==='pause')pauseToggle()}
+function action(a){if(a==='start')requestRunStart();else if(a==='attack')startAttack();else if(a==='parry')parry();else if(a==='jump')jump();else if(a==='dodge')dodge();else if(a==='pause')pauseToggle()}
 const analog={dx:0,dy:0,pointerId:null};
 function control(dt,pad){
  if(gameState!=='playing')return;
@@ -1352,7 +1405,10 @@ function updateHud(){
  const markup=badges||'<span class="empty-mod">속성 미장착</span>';
  if(modStripCache!==markup){$('modStrip').innerHTML=markup;modStripCache=markup}
  $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'BARE FISTS';$('modName').textContent=p.mod==='neuro'?'NEURO':p.mod==='none'?'NONE':p.mods.map(n=>({fire:'FIRE',shock:'VOLT',bleed:'BLEED',ice:'ICE'})[n]).join('+');$('credits').textContent=String(p.credits).padStart(4,'0');$('shardCount').textContent=String(perma.shards);$('combo').innerHTML=`${p.hits} <small>HITS</small>`;$('enemyCount').textContent=`REMAINING ${String(enemies.filter(e=>!e.dead).length).padStart(2,'0')}`;$('level').textContent=String(level).padStart(2,'0');const eliteOrBoss=enemies.find(e=>!e.dead&&e.type==='boss'&&Math.abs(e.x-p.x)<1050)||enemies.find(e=>!e.dead&&e.type==='elite'&&Math.abs(e.x-p.x)<850);$('bossHud').hidden=gameState!=='playing'||!eliteOrBoss;if(eliteOrBoss){$('bossName').textContent=eliteOrBoss.type==='elite'?'IRON MASK / 철가면 추적자':'HUNTER / 붉은 집행자';$('bossFill').style.width=`${clamp(100*eliteOrBoss.hp/eliteOrBoss.maxHp,0,100)}%`;$('bossPhase').textContent=String(eliteOrBoss.phase).padStart(2,'0')} }
-function update(dt){RZAssassinArt.warm(dt);warmZSprites(dt);warmMaskedGrunt(dt);time+=dt;messageUpdate(dt);const pad=pollPad();updateEffects(dt);if(gameState!=='playing')return;if(hitStop>0){hitStop-=dt;updateHud();return}control(dt,pad);cameraX+=(clamp(p.x-465,0,STAGE_WIDTH-W)-cameraX)*Math.min(1,dt*6.5);updateEnemies(dt*(slowMotion>0?.19:1));slowMotion=Math.max(0,slowMotion-dt);updateHud();const cleared=gameState==='playing'&&waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
+function update(dt){
+ // Don't decode a full library of 2K sprite sheets while the user fights.
+ // Required combat animations are prepared behind the loading screen.
+time+=dt;messageUpdate(dt);const pad=pollPad();updateEffects(dt);if(gameState!=='playing')return;if(hitStop>0){hitStop-=dt;updateHud();return}control(dt,pad);cameraX+=(clamp(p.x-465,0,STAGE_WIDTH-W)-cameraX)*Math.min(1,dt*6.5);updateEnemies(dt*(slowMotion>0?.19:1));slowMotion=Math.max(0,slowMotion-dt);updateHud();const cleared=gameState==='playing'&&waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
 function drawBackdrop(){
  const bg=img.street_pano;
  if(bg&&bg.complete&&bg.naturalWidth&&bg.naturalHeight){
@@ -1503,6 +1559,7 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  if(a.chargePrep>0){ctx.textAlign='center';ctx.fillStyle='#ffb842';ctx.font='900 31px Arial';ctx.fillText('!!',x,y0-18)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('공격 → 처형',x,y0-12)}}}
 function drawEffects(){drawModEnergy();for(const f of fx){let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}for(const f of floating){ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;ctx.lineWidth=4;ctx.strokeStyle='#10131c';ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);ctx.restore()}}
 function draw(){
+ if(gameState==='loading'||gameState==='menu'||gameState==='hub')return;
  ctx.clearRect(0,0,W,H);ctx.save();
  if(screenShake>0)ctx.translate(rnd(-screenShake,screenShake),rnd(-screenShake*.65,screenShake*.65));
  drawBackdrop();
@@ -1527,7 +1584,7 @@ function keyDown(ev){const k=ev.key.toLowerCase();if([' ','arrowup','arrowdown',
   if(k==='arrowright'||k==='arrowdown'||k==='d'||k==='s'){selectMenuItem(1);return}
   if(k==='enter'||k===' '){if(menuConfirm())return}
  }
- if(keys.has(k))return;keys.add(k);if(k==='j')startAttack();else if(k==='k'||k===' ')jump();else if(k==='l')parry();else if(k==='shift')dodge();else if(k==='escape'||k==='p')pauseToggle();else if(k==='enter'&&gameState==='menu'&&!$('overlay').querySelector('[data-action="start"]')?.disabled)startRun()}
+ if(keys.has(k))return;keys.add(k);if(k==='j')startAttack();else if(k==='k'||k===' ')jump();else if(k==='l')parry();else if(k==='shift')dodge();else if(k==='escape'||k==='p')pauseToggle();else if(k==='enter'&&gameState==='menu'&&!$('overlay').querySelector('[data-action="start"]')?.disabled)requestRunStart()}
 window.addEventListener('keydown',keyDown);window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
 const analogPad=$('analogPad'),analogThumb=$('analogThumb');
 function resetAnalog(){analog.dx=0;analog.dy=0;analog.pointerId=null;analogThumb.style.translate='0px 0px';analogPad.classList.remove('engaged')}
@@ -1557,12 +1614,12 @@ function suspendGame(){resetInputs();if(gameState==='playing')pauseToggle()}
 window.addEventListener('blur',suspendGame);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame()});
 
-$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.action;if(a==='start')startRun();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')hubMenu();else if(b.dataset.mod)selectMod(b.dataset.mod);else if(b.dataset.perma)buyUpgrade(b.dataset.perma)});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')hubMenu();else if(b.dataset.mod)selectMod(b.dataset.mod);else if(b.dataset.perma)buyUpgrade(b.dataset.perma)});
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();if(gameState!=='playing')return;b.setPointerCapture(e.pointerId);keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release)}
 for(let i=0;i<110;i++)rain.push({x:rnd(0,1280),y:rnd(0,720),s:rnd(220,590),len:rnd(5,18)});
 window.__revenant={getState:()=>({gameState,wave,player:{x:p.x,y:p.y,z:p.z,hp:p.hp,stamina:p.stamina,weapon:p.weapon,mod:p.mod,mods:[...p.mods]},enemies:enemies.map(e=>({type:e.type,x:e.x,y:e.y,hp:e.hp,poise:e.poise,groggy:e.groggy})),perma}),startRun,attack:startAttack,parry,execute,selectMod,buyUpgrade,forceClear:()=>{enemies=[];updateEnemies(0)},getWorld:()=>({x:p.x,cameraX,wave,stageWidth:STAGE_WIDTH,enemyPositions:enemies.filter(e=>!e.dead).map(e=>e.x)}),getAnalog:()=>({...analog}),getAssassinArtStatus:()=>RZAssassinArt.status(),getArtStatus:(key)=>{const v=loadZMove(key||'idle');return{ready:v.ready,failed:v.failed,loading:v.loading,frames:v.frames?.length,error:v.error}}};
-titleMenu();requestAnimationFrame(loop);
+canvas.style.visibility='hidden';titleMenu();requestAnimationFrame(loop);
 })();
 
 </script>
