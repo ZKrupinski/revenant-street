@@ -1,0 +1,54 @@
+name: Import Higgsfield riot shield enemy seven actions
+on:
+  push:
+    paths:
+      - '.github/workflows/import-riot-shield.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  prepare-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Preserve seven original high-resolution Higgsfield sprite sheets
+        run: |
+          mkdir -p assets/riot-shield/source
+          curl -fLSs --retry 3 --connect-timeout 22 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_065709_7a937eb5-14ac-4650-9065-d9df1dcc95e4.png' -o assets/riot-shield/source/idle.png
+          curl -fLSs --retry 3 --connect-timeout 22 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_065812_49b69845-4cf9-4780-b819-b83348a94dd5.png' -o assets/riot-shield/source/walk.png
+          curl -fLSs --retry 3 --connect-timeout 22 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_065811_cb2df4df-e332-4910-a7be-3451ac16d3fd.png' -o assets/riot-shield/source/run.png
+          curl -fLSs --retry 3 --connect-timeout 22 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_065812_e800d076-8102-4823-814e-855c63613271.png' -o assets/riot-shield/source/block.png
+          curl -fLSs --retry 3 --connect-timeout 22 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_065812_9eb5daac-1f18-4992-9777-a4dbb8bee27c.png' -o assets/riot-shield/source/attack.png
+          curl -fLSs --retry 3 --connect-timeout 22 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_065813_e4457c32-407b-4e3f-8705-bb65a9ec5f8e.png' -o assets/riot-shield/source/hit.png
+          curl -fLSs --retry 3 --connect-timeout 22 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_065811_79249d34-1e3b-4173-a54b-68a8e8582a39.png' -o assets/riot-shield/source/fall.png
+      - name: Chroma removal and shared foot-scale normalization
+        run: |
+          python3 -m pip install --quiet Pillow numpy scipy
+          python3 scripts/pack-riot-shield.py
+      - name: Validate transparent 4-by-2 eight-frame atlases
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          for name in ('idle','walk','run','block','attack','hit','fall'):
+              im=Image.open(f'assets/riot-shield/{name}.webp').convert('RGBA')
+              assert im.size==(1280,708),(name,im.size)
+              for i in range(8):
+                  tile=im.crop(((i%4)*320,(i//4)*354,((i%4)+1)*320,((i//4)+1)*354))
+                  assert tile.getchannel('A').getbbox(),(name,i,"missing frame")
+              print(name,'OK',Path(f'assets/riot-shield/{name}.webp').stat().st_size)
+          PY
+      - name: Commit seven sheets without losing concurrent edits
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/riot-shield/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Art: import and process 56 frames of armored riot shield enemy'
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi
