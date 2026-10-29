@@ -47,8 +47,9 @@ const gaitSource=poseguidedGait?{
  run:'./assets/project-z-hero/z-run-poseguided.png'
 }:zRevisedGait;
 if(!previousGait)for(const key of ['walk','run'])list.find(a=>a.id===key).sheet_url=gaitSource[key];
-// New black-hoodie protagonist is the default; ?hero=original shows archived Z.
-const isBlackHoodieHero=!/(?:[?&])hero=original(?:&|$)/.test(location.search);
+// Archived original protagonist is once again the default in both the game and lab.
+// Alternate black hoodie art remains available with ?hero=hoodie.
+const isBlackHoodieHero=/(?:[?&])hero=hoodie(?:&|$)/.test(location.search);
 if(isBlackHoodieHero){
  const remap={idle:'idle',walk:'walk',backwalk:'walk',run:'run',dash:'run',dodge:'run',
   jumpstart:'jump',airborne:'jump',landing:'jump',guard:'idle',
