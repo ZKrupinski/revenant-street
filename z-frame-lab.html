@@ -47,6 +47,20 @@ const gaitSource=poseguidedGait?{
  run:'./assets/project-z-hero/z-run-poseguided.png'
 }:zRevisedGait;
 if(!previousGait)for(const key of ['walk','run'])list.find(a=>a.id===key).sheet_url=gaitSource[key];
+// New black-hoodie protagonist is the default; ?hero=original shows archived Z.
+const isBlackHoodieHero=!/(?:[?&])hero=original(?:&|$)/.test(location.search);
+if(isBlackHoodieHero){
+ const remap={idle:'idle',walk:'walk',backwalk:'walk',run:'run',dash:'run',dodge:'run',
+  jumpstart:'jump',airborne:'jump',landing:'jump',guard:'idle',
+  jab:'punch',cross:'punch',hook:'punch',uppercut:'punch',
+  frontkick:'kick',roundkick:'kick',lowkick:'kick',airkick:'kick',
+  hit:'hit',heavyhit:'hit',knockdown:'death',getup:'death'};
+ for(const a of list){
+  if(!Object.hasOwn(remap,a.id))continue;
+  a.sheet_url='./assets/new-hero/'+remap[a.id]+'.png';
+  a.label='NEW HERO · '+a.label;
+ }
+}
 const assassinLabels=["대기", "걷기", "달리기", "돌진 찌르기", "단검 베기", "머리 피격", "복부 피격", "회전 피격", "공중 피격", "넉백", "다운·사망", "기상"];
 RZAssassinArt.keys.forEach((key,i)=>list.push({id:'assassin_'+key,label:assassinLabels[i],group:i<5?'새 적 B · 쌍단검':'새 적 B · 피격·다운',frames_target:8,sheet_url:RZAssassinArt.source(key),packed:true,frame_ms:90}));
 RZAssassinArt.keys.forEach((key,i)=>list.push({id:'elite_'+key,label:'철가면 엘리트 · '+assassinLabels[i],group:i<5?'철가면 엘리트 · 기본·공격':'철가면 엘리트 · 피격·다운',frames_target:8,sheet_url:RZAssassinArt.source(key),packed:true,variant:'elite',frame_ms:90}));
