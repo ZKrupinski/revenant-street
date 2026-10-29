@@ -1,0 +1,22 @@
+name: Project Z smoke tests
+on:
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - tests/**
+      - .github/workflows/z-smoke.yml
+  workflow_dispatch:
+jobs:
+  combat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Combat and animation regression tests
+        run: node tests/assassin-combat.cjs
