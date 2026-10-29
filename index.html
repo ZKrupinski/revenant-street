@@ -832,6 +832,43 @@ function resolveBodyCollisions(dt){
   }
  }
 }
+// IRON MASK ELITE: long readable tell -> fast rush -> parryable heavy cleave.
+function updateEliteAI(e,dt,dx,dy,dist){
+ if(e.windup>0)return false;
+ e.eliteCooldown=Math.max(0,e.eliteCooldown-dt);
+ if(!e.eliteAnnounced&&dist<650){
+  e.eliteAnnounced=true;
+  floatText('IRON MASK!',e.x,e.y-285,'#f3bb79');
+ }
+ if(e.eliteTell>0){
+  e.eliteTell=Math.max(0,e.eliteTell-dt);
+  e.visualMoving=false;
+  if(e.eliteTell===0){e.eliteRush=.42;fxBurst(e.x,e.y-144,'gold',1.2)}
+  return true;
+ }
+ if(e.eliteRush>0){
+  e.eliteRush=Math.max(0,e.eliteRush-dt);
+  const startX=e.x,startY=e.y,targetX=p.x-e.face*56;
+  const rush=Math.min(Math.abs(targetX-e.x),Math.max(430,e.speed*3.6)*dt);
+  e.x=clamp(e.x+Math.sign(targetX-e.x)*rush,45,STAGE_WIDTH-45);
+  e.y=clamp(e.y+Math.sign(dy)*Math.min(Math.abs(dy),210*dt),480,665);
+  const moved=Math.hypot(e.x-startX,(e.y-startY)*1.7);
+  e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
+  if((Math.abs(e.x-p.x)<e.reach+80&&Math.abs(e.y-p.y)<63)||e.eliteRush===0){
+   e.eliteRush=0;e.eliteAttack=true;e.windup=.27;e.windupDuration=.27;
+   e.cooldown=1.0;
+   fxBurst(e.x+e.face*40,e.y-125,'blue',1.2);
+  }
+  return true;
+ }
+ if(e.eliteCooldown===0&&dist>130&&dist<390&&Math.abs(dy)<95&&e.z<10){
+  e.eliteTell=e.phase===2?.51:.68;
+  e.eliteCooldown=e.phase===2?4.0:5.7;
+  e.cooldown=Math.max(e.cooldown,1.0);
+  return true;
+ }
+ return false;
+}
 function updateEnemies(dt){
  for(const e of enemies){
   if(Math.abs(e.knockVX)>1||Math.abs(e.knockVY)>1){
@@ -882,6 +919,7 @@ function updateEnemies(dt){
   e.face=dx>=0?1:-1;
   e.cooldown=Math.max(0,e.cooldown-dt);
   e.chargeCooldown=Math.max(0,e.chargeCooldown-dt);
+  if(e.type==='elite'&&updateEliteAI(e,dt,dx,dy,dist))continue;
   if(e.windup>0){
    e.windup-=dt;
    if(e.windup<=0){enemyAttack(e);e.attackPoseTime=.17;e.cooldown=e.type==='boss'?.98:1.18+(e.slot%3)*.22;e.attackDone=true}
