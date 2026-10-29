@@ -109,7 +109,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
     <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 콤보/자동 처형 · K 점프 · L 패링 · SHIFT 대쉬</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.22 — REAR AUTO-TURN PARRY</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.23 — HIGGSFIELD SHIELD GUARD</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -569,7 +569,7 @@ function paintZ(x,y,z){
  ctx.restore();return true;
 }
 function syncZSprite(){if(zArtNode)zArtNode.style.display='none'}
-RZAssassinArt.load('idle');loadMaskedMove('idle');loadZMove('idle');loadZMove('walk');loadZMove('run');loadZMove('dash');loadZMove('guard');loadZMove('airkick');loadZMove('jab');loadZMove('frontkick');loadZMove('lowkick');loadZMove('roundkick');
+RZAssassinArt.load('idle');loadMaskedMove('idle');if(USE_HF_SHIELD)loadRiotGuard('idle');loadZMove('idle');loadZMove('walk');loadZMove('run');loadZMove('dash');loadZMove('guard');loadZMove('airkick');loadZMove('jab');loadZMove('frontkick');loadZMove('lowkick');loadZMove('roundkick');
 
 const STAGE_WIDTH=12800;let cameraX=0;const WAVE_GATES=[0,4230,8850,12715]; // entire ten-screen world, no per-encounter movement clamp
 let enemies=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
@@ -1242,11 +1242,98 @@ function drawTravelMeter(){
  ctx.restore();
 }
 function ellipseShadow(x,y,s=1,alpha=.36){ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle='#01040b';ctx.beginPath();ctx.ellipse(x,y,49*s,11*s,0,0,Math.PI*2);ctx.fill();ctx.restore()}
+// HIGGSFIELD RIOT GUARD — seven complete eight-frame bitmap actions.
+// Keep the original embedded guard available with ?shield=old for A/B QA.
+const USE_HF_SHIELD=!/(?:[?&])shield=old(?:&|$)/.test(window.location?.search||'');
+const RIOT_GUARD_KEYS=['idle','walk','run','block','attack','hit','fall'];
+const riotGuardImages={},RIOT_CW=320,RIOT_CH=354;
+function getRiotGuardState(e){
+ if(e.dead)return 'fall';
+ if(e.reactionTime>0||e.pendingFall)return 'hit';
+ if(e.windup>0||e.attackPoseTime>0)return 'attack';
+ if(e.chargePrep>0)return 'block';
+ if(e.chargeTime>0)return 'run';
+ // Visually brace when the player attacks into the shield's front.
+ const front=(p.x-e.x)*(e.face||1)>0;
+ if(p.attack>0&&front&&Math.abs(p.x-e.x)<205&&Math.abs(p.y-e.y)<72)return 'block';
+ if(e.visualMoving)return e.locomotionMode==='run'?'run':'walk';
+ return 'idle';
+}
+function getRiotGuardFrame(e,key){
+ if(key==='fall')return Math.min(7,Math.floor(Math.max(0,e.deathAge||0)/.74*8));
+ if(key==='hit')return zOneShotFrame(1-(e.reactionTime||0)/Math.max(.001,e.reactionDuration||.5));
+ if(key==='attack'){
+  if(e.windup>0)return Math.min(5,zOneShotFrame(1-e.windup/Math.max(.001,e.windupDuration||.45))*.78|0);
+  return Math.min(7,6+Math.floor((1-(e.attackPoseTime||0)/.17)*2));
+ }
+ if(key==='walk'||key==='run'){
+  return Math.floor(Math.max(0,e.spriteDistance||0)/(key==='run'?30:24))%8;
+ }
+ return Math.floor(Math.max(0,e.spriteTime||0)*6.6*Z_ANIM_RATE)%8;
+}
+function loadRiotGuard(key){
+ if(!RIOT_GUARD_KEYS.includes(key))key='idle';
+ if(!riotGuardImages[key]){
+  const obj={frames:[],ready:false,loading:true,failed:false};
+  riotGuardImages[key]=obj;
+  const image=new Image();
+  image.onload=()=>{
+   try{
+    if(image.naturalWidth!==RIOT_CW*4||image.naturalHeight!==RIOT_CH*2)
+     throw Error('Shield guard atlas must have exactly eight frames');
+    for(let i=0;i<8;i++){
+     const frame=document.createElement('canvas');
+     frame.width=RIOT_CW;frame.height=RIOT_CH;
+     frame.getContext('2d').drawImage(image,(i%4)*RIOT_CW,Math.floor(i/4)*RIOT_CH,RIOT_CW,RIOT_CH,0,0,RIOT_CW,RIOT_CH);
+     obj.frames.push(frame);
+    }
+    obj.ready=true;
+   }catch(err){obj.failed=true;obj.error=String(err)}
+   obj.loading=false;image.onload=null;image.onerror=null;
+  };
+  image.onerror=()=>{obj.loading=false;obj.failed=true;obj.error='Network'};
+  image.src='./assets/riot-shield/'+key+'.webp';
+ }
+ return riotGuardImages[key];
+}
+function drawRiotGuard(e,x,y,z){
+ const state=getRiotGuardState(e);
+ if(e.riotState!==state){e.riotState=state;e.riotTime=0}
+ const atlas=loadRiotGuard(state),fallback=loadRiotGuard('idle');
+ const idx=getRiotGuardFrame(e,state);
+ const frame=atlas.ready?atlas.frames[idx]:fallback.ready?fallback.frames[0]:null;
+ if(frame)e.riotLastFrame=frame;
+ const current=frame||e.riotLastFrame;
+ const alpha=e.dead?clamp(e.fade,0,1):1;
+ ellipseShadow(x,y,1.0,.45*alpha/(1+z*.025));
+ ctx.save();ctx.translate(x,Math.round(y-z+5));
+ ctx.scale(e.face>0?-1:1,1);ctx.globalAlpha=alpha;
+ if(e.hitFlash>0)ctx.filter='brightness(1.5)';
+ if(current){
+  // Source is pre-matted; preserve proportions and 1 common scale.
+  const scale=.75;
+  ctx.drawImage(current,-RIOT_CW*scale/2,-RIOT_CH*scale,RIOT_CW*scale,RIOT_CH*scale);
+ }else{
+  // Only shown while initial eight-frame art streams in.
+  const old=img.guard;
+  if(old?.complete&&old.naturalWidth)ctx.drawImage(old,-74,-184,148,184);
+ }
+ ctx.restore();
+ if(e.dead)return;
+ const top=y-z-280,bw=100;
+ ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,top,bw,7);
+ ctx.fillStyle='#ddbd84';ctx.fillRect(x-bw/2,top,bw*clamp(e.hp/e.maxHp,0,1),7);
+ if(e.poise>0){ctx.fillStyle='#78ddef';ctx.fillRect(x-bw/2,top+9,bw*clamp(e.poise/e.maxPoise,0,1),4)}
+ ctx.textAlign='center';
+ if(e.windup>0){ctx.font='900 28px Arial';ctx.fillStyle='#ff677d';ctx.fillText('!',x,top-14)}
+ if(e.groggy>0){ctx.font='900 13px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('GROGGY',x,top-10)}
+}
 function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=actorShakeOffset(a);const x=Math.round((isP?a.x:(a.renderX??a.x))+sx),y=Math.round((isP?a.y:(a.renderY??a.y))+sy),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?getZMove():'';
  if(isP){ellipseShadow(x,y,1.06,.45);paintZ(x,y,z);return;}
  if(a.type==='raider'){drawMaskedGrunt(a,x,y,z);return;}
  if(a.type==='assassin'){drawAssassin(a,x,y,z);return;}
  if(a.type==='elite'){window.RZElite.draw(a,x,y,z,{ctx,art:RZAssassinArt,maskedFrame,getAssassinMove,ellipseShadow,clamp,images:img,time});return;}
+ if(a.type==='guard'&&USE_HF_SHIELD){drawRiotGuard(a,x,y,z);return;}
  const picture=img[a.type];if(!picture?.complete||!picture.naturalWidth)return;const w=isP?128:boss?340:(a.type==='guard'?148:a.type==='assassin'?120:122);const h=isP?260:boss?328:186;ellipseShadow(x,y,boss?2.05:isP?1.06:.85,1/(1+z*.022)*.45);
  ctx.save();ctx.globalAlpha=a.dead?clamp(a.fade,0,1):1;
  const impacted=!isP&&(a.reactionTime||0)>0;
