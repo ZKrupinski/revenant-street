@@ -780,7 +780,7 @@ function requiredSceneArt(preview=false){
   ...['idle','walk','attack'].map(k=>['암살자 '+k,()=>RZAssassinArt.load(k)]),
   ...['idle','walk'].map(k=>['방패 '+k,()=>loadRiotGuard(k)])
  ];
- if(preview)for(const k of ['idle','walk','taunt','dash','slam','death','hit'])checks.push(['보스 '+k,()=>window.RZBossHunter.load(k)]);
+ if(preview&&window.RZBossHunter?.isEnabled?.())for(const k of ['idle','walk','taunt','dash','slam','death','hit'])checks.push(['보스 '+k,()=>window.RZBossHunter.load(k)]);
  return checks;
 }
 function waitSceneArt(preview,onProgress){
