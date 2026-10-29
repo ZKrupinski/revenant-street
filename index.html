@@ -158,6 +158,7 @@ const zStride=key=>(key==='run'?32:key==='backwalk'?23:key==='walk'?24:24);
 const assetNames=['street','assassin','guard','boss','pipe_metal','pipe_charged','burst_red','burst_blue','burst_gold','street_pano'];
 const img={};
 assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
+const offscreenArrow=new Image();offscreenArrow.src='./assets/ui/target-arrow.png';
 const keys=new Set(), padPrev={}, touchKey={};
 const p={x:270,y:570,z:0,vz:0,facing:1,hp:100,maxHp:100,stamina:100,stagger:0,inv:0,stun:0,attack:0,attackDuration:0,hitDone:false,comboIdx:0,comboWindow:0,parry:0,dodge:0,dodgeX:0,weapon:0,maxWeapon:18,moveDX:0,moveDY:0,moveName:'idle',kickIdx:-1,punchIdx:-1,animAge:0,mod:'none',mods:[],credits:0,hits:0,hitTimeout:0,damageBoost:0,glow:0};
 
@@ -778,6 +779,7 @@ let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
   ['배경',()=>({ready:img.street_pano?.complete&&img.street_pano.naturalWidth>0,failed:false})],
+  ['적 방향 아이콘',()=>({ready:offscreenArrow.complete&&offscreenArrow.naturalWidth>0,failed:false})],
   ['이펙트',()=>({ready:['burst_red','burst_blue','burst_gold'].every(k=>img[k]?.complete&&img[k].naturalWidth>0),failed:false})],
   ...['idle','walk','run','jab','frontkick','hit'].map(k=>['Z '+k,()=>loadZMove(k)]),
   ...['idle','walk','attack'].map(k=>['잡몹 '+k,()=>loadMaskedMove(k)]),
@@ -1491,6 +1493,34 @@ function drawBackdrop(){
  }
  ctx.fillStyle='rgba(13,19,33,.05)';ctx.fillRect(0,500,W,190);
 }
+function offscreenEnemyTarget(){
+ const live=enemies.filter(e=>!e.dead);
+ if(!live.length)return null;
+ // Don't distract from active combat if any target is currently visible.
+ if(live.some(e=>e.x>=cameraX+45&&e.x<=cameraX+W-45))return null;
+ const nearest=live.reduce((a,b)=>Math.abs(a.x-p.x)<=Math.abs(b.x-p.x)?a:b);
+ return {side:nearest.x<cameraX?'left':'right',distance:Math.round(Math.abs(nearest.x-p.x)),
+  remaining:live.length,worldX:nearest.x};
+}
+function drawOffscreenEnemyIndicator(){
+ if(gameState!=='playing')return;
+ const target=offscreenEnemyTarget();if(!target)return;
+ const left=target.side==='left',x=left?16:W-158,y=260;
+ ctx.save();ctx.globalAlpha=.94;
+ ctx.fillStyle='rgba(7,15,28,.78)';ctx.fillRect(x,y,142,91);
+ ctx.strokeStyle='#83eaff';ctx.lineWidth=2;ctx.strokeRect(x+1,y+1,140,89);
+ if(offscreenArrow.complete&&offscreenArrow.naturalWidth>0){
+  ctx.save();ctx.translate(left?x+82:x+60,y+14);if(left)ctx.scale(-1,1);
+  ctx.drawImage(offscreenArrow,-40,0,80,54);ctx.restore();
+ }else{
+  ctx.fillStyle='#a6f4ff';ctx.font='900 54px Arial';ctx.fillText(left?'◀':'▶',x+28,y+60);
+ }
+ ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#edfaff';
+ ctx.fillText('남은 적 '+target.remaining+'명',x+71,y+73);
+ ctx.font='900 11px Arial';ctx.fillStyle='#a5d8ed';
+ ctx.fillText(target.distance+' px',x+71,y+86);
+ ctx.restore();
+}
 function drawTravelMeter(){
  const x0=407,y0=30,w=466,h=6;
  ctx.save();ctx.globalAlpha=.92;ctx.fillStyle='rgba(4,8,15,.75)';ctx.fillRect(x0-7,y0-9,w+14,26);
@@ -1628,7 +1658,7 @@ function draw(){
  actors.forEach(drawActor);
  drawEffects();ctx.restore();syncZSprite();
  if(screenTint>0){ctx.globalAlpha=screenTint*.32;ctx.fillStyle='#ff335d';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}
- drawTravelMeter();ctx.restore();
+ drawTravelMeter();ctx.restore();drawOffscreenEnemyIndicator();
 }
 function loop(t){const dt=Math.min((t-last)/1000||.016,.05);last=t;update(dt);draw();requestAnimationFrame(loop)}
 function rewardMenu(){setStatus('WAVE CLEAR');$('hint').hidden=true;$('bossHud').hidden=true;const opts=[{mod:'fire',symbol:'F',title:'IGNITION / 화염',desc:'강타 피해 +30%. 점화로 지속 피해'},{mod:'shock',symbol:'V',title:'VOLT / 전류',desc:'전류 충격으로 적을 잠시 멈춤'},{mod:'bleed',symbol:'B',title:'HEMORRHAGE / 출혈',desc:'피격 후 출혈 피해를 누적'},{mod:'ice',symbol:'C',title:'CRYO / 빙결',desc:'타격한 적의 행동 속도를 감소'}];if(wave===2){opts.sort((a,b)=>(p.mods.includes(a.mod)?1:0)-(p.mods.includes(b.mod)?1:0));}const cards=opts.filter(o=>!p.mods.includes(o.mod)).slice(0,3).map(o=>`<button class="upgrade-btn" data-mod="${o.mod}"><span class="sym">${MOD_META[o.mod].icon} ${o.symbol}</span><strong>${o.title}</strong><small>${o.desc}</small></button>`).join('');showMenu(`<div class="eyebrow">SYSTEM UPDATE / WAVE 0${wave} CLEAR</div><h2>속성 강화 선택 — 무료</h2><p>재화 소모 없음 · 생존 보너스 <b class="key">+20 체력</b> · 무기 자동 수리. 새 속성을 추가해 다음 지역으로 진입하세요. 출혈 + 전류 = 신경 폭주.</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT MOD — ${p.mod.toUpperCase()}</div><div class="pad-hint">◀ ▶ / 십자키 · 왼쪽 스틱 선택　 A / × 결정</div>`)}
