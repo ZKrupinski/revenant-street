@@ -51,5 +51,7 @@ jobs:
             echo 'New hero assets are already current'
           else
             git commit -m 'Art: package eight black-hoodie hero sprite atlases with stable dimensions'
-            git push
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
           fi
