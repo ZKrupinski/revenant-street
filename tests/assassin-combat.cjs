@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,getRiotGuardState,getRiotGuardFrame,pollPad,attackCheck,control,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,selectMod,updateHud,pollPad,attackCheck,control,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('existing wave composition preserves assassin slots',()=>{g.startRun();assert.equal(t.getEnemies().filter(e=>e.type==='assassin').length,6)});
@@ -507,5 +507,73 @@ test('reaction variation avoids identical repeats and preserves boss mass and wo
  assert.equal(boss.vz,0,'boss should not float like a grunt');
  boss.x=12730;boss.knockVX=1500;t.updateEnemies(.4);
  assert(boss.x<=12755,'knockback should stay inside world bounds');
+});
+
+test('remaining off-screen enemy shows a direction; active visible enemies suppress it',()=>{
+ g.startRun();t.setCameraX(0);t.p.x=450;
+ const far=t.makeEnemy('raider',3000,560,0);t.setEnemies([far]);
+ const right=t.offscreenEnemyTarget();
+ assert(right&&right.side==='right'&&right.remaining===1);
+ const shown=t.makeEnemy('raider',650,560,1);t.setEnemies([far,shown]);
+ assert.equal(t.offscreenEnemyTarget(),null,'never cover visible combat with a directional icon');
+ t.setEnemies([far]);t.setCameraX(3500);
+ assert.equal(t.offscreenEnemyTarget().side,'left','arrow must flip behind the camera');
+});
+test('ground perspective limits player and enemy feet without restricting jump altitude',()=>{
+ g.startRun();assert.equal(t.groundY(320),551);assert.equal(t.groundY(720),658);
+ const e=t.makeEnemy('raider',900,480,0);
+ assert.equal(e.y,551,'enemies should never stand on elevated background scenery');
+ t.p.x=420;t.p.y=554;t.setEnemies([]);
+ for(let i=0;i<150;i++)t.control(1/60,{dx:0,dy:-1});
+ assert(t.p.y>=551,'player feet must stay on walkable foreground');
+ t.p.y=659;t.p.stun=0;
+ for(let i=0;i<55;i++)t.control(1/60,{dx:0,dy:1});
+ assert(t.p.y<=658,'bottom of walkable floor must be enforced');
+});
+test('stage difficulty scales enemy health while fodder stays quick to defeat',()=>{
+ g.startRun();
+ const first=t.makeEnemy('raider',1000,560,0),elite1=t.makeEnemy('elite',1200,560,1);
+ assert(first.maxHp<=45,'early cannon fodder should drop in a few hits');
+ assert(elite1.maxHp>=350,'elite should be a clear combat challenge');
+ t.setWave(2);
+ const later=t.makeEnemy('raider',1000,560,0),elite2=t.makeEnemy('elite',1200,560,1);
+ assert(later.maxHp>first.maxHp);
+ assert(elite2.maxHp>elite1.maxHp);
+ t.setWave(3);const boss=t.makeEnemy('boss',11000,560,0);
+ assert(boss.maxHp>=3000,'boss should survive several player combos');
+ assert(boss.maxPoise>elite2.maxPoise,'boss must have more poise than elite');
+});
+test('upgrades may stack repeatedly and have genuine attack damage benefit',()=>{
+ g.startRun();
+ const hit=()=>{
+  const e=t.makeEnemy('raider',t.p.x+75,t.p.y,1);
+  e.hp=1000;e.maxHp=1000;e.stun=2;t.setEnemies([e]);
+  t.p.facing=1;t.p.moveName='jab';t.p.comboIdx=0;t.p.counterBoost=false;t.p.hitDone=false;
+  t.attackCheck();
+  return 1000-e.hp;
+ };
+ const basic=hit();
+ t.selectMod('power');t.selectMod('power');
+ assert.equal(t.modRank('power'),2,'two picks should both count');
+ assert.equal(g.getState().wave,1,'selecting a mid-wave upgrade must not restart the wave');
+ const powered=hit();
+ assert(powered>basic*1.3,'two power stacks must be visibly stronger');
+ t.updateHud();
+ assert(node('modStrip').innerHTML.includes('×2'),'the HUD must display real stack ranks');
+});
+test('five kills trigger optional mid-combat reward without losing surviving mobs',()=>{
+ g.startRun();
+ const survivor=t.makeEnemy('raider',t.p.x+490,t.p.y,5);
+ survivor.stun=2;t.setEnemies([survivor]);
+ for(let i=0;i<5;i++){
+  const e=t.makeEnemy('raider',t.p.x+65,t.p.y,i);
+  t.hurtEnemy(e,999,5);
+ }
+ t.updateEnemies(1/60);
+ assert.equal(g.getState().gameState,'reward','fifth kill should pause for a growth pick');
+ t.selectMod('rush');
+ assert.equal(g.getState().gameState,'playing');
+ assert.equal(g.getState().wave,1);
+ assert.equal(t.getEnemies().filter(e=>!e.dead).length,1,'midwave pick keeps remaining fight');
 });
 console.log(`${checks} combat regression checks passed`);
