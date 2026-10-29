@@ -1,0 +1,60 @@
+name: Import individual original Z walking and running frames
+on:
+  push:
+    paths:
+      - '.github/workflows/import-z-gait-v2.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-gait:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Download 16 individually illustrated original Z poses
+        run: |
+          mkdir -p /tmp/z-gait-individual-v2
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114405_69a19fcf-3392-4e1a-a87e-424dc833e5e7.png' -o /tmp/z-gait-individual-v2/walk-f01.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114718_e6245001-df58-405d-9c6a-58e71c5dbbaf.png' -o /tmp/z-gait-individual-v2/walk-f02.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114720_01810302-9ede-411c-b7b4-5719e55190b7.png' -o /tmp/z-gait-individual-v2/walk-f03.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_115356_cf75e05b-04af-40ee-91f8-2364a93c38c7.png' -o /tmp/z-gait-individual-v2/walk-f04.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114403_a91d9a0c-7249-4f66-91b0-18aabfbc4839.png' -o /tmp/z-gait-individual-v2/walk-f05.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114719_8f823b49-7809-4d19-b30c-3223a8613d64.png' -o /tmp/z-gait-individual-v2/walk-f06.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_115358_e7f89c04-8d49-4994-b8d2-f98d589a5c20.png' -o /tmp/z-gait-individual-v2/walk-f07.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114719_fb40fe17-0988-41ae-9729-adf23e1f251a.png' -o /tmp/z-gait-individual-v2/walk-f08.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114406_9d556db8-8a79-433a-b01a-e5af85298f3a.png' -o /tmp/z-gait-individual-v2/run-f01.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114758_3d221182-16ce-4bf5-ac80-396eeb0442bb.png' -o /tmp/z-gait-individual-v2/run-f02.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114756_bdaa9d26-3e9d-4840-babd-06e7ebf16878.png' -o /tmp/z-gait-individual-v2/run-f03.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114802_1d23c627-7a29-49e1-9a8a-f1aae0870ca8.png' -o /tmp/z-gait-individual-v2/run-f04.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114402_4fcf931c-8c0c-45df-ba38-8d4de40787de.png' -o /tmp/z-gait-individual-v2/run-f05.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114757_bc33a640-5078-4237-9111-3d04a85f4cba.png' -o /tmp/z-gait-individual-v2/run-f06.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114801_823ce390-86a1-42b8-b62b-6be131c1e6a1.png' -o /tmp/z-gait-individual-v2/run-f07.png &
+          curl -fLsS --retry 3 --connect-timeout 20 --max-time 60 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_114758_efcbae78-e890-4e26-8c3f-9904c0ef6828.png' -o /tmp/z-gait-individual-v2/run-f08.png &
+          wait
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('/tmp/z-gait-individual-v2')
+          files=list(source.glob('*.png'))
+          assert len(files)==16,(len(files),'Missing independently generated frames')
+          for f in files:
+              assert f.stat().st_size>350000,(f,'truncated download')
+          print('PASS: all 16 full-resolution individual frames downloaded')
+          PY
+      - name: Crop green and align 8 frame bitmaps to common feet
+        run: |
+          python3 -m pip install -q Pillow numpy
+          python3 scripts/pack-z-gait-v2.py
+      - name: Publish two versioned atlases and QA without overwriting originals
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/original-z-hf/walk-v2.webp assets/original-z-hf/run-v2.webp assets/original-z-hf/walk-v2-qa.jpg assets/original-z-hf/run-v2-qa.jpg assets/original-z-hf/gait-v2-validation.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Art: hand-pose-guided Higgsfield original-Z walk and run 8-frame atlases'
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi
