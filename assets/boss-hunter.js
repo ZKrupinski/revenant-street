@@ -1,6 +1,7 @@
 (function(){
 'use strict';
-const NAMES=['idle','walk','dash','combo','slam','taunt','hit','death'];
+// Removed the fragmented rapid multi-strike skill and its broken bitmap VFX.
+const NAMES=['idle','walk','dash','slam','taunt','hit','death'];
 const CELL_W=512,CELL_H=544,DISPLAY=.72;
 const images={};
 const useNewBoss= !/(?:[?&])boss=old(?:&|$)/.test(location.search);
@@ -27,7 +28,7 @@ function start(e,name,duration,api){
  e.bossMode=name;e.bossAge=0;e.bossDuration=duration;e.bossHitMask=0;
  if(name==='dash')e.bossDashDir=e.face||-1;
  if(name==='slam')api.warning(e,'붉은 충격파!', 'red');
- if(name==='combo')api.warning(e,'연속 강타!', 'gold');
+ 
  if(name==='taunt'){api.warning(e,e.phase===2?'OVERDRIVE / 폭주':'HUNTER / 붉은 집행자','red');load('taunt')}
  load(name);
 }
@@ -70,19 +71,6 @@ function update(e,p,dt,api){
       e.bossHitMask|=1;strike(e,api,125,e.phase===2?1.3:1.1);
      }
     }
-  }else if(e.bossMode==='combo'){
-   if(phase>.13&&phase<.77&&dist<250){
-    const run=Math.min(e.phase===2?180:125,dist)*dt*.72;
-    e.x+=Math.sign(dx)*Math.min(run,Math.abs(dx));
-    e.face=dx>=0?1:-1;e.visualMoving=run>.01;
-   }
-   const windows=[.30,.54,.78];
-   windows.forEach((at,i)=>{
-    if(phase>=at && !(e.bossHitMask&(1<<i))){
-     e.bossHitMask|=1;strike(e,api,128,i===2?1.4:1.03);
-     api.impact(e,'combo');
-    }
-   });
   }else if(e.bossMode==='slam'){
     if(phase>=.61 && !(e.bossHitMask&1)){
       e.bossHitMask|=1;
@@ -105,10 +93,9 @@ function update(e,p,dt,api){
  const cycle=e.bossCycle++;
  if(dist>210){
   start(e,'dash',e.phase===2?.70:.88,api);
- }else if(cycle%3===1){
-  start(e,'slam',e.phase===2?.88:1.12,api);
  }else{
-  start(e,'combo',e.phase===2?.77:.97,api);
+  // Powerful single slam with a readable anticipation. No stuttering combo.
+  start(e,'slam',e.phase===2?.91:1.16,api);
  }
  e.cooldown=Math.max(e.cooldown,.5);
  return true;
@@ -118,7 +105,7 @@ function state(e){
  if(e.bossMode)return e.bossMode;
  if(e.reactionTime>0)return 'hit';
  if(e.visualMoving||e.bossMoving)return 'walk';
- if(e.windup>0||e.attackPoseTime>0)return 'combo';
+ if(e.windup>0||e.attackPoseTime>0)return 'idle';
  return 'idle';
 }
 function frame(e,key){
