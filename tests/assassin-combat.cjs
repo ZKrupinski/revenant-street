@@ -603,4 +603,27 @@ test('WASD are the only PC keys that control X/Y locomotion',()=>{
  t.control(.1,{dx:0,dy:0});
  assert(t.p.x>left,'D must move right');assert(t.p.y>up,'S must move toward foreground');
 });
+
+test('separately posed original-Z v2 walk/run atlases retain 8 frames each',()=>{
+ const art=require('../assets/original-z-hf/gait-v2-validation.json');
+ for(const key of ['walk','run']){
+  const buf=fs.readFileSync(path.join(__dirname,'../assets/original-z-hf/'+key+'-v2.webp'));
+  assert(buf.length>100000,key+' v2 art missing');
+  assert.equal(buf.subarray(0,4).toString('ascii'),'RIFF');
+  assert.equal(buf.subarray(8,12).toString('ascii'),'WEBP');
+  assert.equal(art[key].source_frames,8);
+  assert.deepEqual(Array.from(art[key].per_frame),[512,620]);
+  assert(art[key].shared_scale>.15);
+  assert.equal(art[key].source_bounds.length,8);
+ }
+});
+test('original hero defaults to v2 separate full-body pose frames with older atlas rollback',()=>{
+ const game=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ const lab=fs.readFileSync(path.join(__dirname,'../z-frame-lab.html'),'utf8');
+ assert(game.includes("||'v2'"),'new pose guide gait should be the default');
+ assert(game.includes("const suffix=zGaitChoice==='v1'?'':'-v2'"),'v1 full-body art rollback required');
+ assert(game.includes("const zUsePreviousGait=zGaitChoice==='previous'"),'historical gait rollback required');
+ assert(game.includes("if(zGaitChoice==='crossing')"),'prior crossing version should remain selectable');
+ assert(lab.includes("map.walk='walk'+suffix;map.run='run'+suffix"),'Frame Lab should use same v2 assets as game');
+});
 console.log(`${checks} combat regression checks passed`);
