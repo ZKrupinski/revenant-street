@@ -1,0 +1,40 @@
+name: Build original Z 8F limb motion pose references
+on:
+  push:
+    paths:
+      - '.github/workflows/build-z-gait-guides.yml'
+      - 'scripts/generate_z_gait_guides.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build-gait-guides:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Generate 16 deterministic anatomy and shoulder references
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 scripts/generate_z_gait_guides.py
+      - name: Verify guidance atlas and source geometry
+        run: |
+          python3 - <<'PY'
+          from PIL import Image
+          for k in ('walk','run'):
+              for i in range(1,9):
+                  im=Image.open(f'assets/project-z-hero/pose-guides/{k}-f{i:02}.png')
+                  assert im.size==(512,720)
+              assert Image.open(f'assets/project-z-hero/pose-guides/{k}-8f-contact.png').size==(2048,1440)
+          print('16 reference frame poses and 2 sheets ready')
+          PY
+      - name: Commit QA guides only, not game sprites
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/project-z-hero/pose-guides/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Art QA: 16 precise two-leg and counter-swing pose guides'
+            git push
+          fi
