@@ -160,4 +160,23 @@ test('crossing-step original Z art is locally packaged with old gait rollback',(
  assert(main.includes('const zStride=key=>(key===\'run\'?32'),'running stride should reduce frame jumps');
  assert(lab.includes('value="8"'),'Frame Lab default speed should be 8 FPS');
 });
+
+test('new black-hoodie protagonist maps gameplay motions to eight local original-quality atlases',()=>{
+ const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ const lab=fs.readFileSync(path.join(__dirname,'../z-frame-lab.html'),'utf8');
+ for(const kind of ['idle','walk','run','jump','punch','kick','hit','death']){
+  const file=fs.readFileSync(path.join(__dirname,'../assets/new-hero/'+kind+'.png'));
+  assert(file.length>30000,kind+' atlas is empty');
+  assert.equal(file.subarray(1,4).toString(),'PNG');
+  const w=file.readUInt32BE(16),h=file.readUInt32BE(20);
+  assert.equal(w,1536,'each action needs four equal-width frames');
+  assert.equal(h,832,'each action needs two equal-height frame rows');
+  assert(html.includes("new-hero/'+motion+'.png"),'game hero mapping absent');
+ }
+ assert(html.includes('hero=original'),'archived original must be selectable');
+ assert(html.includes('Z_HOODIE_HERO?prepareTransparentHeroCells'),'transparent new art must avoid green-screen flood fill');
+ assert(lab.includes('preclearedHeroFrames'),'lab must preview black clothing safely');
+ assert(lab.includes('isBlackHoodieHero'),'lab must show new hero by default');
+ assert.equal(t.currentZFrameIndex('getup'),7,'new hero get-up must reverse death animation');
+});
 console.log(`${checks} combat regression checks passed`);
