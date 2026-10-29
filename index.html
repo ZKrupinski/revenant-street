@@ -780,7 +780,7 @@ function requiredSceneArt(preview=false){
   ...['idle','walk','attack'].map(k=>['암살자 '+k,()=>RZAssassinArt.load(k)]),
   ...['idle','walk'].map(k=>['방패 '+k,()=>loadRiotGuard(k)])
  ];
- if(preview)for(const k of ['idle','taunt','dash','slam','death','hit'])checks.push(['보스 '+k,()=>window.RZBossHunter.load(k)]);
+ if(preview)for(const k of ['idle','walk','taunt','dash','slam','death','hit'])checks.push(['보스 '+k,()=>window.RZBossHunter.load(k)]);
  return checks;
 }
 function waitSceneArt(preview,onProgress){
@@ -1572,6 +1572,19 @@ function draw(){
 }
 function loop(t){const dt=Math.min((t-last)/1000||.016,.05);last=t;update(dt);draw();requestAnimationFrame(loop)}
 function rewardMenu(){setStatus('WAVE CLEAR');$('hint').hidden=true;$('bossHud').hidden=true;const opts=[{mod:'fire',symbol:'F',title:'IGNITION / 화염',desc:'강타 피해 +30%. 점화로 지속 피해'},{mod:'shock',symbol:'V',title:'VOLT / 전류',desc:'전류 충격으로 적을 잠시 멈춤'},{mod:'bleed',symbol:'B',title:'HEMORRHAGE / 출혈',desc:'피격 후 출혈 피해를 누적'},{mod:'ice',symbol:'C',title:'CRYO / 빙결',desc:'타격한 적의 행동 속도를 감소'}];if(wave===2){opts.sort((a,b)=>(p.mods.includes(a.mod)?1:0)-(p.mods.includes(b.mod)?1:0));}const cards=opts.filter(o=>!p.mods.includes(o.mod)).slice(0,3).map(o=>`<button class="upgrade-btn" data-mod="${o.mod}"><span class="sym">${MOD_META[o.mod].icon} ${o.symbol}</span><strong>${o.title}</strong><small>${o.desc}</small></button>`).join('');showMenu(`<div class="eyebrow">SYSTEM UPDATE / WAVE 0${wave} CLEAR</div><h2>속성 강화 선택 — 무료</h2><p>재화 소모 없음 · 생존 보너스 <b class="key">+20 체력</b> · 무기 자동 수리. 새 속성을 추가해 다음 지역으로 진입하세요. 출혈 + 전류 = 신경 폭주.</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT MOD — ${p.mod.toUpperCase()}</div><div class="pad-hint">◀ ▶ / 십자키 · 왼쪽 스틱 선택　 A / × 결정</div>`)}
+function requestSelectMod(m){
+ if(wave!==2){selectMod(m);return}
+ if(loadingRun)return;
+ loadingRun=true;gameState='loading';
+ showMenu(`<div class="eyebrow">FINAL STAGE PREPARATION</div><h2>보스 전투 준비 중</h2><p id="loadStatus">보스 8프레임 애니메이션 준비 중</p><div class="bar hp"><div id="loadBar" class="bar-fill" style="width:0%"></div></div>`);
+ waitSceneArt(true,(done,total,name)=>{
+  const label=$('loadStatus'),bar=$('loadBar');
+  if(label)label.textContent=`준비 ${done}/${total} — ${name}`;
+  if(bar)bar.style.width=`${Math.floor(100*done/total)}%`;
+ }).then(()=>{loadingRun=false;selectMod(m)}).catch(err=>{
+  loadingRun=false;showMenu(`<div class="eyebrow">RESOURCE ERROR</div><h2>보스 리소스 로딩 중단</h2><p>${String(err.message).replace(/[<>]/g,'')}</p><div class="buttons"><button class="main-btn" data-mod="${m}">다시 불러오기</button></div>`);
+ });
+}
 function selectMod(m){if(!MOD_META[m])return;if(!p.mods.includes(m))p.mods.push(m);p.mod=(p.mods.includes('shock')&&p.mods.includes('bleed'))?'neuro':p.mods.join('+');p.hp=clamp(p.hp+20,0,p.maxHp);p.weapon=0;p.maxWeapon=18;p.stamina=100;level++;gameState='playing';hideMenu();spawnWave();const info=MOD_META[m];floatText(info.icon+' '+info.title+' 장착!',p.x,p.y-260,info.color);flash(info.icon+' '+info.short+' 속성 활성화!',2);sound('parry');setStatus('COMBAT LIVE')}
 function completeMenu(){gameState='complete';setStatus('RUN COMPLETE');perma.shards+=4;save();$('bossHud').hidden=true;showMenu(`<div class="eyebrow">OBJECTIVE COMPLETE / REBEL SIGNAL ONLINE</div><h1>ZONE <span>CLEARED</span></h1><p>엘리트 헌터를 격파했습니다. 사이버네틱 지하 기지 <b class="key">REBEL HUB</b>로 귀환합니다.</p><div class="hub-stat"><span>처치 ${runKills}명 / 전리품 ₩${p.credits}</span><strong>영구 자원 +4</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB로 귀환</button><button class="secondary-btn" data-action="start">새로운 런 시작</button></div>`)}
 function deadMenu(){if(gameState==='dead')return;gameState='dead';setStatus('SIGNAL LOST');perma.shards+=1;save();$('hint').hidden=true;showMenu(`<div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1><p>기계 신체가 파괴됐습니다. 영구 자원 <b class="key">+1</b>을 회수했습니다.</p><div class="hub-stat"><span>이번 런의 처치 ${runKills}명</span><strong>SHARDS +1</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB</button><button class="secondary-btn" data-action="start">즉시 재시작</button></div>`)}
@@ -1614,7 +1627,7 @@ function suspendGame(){resetInputs();if(gameState==='playing')pauseToggle()}
 window.addEventListener('blur',suspendGame);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame()});
 
-$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')hubMenu();else if(b.dataset.mod)selectMod(b.dataset.mod);else if(b.dataset.perma)buyUpgrade(b.dataset.perma)});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')hubMenu();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)buyUpgrade(b.dataset.perma)});
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();if(gameState!=='playing')return;b.setPointerCapture(e.pointerId);keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release)}
 for(let i=0;i<110;i++)rain.push({x:rnd(0,1280),y:rnd(0,720),s:rnd(220,590),len:rnd(5,18)});
