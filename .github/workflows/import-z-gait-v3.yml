@@ -1,0 +1,63 @@
+name: Import Project Z gait V3 full-body frames
+on:
+  push:
+    paths:
+      - '.github/workflows/import-z-gait-v3.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Download 2 sheets and 8 independently drawn counterpart poses
+        run: |
+          mkdir -p .tmp-z-gait-v3
+          curl -fLsS --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 55 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_143237_df299877-38b0-485e-bc16-5286be8575a1.png' -o .tmp-z-gait-v3/walk-sheet.png
+          curl -fLsS --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 55 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_143235_af5200aa-b09c-4cc6-83dc-3d711520fb16.png' -o .tmp-z-gait-v3/run-sheet.png
+          curl -fLsS --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 55 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_143552_f90c8446-d0d6-4b51-afde-f158638946d1.png' -o .tmp-z-gait-v3/walk-f05.png
+          curl -fLsS --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 55 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_143551_b163c7b9-b819-4be7-b267-f1f69bb326df.png' -o .tmp-z-gait-v3/walk-f06.png
+          curl -fLsS --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 55 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_143553_b1835613-b3eb-43d7-b00e-230dbef073f4.png' -o .tmp-z-gait-v3/walk-f07.png
+          curl -fLsS --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 55 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_143553_ebccac86-ad92-4053-a320-42ffcd079fc3.png' -o .tmp-z-gait-v3/walk-f08.png
+          curl -fLsS --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 55 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_143614_686e2a28-b91d-49c3-a7ee-8f92899c6074.png' -o .tmp-z-gait-v3/run-f05.png
+          curl -fLsS --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 55 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_143615_162850f6-7ad9-4f80-a2a5-d1a0fbe52b6b.png' -o .tmp-z-gait-v3/run-f06.png
+          curl -fLsS --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 55 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_143610_eafde32f-b823-49f9-96f6-63cbb9a267b3.png' -o .tmp-z-gait-v3/run-f07.png
+          curl -fLsS --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 55 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_143616_da6438d1-bbbf-4f2a-a149-840e023b9bda.png' -o .tmp-z-gait-v3/run-f08.png
+      - name: Build transparent eight-frame v3 walk and run atlases
+        run: |
+          python3 -m pip install -q Pillow numpy
+          GAIT_V3_SOURCE="$PWD/.tmp-z-gait-v3" python3 scripts/pack-z-gait-v3.py
+      - name: Validate real media, transparent alpha and all frames
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          import json
+          p=Path('assets/original-z-hf')
+          meta=json.loads((p/'gait-v3-validation.json').read_text())
+          for key in ('walk','run'):
+              fn=p/f'{key}-v3.webp'
+              im=Image.open(fn).convert('RGBA')
+              assert im.size==(2048,1240),im.size
+              assert fn.stat().st_size>100000
+              for i in range(8):
+                  fr=im.crop(((i%4)*512,(i//4)*620,((i%4)+1)*512,((i//4)+1)*620))
+                  assert fr.getchannel('A').getbbox()
+              assert meta[key]['frames']==8
+              print('PASS',key,fn.stat().st_size,'bytes, 8 nonempty cells')
+          PY
+      - name: Commit two game-ready sprite atlases and visual QA
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/original-z-hf/walk-v3.webp assets/original-z-hf/run-v3.webp assets/original-z-hf/walk-v3-qa.jpg assets/original-z-hf/run-v3-qa.jpg assets/original-z-hf/gait-v3-validation.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Art: add original Z true alternating-foot gait V3, 16 full-body frames'
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi
