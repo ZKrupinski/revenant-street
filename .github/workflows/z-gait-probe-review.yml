@@ -1,0 +1,54 @@
+name: Review six original Z locomotion poses
+on:
+  push:
+    paths:
+      - '.github/workflows/z-gait-probe-review.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Build walk/run pose proof bitmap contact and preview output
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 - <<'PY'
+          from PIL import Image,ImageOps,ImageDraw
+          import io,base64,os
+          root='assets/project-z-hero/pose-probes'
+          names=['walk-f01','walk-f03','walk-f05','walk-f07','run-f03','run-f07']
+          sheet=Image.new('RGB',(1600,1210),(18,24,33))
+          d=ImageDraw.Draw(sheet)
+          for i,k in enumerate(names):
+              p=f'{root}/{k}.png'
+              im=Image.open(p).convert('RGBA')
+              board=Image.new('RGB',im.size,(21,25,31))
+              board.paste(im,mask=im.getchannel('A'))
+              tile=ImageOps.contain(board,(508,545))
+              x=12+(i%3)*530
+              y=18+(i//3)*602
+              sheet.paste(tile,(x+(508-tile.width)//2,y+30+(545-tile.height)//2))
+              d.text((x+10,y+5),k.upper(),fill=(245,247,251))
+          output=f'{root}/original-z-keyframes-contact.jpg'
+          sheet.save(output,quality=87,optimize=True)
+          sh=ImageOps.contain(sheet,(1200,900))
+          buf=io.BytesIO()
+          sh.save(buf,format='JPEG',quality=50,optimize=True)
+          encoded=base64.b64encode(buf.getvalue()).decode('ascii')
+          chunks=[encoded[i:i+7000] for i in range(0,len(encoded),7000)]
+          print(f'FRAME_REVIEW_META:{sh.width}x{sh.height}:{len(chunks)}')
+          for i,part in enumerate(chunks):print(f'FRAME_REVIEW_CHUNK:{i}:{part}')
+          PY
+      - name: Save preview only, not live game assets
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/project-z-hero/pose-probes/original-z-keyframes-contact.jpg
+          if ! git diff --cached --quiet; then
+            git commit -m 'Art QA: contact sheet to compare six independently generated original-Z key poses'
+            git push
+          fi
