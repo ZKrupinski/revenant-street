@@ -106,13 +106,13 @@ test('Frame Lab exposes all twelve elite animations without sharing original cac
 
 test('animation loops advance slower than Alpha 1.13 at the same travel distance',()=>{
  g.startRun();
- t.p.gaitDistance=23;t.p.motionTime=0;
+ t.p.gaitDistance=25;t.p.motionTime=0;
  assert.equal(t.currentZFrameIndex('walk'),1);
- assert.equal(t.currentZFrameIndex('run'),0,'run should take longer to advance than old 25px stride');
+ assert.equal(t.currentZFrameIndex('run'),0,'run should advance more slowly after stride tuning');
  t.p.gaitDistance=0;t.p.motionTime=1;
  assert.equal(t.currentZFrameIndex('idle'),4,'idle cycle should advance at 78% original cadence');
  const e=t.makeEnemy('raider',400,570,0);
- e.spriteDistance=22;e.spriteTime=1;
+ e.spriteDistance=25;e.spriteTime=1;
  assert.equal(t.maskedFrame(e,'walk'),1);
  assert.equal(t.maskedFrame(e,'idle'),4);
 });
@@ -140,5 +140,22 @@ test('enemy visual locomotion uses speed hysteresis to suppress frame flicker',(
  assert.equal(e.locomotionMode,'run','minor speed dip must not flip back into walk');
  e.visualSpeedSmooth=140;t.updateEnemies(.016);
  assert.equal(e.locomotionMode,'walk','large speed drop eventually returns to walk');
+});
+
+test('Higgsfield original-Z walk and run atlas sources match gameplay and Frame Lab',()=>{
+ const main=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ const lab=fs.readFileSync(path.join(__dirname,'../z-frame-lab.html'),'utf8');
+ const motion={
+  walk:'hf_20261029_030024_4719744a-87ec-488b-9d17-dae2d61fbcd5.png',
+  run:'hf_20261029_030023_82fb3e14-3ccd-4f1a-81ad-3014aca3b65e.png'
+ };
+ for(const [name,source] of Object.entries(motion)){
+  assert(main.includes(source),name+' missing from game');
+  assert(lab.includes(source),name+' missing from Frame Lab');
+  assert(!main.includes('hf_20261028_15015'+(name==='walk'?'6_f5057a8d':'7_260ad4f6')),name+' old atlas still used');
+ }
+ assert(main.includes('const Z_ANIM_RATE=.72'),'animation cadence must be slightly slower');
+ assert(main.includes('const zStride=key=>(key===\'run\'?32'),'running stride should reduce frame jumps');
+ assert(lab.includes('value="8"'),'Frame Lab default speed should be 8 FPS');
 });
 console.log(`${checks} combat regression checks passed`);
