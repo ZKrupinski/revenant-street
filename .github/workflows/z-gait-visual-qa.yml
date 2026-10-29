@@ -1,0 +1,31 @@
+name: Visual QA preview for Project Z gait
+on:
+  push:
+    paths:
+      - '.github/workflows/z-gait-visual-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview-gait:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Export compressed walk and run previews for visual inspection
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 - <<'PY'
+          from PIL import Image
+          import io, base64, math
+          for kind in ('walk','run'):
+              im=Image.open(f'assets/project-z-hero/z-{kind}-crossing.png').convert('RGB')
+              im.thumbnail((1200,680))
+              buf=io.BytesIO()
+              im.save(buf,format='JPEG',quality=45,optimize=True,progressive=False)
+              encoded=base64.b64encode(buf.getvalue()).decode('ascii')
+              width=7000
+              parts=[encoded[i:i+width] for i in range(0,len(encoded),width)]
+              print(f'PREVIEW_META:{kind}:{im.width}x{im.height}:{len(parts)}',flush=True)
+              for i,part in enumerate(parts):
+                  print(f'PREVIEW_CHUNK:{kind}:{i}:{part}',flush=True)
+          PY
