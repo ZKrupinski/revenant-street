@@ -34,3 +34,5 @@ jobs:
               for i,part in enumerate(parts):
                   print(f'PREVIEW_CHUNK:{kind}:{i}:{part}',flush=True)
           PY
+
+# Run visual QA after staging the independent near/far-leg pose-guided candidate files.
