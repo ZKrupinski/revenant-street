@@ -569,7 +569,7 @@ function paintZ(x,y,z){
  ctx.restore();return true;
 }
 function syncZSprite(){if(zArtNode)zArtNode.style.display='none'}
-RZAssassinArt.load('idle');loadMaskedMove('idle');if(USE_HF_SHIELD)loadRiotGuard('idle');loadZMove('idle');loadZMove('walk');loadZMove('run');loadZMove('dash');loadZMove('guard');loadZMove('airkick');loadZMove('jab');loadZMove('frontkick');loadZMove('lowkick');loadZMove('roundkick');
+RZAssassinArt.load('idle');loadMaskedMove('idle');loadZMove('idle');loadZMove('walk');loadZMove('run');loadZMove('dash');loadZMove('guard');loadZMove('airkick');loadZMove('jab');loadZMove('frontkick');loadZMove('lowkick');loadZMove('roundkick');
 
 const STAGE_WIDTH=12800;let cameraX=0;const WAVE_GATES=[0,4230,8850,12715]; // entire ten-screen world, no per-encounter movement clamp
 let enemies=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
@@ -1328,6 +1328,8 @@ function drawRiotGuard(e,x,y,z){
  if(e.windup>0){ctx.font='900 28px Arial';ctx.fillStyle='#ff677d';ctx.fillText('!',x,top-14)}
  if(e.groggy>0){ctx.font='900 13px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('GROGGY',x,top-10)}
 }
+// This warm-up runs only after the shield module has initialized.
+if(USE_HF_SHIELD)loadRiotGuard('idle');
 function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=actorShakeOffset(a);const x=Math.round((isP?a.x:(a.renderX??a.x))+sx),y=Math.round((isP?a.y:(a.renderY??a.y))+sy),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?getZMove():'';
  if(isP){ellipseShadow(x,y,1.06,.45);paintZ(x,y,z);return;}
  if(a.type==='raider'){drawMaskedGrunt(a,x,y,z);return;}
