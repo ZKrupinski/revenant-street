@@ -790,7 +790,7 @@ function showMenu(html){canvas.style.visibility='hidden';resetInputs();$('hint')
 function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;$('bottomTip').style.display='flex';showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1><p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p><div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div><div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button><button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div><p class="micro">가로 10화면 · 마스크 잡몹 A + 쌍단검 암살자 B + 철가면 엘리트 / 키보드·게임패드·드래그 조이스틱</p>`)}
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>앞뒤/깊이 이동 · 조이스틱 끝까지 달리기</div><div><kbd>J / X</kbd>20종 랜덤 공격 · 길게 누르면 연속 · 공중 차기</div><div><kbd>K / Y / △</kbd>점프 (지상 횡베기 회피)</div><div><kbd>L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
-function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0}
+function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0}
 let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
@@ -965,7 +965,7 @@ function startAttack(){
  if(p.stamina<cost)return;
  p.stamina-=cost;p.comboIdx=step;p.moveName=move;p.attackQueued=false;p.airAttack=false;p.counterBoost=false;p.recentMoves.push(move);if(p.recentMoves.length>5)p.recentMoves.shift();
  const durations={jab:.31,cross:.37,hook:.41,uppercut:.44,backfist:.39,hammerfist:.50,spinning_elbow:.52,rising_elbow:.42,superman_punch:.56,shovel_hook:.41,frontkick:.48,lowkick:.40,roundkick:.54,axe_kick:.59,sidekick:.48,spinning_heel:.57,crescent_kick:.53,diagonal_airkick:.58,rising_headbutt:.45,forward_headbutt:.40};
- p.attackDuration=durations[move]||.36;
+ p.attackDuration=(durations[move]||.36)/(1+modRank('haste')*.10);
  const advance={jab:23,cross:43,hook:31,uppercut:22,backfist:29,hammerfist:46,
   spinning_elbow:53,rising_elbow:30,superman_punch:100,shovel_hook:34,
   frontkick:45,lowkick:32,roundkick:48,axe_kick:37,sidekick:66,
@@ -980,7 +980,7 @@ function startAttack(){
  // Bigger intentional chase step on every strike. Kicks and finishers drive
  // farther than jabs; keep a hard cap to prevent a one-tap screen teleport.
  const impactStep=isKick?1.20:move==='superman_punch'?1.14:1;
- p.attackDriveTotal=Math.min(242,Math.round((advance[move]||32)*(hasInput?2.68:2.42)*impactStep));
+ p.attackDriveTotal=Math.min(275,Math.round((advance[move]||32)*(hasInput?2.68:2.42)*impactStep*(1+modRank('rush')*.2)));
  p.attackDriveRemaining=p.attackDriveTotal;
  p.attack=p.attackDuration;p.animAge=0;p.hitDone=false;p.glow=.18;p.comboWindow=.95;
  sound('attack');
@@ -1031,7 +1031,7 @@ function awardEnemyKill(e){
 }
 function hurtEnemy(e,dmg,poise){
  if(e.dead)return;
- e.hp-=dmg;e.poise=clamp(e.poise+poise*(e.type==='boss'?.35:e.type==='elite'?.80:1),0,e.maxPoise);
+ e.hp-=dmg;e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:e.type==='elite'?.80:1),0,e.maxPoise);
  // Twelve distinct impacts: head snaps, gut folds, ankle buckles, spins,
  // side stumbles and aerial knockdowns. Keep the existing enemy bitmap.
  const smash=Z_KICK_MOVES.has(p.moveName)||Z_HEAD_MOVES.has(p.moveName)||p.moveName==='uppercut'||dmg>=60;
@@ -1077,7 +1077,7 @@ function hurtEnemy(e,dmg,poise){
  const kick=Z_KICK_MOVES.has(p.moveName);
  const force=clamp(Math.max(vx*(smash?1.27:.82),
     drive*(kick?5.1:4.55)+(smash?105:35)),260,1300);
- const resistance=e.type==='boss'?.34:e.type==='elite'?.78:e.type==='guard'?.88:1;
+ const resistance=(e.type==='boss'?.34:e.type==='elite'?.78:e.type==='guard'?.88:1)*(1+modRank('impact')*.22);
  const carry=Math.max(0,(e.knockVX||0)*p.facing)*.29;
  e.knockVX=p.facing*clamp(force*resistance+carry,0,1360);
  e.knockVY=(e.type==='boss'?.2:e.type==='elite'?.67:.84)*vy;
@@ -1095,16 +1095,38 @@ function attackCheck(){
  const armed=p.weapon>0&&!Z_KICK_MOVES.has(p.moveName)&&!Z_HEAD_MOVES.has(p.moveName)&&!p.airAttack;
  const baseDamage={jab:15,cross:19,hook:22,uppercut:26,backfist:20,hammerfist:30,spinning_elbow:28,rising_elbow:26,superman_punch:32,shovel_hook:23,frontkick:20,lowkick:18,roundkick:29,axe_kick:32,sidekick:27,spinning_heel:34,crescent_kick:28,diagonal_airkick:35,rising_headbutt:27,forward_headbutt:25,airkick:37};
  const baseReach={jab:94,cross:112,hook:105,uppercut:100,backfist:105,hammerfist:110,spinning_elbow:108,rising_elbow:95,superman_punch:166,shovel_hook:96,frontkick:133,lowkick:132,roundkick:151,axe_kick:128,sidekick:154,spinning_heel:165,crescent_kick:151,diagonal_airkick:160,rising_headbutt:88,forward_headbutt:89,airkick:174};
- const damage=((armed?([22,27,38][p.comboIdx]||22):baseDamage[p.moveName]||15)+p.damageBoost)*(p.counterBoost?2.05:1);
+ const damage=((armed?([22,27,38][p.comboIdx]||22):baseDamage[p.moveName]||15)+p.damageBoost)
+  *(p.counterBoost?2.05:1)*(1+modRank('power')*.16)
+  *(1+Math.min(9,p.hits)*modRank('momentum')*.055);
  const reach=p.counterBoost?220:armed?([134,145,170][p.comboIdx]||135):(baseReach[p.moveName]||100);
  const poise={jab:21,cross:29,hook:38,uppercut:53,backfist:32,hammerfist:62,spinning_elbow:58,rising_elbow:49,superman_punch:68,shovel_hook:41,frontkick:43,lowkick:34,roundkick:57,axe_kick:65,sidekick:58,spinning_heel:72,crescent_kick:56,diagonal_airkick:74,rising_headbutt:62,forward_headbutt:54,airkick:78};
  let hits=0;
- for(const e of enemies){if(e.dead||e.inv>0)continue;const dx=e.x-p.x,dy=Math.abs(e.y-p.y);if((dx*p.facing)>-25&&(dx*p.facing)<reach&&dy<(p.airAttack?78:56)&&(p.airAttack?p.z<225:Math.abs(e.z-p.z)<82)){let dmg=damage;if(p.mods.includes('fire')){dmg*=1.3;e.burn=Math.max(e.burn||0,3.4)}
- if(p.mods.includes('ice')){dmg*=.94;e.freeze=1.6}
- if(p.mods.includes('bleed')){dmg*=.95;e.bleed=Math.max(e.bleed,4.5)}
- if(p.mods.includes('shock')){dmg*=1.08;e.shock=1.4}
+ for(const e of enemies){if(e.dead||e.inv>0)continue;const dx=e.x-p.x,dy=Math.abs(e.y-p.y);if((dx*p.facing)>-25&&(dx*p.facing)<reach&&dy<(p.airAttack?78:56)&&(p.airAttack?p.z<225:Math.abs(e.z-p.z)<82)){let dmg=damage;
+ const critChance=Math.min(.65,modRank('crit')*.10);
+ const critical=Math.random()<critChance;
+ if(critical){dmg*=1.8;floatText('CRITICAL!',e.x,e.y-236,'#ffe982');fxBurst(e.x,e.y-118,'gold',1.55)}
+ if(p.mods.includes('fire')){dmg*=1+.15*modRank('fire');e.burn=Math.max(e.burn||0,2.7+.65*modRank('fire'));e.burnPower=modRank('fire')}
+ if(p.mods.includes('ice')){dmg*=.94;e.freeze=Math.max(e.freeze,1.2+modRank('ice')*.55);e.freezePower=modRank('ice')}
+ if(p.mods.includes('bleed')){dmg*=.95;e.bleed=Math.max(e.bleed,3.7+modRank('bleed')*.7);e.bleedPower=modRank('bleed')}
+ if(p.mods.includes('shock')){dmg*=1+.06*modRank('shock');e.shock=Math.max(e.shock,1.1+.28*modRank('shock'))}
  if(p.mod==='neuro') {dmg*=1.35;e.shock=2;e.bleed=4.5;enemies.filter(o=>o!==e&&!o.dead&&Math.abs(o.x-e.x)<180).forEach(o=>{o.stun=.8;o.hp-=18;fxBurst(o.x,o.y-90,'blue',.8)})}
- hurtEnemy(e,dmg,p.counterBoost?100:armed?([28,31,47][p.comboIdx]||28):(poise[p.moveName]||28));createModImpact(e);hits++}}
+ hurtEnemy(e,dmg,p.counterBoost?100:armed?([28,31,47][p.comboIdx]||28):(poise[p.moveName]||28));createModImpact(e);hits++;
+ p.hp=clamp(p.hp+dmg*modRank('leech')*.04,0,p.maxHp);
+ if(modRank('chain')&&Math.random()<Math.min(.85,modRank('chain')*.25)){
+  for(const nearby of enemies.filter(o=>o!==e&&!o.dead&&Math.abs(o.x-e.x)<195&&Math.abs(o.y-e.y)<80).slice(0,2+modRank('chain'))){
+   nearby.hp-=8+modRank('chain')*7;nearby.shock=Math.max(nearby.shock,.65);
+   fxBurst(nearby.x,nearby.y-110,'blue',1.3);
+  }
+ }
+ if(modRank('nova')&&p.novaCooldown<=0){
+  p.novaCooldown=.44;
+  for(const nearby of enemies.filter(o=>o!==e&&!o.dead&&Math.hypot(o.x-e.x,(o.y-e.y)*1.6)<165+modRank('nova')*13)){
+   nearby.hp-=11+modRank('nova')*8;
+   nearby.knockVX+=(nearby.x>=e.x?1:-1)*(170+modRank('nova')*40);
+   fxBurst(nearby.x,nearby.y-100,'gold',1.25);
+  }
+  fxBurst(e.x,e.y-120,'gold',1.9);
+ }}}
  if(armed){p.weapon--;if(p.weapon<=0){flash('OVERLOAD SHATTER!',1.7);screenShake=27;screenTint=.9;sound('break');fxBurst(p.x+75*p.facing,p.y-120,'red',3);for(const e of enemies)if(!e.dead&&Math.hypot(e.x-p.x,(e.y-p.y)*1.4)<310){hurtEnemy(e,85,105)}}}
  if(hits>0&&p.attackDriveRemaining>0&&p.attackDriveTotal>0){
   // Commit the hit's momentum into forward pressure; avoid backward recoil.
@@ -1145,7 +1167,7 @@ function enemyAttack(e){
   if(e.poise>=e.maxPoise){e.groggy=3.4;e.stun=3.4;floatText('GROGGY',e.x,e.y-185,'#8fe6ff')}
   return;
  }
- if(p.inv>0||p.dodge>0)return;const dmg=e.damage*(eliteCleave?1.42:1)*(e.bossDamageMult||1);p.hp=Math.max(0,p.hp-dmg);p.receivedHits=(p.receivedHits||0)+1;
+ if(p.inv>0||p.dodge>0)return;const dmg=e.damage*(eliteCleave?1.42:1)*(e.bossDamageMult||1);p.hp=Math.max(0,p.hp-dmg*clamp(1-modRank('guard')*.09,.49,1));p.receivedHits=(p.receivedHits||0)+1;
  const heavy=e.type==='boss'||eliteCleave||e.type==='guard'&&p.receivedHits%3===0;
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.counterBoost=false;
  if(heavy&&p.hp>0&&p.z<70&&p.receivedHits%2===0){
@@ -1257,7 +1279,9 @@ function control(dt,pad){
  p.parry=Math.max(0,p.parry-dt);p.dodge=Math.max(0,p.dodge-dt);
  p.riposteWindow=Math.max(0,p.riposteWindow-dt);
  if(p.riposteWindow===0)p.riposteTarget=null;
- p.stamina=clamp(p.stamina+17*dt,0,100);
+ p.stamina=clamp(p.stamina+(17+modRank('haste')*4)*dt,0,100);
+ p.hp=clamp(p.hp+modRank('regen')*.8*dt,0,p.maxHp);
+ p.novaCooldown=Math.max(0,(p.novaCooldown||0)-dt);
  p.comboWindow=Math.max(0,p.comboWindow-dt);
  p.hitTimeout=Math.max(0,p.hitTimeout-dt);if(p.hitTimeout===0)p.hits=0;
  p.motionTime=(p.motionTime||0)+dt;
@@ -1379,7 +1403,7 @@ function updateEnemies(dt){
   e.freeze=Math.max(0,e.freeze-dt);
   e.bleed=Math.max(0,e.bleed-dt);e.burn=Math.max(0,(e.burn||0)-dt);
   if(e.groggy>0){e.groggy-=dt;if(e.groggy<=0){e.poise=0;e.stun=0}}
-  if(e.bleed>0)e.hp-=dt*5.5;if(e.burn>0)e.hp-=dt*7.5;
+  if(e.bleed>0)e.hp-=dt*(4+2.5*(e.bleedPower||1));if(e.burn>0)e.hp-=dt*(5+3*(e.burnPower||1));
   if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);continue}
   if(e.stun>0||e.shock>.35||e.groggy>0||e.proneTime>0||e.riseTime>0)continue;
   let dx=p.x-e.x,dy=p.y-e.y,dist=Math.abs(dx);
@@ -1403,7 +1427,7 @@ function updateEnemies(dt){
    if(e.windup<=0){enemyAttack(e);e.attackPoseTime=.17;e.cooldown=e.type==='boss'?.98:1.18+(e.slot%3)*.22;e.attackDone=true}
    continue;
   }
-  const frozenSpeed=e.freeze>0?.52:1;
+  const frozenSpeed=e.freeze>0?Math.max(.28,.65-.09*(e.freezePower||1)):1;
   const speed=e.speed*frozenSpeed*(e.phase===2?1.12:1);
   if(e.chargePrep>0){
    e.chargePrep-=dt;
