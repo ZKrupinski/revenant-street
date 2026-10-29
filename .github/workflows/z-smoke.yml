@@ -22,3 +22,5 @@ jobs:
         run: node tests/assassin-combat.cjs
       - name: Z locomotion full-body motion planner checks
         run: node tests/z-gait-planner.cjs
+      - name: Original Z V3 walk/run and backstep regression
+        run: node tests/z-gait-v3-runtime.cjs
