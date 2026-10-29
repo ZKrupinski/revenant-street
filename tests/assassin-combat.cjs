@@ -173,13 +173,13 @@ test('new black-hoodie protagonist maps gameplay motions to eight local original
   assert.equal(h,832,'each action needs two equal-height frame rows');
   assert(html.includes("new-hero/'+motion+'.png"),'game hero mapping absent');
  }
- assert(html.includes('hero=original'),'archived original must be selectable');
- assert(html.includes('Z_HOODIE_HERO?prepareTransparentHeroCells'),'transparent new art must avoid green-screen flood fill');
- assert(lab.includes('preclearedHeroFrames'),'lab must preview black clothing safely');
- assert(lab.includes('isBlackHoodieHero'),'lab must show new hero by default');
+ assert(html.includes("const Z_HOODIE_HERO=/(?:[?&])hero=hoodie"),'original Z must be the game default');
+ assert(lab.includes("const isBlackHoodieHero=/(?:[?&])hero=hoodie"),'original Z must be the Frame Lab default');
+ assert(html.includes('Z_HOODIE_HERO?prepareTransparentHeroCells'),'alternate hoodie art must preserve transparency');
+ assert(lab.includes('preclearedHeroFrames'),'alternate hoodie must remain available for comparison');
  t.p.getupTimer=.64;t.p.recoveryDuration=.64;
- assert.equal(t.currentZFrameIndex('getup'),7,'new hero get-up must start with the last fallen frame');
+ assert.equal(t.currentZFrameIndex('getup'),0,'original hero get-up must begin on original first frame');
  t.p.getupTimer=0;
- assert.equal(t.currentZFrameIndex('getup'),0,'new hero get-up must finish on the first upright frame');
+ assert.equal(t.currentZFrameIndex('getup'),7,'original hero get-up must finish on original last frame');
 });
 console.log(`${checks} combat regression checks passed`);
