@@ -20,3 +20,5 @@ jobs:
           node-version: '22'
       - name: Combat and animation regression tests
         run: node tests/assassin-combat.cjs
+      - name: Z locomotion full-body motion planner checks
+        run: node tests/z-gait-planner.cjs
