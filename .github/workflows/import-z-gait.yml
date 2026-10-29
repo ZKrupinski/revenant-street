@@ -1,0 +1,49 @@
+name: Import and verify original Z gait atlases
+on:
+  push:
+    paths:
+      - '.github/workflows/import-z-gait.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-gait:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Fetch high-resolution Higgsfield gait source images
+        run: |
+          mkdir -p assets/project-z-hero
+          curl -fL --retry 3 --connect-timeout 20 \
+            'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_030616_7eb6e1fe-086f-468e-ba39-4259b60ec4dc.png' \
+            -o assets/project-z-hero/z-walk-crossing.png
+          curl -fL --retry 3 --connect-timeout 20 \
+            'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_030616_d3545988-f136-4b51-b110-ac60ac48b799.png' \
+            -o assets/project-z-hero/z-run-crossing.png
+      - name: Verify PNG and eight-frame cell geometry
+        run: |
+          python3 - <<'PY'
+          import struct
+          for kind in ('walk','run'):
+              p=f'assets/project-z-hero/z-{kind}-crossing.png'
+              with open(p,'rb') as f:
+                  h=f.read(24)
+              assert h[:8]==b'\x89PNG\r\n\x1a\n',(p,'not PNG')
+              w,height=struct.unpack('>II',h[16:24])
+              assert w>=900 and height>=500,(p,w,height)
+              assert w//4>=160 and height//2>=180,(p,'cells too small')
+              print(f'{p}: valid PNG {w}x{height}; 4x2 cells approx {w//4}x{height//2}')
+          PY
+      - name: Commit packaged gait atlases to GitHub
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/project-z-hero/z-walk-crossing.png assets/project-z-hero/z-run-crossing.png
+          if git diff --cached --quiet; then
+            echo 'Gait files already match repository.'
+          else
+            git commit -m 'Assets: package verified original Z crossing-step walk and run PNG atlases'
+            git push
+          fi
