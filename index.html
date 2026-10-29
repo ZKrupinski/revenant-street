@@ -167,8 +167,8 @@ const Z_HOODIE_KEYS={idle:'idle',walk:'walk',backwalk:'walk',run:'run',
 if(Z_HOODIE_HERO){
  for(const key of Object.keys(Z_REMOTE_ATLAS)){
   let motion=Z_HOODIE_KEYS[key];
-  if(!motion)motion=/kick/i.test(key)?'kick':/hit|hurt|stun/i.test(key)?'hit':
-   /jump|air|land/i.test(key)?'jump':/punch|jab|hook|cross|upper|attack/i.test(key)?'punch':'idle';
+  if(!motion)motion=/kick|heel/i.test(key)?'kick':/hit|hurt|stun/i.test(key)?'hit':
+   /jump|air|land/i.test(key)?'jump':/punch|jab|hook|cross|upper|attack|elbow|headbutt|backfist|hammerfist/i.test(key)?'punch':'idle';
   Z_REMOTE_ATLAS[key]='./assets/new-hero/'+motion+'.png';
  }
 }
