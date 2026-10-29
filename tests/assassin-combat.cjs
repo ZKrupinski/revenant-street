@@ -203,4 +203,20 @@ test('combo lunge respects facing and does not teleport on one frame',()=>{
  assert(t.p.x<prior,'left-facing attack must travel left');
  assert(prior-t.p.x<40,'lunge must not teleport across the arena in one frame');
 });
+
+test('original armored Z uses four local Higgsfield sprite motions and retains rollback',()=>{
+ const game=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ const lab=fs.readFileSync(path.join(__dirname,'../z-frame-lab.html'),'utf8');
+ for(const key of ['walk','run','punch','kick']){
+  const data=fs.readFileSync(path.join(__dirname,'../assets/original-z-hf/'+key+'.webp'));
+  assert(data.length>75000,key+' local art missing');
+  assert.equal(data.subarray(0,4).toString('ascii'),'RIFF');
+  assert.equal(data.subarray(8,12).toString('ascii'),'WEBP');
+  assert(game.includes("original-z-hf/'+art+'.webp"),'game should map attack sheets');
+  assert(lab.includes("original-z-hf/'+value+'.webp"),'Frame Lab should allow visual comparison');
+ }
+ assert(game.includes("const Z_HF_ART=!/(?:[?&])zart=original"),'game needs one-click original-Z art rollback');
+ assert(game.includes("if(!zUsePreviousGait)"),'old walking and running must remain selectable');
+ assert(game.includes("const Z_HOODIE_HERO=/(?:[?&])hero=hoodie"),'do not change the playable character identity');
+});
 console.log(`${checks} combat regression checks passed`);
