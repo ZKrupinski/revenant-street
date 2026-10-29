@@ -47,6 +47,17 @@ const gaitSource=poseguidedGait?{
  run:'./assets/project-z-hero/z-run-poseguided.png'
 }:zRevisedGait;
 if(!previousGait)for(const key of ['walk','run'])list.find(a=>a.id===key).sheet_url=gaitSource[key];
+// Show revised original armored hero movements by default, with a source
+// comparison switch (?zart=original / ?gait=previous).
+const hfOriginalArt=!/(?:[?&])zart=original(?:&|$)/.test(location.search);
+if(hfOriginalArt){
+ const map={jab:'punch',cross:'punch',backfist:'punch',frontkick:'kick',roundkick:'kick',sidekick:'kick'};
+ if(!previousGait){map.walk='walk';map.run='run'}
+ for(const [key,value] of Object.entries(map)){
+  const art=list.find(a=>a.id===key);
+  if(art){art.sheet_url='./assets/original-z-hf/'+value+'.webp';art.label='ORIGINAL Z · '+art.label}
+ }
+}
 // Archived original protagonist is once again the default in both the game and lab.
 // Alternate black hoodie art remains available with ?hero=hoodie.
 const isBlackHoodieHero=/(?:[?&])hero=hoodie(?:&|$)/.test(location.search);
