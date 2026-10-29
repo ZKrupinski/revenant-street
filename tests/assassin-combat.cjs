@@ -130,14 +130,15 @@ test('enemy visual locomotion uses speed hysteresis to suppress frame flicker',(
  g.startRun();
  const e=t.makeEnemy('raider',t.p.x+170,t.p.y,0);
  t.setEnemies([e]);e.stun=5;
- e.visualMoving=true;e.visualSpeed=220;
- t.updateEnemies(.016);
- assert.equal(e.locomotionMode,'walk','one noisy frame must not flip run state');
- e.visualMoving=true;e.visualSpeed=300;
- for(let i=0;i<12;i++){e.stun=5;e.visualMoving=true;e.visualSpeed=300;t.updateEnemies(.016)}
- assert.equal(e.locomotionMode,'run');
- e.visualMoving=true;e.visualSpeed=175;
- t.updateEnemies(.016);
- assert.equal(e.locomotionMode,'run','run should not jitter into walk at threshold');
+ // updateEnemies deliberately recomputes visualMoving from physics each tick.
+ // Inject the observed smoothed speed to probe the threshold hysteresis.
+ e.visualSpeedSmooth=180;t.updateEnemies(.016);
+ assert.equal(e.locomotionMode,'walk','one noisy sample must not trigger run');
+ e.visualSpeedSmooth=270;t.updateEnemies(.016);
+ assert.equal(e.locomotionMode,'run','sustained fast motion should trigger run');
+ e.visualSpeedSmooth=205;t.updateEnemies(.016);
+ assert.equal(e.locomotionMode,'run','minor speed dip must not flip back into walk');
+ e.visualSpeedSmooth=140;t.updateEnemies(.016);
+ assert.equal(e.locomotionMode,'walk','large speed drop eventually returns to walk');
 });
 console.log(`${checks} combat regression checks passed`);
