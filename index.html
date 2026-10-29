@@ -109,7 +109,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
     <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 콤보/자동 처형 · K 점프 · L 패링 · SHIFT 대쉬</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.13 — IRON MASK ELITE HUNTER</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.14 — SMOOTHER, SLOWER ANIMATION</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -132,6 +132,11 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 (()=>{'use strict';
 const $=id=>document.getElementById(id), canvas=$('game'),ctx=canvas.getContext('2d');
 const W=1280,H=720;
+// Animation-only tuning: reduce visible frame transitions by 22%, preserve
+// world speed, attack collision windows and existing eight-frame atlases.
+const Z_ANIM_RATE=.78,Z_ANIM_ONESHOT_CURVE=1.16;
+const zOneShotFrame=t=>Math.min(7,Math.max(0,Math.floor(Math.pow(Math.min(1,Math.max(0,t)),Z_ANIM_ONESHOT_CURVE)*8)));
+const zStride=key=>(key==='run'?29:key==='backwalk'?21:key==='walk'?22:22);
 const assetNames=['street','assassin','guard','boss','pipe_metal','pipe_charged','burst_red','burst_blue','burst_gold','street_pano'];
 const img={};
 assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
@@ -360,10 +365,10 @@ function getMaskedMove(e){
  if(e.z>28)return e.reactionVariant===5||e.reactionVariant===10?'hitLaunch':'hitFly';
  if(e.windup>0||e.attackPoseTime>0)return 'attack';
  if(e.chargePrep>0||e.chargeTime>0)return 'charge';
- return e.visualMoving?(e.visualSpeed>180?'run':'walk'):'idle';
+ return e.visualMoving?(e.locomotionMode==='run'?'run':'walk'):'idle';
 }
 function maskedFrame(e,key){
- const one=x=>Math.max(0,Math.min(7,Math.floor(x*8)));
+ const one=zOneShotFrame;
  if(key==='fall')return e.dead?one((e.collapseAge||0)/.7):one(1-e.proneTime/.62);
  if(key==='getup')return one(1-e.riseTime/.67);
  if(key.startsWith('hit'))return one(1-e.reactionTime/Math.max(.001,e.reactionDuration||.48));
@@ -371,11 +376,16 @@ function maskedFrame(e,key){
   Math.min(7,6+Math.floor((1-e.attackPoseTime/.17)*2));
  if(key==='charge')return e.chargePrep>0?one((1-e.chargePrep/Math.max(.001,e.chargePrepDuration||.4))*.3):
   one(.3+(1-e.chargeTime/.44)*.7);
- if(key==='walk'||key==='run')return Math.floor((e.spriteDistance||0)/(key==='run'?21:15))%8;
- return Math.floor((e.spriteTime||0)*5.7)%8;
+ if(key==='walk'||key==='run')return Math.floor(Math.max(0,e.spriteDistance||0)/zStride(key))%8;
+ return Math.floor(Math.max(0,e.spriteTime||0)*5.7*Z_ANIM_RATE)%8;
 }
 function drawMaskedGrunt(e,x,y,z){
- const key=getMaskedMove(e);if(e.spriteKey!==key){e.spriteKey=key;e.spriteTime=0;e.spriteDistance=0}
+ const key=getMaskedMove(e);if(e.spriteKey!==key){
+  const wasMoving=e.spriteKey==='walk'||e.spriteKey==='run',nowMoving=key==='walk'||key==='run';
+  if(wasMoving&&nowMoving)e.spriteDistance=(e.spriteDistance||0)*zStride(key)/zStride(e.spriteKey);
+  else e.spriteDistance=0;
+  e.spriteKey=key;e.spriteTime=0;
+ }
  const art=loadMaskedMove(key);
  const fr=art.ready?art.frames[maskedFrame(e,key)]:(e.lastSprite||maskedArt.idle?.frames?.[0]||null);
  if(art.ready&&fr)e.lastSprite=fr;
@@ -411,7 +421,12 @@ function getAssassinMove(e){
 }
 function drawAssassin(e,x,y,z){
  const key=getAssassinMove(e);
- if(e.spriteKey!==key){e.spriteKey=key;e.spriteTime=0;e.spriteDistance=0}
+ if(e.spriteKey!==key){
+  const wasMoving=e.spriteKey==='walk'||e.spriteKey==='run',nowMoving=key==='walk'||key==='run';
+  if(wasMoving&&nowMoving)e.spriteDistance=(e.spriteDistance||0)*zStride(key)/zStride(e.spriteKey);
+  else e.spriteDistance=0;
+  e.spriteKey=key;e.spriteTime=0;
+ }
  const art=RZAssassinArt.load(key),idle=RZAssassinArt.load('idle');
  const selected=art.ready?art:idle;
  const frame=key==='fall'&&e.dead?Math.min(7,Math.floor((e.collapseAge||0)/.7*8)):maskedFrame(e,selected===art?key:'idle');
@@ -452,7 +467,7 @@ function loadZMove(key){
  return zArtState[key];
 }
 function currentZFrameIndex(key){
- const oneshot=t=>Math.max(0,Math.min(7,Math.floor(t*8)));
+ const oneshot=zOneShotFrame;
  if(key==='knockdown')return oneshot(1-p.downTimer/.83);
  if(key==='getup')return oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64));
  if(key==='hit'||key==='heavyhit')return oneshot(1-p.stun/Math.max(.001,p.hitDuration||.4));
@@ -464,15 +479,21 @@ function currentZFrameIndex(key){
  // The legs only advance in proportion to actual world travel.
  // This prevents the rapid 'shaking in place' caused by a slow joystick tilt.
  if(key==='walk'||key==='run'||key==='backwalk'){
-  const pxPerFrame=key==='run'?25:key==='walk'?17:15;
-  return Math.floor(Math.max(0,p.gaitDistance||0)/pxPerFrame)%8;
+  return Math.floor(Math.max(0,p.gaitDistance||0)/zStride(key))%8;
  }
  const speed=key==='idle'?5.8:key==='airborne'?8:10;
- return Math.floor(Math.max(0,p.motionTime||0)*speed)%8;
+ return Math.floor(Math.max(0,p.motionTime||0)*speed*Z_ANIM_RATE)%8;
 }
 function paintZ(x,y,z){
  const key=getZMove(),atlas=loadZMove(key);
- if(p.motionKey!==key){p.motionKey=key;p.motionTime=0;if(key==='walk'||key==='run'||key==='backwalk')p.gaitDistance=0}
+ if(p.motionKey!==key){
+  const before=p.motionKey,wasMoving=['walk','run','backwalk'].includes(before),nowMoving=['walk','run','backwalk'].includes(key);
+  if(nowMoving){
+   if(wasMoving)p.gaitDistance=(p.gaitDistance||0)*zStride(key)/zStride(before);
+   else p.gaitDistance=0;
+  }
+  p.motionKey=key;p.motionTime=0;
+ }
  const fr=atlas&&atlas.ready?atlas.frames[currentZFrameIndex(key)]:(zLastGoodFrame||zArtState.idle?.frames[0]||null);
  if(fr)zLastGoodFrame=fr;
  ctx.save();ctx.translate(x,Math.round(y-z+8));ctx.scale(p.facing<0?-1:1,1);
@@ -542,7 +563,7 @@ function makeEnemy(type,x,y,index){
  poise:0,maxPoise:poise,speed,damage,reach,stun:0,inv:0,windup:0,
  cooldown:(index%3)*.23+.38,attackDone:false,hitFlash:0,groggy:0,phase:1,
  dead:false,fade:1,decision:0,strafe:Math.random()>.5?1:-1,
- bleed:0,shock:0,freeze:0,spriteKey:'',spriteTime:0,spriteDistance:0,visualMoving:false,visualSpeed:0,visualHold:0,renderX:x,renderY:y,
+ bleed:0,shock:0,freeze:0,spriteKey:'',spriteTime:0,spriteDistance:0,visualMoving:false,visualSpeed:0,visualSpeedSmooth:0,locomotionMode:'walk',visualHold:0,renderX:x,renderY:y,
   attackPoseTime:0,windupDuration:.45,hitAnimation:'hitHead',proneTime:0,riseTime:0,pendingFall:false,deathAge:0,
   brain:type==='boss'?'boss':type==='elite'?'elite':['swarm','feint','charger','swarm','feint','charger'][index%6],
   chargeCooldown:1.6+(index%5)*.48,chargePrep:0,chargeTime:0,
@@ -976,9 +997,15 @@ function updateEnemies(dt){
  resolveBodyCollisions(dt);
  // Smooth render positions separately from the responsive combat hitboxes.
  for(const e of enemies){
-  if(e.visualMoving)e.visualHold=.13;
+  // Smooth speed and apply hysteresis to avoid IDLE/WALK/RUN oscillation.
+  const movingThisFrame=e.visualMoving,rawSpeed=movingThisFrame?e.visualSpeed:0;
+  e.visualSpeedSmooth=(e.visualSpeedSmooth||0)+(rawSpeed-(e.visualSpeedSmooth||0))*Math.min(1,dt*8);
+  if(movingThisFrame)e.visualHold=.23;
   else e.visualHold=Math.max(0,(e.visualHold||0)-dt);
   e.visualMoving=e.visualHold>0;
+  if(e.locomotionMode==='run'){
+   if(e.visualSpeedSmooth<163)e.locomotionMode='walk';
+  }else if(e.visualSpeedSmooth>212)e.locomotionMode='run';
   const k=Math.min(1,Math.max(0,dt)*(e.reactionTime>0||e.dead?28:14));
   if(!Number.isFinite(e.renderX)||Math.abs(e.x-e.renderX)>220)e.renderX=e.x;
   else e.renderX+=(e.x-e.renderX)*k;
