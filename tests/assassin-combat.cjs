@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('existing wave composition preserves assassin slots',()=>{g.startRun();assert.equal(t.getEnemies().filter(e=>e.type==='assassin').length,6)});
@@ -47,5 +47,51 @@ test('raider airborne death and landing follow an uninterrupted animation',()=>{
  e.z=0;e.vz=0;t.updateEnemies(.05);
  assert.equal(t.getMaskedMove(e),'fall');
  assert(e.collapseAge>0);
+});
+
+test('elite appears once in the first wave and uses a separate combat type',()=>{
+ g.startRun();
+ const elite=t.getEnemies().filter(e=>e.type==='elite');
+ assert.equal(elite.length,1);
+ assert.equal(elite[0].maxHp,210);
+ assert.equal(elite[0].maxPoise,185);
+ assert(elite[0].x>2000&&elite[0].x<2500);
+});
+test('elite battle telegraphs and rushes before a strong attack',()=>{
+ g.startRun();
+ const e=t.makeEnemy('elite',t.p.x+250,t.p.y,0);
+ e.eliteCooldown=0;t.setEnemies([e]);
+ t.updateEnemies(.016);
+ assert(e.eliteTell>.5,'elite should telegraph instead of instantly attacking');
+ let charged=false,powered=false;
+ for(let i=0;i<150;i++){
+  t.updateEnemies(1/60);
+  if(e.eliteRush>0)charged=true;
+  if(e.eliteAttack||e.attackPoseTime>0)powered=true;
+ }
+ assert(charged,'elite should dash after warning');
+ assert(powered,'elite should transition to powered attack');
+});
+test('parrying elite power attack creates execution vulnerability',()=>{
+ g.startRun();
+ const e=t.makeEnemy('elite',t.p.x+80,t.p.y,0);
+ t.setEnemies([e]);e.eliteAttack=true;
+ t.parry();t.enemyAttack(e);
+ assert.equal(t.p.hp,t.p.maxHp);
+ assert(e.groggy>0,'parry should break elite poise');
+ assert.equal(e.eliteAttack,false,'power attack must reset on parry');
+});
+test('elite overdrive at critical health and independent sprite module',()=>{
+ g.startRun();
+ const e=t.makeEnemy('elite',t.p.x+125,t.p.y,0);
+ t.setEnemies([e]);t.hurtEnemy(e,120,20);
+ assert.equal(e.phase,2);
+ const art=fs.readFileSync(path.join(__dirname,'../assets/elite-ironmask.js'),'utf8');
+ new vm.Script(art);
+ vm.runInContext(art,world);
+ const enemy={...e,dead:false,z:0,eliteTell:.5,eliteRush:0};
+ assert.equal(world.RZElite.move(enemy,()=> 'idle'),'charge');
+ enemy.eliteTell=0;enemy.dead=true;enemy.z=20;
+ assert.equal(world.RZElite.move(enemy,()=> 'idle'),'hitFly');
 });
 console.log(`${checks} combat regression checks passed`);
