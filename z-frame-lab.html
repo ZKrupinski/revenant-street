@@ -39,8 +39,14 @@ const zRevisedGait={
  walk:'./assets/project-z-hero/z-walk-crossing.png',
  run:'./assets/project-z-hero/z-run-crossing.png'
 };
-const previousGait=new URLSearchParams(location.search).get('gait')==='previous';
-if(!previousGait)for(const key of ['walk','run'])list.find(a=>a.id===key).sheet_url=zRevisedGait[key];
+const requestedGait=new URLSearchParams(location.search).get('gait');
+const previousGait=requestedGait==='previous';
+const poseguidedGait=requestedGait==='poseguided';
+const gaitSource=poseguidedGait?{
+ walk:'./assets/project-z-hero/z-walk-poseguided.png',
+ run:'./assets/project-z-hero/z-run-poseguided.png'
+}:zRevisedGait;
+if(!previousGait)for(const key of ['walk','run'])list.find(a=>a.id===key).sheet_url=gaitSource[key];
 const assassinLabels=["대기", "걷기", "달리기", "돌진 찌르기", "단검 베기", "머리 피격", "복부 피격", "회전 피격", "공중 피격", "넉백", "다운·사망", "기상"];
 RZAssassinArt.keys.forEach((key,i)=>list.push({id:'assassin_'+key,label:assassinLabels[i],group:i<5?'새 적 B · 쌍단검':'새 적 B · 피격·다운',frames_target:8,sheet_url:RZAssassinArt.source(key),packed:true,frame_ms:90}));
 RZAssassinArt.keys.forEach((key,i)=>list.push({id:'elite_'+key,label:'철가면 엘리트 · '+assassinLabels[i],group:i<5?'철가면 엘리트 · 기본·공격':'철가면 엘리트 · 피격·다운',frames_target:8,sheet_url:RZAssassinArt.source(key),packed:true,variant:'elite',frame_ms:90}));
