@@ -793,6 +793,7 @@ function spawnWave(){
   ]
  };
  enemies=(spawns[wave]||[]).map(([type,x,y],i)=>makeEnemy(type,x,y,i));
+ if(wave===3)for(const name of ['idle','taunt','dash','combo','slam','death'])window.RZBossHunter?.load(name);
   $('bossHud').hidden=true;
  $('waveLabel').textContent=['','WAVE 01 — 젖은 골목','WAVE 02 — 공사 구역','WAVE 03 — 헌터의 공장'][wave];
  $('chapter').textContent=`0${wave} / 끝없는 거리`;
@@ -1033,6 +1034,9 @@ function pollPad(){
   menuPad.nav=direction;
   const accept=!!(g.buttons[0]?.pressed||g.buttons[2]?.pressed);
   if(accept&&!menuPad.confirm)menuConfirm();
+  // The same A button must not trigger a dash immediately after
+  // confirming a menu selection that resumes combat.
+  padPrev.dodge=accept;padPrev.attack=!!g.buttons[2]?.pressed;
   menuPad.confirm=accept;
   const back=!!g.buttons[1]?.pressed;
   if(back&&!menuPad.back)menuBack();
@@ -1493,7 +1497,7 @@ function draw(){
 }
 function loop(t){const dt=Math.min((t-last)/1000||.016,.05);last=t;update(dt);draw();requestAnimationFrame(loop)}
 function rewardMenu(){setStatus('WAVE CLEAR');$('hint').hidden=true;$('bossHud').hidden=true;const opts=[{mod:'fire',symbol:'F',title:'IGNITION / 화염',desc:'강타 피해 +30%. 점화로 지속 피해'},{mod:'shock',symbol:'V',title:'VOLT / 전류',desc:'전류 충격으로 적을 잠시 멈춤'},{mod:'bleed',symbol:'B',title:'HEMORRHAGE / 출혈',desc:'피격 후 출혈 피해를 누적'},{mod:'ice',symbol:'C',title:'CRYO / 빙결',desc:'타격한 적의 행동 속도를 감소'}];if(wave===2){opts.sort((a,b)=>(p.mods.includes(a.mod)?1:0)-(p.mods.includes(b.mod)?1:0));}const cards=opts.filter(o=>!p.mods.includes(o.mod)).slice(0,3).map(o=>`<button class="upgrade-btn" data-mod="${o.mod}"><span class="sym">${MOD_META[o.mod].icon} ${o.symbol}</span><strong>${o.title}</strong><small>${o.desc}</small></button>`).join('');showMenu(`<div class="eyebrow">SYSTEM UPDATE / WAVE 0${wave} CLEAR</div><h2>무기 플러그인 장착</h2><p>생존 보너스 <b class="key">+20 체력</b> · 무기 자동 수리. 새 속성을 추가해 다음 지역으로 진입하세요. 출혈 + 전류 = 신경 폭주.</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT MOD — ${p.mod.toUpperCase()}</div><div class="pad-hint">◀ ▶ / 십자키 · 왼쪽 스틱 선택　 A / × 결정</div>`)}
-function selectMod(m){if(!p.mods.includes(m))p.mods.push(m);p.mod=(p.mods.includes('shock')&&p.mods.includes('bleed'))?'neuro':p.mods.join('+');p.hp=clamp(p.hp+20,0,p.maxHp);p.weapon=0;p.maxWeapon=18;p.stamina=100;level++;gameState='playing';hideMenu();spawnWave();flash('NEW AREA / WAVE 0'+wave,1.5);setStatus('COMBAT LIVE')}
+function selectMod(m){if(!MOD_META[m])return;if(!p.mods.includes(m))p.mods.push(m);p.mod=(p.mods.includes('shock')&&p.mods.includes('bleed'))?'neuro':p.mods.join('+');p.hp=clamp(p.hp+20,0,p.maxHp);p.weapon=0;p.maxWeapon=18;p.stamina=100;level++;gameState='playing';hideMenu();spawnWave();const info=MOD_META[m];floatText(info.icon+' '+info.title+' 장착!',p.x,p.y-260,info.color);flash(info.icon+' '+info.short+' 속성 활성화!',2);sound('parry');setStatus('COMBAT LIVE')}
 function completeMenu(){gameState='complete';setStatus('RUN COMPLETE');perma.shards+=4;save();$('bossHud').hidden=true;showMenu(`<div class="eyebrow">OBJECTIVE COMPLETE / REBEL SIGNAL ONLINE</div><h1>ZONE <span>CLEARED</span></h1><p>엘리트 헌터를 격파했습니다. 사이버네틱 지하 기지 <b class="key">REBEL HUB</b>로 귀환합니다.</p><div class="hub-stat"><span>처치 ${runKills}명 / 전리품 ₩${p.credits}</span><strong>영구 자원 +4</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB로 귀환</button><button class="secondary-btn" data-action="start">새로운 런 시작</button></div>`)}
 function deadMenu(){if(gameState==='dead')return;gameState='dead';setStatus('SIGNAL LOST');perma.shards+=1;save();$('hint').hidden=true;showMenu(`<div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1><p>기계 신체가 파괴됐습니다. 영구 자원 <b class="key">+1</b>을 회수했습니다.</p><div class="hub-stat"><span>이번 런의 처치 ${runKills}명</span><strong>SHARDS +1</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB</button><button class="secondary-btn" data-action="start">즉시 재시작</button></div>`)}
 function hubMenu(){gameState='hub';$('bossHud').hidden=true;setStatus('REBEL HUB');const opts=[['core','외골격 증설','최대 체력 +20','20 HP'],['servo','동력 관절 보정','모든 공격 피해 +2','ATK +2'],['reflex','인공 반사신경','패링 유효시간 +0.035초','PARRY +']];const html=opts.map(([id,title,txt,short])=>`<button class="upgrade-btn" data-perma="${id}" ${perma.shards<2?'disabled':''}><span class="sym">${short}</span><strong>${title} <small>Lv.${perma[id]}</small></strong><small>${txt} / 비용 2 파편</small></button>`).join('');showMenu(`<div class="eyebrow">SAFE ZONE / CYBERNETIC UNDERGROUND</div><h2>REBEL HUB</h2><p>사망 이후에도 남는 사이버네틱 신체 업그레이드. 파편을 소비해 다음 런을 준비합니다.</p><div class="hub-stat"><span>영구 강화 자원</span><strong>${perma.shards} SHARDS</strong></div><div class="choice-grid">${html}</div><div class="buttons"><button class="main-btn" data-action="start">다시 거리로</button><button class="secondary-btn" data-action="title">타이틀로</button></div>`)}
