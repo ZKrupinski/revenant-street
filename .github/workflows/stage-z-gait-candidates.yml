@@ -1,0 +1,43 @@
+name: Stage pose-guided original Z gait candidates
+on:
+  push:
+    paths:
+      - '.github/workflows/stage-z-gait-candidates.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download pose-guided walk and run PNGs into staging
+        run: |
+          mkdir -p assets/project-z-hero
+          curl -fL --retry 3 --connect-timeout 20 \
+            'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_031427_93d6e921-4ca4-411e-9980-20a040ae44fd.png' \
+            -o assets/project-z-hero/z-walk-poseguided.png
+          curl -fL --retry 3 --connect-timeout 20 \
+            'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_031427_1beaa541-a735-46b0-9f73-da64f1fa6ffd.png' \
+            -o assets/project-z-hero/z-run-poseguided.png
+      - name: Verify PNG geometry
+        run: |
+          python3 - <<'PY'
+          import struct
+          for k in ('walk','run'):
+              p=f'assets/project-z-hero/z-{k}-poseguided.png'
+              h=open(p,'rb').read(24)
+              assert h[:8]==b'\x89PNG\r\n\x1a\n'
+              w,h=struct.unpack('>II',h[16:24])
+              assert w//4>=180 and h//2>=200
+              print(k,w,h)
+          PY
+      - name: Commit only staged assets (no live replacement)
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/project-z-hero/z-walk-poseguided.png assets/project-z-hero/z-run-poseguided.png
+          if ! git diff --cached --quiet; then
+            git commit -m 'Art QA: stage pose-guided original Z walk/run for visual approval'
+            git push
+          fi
