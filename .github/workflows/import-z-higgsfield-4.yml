@@ -1,0 +1,59 @@
+name: Import original Z Higgsfield motion revisions
+on:
+  push:
+    paths:
+      - '.github/workflows/import-z-higgsfield-4.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-z-hf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Retrieve four original-character 8-frame source atlases
+        run: |
+          mkdir -p /tmp/z-hf assets/original-z-hf
+          curl -fL --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_062912_4ecd0187-b0a5-487b-995d-78677f2ac013.png' -o /tmp/z-hf/walk.png
+          curl -fL --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_062911_8a2c7f4b-aafd-4e24-acba-5789450da417.png' -o /tmp/z-hf/run.png
+          curl -fL --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_062911_b6d2e3c2-3fd6-40eb-af1e-17b307f79384.png' -o /tmp/z-hf/punch.png
+          curl -fL --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_062911_f7cf4553-aa2e-41f4-b430-b4eee0059211.png' -o /tmp/z-hf/kick.png
+      - name: Validate original hero identity colors and pack local webp
+        run: |
+          python3 -m pip install -q Pillow
+          python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          root=Path('/tmp/z-hf')
+          out=Path('assets/original-z-hf')
+          for kind in ('walk','run','punch','kick'):
+              im=Image.open(root/(kind+'.png')).convert('RGB')
+              w,h=im.size
+              assert w>=2000 and h>=1100 and w%4==0 and h%2==0,(kind,im.size)
+              cellw,cellh=w//4,h//2
+              assert cellw>=400 and cellh>=400
+              # Nonempty actor silhouettes are required in all eight cells.
+              for i in range(8):
+                  tile=im.crop(((i%4)*cellw,(i//4)*cellh,((i%4)+1)*cellw,((i//4)+1)*cellh))
+                  small=tile.resize((60,70))
+                  colored=sum(1 for r,g,b in small.getdata() if not (g>100 and g>r*1.12 and g>b*1.10))
+                  assert colored>230,(kind,i,colored,'empty frame')
+              output=out/(kind+'.webp')
+              im.save(output,format='WEBP',quality=94,method=6)
+              assert output.stat().st_size>75000,(kind,'suspiciously small file')
+              print(kind,'eight frames preserved',w,h,'bytes',output.stat().st_size)
+          PY
+      - name: Publish local art without discarding simultaneous edits
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/original-z-hf/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Art: package Higgsfield original-Z 8-frame walk/run/punch/kick atlases'
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi
