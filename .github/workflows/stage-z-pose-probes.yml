@@ -1,0 +1,46 @@
+name: Stage Z gait individual frame proof
+on:
+  push:
+    paths:
+      - '.github/workflows/stage-z-pose-probes.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Download independently generated hero gait action frames
+        run: |
+          mkdir -p assets/project-z-hero/pose-probes
+          curl -fLSs --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_032941_2ca52658-ed25-4ed3-ba76-2a80ad52a830.png' -o assets/project-z-hero/pose-probes/walk-f01.png
+          curl -fLSs --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_032940_7df309f3-1b27-4e53-a224-1cdeebfffb6b.png' -o assets/project-z-hero/pose-probes/walk-f03.png
+          curl -fLSs --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_032942_f5382d5d-cb5f-44a0-b6e3-3c08cb01b4ff.png' -o assets/project-z-hero/pose-probes/walk-f05.png
+          curl -fLSs --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_032942_262d676f-6690-41bf-beba-9dee52fff33d.png' -o assets/project-z-hero/pose-probes/walk-f07.png
+          curl -fLSs --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_032941_0db29691-b9d0-4bcc-a7dc-e3d0a9279162.png' -o assets/project-z-hero/pose-probes/run-f03.png
+          curl -fLSs --retry 3 --connect-timeout 20 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261029_032941_53f641a6-0796-43d8-9562-e4d50508209f.png' -o assets/project-z-hero/pose-probes/run-f07.png
+      - name: Validate individual images
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 - <<'PY'
+          from PIL import Image
+          import glob
+          fs=glob.glob('assets/project-z-hero/pose-probes/*.png')
+          assert len(fs)==6,len(fs)
+          for f in fs:
+              im=Image.open(f)
+              assert im.width>=500 and im.height>=500,(f,im.size)
+              print(f,im.size)
+          PY
+      - name: Commit only isolated pose samples for artistic QA
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/project-z-hero/pose-probes/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Art QA: preserve original Z alternate-legs 6 individual Higgsfield frame prototypes'
+            git push
+          fi
