@@ -157,6 +157,20 @@ const Z_GAIT_VERSIONS={
 const zGaitParam=window.location?.search||'';
 const zUsePreviousGait=/(?:[?&])gait=previous(?:&|$)/.test(zGaitParam);
 Object.assign(Z_REMOTE_ATLAS,zUsePreviousGait?Z_GAIT_VERSIONS.previous:Z_GAIT_VERSIONS.crossing);
+// Alpha 1.20 original armored hero: four new Higgsfield motion atlases.
+// ?zart=original restores *all* prior original-Z actions, ?gait=previous
+// reverts only locomotion. Alternate hoodie remains available independently.
+const Z_HF_ART=!/(?:[?&])zart=original(?:&|$)/.test(zGaitParam);
+if(Z_HF_ART){
+ if(!zUsePreviousGait){
+  Z_REMOTE_ATLAS.walk='./assets/original-z-hf/walk.webp';
+  Z_REMOTE_ATLAS.run='./assets/original-z-hf/run.webp';
+ }
+ for(const [key,art] of Object.entries({
+  jab:'punch',cross:'punch',backfist:'punch',
+  frontkick:'kick',roundkick:'kick',sidekick:'kick'
+ }))Z_REMOTE_ATLAS[key]='./assets/original-z-hf/'+art+'.webp';
+}
 // Restore the original protagonist as the default. Keep the alternative outfit
 // explicitly selectable with ?hero=hoodie (no loss of art or combat progress).
 const Z_HOODIE_HERO=/(?:[?&])hero=hoodie(?:&|$)/.test(zGaitParam);
