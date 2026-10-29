@@ -5,12 +5,12 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('existing wave composition preserves assassin slots',()=>{g.startRun();assert.equal(t.getEnemies().filter(e=>e.type==='assassin').length,6)});
 test('all assassin AI roles reach and damage the player',()=>{for(let i=0;i<6;i++){g.startRun();const e=t.makeEnemy('assassin',t.p.x+180,t.p.y,i);t.setEnemies([e]);for(let n=0;n<900&&t.p.hp===t.p.maxHp;n++)t.updateEnemies(1/60);assert(t.p.hp<t.p.maxHp,`slot ${i}`)}});
-test('all twelve artwork states are reachable',()=>{const e=t.makeEnemy('assassin',0,0,0);const cases={idle:{},walk:{visualMoving:true,visualSpeed:100},run:{visualMoving:true,visualSpeed:240},charge:{chargePrep:.3},attack:{windup:.4},hitHead:{reactionTime:.3,hitAnimation:'hitHead'},hitBody:{reactionTime:.3,hitAnimation:'hitBody'},hitSpin:{reactionTime:.3,hitAnimation:'hitSpin'},hitLaunch:{reactionTime:.3,hitAnimation:'hitLaunch'},hitFly:{reactionTime:.3,hitAnimation:'hitFly'},fall:{proneTime:.5},getup:{riseTime:.5}};for(const [key,state]of Object.entries(cases)){const actor={...e,...state};assert.equal(t.getAssassinMove(actor),key);assert(t.maskedFrame(actor,key)>=0&&t.maskedFrame(actor,key)<8)}});
+test('all twelve artwork states are reachable',()=>{const e=t.makeEnemy('assassin',0,0,0);const cases={idle:{},walk:{visualMoving:true,visualSpeed:100},run:{visualMoving:true,visualSpeed:240,locomotionMode:'run'},charge:{chargePrep:.3},attack:{windup:.4},hitHead:{reactionTime:.3,hitAnimation:'hitHead'},hitBody:{reactionTime:.3,hitAnimation:'hitBody'},hitSpin:{reactionTime:.3,hitAnimation:'hitSpin'},hitLaunch:{reactionTime:.3,hitAnimation:'hitLaunch'},hitFly:{reactionTime:.3,hitAnimation:'hitFly'},fall:{proneTime:.5},getup:{riseTime:.5}};for(const [key,state]of Object.entries(cases)){const actor={...e,...state};assert.equal(t.getAssassinMove(actor),key);assert(t.maskedFrame(actor,key)>=0&&t.maskedFrame(actor,key)<8)}});
 test('assassin uses grounded fall and recovery timers',()=>{g.startRun();const e=t.makeEnemy('assassin',t.p.x+120,t.p.y,0);e.pendingFall=true;t.setEnemies([e]);t.updateEnemies(.01);assert.equal(t.getAssassinMove(e),'fall');t.updateEnemies(.62);assert.equal(t.getAssassinMove(e),'getup');t.updateEnemies(.67);assert.equal(e.riseTime,0)});
 test('airborne dead assassin holds knockback before ground collapse',()=>{g.startRun();const e=t.makeEnemy('assassin',t.p.x+120,t.p.y,0);Object.assign(e,{dead:true,z:70,vz:0});t.setEnemies([e]);assert.equal(t.getAssassinMove(e),'hitFly');t.updateEnemies(.01);assert.equal(e.collapseAge,0);e.z=0;e.vz=0;t.updateEnemies(.05);assert(e.collapseAge>0);assert.equal(t.getAssassinMove(e),'fall')});
 test('parry and execution retain normal assassin combat rules',()=>{g.startRun();const e=t.makeEnemy('assassin',t.p.x+70,t.p.y,0);t.setEnemies([e]);t.parry();t.enemyAttack(e);assert.equal(t.p.hp,t.p.maxHp);assert(e.groggy>0);t.p.riposteWindow=0;t.p.parry=0;t.startAttack();assert(e.dead)});
@@ -102,5 +102,42 @@ test('Frame Lab exposes all twelve elite animations without sharing original cac
  assert(lab.includes('variant:\'elite\''),'elite variants not registered');
  assert(lab.includes('RZElite.colored(c)'),'elite bitmap transform not in Frame Lab');
  assert(lab.includes("cacheKey=a.variant==='elite'"),'elite cache must be isolated');
+});
+
+test('animation loops advance slower than Alpha 1.13 at the same travel distance',()=>{
+ g.startRun();
+ t.p.gaitDistance=23;t.p.motionTime=0;
+ assert.equal(t.currentZFrameIndex('walk'),1);
+ assert.equal(t.currentZFrameIndex('run'),0,'run should take longer to advance than old 25px stride');
+ t.p.gaitDistance=0;t.p.motionTime=1;
+ assert.equal(t.currentZFrameIndex('idle'),4,'idle cycle should advance at 78% original cadence');
+ const e=t.makeEnemy('raider',400,570,0);
+ e.spriteDistance=22;e.spriteTime=1;
+ assert.equal(t.maskedFrame(e,'walk'),1);
+ assert.equal(t.maskedFrame(e,'idle'),4);
+});
+test('one-shot animations preserve the last pose without altering hit timers',()=>{
+ assert.equal(t.zOneShotFrame(0),0);
+ assert.equal(t.zOneShotFrame(1),7);
+ assert(t.zOneShotFrame(.5)<4,'early frames must stay on screen longer');
+ assert(t.zOneShotFrame(.97)>=7);
+ g.startRun();
+ t.p.moveName='jab';t.p.attackDuration=.31;t.p.attack=.155;
+ assert.equal(t.currentZFrameIndex('jab'),t.zOneShotFrame(.5));
+ assert.equal(t.p.attackDuration,.31,'animation playback must not change combat timings');
+});
+test('enemy visual locomotion uses speed hysteresis to suppress frame flicker',()=>{
+ g.startRun();
+ const e=t.makeEnemy('raider',t.p.x+170,t.p.y,0);
+ t.setEnemies([e]);e.stun=5;
+ e.visualMoving=true;e.visualSpeed=220;
+ t.updateEnemies(.016);
+ assert.equal(e.locomotionMode,'walk','one noisy frame must not flip run state');
+ e.visualMoving=true;e.visualSpeed=300;
+ for(let i=0;i<12;i++){e.stun=5;e.visualMoving=true;e.visualSpeed=300;t.updateEnemies(.016)}
+ assert.equal(e.locomotionMode,'run');
+ e.visualMoving=true;e.visualSpeed=175;
+ t.updateEnemies(.016);
+ assert.equal(e.locomotionMode,'run','run should not jitter into walk at threshold');
 });
 console.log(`${checks} combat regression checks passed`);
