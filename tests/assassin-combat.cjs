@@ -94,4 +94,13 @@ test('elite overdrive at critical health and independent sprite module',()=>{
  enemy.eliteTell=0;enemy.dead=true;enemy.z=20;
  assert.equal(world.RZElite.move(enemy,()=> 'idle'),'hitFly');
 });
+test('Frame Lab exposes all twelve elite animations without sharing original cache keys',()=>{
+ const lab=fs.readFileSync(path.join(__dirname,'../z-frame-lab.html'),'utf8');
+ const script=[...lab.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]).at(-1);
+ assert(script,'Frame Lab inline script missing');
+ new vm.Script(script);
+ assert(lab.includes('variant:\'elite\''),'elite variants not registered');
+ assert(lab.includes('RZElite.colored(c)'),'elite bitmap transform not in Frame Lab');
+ assert(lab.includes("cacheKey=a.variant==='elite'"),'elite cache must be isolated');
+});
 console.log(`${checks} combat regression checks passed`);
