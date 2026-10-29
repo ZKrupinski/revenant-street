@@ -439,4 +439,73 @@ test('loading gate is present, checks mandatory sprites and disables live animat
  assert(!code.includes('function update(dt){RZAssassinArt.warm(dt)'));
  assert(code.includes("if(a==='start')requestRunStart()"));
 });
+
+test('ground attacks drive farther than Alpha 1.26 and stay capped per frame',()=>{
+ g.startRun();t.setEnemies([]);
+ t.p.x=440;t.p.y=570;t.p.facing=1;t.p.stamina=100;t.p.attack=0;
+ t.p.comboWindow=0;t.p.moveDX=0;t.p.moveDY=0;
+ t.startAttack();
+ assert(t.p.attackDriveTotal>=50,'every neutral attack should surge substantially');
+ assert(t.p.attackDriveTotal<=242,'do not teleport across the screen in one strike');
+ const start=t.p.x;
+ for(let i=0;i<12;i++)t.control(1/60,{dx:0,dy:0});
+ assert(t.p.x>start+30,'visible forward momentum even with no joystick input');
+});
+test('attack rush cannot overtake a victim before the hit and continues pursuit after contact',()=>{
+ g.startRun();
+ const e=t.makeEnemy('guard',t.p.x+95,t.p.y,0);
+ e.hp=1000;e.maxHp=1000;e.stun=2;
+ t.setEnemies([e]);t.p.facing=1;t.p.stamina=100;t.p.comboWindow=0;
+ t.p.moveDX=0;t.p.moveDY=0;t.p.attack=0;t.startAttack();
+ t.p.moveName='sidekick';t.p.attackDriveTotal=195;t.p.attackDriveRemaining=195;
+ const start=t.p.x;
+ for(let i=0;i<60&&t.p.attack>0;i++){
+   t.control(1/60,{dx:0,dy:0});
+   assert(t.p.x<=e.x-40,'attack advance must not cross the enemy hurtbox');
+   t.updateEnemies(1/60);
+ }
+ assert(t.p.hitDone,'attack should reach the impact frame');
+ assert(e.hp<1000,'attack must hit instead of dashing through the target');
+ assert(e.x>start+95,'victim is actually driven backwards');
+ assert(t.p.x>start+25,'hero should also travel forwards in the same strike');
+});
+test('heavy kicks drive grunts farther than jabs and retain aerial trajectories',()=>{
+ const distance=(key,drive)=>{
+  g.startRun();
+  const x0=t.p.x;
+  const e=t.makeEnemy('assassin',x0+78,t.p.y,0);
+  e.hp=e.maxHp=1000;e.stun=2;
+  t.setEnemies([e]);t.p.moveName=key;t.p.attackDriveTotal=drive;t.p.attackDriveRemaining=drive;
+  t.hurtEnemy(e,10,20);
+  const force=e.knockVX;
+  for(let i=0;i<18;i++)t.updateEnemies(1/60);
+  return{force,distance:e.x-(x0+78),height:e.z};
+ };
+ const jab=distance('jab',66),kick=distance('sidekick',175);
+ assert(jab.force>250,'even a regular jab must visibly knock enemies back');
+ assert(kick.force>jab.force*1.4,'kick and forward-drive momentum should matter');
+ assert(kick.distance>jab.distance+35,'enemy displacement should reflect a stronger kick');
+ assert(kick.distance>125,'kick knockback should be dramatic');
+});
+test('reaction variation avoids identical repeats and preserves boss mass and world bounds',()=>{
+ g.startRun();const x=t.p.x;
+ const grunt=t.makeEnemy('raider',x+85,t.p.y,0);grunt.hp=9000;grunt.maxHp=9000;
+ t.setEnemies([grunt]);t.p.facing=1;t.p.moveName='uppercut';t.p.attackDriveTotal=120;
+ let launched=0;
+ for(let i=0;i<24;i++){
+  const before=grunt.reactionVariant;
+  grunt.previousReactionVariant=before;
+  t.hurtEnemy(grunt,2,0);
+  if(before!==undefined)assert.notEqual(grunt.reactionVariant,before,'do not repeat the last same reaction pose');
+  if(grunt.vz>120)launched++;
+  grunt.x=x+85;grunt.z=0;grunt.knockVX=0;grunt.vz=0;grunt.hp=9000;
+ }
+ assert(launched>=10,'air knockbacks should appear frequently');
+ const boss=t.makeEnemy('boss',x+85,t.p.y,1);boss.hp=9000;t.setEnemies([boss]);
+ t.hurtEnemy(boss,10,0);
+ assert(Math.abs(boss.knockVX)<700,'boss must retain its heavy footing');
+ assert.equal(boss.vz,0,'boss should not float like a grunt');
+ boss.x=12730;boss.knockVX=1500;t.updateEnemies(.4);
+ assert(boss.x<=12755,'knockback should stay inside world bounds');
+});
 console.log(`${checks} combat regression checks passed`);
