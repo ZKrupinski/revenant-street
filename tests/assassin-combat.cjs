@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,control,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,getRiotGuardState,getRiotGuardFrame,control,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('existing wave composition preserves assassin slots',()=>{g.startRun();assert.equal(t.getEnemies().filter(e=>e.type==='assassin').length,6)});
@@ -285,5 +285,49 @@ test('rear enemy still damages hero without an active parry',()=>{
  t.p.facing=1;t.p.parry=0;t.p.inv=0;
  const hp=t.p.hp;t.enemyAttack(e);
  assert(t.p.hp<hp,'rear protection must not become automatic invulnerability');
+});
+
+test('seven Higgsfield guard actions each have real 4 by 2 transparent WebP atlases',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ const lab=fs.readFileSync(path.join(__dirname,'../z-frame-lab.html'),'utf8');
+ for(const key of ['idle','walk','run','block','attack','hit','fall']){
+  const data=fs.readFileSync(path.join(__dirname,'../assets/riot-shield/'+key+'.webp'));
+  assert(data.length>40000,key+' action must not be empty');
+  assert.equal(data.subarray(0,4).toString('ascii'),'RIFF');
+  assert.equal(data.subarray(8,12).toString('ascii'),'WEBP');
+  assert(lab.includes("'./assets/riot-shield/'+key+'.webp'"));
+ }
+ assert(source.includes('const USE_HF_SHIELD=!/(?:[?&])shield=old'),'legacy shield sprite must remain recoverable');
+ assert(source.includes("if(a.type==='guard'&&USE_HF_SHIELD)"),'game must use the new guard sprite code path');
+});
+test('guard action state tracks motion, bracing, attacks, injury and falling',()=>{
+ g.startRun();
+ const e=t.makeEnemy('guard',t.p.x+140,t.p.y,2);
+ t.setEnemies([e]);e.face=-1;
+ assert.equal(t.getRiotGuardState(e),'idle');
+ e.visualMoving=true;
+ assert.equal(t.getRiotGuardState(e),'walk');
+ e.locomotionMode='run';
+ assert.equal(t.getRiotGuardState(e),'run');
+ e.visualMoving=false;e.chargePrep=.24;
+ assert.equal(t.getRiotGuardState(e),'block');
+ e.chargePrep=0;e.windup=.30;
+ assert.equal(t.getRiotGuardState(e),'attack');
+ assert(t.getRiotGuardFrame(e,'attack')>=0&&t.getRiotGuardFrame(e,'attack')<=7);
+ e.windup=0;e.reactionTime=.40;e.reactionDuration=.50;
+ assert.equal(t.getRiotGuardState(e),'hit');
+ e.reactionTime=0;e.dead=true;e.deathAge=0;
+ assert.equal(t.getRiotGuardState(e),'fall');
+ assert.equal(t.getRiotGuardFrame(e,'fall'),0);
+ e.deathAge=.9;assert.equal(t.getRiotGuardFrame(e,'fall'),7);
+});
+test('guard keeps its own original combat stats and previous actor systems intact',()=>{
+ g.startRun();
+ const e=t.makeEnemy('guard',t.p.x+110,t.p.y,0);
+ assert.equal(e.maxHp,95);
+ assert.equal(e.maxPoise,120);
+ assert.equal(e.speed,101);
+ assert.equal(e.reach,41);
+ assert.equal(e.damage,13);
 });
 console.log(`${checks} combat regression checks passed`);
