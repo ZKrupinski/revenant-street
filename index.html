@@ -1187,7 +1187,18 @@ function control(dt,pad){
     const desired=p.attackDriveTotal*dt/(p.attackDuration*.62)*burstRate;
     const burst=Math.min(p.attackDriveRemaining,Math.min(35,desired));
     const before=p.x;
-    p.x=clamp(p.x+p.attackDriveX*burst,64,STAGE_WIDTH-64);
+    let nextX=clamp(p.x+p.attackDriveX*burst,64,STAGE_WIDTH-64);
+    // Closing distance cannot cross the next target before the attack's
+    // contact frame. Once the hit knocks them away, remaining dash follows.
+    const closest=enemies.filter(e=>!e.dead&&e.z<80&&Math.abs(e.y-p.y)<59&&
+      (e.x-before)*p.attackDriveX>=0)
+      .sort((a,b)=>Math.abs(a.x-before)-Math.abs(b.x-before))[0];
+    if(closest){
+      const gap=closest.type==='boss'?82:closest.type==='elite'?59:closest.type==='guard'?52:47;
+      const limit=closest.x-p.attackDriveX*gap;
+      if((nextX-limit)*p.attackDriveX>0)nextX=(limit-before)*p.attackDriveX>=0?limit:before;
+    }
+    p.x=clamp(nextX,64,STAGE_WIDTH-64);
     p.y=clamp(p.y+p.attackDriveY*burst*.31,480,664);
     p.attackDriveRemaining=Math.max(0,p.attackDriveRemaining-Math.abs(p.x-before));
    }
