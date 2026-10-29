@@ -109,7 +109,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
     <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 콤보/자동 처형 · K 점프 · L 패링 · SHIFT 대쉬</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.21 — HEAVY IMPACT AUDIO + RUMBLE</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.22 — REAR AUTO-TURN PARRY</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -812,6 +812,13 @@ function parry(){
  if(gameState!=='playing'||p.stun>0||p.parry>0||p.downTimer>0||p.getupTimer>0||p.stamina<7)return;
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.attackDriveRemaining=0;p.counterRush=0;
  p.parryDuration=.34+perma.reflex*.035;p.parry=p.parryDuration;
+ // Immediately face the most imminent attacker, including enemies behind.
+ // Selecting a target NEVER triggers parry automatically; the player still
+ // must press their parry button within the ordinary parry window.
+ const incoming=enemies.filter(e=>!e.dead&&e.windup>0&&e.z<70&&
+  Math.abs(e.x-p.x)<e.reach+110&&Math.abs(e.y-p.y)<75)
+  .sort((a,b)=>a.windup-b.windup||Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0];
+ if(incoming)p.facing=incoming.x>=p.x?1:-1;
  p.inv=Math.max(p.inv,.08);p.stamina-=7;
  fxBurst(p.x+46*p.facing,p.y-130,'blue',.65);sound('parry');
 }
@@ -899,8 +906,13 @@ function enemyAttack(e){
  if(gameState!=='playing'||e.dead||e.groggy>0||p.downTimer>0||p.getupTimer>0)return;
  const dx=Math.abs(e.x-p.x),dy=Math.abs(e.y-p.y);
  if(dx>e.reach+(eliteCleave?105:64)||dy>(eliteCleave?68:57)||p.z>76)return;
- const parryWindow=p.parry>0&&((e.x-p.x)*p.facing)>-35;
+ // During an active parry, redirect the guard toward the real attacker
+ // even if the blow comes from behind. Reaction occurs at impact time.
+ const parryWindow=p.parry>0;
  if(parryWindow){
+  const rearHit=(e.x-p.x)*p.facing<0;
+  p.facing=e.x>=p.x?1:-1;
+  if(rearHit)fxBurst(p.x+p.facing*42,p.y-118,'blue',.9);
   e.stun=e.type==='boss'?.88:eliteCleave?2.25:1.65;
   e.windup=0;e.cooldown=1.2;e.poise=clamp(e.poise+(e.type==='boss'?48:eliteCleave?e.maxPoise:95),0,e.maxPoise);
   e.knockVX=p.facing*(e.type==='boss'?255:590);e.knockVY=rnd(-65,65);
@@ -966,8 +978,8 @@ function control(dt,pad){
     p.attackDriveRemaining=Math.max(0,p.attackDriveRemaining-Math.abs(p.x-before));
    }
   }
-  if(p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx>.1)p.facing=1;
-  else if(p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx<-.1)p.facing=-1;
+  if(p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx>.1)p.facing=1;
+  else if(p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx<-.1)p.facing=-1;
  }
  const distanceTraveled=Math.hypot(p.x-movementStartX,(p.y-movementStartY)*1.9);
  if(distanceTraveled>.001&&p.attack<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){
