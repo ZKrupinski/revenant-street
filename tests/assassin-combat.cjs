@@ -142,19 +142,20 @@ test('enemy visual locomotion uses speed hysteresis to suppress frame flicker',(
  assert.equal(e.locomotionMode,'walk','large speed drop eventually returns to walk');
 });
 
-test('Higgsfield original-Z walk and run atlas sources match gameplay and Frame Lab',()=>{
+test('crossing-step original Z art is locally packaged with old gait rollback',()=>{
  const main=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
  const lab=fs.readFileSync(path.join(__dirname,'../z-frame-lab.html'),'utf8');
- const motion={
-  walk:'hf_20261029_030024_4719744a-87ec-488b-9d17-dae2d61fbcd5.png',
-  run:'hf_20261029_030023_82fb3e14-3ccd-4f1a-81ad-3014aca3b65e.png'
- };
- for(const [name,source] of Object.entries(motion)){
-  assert(main.includes(source),name+' missing from game');
-  assert(lab.includes(source),name+' missing from Frame Lab');
-  assert(!main.includes('hf_20261028_15015'+(name==='walk'?'6_f5057a8d':'7_260ad4f6')),name+' old atlas still used');
+ for(const kind of ['walk','run']){
+  const source='assets/project-z-hero/z-'+kind+'-crossing.png';
+  const file=fs.readFileSync(path.join(__dirname,'..',source));
+  assert(file.length>100000,kind+' sprite sheet too small');
+  assert.equal(file.subarray(1,4).toString(),'PNG');
+  assert(main.includes(source),kind+' missing from game');
+  assert(lab.includes(source),kind+' missing from Frame Lab');
  }
- assert(main.includes('const Z_ANIM_RATE=.72'),'animation cadence must be slightly slower');
+ assert(main.includes('gait=previous'),'older gait A/B fallback must remain available');
+ assert(lab.includes("get('gait')==='previous'"),'Frame Lab must support previous-gait comparison');
+ assert(main.includes('const Z_ANIM_RATE=.72'),'animation cadence must remain slower');
  assert(main.includes('const zStride=key=>(key===\'run\'?32'),'running stride should reduce frame jumps');
  assert(lab.includes('value="8"'),'Frame Lab default speed should be 8 FPS');
 });
