@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - '.github/workflows/z-gait-visual-qa.yml'
+      - 'assets/project-z-hero/*poseguided.png'
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,8 +18,12 @@ jobs:
           python3 - <<'PY'
           from PIL import Image
           import io, base64, math
-          for kind in ('walk','run'):
-              im=Image.open(f'assets/project-z-hero/z-{kind}-crossing.png').convert('RGB')
+          for kind in ('walk','run','walk-candidate','run-candidate'):
+              candidate=kind.endswith('-candidate')
+              name=kind.replace('-candidate','')
+              source=f'assets/project-z-hero/z-{name}-poseguided.png' if candidate else f'assets/project-z-hero/z-{name}-crossing.png'
+              if not __import__('os').path.exists(source):continue
+              im=Image.open(source).convert('RGB')
               im.thumbnail((1200,680))
               buf=io.BytesIO()
               im.save(buf,format='JPEG',quality=45,optimize=True,progressive=False)
