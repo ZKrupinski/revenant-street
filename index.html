@@ -109,7 +109,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
     <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 콤보/자동 처형 · K 점프 · L 패링 · SHIFT 대쉬</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.18 — NEW BLACK HOODIE HERO</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.19 — ORIGINAL HERO RESTORED</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -157,8 +157,9 @@ const Z_GAIT_VERSIONS={
 const zGaitParam=window.location?.search||'';
 const zUsePreviousGait=/(?:[?&])gait=previous(?:&|$)/.test(zGaitParam);
 Object.assign(Z_REMOTE_ATLAS,zUsePreviousGait?Z_GAIT_VERSIONS.previous:Z_GAIT_VERSIONS.crossing);
-// New approved protagonist. The original remains selectable with ?hero=original.
-const Z_HOODIE_HERO=!/(?:[?&])hero=original(?:&|$)/.test(zGaitParam);
+// Restore the original protagonist as the default. Keep the alternative outfit
+// explicitly selectable with ?hero=hoodie (no loss of art or combat progress).
+const Z_HOODIE_HERO=/(?:[?&])hero=hoodie(?:&|$)/.test(zGaitParam);
 const Z_HOODIE_KEYS={idle:'idle',walk:'walk',backwalk:'walk',run:'run',
  dash:'run',dodge:'run',jumpstart:'jump',airborne:'jump',landing:'jump',
  guard:'idle',jab:'punch',cross:'punch',hook:'punch',uppercut:'punch',
