@@ -114,7 +114,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
         <div class="mod-strip" id="modStrip" aria-label="선택한 전투 속성"><span class="empty-mod">속성 미장착</span></div>
       </div>
       <div class="hud-center"><div class="chapter" id="chapter">01 / 침수된 거리</div><div class="wave-label" id="waveLabel">WAVE 01 — 침입자</div><div class="kill-count" id="enemyCount">REMAINING 03</div></div>
-      <div class="hud-right"><div class="currency">₩ <b id="credits">0000</b></div><div class="combo" id="combo">0 <small>HITS</small></div><button class="small-button" id="pauseButton" aria-label="일시정지">Ⅱ</button></div>
+      <div class="hud-right"><div class="currency" title="전투로 획득하는 크레딧">₩ <b id="credits">0000</b> <small style="color:#ffe68f">◆ <b id="shardCount">0</b></small></div><div class="combo" id="combo">0 <small>HITS</small></div><button class="small-button" id="pauseButton" aria-label="일시정지">Ⅱ</button></div>
     </div>
     <div class="boss-hud" id="bossHud" hidden><div class="boss-title"><span id="bossName">ELITE HUNTER</span><span>PHASE <b id="bossPhase">01</b></span></div><div class="boss-track"><div id="bossFill"></div></div></div>
     <div class="game-message" id="gameMessage" aria-live="polite"></div>
@@ -795,12 +795,12 @@ function spawnWave(){
    ['guard',8100,550],['raider',8170,596],['elite',8240,629],['raider',8320,564],['guard',8400,603],['assassin',8470,533]
   ],
   3:[
-   ['raider',10920,542],['assassin',10990,600],['guard',11060,632],['raider',11135,554],['assassin',11210,597],['guard',11290,534],
-   ['boss',11880,561],['raider',12030,618],['guard',12120,548],['assassin',12200,598],['raider',12280,556]
+   // Isolated arena. Do not activate a crowd with the boss.
+   ['boss',11880,561]
   ]
  };
  enemies=(spawns[wave]||[]).map(([type,x,y],i)=>makeEnemy(type,x,y,i));
- if(wave===3)for(const name of ['idle','taunt','dash','combo','slam','death'])window.RZBossHunter?.load(name);
+ if(wave===3)for(const name of ['idle','taunt','dash','slam','death'])window.RZBossHunter?.load(name);
   $('bossHud').hidden=true;
  $('waveLabel').textContent=['','WAVE 01 — 젖은 골목','WAVE 02 — 공사 구역','WAVE 03 — 헌터의 공장'][wave];
  $('chapter').textContent=`0${wave} / 끝없는 거리`;
@@ -928,6 +928,17 @@ function execute(target){
  fxBurst(target.x,target.y-130,target.type==='boss'?'red':'gold',2.4);
  flash('EXECUTION!',1.1);sound('execution');return true
 }
+function awardEnemyKill(e){
+ if(e.killAwarded)return;
+ e.killAwarded=true;
+ const money=e.type==='boss'?300:e.type==='elite'?135:e.type==='guard'?65:45;
+ const shards=e.type==='boss'?4:e.type==='elite'?2:e.type==='guard'?1:(runKills%4===0?1:0);
+ p.credits+=money;
+ if(shards>0){perma.shards+=shards;save()}
+ const textValue='+₩'+money+(shards?'  +'+shards+' 파편':'');
+ floatText(textValue,e.x,e.y-210,shards?'#ffe78c':'#ffdc8d');
+ fxBurst(e.x,e.y-120,'gold',.85);
+}
 function hurtEnemy(e,dmg,poise){
  if(e.dead)return;
  e.hp-=dmg;e.poise=clamp(e.poise+poise,0,e.maxPoise);
@@ -963,7 +974,7 @@ function hurtEnemy(e,dmg,poise){
  if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=3.6;e.stun=3.6;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
  if(e.type==='elite'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.14;e.eliteCooldown=Math.min(e.eliteCooldown,1.6);fxBurst(e.x,e.y-150,'gold',1.8);floatText('OVERDRIVE',e.x,e.y-255,'#f9c26a')}
  if(e.type==='boss'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.bossPhasePending=true;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
- if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;p.credits+=e.type==='boss'?250:e.type==='elite'?125:e.type==='guard'?58:30;perma.shards+=0;fxBurst(e.x,e.y-70,'gold',1.1);}}
+ if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);fxBurst(e.x,e.y-70,'gold',1.1);}}
 function attackCheck(){
  const armed=p.weapon>0&&!Z_KICK_MOVES.has(p.moveName)&&!Z_HEAD_MOVES.has(p.moveName)&&!p.airAttack;
  const baseDamage={jab:15,cross:19,hook:22,uppercut:26,backfist:20,hammerfist:30,spinning_elbow:28,rising_elbow:26,superman_punch:32,shovel_hook:23,frontkick:20,lowkick:18,roundkick:29,axe_kick:32,sidekick:27,spinning_heel:34,crescent_kick:28,diagonal_airkick:35,rising_headbutt:27,forward_headbutt:25,airkick:37};
@@ -1238,7 +1249,7 @@ function updateEnemies(dt){
   e.bleed=Math.max(0,e.bleed-dt);e.burn=Math.max(0,(e.burn||0)-dt);
   if(e.groggy>0){e.groggy-=dt;if(e.groggy<=0){e.poise=0;e.stun=0}}
   if(e.bleed>0)e.hp-=dt*5.5;if(e.burn>0)e.hp-=dt*7.5;
-  if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;p.credits+=e.type==='elite'?125:40;continue}
+  if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);continue}
   if(e.stun>0||e.shock>.35||e.groggy>0||e.proneTime>0||e.riseTime>0)continue;
   let dx=p.x-e.x,dy=p.y-e.y,dist=Math.abs(dx);
   if(dist>920)continue;
@@ -1340,7 +1351,7 @@ function updateHud(){
   (p.mod==='neuro'?'<span class="mod-chip neuro">⚡ NEURO</span>':'');
  const markup=badges||'<span class="empty-mod">속성 미장착</span>';
  if(modStripCache!==markup){$('modStrip').innerHTML=markup;modStripCache=markup}
- $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'BARE FISTS';$('modName').textContent=p.mod==='neuro'?'NEURO':p.mod==='none'?'NONE':p.mods.map(n=>({fire:'FIRE',shock:'VOLT',bleed:'BLEED',ice:'ICE'})[n]).join('+');$('credits').textContent=String(p.credits).padStart(4,'0');$('combo').innerHTML=`${p.hits} <small>HITS</small>`;$('enemyCount').textContent=`REMAINING ${String(enemies.filter(e=>!e.dead).length).padStart(2,'0')}`;$('level').textContent=String(level).padStart(2,'0');const eliteOrBoss=enemies.find(e=>!e.dead&&e.type==='boss'&&Math.abs(e.x-p.x)<1050)||enemies.find(e=>!e.dead&&e.type==='elite'&&Math.abs(e.x-p.x)<850);$('bossHud').hidden=gameState!=='playing'||!eliteOrBoss;if(eliteOrBoss){$('bossName').textContent=eliteOrBoss.type==='elite'?'IRON MASK / 철가면 추적자':'HUNTER / 붉은 집행자';$('bossFill').style.width=`${clamp(100*eliteOrBoss.hp/eliteOrBoss.maxHp,0,100)}%`;$('bossPhase').textContent=String(eliteOrBoss.phase).padStart(2,'0')} }
+ $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'BARE FISTS';$('modName').textContent=p.mod==='neuro'?'NEURO':p.mod==='none'?'NONE':p.mods.map(n=>({fire:'FIRE',shock:'VOLT',bleed:'BLEED',ice:'ICE'})[n]).join('+');$('credits').textContent=String(p.credits).padStart(4,'0');$('shardCount').textContent=String(perma.shards);$('combo').innerHTML=`${p.hits} <small>HITS</small>`;$('enemyCount').textContent=`REMAINING ${String(enemies.filter(e=>!e.dead).length).padStart(2,'0')}`;$('level').textContent=String(level).padStart(2,'0');const eliteOrBoss=enemies.find(e=>!e.dead&&e.type==='boss'&&Math.abs(e.x-p.x)<1050)||enemies.find(e=>!e.dead&&e.type==='elite'&&Math.abs(e.x-p.x)<850);$('bossHud').hidden=gameState!=='playing'||!eliteOrBoss;if(eliteOrBoss){$('bossName').textContent=eliteOrBoss.type==='elite'?'IRON MASK / 철가면 추적자':'HUNTER / 붉은 집행자';$('bossFill').style.width=`${clamp(100*eliteOrBoss.hp/eliteOrBoss.maxHp,0,100)}%`;$('bossPhase').textContent=String(eliteOrBoss.phase).padStart(2,'0')} }
 function update(dt){RZAssassinArt.warm(dt);warmZSprites(dt);warmMaskedGrunt(dt);time+=dt;messageUpdate(dt);const pad=pollPad();updateEffects(dt);if(gameState!=='playing')return;if(hitStop>0){hitStop-=dt;updateHud();return}control(dt,pad);cameraX+=(clamp(p.x-465,0,STAGE_WIDTH-W)-cameraX)*Math.min(1,dt*6.5);updateEnemies(dt*(slowMotion>0?.19:1));slowMotion=Math.max(0,slowMotion-dt);updateHud();const cleared=gameState==='playing'&&waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
 function drawBackdrop(){
  const bg=img.street_pano;
@@ -1503,11 +1514,11 @@ function draw(){
  drawTravelMeter();ctx.restore();
 }
 function loop(t){const dt=Math.min((t-last)/1000||.016,.05);last=t;update(dt);draw();requestAnimationFrame(loop)}
-function rewardMenu(){setStatus('WAVE CLEAR');$('hint').hidden=true;$('bossHud').hidden=true;const opts=[{mod:'fire',symbol:'F',title:'IGNITION / 화염',desc:'강타 피해 +30%. 점화로 지속 피해'},{mod:'shock',symbol:'V',title:'VOLT / 전류',desc:'전류 충격으로 적을 잠시 멈춤'},{mod:'bleed',symbol:'B',title:'HEMORRHAGE / 출혈',desc:'피격 후 출혈 피해를 누적'},{mod:'ice',symbol:'C',title:'CRYO / 빙결',desc:'타격한 적의 행동 속도를 감소'}];if(wave===2){opts.sort((a,b)=>(p.mods.includes(a.mod)?1:0)-(p.mods.includes(b.mod)?1:0));}const cards=opts.filter(o=>!p.mods.includes(o.mod)).slice(0,3).map(o=>`<button class="upgrade-btn" data-mod="${o.mod}"><span class="sym">${MOD_META[o.mod].icon} ${o.symbol}</span><strong>${o.title}</strong><small>${o.desc}</small></button>`).join('');showMenu(`<div class="eyebrow">SYSTEM UPDATE / WAVE 0${wave} CLEAR</div><h2>무기 플러그인 장착</h2><p>생존 보너스 <b class="key">+20 체력</b> · 무기 자동 수리. 새 속성을 추가해 다음 지역으로 진입하세요. 출혈 + 전류 = 신경 폭주.</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT MOD — ${p.mod.toUpperCase()}</div><div class="pad-hint">◀ ▶ / 십자키 · 왼쪽 스틱 선택　 A / × 결정</div>`)}
+function rewardMenu(){setStatus('WAVE CLEAR');$('hint').hidden=true;$('bossHud').hidden=true;const opts=[{mod:'fire',symbol:'F',title:'IGNITION / 화염',desc:'강타 피해 +30%. 점화로 지속 피해'},{mod:'shock',symbol:'V',title:'VOLT / 전류',desc:'전류 충격으로 적을 잠시 멈춤'},{mod:'bleed',symbol:'B',title:'HEMORRHAGE / 출혈',desc:'피격 후 출혈 피해를 누적'},{mod:'ice',symbol:'C',title:'CRYO / 빙결',desc:'타격한 적의 행동 속도를 감소'}];if(wave===2){opts.sort((a,b)=>(p.mods.includes(a.mod)?1:0)-(p.mods.includes(b.mod)?1:0));}const cards=opts.filter(o=>!p.mods.includes(o.mod)).slice(0,3).map(o=>`<button class="upgrade-btn" data-mod="${o.mod}"><span class="sym">${MOD_META[o.mod].icon} ${o.symbol}</span><strong>${o.title}</strong><small>${o.desc}</small></button>`).join('');showMenu(`<div class="eyebrow">SYSTEM UPDATE / WAVE 0${wave} CLEAR</div><h2>속성 강화 선택 — 무료</h2><p>재화 소모 없음 · 생존 보너스 <b class="key">+20 체력</b> · 무기 자동 수리. 새 속성을 추가해 다음 지역으로 진입하세요. 출혈 + 전류 = 신경 폭주.</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT MOD — ${p.mod.toUpperCase()}</div><div class="pad-hint">◀ ▶ / 십자키 · 왼쪽 스틱 선택　 A / × 결정</div>`)}
 function selectMod(m){if(!MOD_META[m])return;if(!p.mods.includes(m))p.mods.push(m);p.mod=(p.mods.includes('shock')&&p.mods.includes('bleed'))?'neuro':p.mods.join('+');p.hp=clamp(p.hp+20,0,p.maxHp);p.weapon=0;p.maxWeapon=18;p.stamina=100;level++;gameState='playing';hideMenu();spawnWave();const info=MOD_META[m];floatText(info.icon+' '+info.title+' 장착!',p.x,p.y-260,info.color);flash(info.icon+' '+info.short+' 속성 활성화!',2);sound('parry');setStatus('COMBAT LIVE')}
 function completeMenu(){gameState='complete';setStatus('RUN COMPLETE');perma.shards+=4;save();$('bossHud').hidden=true;showMenu(`<div class="eyebrow">OBJECTIVE COMPLETE / REBEL SIGNAL ONLINE</div><h1>ZONE <span>CLEARED</span></h1><p>엘리트 헌터를 격파했습니다. 사이버네틱 지하 기지 <b class="key">REBEL HUB</b>로 귀환합니다.</p><div class="hub-stat"><span>처치 ${runKills}명 / 전리품 ₩${p.credits}</span><strong>영구 자원 +4</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB로 귀환</button><button class="secondary-btn" data-action="start">새로운 런 시작</button></div>`)}
 function deadMenu(){if(gameState==='dead')return;gameState='dead';setStatus('SIGNAL LOST');perma.shards+=1;save();$('hint').hidden=true;showMenu(`<div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1><p>기계 신체가 파괴됐습니다. 영구 자원 <b class="key">+1</b>을 회수했습니다.</p><div class="hub-stat"><span>이번 런의 처치 ${runKills}명</span><strong>SHARDS +1</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB</button><button class="secondary-btn" data-action="start">즉시 재시작</button></div>`)}
-function hubMenu(){gameState='hub';$('bossHud').hidden=true;setStatus('REBEL HUB');const opts=[['core','외골격 증설','최대 체력 +20','20 HP'],['servo','동력 관절 보정','모든 공격 피해 +2','ATK +2'],['reflex','인공 반사신경','패링 유효시간 +0.035초','PARRY +']];const html=opts.map(([id,title,txt,short])=>`<button class="upgrade-btn" data-perma="${id}" ${perma.shards<2?'disabled':''}><span class="sym">${short}</span><strong>${title} <small>Lv.${perma[id]}</small></strong><small>${txt} / 비용 2 파편</small></button>`).join('');showMenu(`<div class="eyebrow">SAFE ZONE / CYBERNETIC UNDERGROUND</div><h2>REBEL HUB</h2><p>사망 이후에도 남는 사이버네틱 신체 업그레이드. 파편을 소비해 다음 런을 준비합니다.</p><div class="hub-stat"><span>영구 강화 자원</span><strong>${perma.shards} SHARDS</strong></div><div class="choice-grid">${html}</div><div class="buttons"><button class="main-btn" data-action="start">다시 거리로</button><button class="secondary-btn" data-action="title">타이틀로</button></div>`)}
+function hubMenu(){gameState='hub';$('bossHud').hidden=true;setStatus('REBEL HUB');const opts=[['core','외골격 증설','최대 체력 +20','20 HP'],['servo','동력 관절 보정','모든 공격 피해 +2','ATK +2'],['reflex','인공 반사신경','패링 유효시간 +0.035초','PARRY +']];const html=opts.map(([id,title,txt,short])=>`<button class="upgrade-btn" data-perma="${id}" ${perma.shards<2?'disabled':''}><span class="sym">${short}</span><strong>${title} <small>Lv.${perma[id]}</small></strong><small>${txt} / 비용 2 파편</small></button>`).join('');showMenu(`<div class="eyebrow">SAFE ZONE / CYBERNETIC UNDERGROUND</div><h2>REBEL HUB</h2><p>전투에서 획득한 <b class='key'>◆ 파편</b>으로 영구 강화합니다. 일반 적 4명 처치마다 1개, 방패병 1개, 엘리트 2개, 보스 4개. <b>₩ 크레딧은 전투 점수</b>이며 구매 재화가 아닙니다.</p><div class="hub-stat"><span>영구 강화 자원</span><strong>${perma.shards} SHARDS</strong></div><div class="choice-grid">${html}</div><div class="buttons"><button class="main-btn" data-action="start">다시 거리로</button><button class="secondary-btn" data-action="title">타이틀로</button></div>`)}
 function buyUpgrade(k){if(perma.shards<2)return;perma.shards-=2;perma[k]++;save();hubMenu();sound('parry')}
 function pauseToggle(){if(gameState==='playing'){gameState='paused';setStatus('PAUSED');showMenu(`<div class="eyebrow">SYSTEM SUSPENDED</div><h2>일시 정지</h2><p>전투가 일시 정지되었습니다.</p><div class="buttons"><button class="main-btn" data-action="resume">▶ 계속 플레이</button><button class="secondary-btn" data-action="guideResume">조작 안내</button><button class="secondary-btn" data-action="title">타이틀로</button></div>`)}else if(gameState==='paused'){gameState='playing';setStatus('COMBAT LIVE');hideMenu()}}
 function keyDown(ev){const k=ev.key.toLowerCase();if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(k))ev.preventDefault();
