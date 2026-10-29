@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,control,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('existing wave composition preserves assassin slots',()=>{g.startRun();assert.equal(t.getEnemies().filter(e=>e.type==='assassin').length,6)});
@@ -181,5 +181,26 @@ test('new black-hoodie protagonist maps gameplay motions to eight local original
  assert.equal(t.currentZFrameIndex('getup'),0,'original hero get-up must begin on original first frame');
  t.p.getupTimer=0;
  assert.equal(t.currentZFrameIndex('getup'),7,'original hero get-up must finish on original last frame');
+});
+
+test('ground combos now lunge decisively even with a neutral joystick',()=>{
+ g.startRun();t.setEnemies([]);
+ t.p.x=350;t.p.y=570;t.p.facing=1;t.p.moveDX=0;t.p.moveDY=0;t.p.attack=0;t.p.comboWindow=0;t.p.stamina=100;
+ t.startAttack();
+ const total=t.p.attackDriveTotal;
+ assert(total>=42,'neutral jab should drive forwards, not stay in place');
+ const atStart=t.p.x;
+ for(let i=0;i<17;i++)t.control(1/60,{dx:0,dy:0});
+ assert(t.p.x-atStart>=34,'first punch must visibly advance without joystick input');
+ assert(t.p.attackDriveRemaining<total,'distance budget should be used on forward movement');
+ assert(t.p.x<=12800-64,'world bounds remain enforced');
+});
+test('combo lunge respects facing and does not teleport on one frame',()=>{
+ g.startRun();t.setEnemies([]);
+ t.p.x=750;t.p.y=570;t.p.facing=-1;t.p.moveDX=0;t.p.moveDY=0;t.p.attack=0;t.p.comboWindow=0;t.p.stamina=100;
+ t.startAttack();
+ const prior=t.p.x;t.control(1/60,{dx:0,dy:0});
+ assert(t.p.x<prior,'left-facing attack must travel left');
+ assert(prior-t.p.x<40,'lunge must not teleport across the arena in one frame');
 });
 console.log(`${checks} combat regression checks passed`);
