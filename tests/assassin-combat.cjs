@@ -96,7 +96,7 @@ test('elite overdrive at critical health and independent sprite module',()=>{
 });
 test('Frame Lab exposes all twelve elite animations without sharing original cache keys',()=>{
  const lab=fs.readFileSync(path.join(__dirname,'../z-frame-lab.html'),'utf8');
- const script=[...lab.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]).at(-1);
+ const script=lab.slice(lab.lastIndexOf('<script>')+8,lab.lastIndexOf('</script>'));
  assert(script,'Frame Lab inline script missing');
  new vm.Script(script);
  assert(lab.includes('variant:\'elite\''),'elite variants not registered');
