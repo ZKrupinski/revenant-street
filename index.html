@@ -109,7 +109,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
     <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · J 콤보/자동 처형 · K 점프 · L 패링 · SHIFT 대쉬</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.11 — MASKED GRUNT A + BLADE ASSASSIN B</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.12 — STABLE ENEMY ANCHORS + CROWD PHYSICS</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -313,7 +313,7 @@ function loadMaskedMove(key){
    try{
     const raw=prepareZCells(im);
     if(raw.length!==8)throw Error('8-frame masked enemy atlas required');
-    obj.frames=raw;
+    obj.frames=anchorMaskedFrames(raw,key);
     obj.ready=true;
    }catch(err){obj.failed=true;obj.error=String(err);console.warn('Masked Grunt:',key,err)}
    obj.loading=false;im.onload=null;im.onerror=null;
@@ -327,6 +327,29 @@ function warmMaskedGrunt(dt){
  maskedWarmDelay-=dt;if(maskedWarmDelay>0)return;
  while(maskedWarmIndex<maskedLoadOrder.length&&maskedArt[maskedLoadOrder[maskedWarmIndex]])maskedWarmIndex++;
  if(maskedWarmIndex<maskedLoadOrder.length){loadMaskedMove(maskedLoadOrder[maskedWarmIndex++]);maskedWarmDelay=.36}
+}
+// All eight frames share the same foot pivot despite AI atlas crop variation.
+function anchorMaskedFrames(frames,key){
+ const grounded=['idle','walk','run','charge','attack','getup'].includes(key);
+ for(const f of frames){
+  const c=f.canvas,w=c.width,h=c.height;
+  const pixels=c.getContext('2d',{willReadFrequently:true}).getImageData(0,0,w,h).data;
+  const rows=new Uint16Array(h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(pixels[(y*w+x)*4+3]>100)rows[y]++;
+  const threshold=Math.max(3,Math.floor(w*.013));
+  let foot=h-1;while(foot>0&&rows[foot]<threshold)foot--;
+  if(foot===0){f.anchorX=w/2;f.anchorY=h;continue}
+  let xSum=0,count=0;
+  if(grounded){
+   const start=Math.max(0,foot-Math.max(14,Math.floor(h*.15)));
+   for(let y=start;y<=foot;y++)for(let x=0;x<w;x++){
+    if(pixels[(y*w+x)*4+3]>115){xSum+=x;count++}
+   }
+  }
+  f.anchorX=grounded&&count?clamp(xSum/count,w*.30,w*.70):w/2;
+  f.anchorY=foot;
+ }
+ return frames;
 }
 function getMaskedMove(e){
  if(e.dead)return 'fall';
@@ -352,15 +375,16 @@ function maskedFrame(e,key){
 }
 function drawMaskedGrunt(e,x,y,z){
  const key=getMaskedMove(e);if(e.spriteKey!==key){e.spriteKey=key;e.spriteTime=0;e.spriteDistance=0}
- const art=loadMaskedMove(key),selected=art.ready?art:maskedArt.idle;
- const fr=selected?.ready?selected.frames[maskedFrame(e,selected===art?key:'idle')]:null;
+ const art=loadMaskedMove(key);
+ const fr=art.ready?art.frames[maskedFrame(e,key)]:(e.lastSprite||maskedArt.idle?.frames?.[0]||null);
+ if(art.ready&&fr)e.lastSprite=fr;
  ellipseShadow(x,y,1.06,.42/(1+z*.022));
  ctx.save();ctx.translate(x,Math.round(y-z));ctx.scale(e.face>0?-1:1,1);
  if(fr){
-  const {w,h}=fr.bounds,scale=1;
+  const {w,h}=fr.bounds;
   ctx.globalAlpha=e.dead?clamp(e.fade,0,1):1;
   if(e.hitFlash>0)ctx.filter='brightness(1.35)';
-  ctx.drawImage(fr.canvas,-w*scale/2,-h*scale,w*scale,h*scale);
+  ctx.drawImage(fr.canvas,-(fr.anchorX??w/2),-(fr.anchorY??h),w,h);
   ctx.filter='none';
  }else{
   // Never flash old raider art while a sheet is loading.
@@ -517,7 +541,7 @@ function makeEnemy(type,x,y,index){
  poise:0,maxPoise:poise,speed,damage,reach,stun:0,inv:0,windup:0,
  cooldown:(index%3)*.23+.38,attackDone:false,hitFlash:0,groggy:0,phase:1,
  dead:false,fade:1,decision:0,strafe:Math.random()>.5?1:-1,
- bleed:0,shock:0,freeze:0,spriteKey:'',spriteTime:0,spriteDistance:0,visualMoving:false,visualSpeed:0,
+ bleed:0,shock:0,freeze:0,spriteKey:'',spriteTime:0,spriteDistance:0,visualMoving:false,visualSpeed:0,visualHold:0,renderX:x,renderY:y,
   attackPoseTime:0,windupDuration:.45,hitAnimation:'hitHead',proneTime:0,riseTime:0,pendingFall:false,deathAge:0,
   brain:type==='boss'?'boss':['swarm','feint','charger','swarm','feint','charger'][index%6],
   chargeCooldown:1.6+(index%5)*.48,chargePrep:0,chargeTime:0,
@@ -769,7 +793,7 @@ function control(dt,pad){
  }
  if((p.attackQueued||keys.has('j')||padPrev.attack)&&p.attack===0&&p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){p.attackQueued=false;startAttack()}
 }
-function resolveBodyCollisions(){
+function resolveBodyCollisions(dt){
  // Physics uses compact footprint ellipses at floor height, not full sprite
  // bounding rectangles. Shallow Y lanes let crowds pass without stacking.
  const bodies=[p,...enemies.filter(e=>!e.dead&&e.z<37)];
@@ -786,9 +810,12 @@ function resolveBodyCollisions(){
    if(dist>=1)continue;
    if(dist<.001){dx=(i+j)%2?1:-1;dy=(i%3-1)*.45;dist=Math.hypot(dx/wx,dy/wy)}
    const gap=1-dist+.006;
-   const shiftX=(dx/wx)/dist*wx*gap,shiftY=(dy/wy)/dist*wy*gap;
+   let shiftX=(dx/wx)/dist*wx*gap,shiftY=(dy/wy)/dist*wy*gap;
+   // Spread overlap correction over multiple frames to avoid crowd snapping.
+   const amount=Math.hypot(shiftX,shiftY),maxStep=Math.min(7,Math.max(0,dt)*350);
+   if(amount>maxStep&&amount>0){shiftX*=maxStep/amount;shiftY*=maxStep/amount}
    const playerBoss=(a===p||b===p)&&(a.type==='boss'||b.type==='boss');
-   const weightA=playerBoss?(a===p?.80:.20):a===p?.36:b===p?.64:.5;
+   const weightA=a===p?(playerBoss?.22:.12):b===p?(playerBoss?.78:.88):.5;
    a.x=clamp(a.x+shiftX*weightA,55,STAGE_WIDTH-55);
    b.x=clamp(b.x-shiftX*(1-weightA),55,STAGE_WIDTH-55);
    a.y=clamp(a.y+shiftY*weightA,480,664);
@@ -897,7 +924,18 @@ function updateEnemies(dt){
   e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
   e.spriteDistance+=moved;
  }
- resolveBodyCollisions();
+ resolveBodyCollisions(dt);
+ // Smooth render positions separately from the responsive combat hitboxes.
+ for(const e of enemies){
+  if(e.visualMoving)e.visualHold=.13;
+  else e.visualHold=Math.max(0,(e.visualHold||0)-dt);
+  e.visualMoving=e.visualHold>0;
+  const k=Math.min(1,Math.max(0,dt)*(e.reactionTime>0||e.dead?28:14));
+  if(!Number.isFinite(e.renderX)||Math.abs(e.x-e.renderX)>220)e.renderX=e.x;
+  else e.renderX+=(e.x-e.renderX)*k;
+  if(!Number.isFinite(e.renderY)||Math.abs(e.y-e.renderY)>120)e.renderY=e.y;
+  else e.renderY+=(e.y-e.renderY)*k;
+ }
  enemies=enemies.filter(e=>!e.dead||e.fade>0);
  if(gameState==='playing'&&enemies.length===0){
   if(!waveClearNotified){waveClearNotified=true;flash('구역 확보 — 오른쪽으로 전진!',2)}
@@ -939,7 +977,7 @@ function drawTravelMeter(){
  ctx.restore();
 }
 function ellipseShadow(x,y,s=1,alpha=.36){ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle='#01040b';ctx.beginPath();ctx.ellipse(x,y,49*s,11*s,0,0,Math.PI*2);ctx.fill();ctx.restore()}
-function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const x=Math.round(a.x),y=Math.round(a.y),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?getZMove():'';
+function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const x=Math.round(isP?a.x:(a.renderX??a.x)),y=Math.round(isP?a.y:(a.renderY??a.y)),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?getZMove():'';
  if(isP){ellipseShadow(x,y,1.06,.45);paintZ(x,y,z);return;}
  if(a.type==='raider'){drawMaskedGrunt(a,x,y,z);return;}
  if(a.type==='assassin'){drawAssassin(a,x,y,z);return;}
