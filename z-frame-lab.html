@@ -54,14 +54,15 @@ if(hfOriginalArt){
  const map={jab:'punch',cross:'punch',backfist:'punch',frontkick:'kick',roundkick:'kick',sidekick:'kick'};
  const useIndividualGait=!['previous','poseguided','crossing'].includes(requestedGait);
  if(useIndividualGait){
-  const suffix=requestedGait==='v1'?'':'-v2';
+  const suffix=requestedGait==='v1'?'':requestedGait==='v2'?'-v2':'-v3';
   map.walk='walk'+suffix;map.run='run'+suffix;
  }
  for(const [key,value] of Object.entries(map)){
   const art=list.find(a=>a.id===key);
   if(art){
    art.sheet_url='./assets/original-z-hf/'+value+'.webp';
-   art.label=(value.endsWith('-v2')?'Z 8F 개별제작 · ':'ORIGINAL Z · ')+art.label;
+   if(value.endsWith('-v3')){art.precleared=true;art.frame_ms=key==='run'?72:105;}
+   art.label=(value.endsWith('-v3')?'Z v3 교대보행 · ':value.endsWith('-v2')?'Z 8F 개별제작 · ':'ORIGINAL Z · ')+art.label;
   }
  }
 }

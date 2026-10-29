@@ -126,7 +126,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
     <div class="bottom-tip" id="bottomTip"><span>WASD 이동 · ↑ 점프 · ← 공격/처형 · → 패링 · ↓ 대쉬 (J/K/L/SHIFT도 지원)</span><span>GAMEPAD 지원</span></div>
   </main>
-  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.30 — ORIGINAL Z FULL-BODY GAIT</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
+  <footer><span>90s CYBERPUNK SEOUL <i>•</i> ACTION ROGUELITE</span><span>10-SCREEN SIDE-SCROLLING WORLD / ALPHA 1.31 — ORIGINAL Z ALTERNATING-LEG GAIT V3</span><button id="muteButton">SOUND: ON</button><a style="display:block;text-align:center;color:#78dce5;text-decoration:underline;font:800 11px system-ui;padding:7px" href="./z-frame-lab.html" target="_blank" rel="noopener">Z 독립 원화 애니메이션 20종 프레임 검수실 열기</a></footer>
 </div>
 <script>window.RZ_ASSETS={};window.RZ_BG="";</script>
 <script src="./assets/alpha10/bg0.js"></script>
@@ -175,7 +175,7 @@ const Z_GAIT_VERSIONS={
 };
 const zGaitParam=window.location?.search||'';
 // Choose complete redraws for each biomechanical gait frame; preserve A/B.
-const zGaitChoice=(/(?:[?&])gait=(previous|crossing|v1|v2)(?:&|$)/.exec(zGaitParam)||[])[1]||'v2';
+const zGaitChoice=(/(?:[?&])gait=(previous|crossing|v1|v2|v3)(?:&|$)/.exec(zGaitParam)||[])[1]||'v3';
 const zUsePreviousGait=zGaitChoice==='previous';
 Object.assign(Z_REMOTE_ATLAS,zUsePreviousGait?Z_GAIT_VERSIONS.previous:Z_GAIT_VERSIONS.crossing);
 // Alpha 1.20 original armored hero: four new Higgsfield motion atlases.
@@ -184,7 +184,10 @@ Object.assign(Z_REMOTE_ATLAS,zUsePreviousGait?Z_GAIT_VERSIONS.previous:Z_GAIT_VE
 const Z_HF_ART=!/(?:[?&])zart=original(?:&|$)/.test(zGaitParam);
 if(Z_HF_ART){
  if(!zUsePreviousGait){
-  if(zGaitChoice==='crossing'){
+  if(zGaitChoice==='v3'){
+   Z_REMOTE_ATLAS.walk='./assets/original-z-hf/walk-v3.webp';
+   Z_REMOTE_ATLAS.run='./assets/original-z-hf/run-v3.webp';
+  }else if(zGaitChoice==='crossing'){
    Z_REMOTE_ATLAS.walk=Z_GAIT_VERSIONS.crossing.walk;
    Z_REMOTE_ATLAS.run=Z_GAIT_VERSIONS.crossing.run;
   }else{
@@ -537,12 +540,46 @@ function prepareTransparentHeroCells(im){
  }
  return cells;
 }
+// V3 is already transparent. Crop all 8 frames with ONE shared envelope
+// and ONE physical scale. Never chroma-key the dark costume or re-size a
+// knee, torso, or boot independently. Keep the packed foot contact plane.
+function preparePremattedGaitCells(im){
+ const cw=Math.floor(im.naturalWidth/4),ch=Math.floor(im.naturalHeight/2);
+ if(cw<128||ch<170)throw Error('V3 gait atlas too small');
+ const frames=[],bounds=[];
+ for(let i=0;i<8;i++){
+  const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+  const c=cv.getContext('2d',{willReadFrequently:true});
+  c.drawImage(im,(i%4)*cw,Math.floor(i/4)*ch,cw,ch,0,0,cw,ch);
+  const a=c.getImageData(0,0,cw,ch).data;
+  let minX=cw,minY=ch,maxX=-1,maxY=-1;
+  for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){
+   if(a[(y*cw+x)*4+3]<60)continue;
+   minX=Math.min(x,minX);minY=Math.min(y,minY);
+   maxX=Math.max(x,maxX);maxY=Math.max(y,maxY);
+  }
+  if(maxX<0)throw Error('Empty V3 gait frame '+i);
+  bounds.push({minX,minY,maxX,maxY});frames.push(cv);
+ }
+ const minX=Math.max(0,Math.min(...bounds.map(b=>b.minX))-7);
+ const minY=Math.max(0,Math.min(...bounds.map(b=>b.minY))-10);
+ const maxX=Math.min(cw-1,Math.max(...bounds.map(b=>b.maxX))+7);
+ const maxY=Math.min(ch-1,Math.max(...bounds.map(b=>b.maxY))+6);
+ const rectW=maxX-minX+1,rectH=maxY-minY+1;
+ const scale=Math.min(240/rectW,254/rectH);
+ const outW=Math.round(rectW*scale),outH=Math.round(rectH*scale);
+ return frames.map(cv=>{
+  const sprite=document.createElement('canvas');sprite.width=outW;sprite.height=outH;
+  sprite.getContext('2d').drawImage(cv,minX,minY,rectW,rectH,0,0,outW,outH);
+  return {canvas:sprite,bounds:{x:0,y:0,w:outW,h:outH},unitScale:1};
+ });
+}
 function loadZMove(key){
  if(!Z_REMOTE_ATLAS[key])key='idle';
  if(!zArtState[key]){
   const obj={ready:false,failed:false,loading:true,url:Z_REMOTE_ATLAS[key],frames:[]};zArtState[key]=obj;
   const im=new Image();im.crossOrigin='anonymous';
-  im.onload=()=>{try{obj.frames=Z_HOODIE_HERO?prepareTransparentHeroCells(im):prepareZCells(im);obj.ready=obj.frames.length===8;obj.failed=false}
+  im.onload=()=>{try{obj.frames=Z_HOODIE_HERO?prepareTransparentHeroCells(im):(Z_HF_ART&&zGaitChoice==='v3'&&(key==='walk'||key==='run')?preparePremattedGaitCells(im):prepareZCells(im));obj.ready=obj.frames.length===8;obj.failed=false}
    catch(err){obj.ready=false;obj.failed=true;obj.error=String(err);console.warn('Z atlas rejected:',key,err)}obj.loading=false;obj.image=null;im.onload=null;im.onerror=null;};
   im.onerror=()=>{obj.failed=true;obj.ready=false;obj.loading=false;obj.image=null;im.onload=null;im.onerror=null};im.src=obj.url;obj.image=im;
  }

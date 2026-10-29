@@ -617,13 +617,35 @@ test('separately posed original-Z v2 walk/run atlases retain 8 frames each',()=>
   assert.equal(art[key].source_bounds.length,8);
  }
 });
-test('original hero defaults to v2 separate full-body pose frames with older atlas rollback',()=>{
+test('original hero defaults to v3 alternating-foot full-body gait with previous atlas rollback',()=>{
  const game=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
  const lab=fs.readFileSync(path.join(__dirname,'../z-frame-lab.html'),'utf8');
- assert(game.includes("||'v2'"),'new pose guide gait should be the default');
+ assert(game.includes("||'v3'"),'full-body alternating-leg gait v3 should be the default');
+ assert(game.includes("walk-v3.webp")&&game.includes("run-v3.webp"),'game must reference both v3 atlases');
+ assert(game.includes('preparePremattedGaitCells(im)'),'game must avoid re-keying pre-matted v3 art');
  assert(game.includes("const suffix=zGaitChoice==='v1'?'':'-v2'"),'v1 full-body art rollback required');
  assert(game.includes("const zUsePreviousGait=zGaitChoice==='previous'"),'historical gait rollback required');
  assert(game.includes("if(zGaitChoice==='crossing')"),'prior crossing version should remain selectable');
- assert(lab.includes("map.walk='walk'+suffix;map.run='run'+suffix"),'Frame Lab should use same v2 assets as game');
+ assert(lab.includes("map.walk='walk'+suffix;map.run='run'+suffix"),'Frame Lab should use same v3 assets as game');
+ assert(lab.includes("value.endsWith('-v3')")&&lab.includes('art.precleared=true'),'Frame Lab must display pre-cleared v3 atlases directly');
+});
+test('original Z new V3 walking and running atlas packs have 16 complete transparent cells',()=>{
+ const art=require('../assets/original-z-hf/gait-v3-validation.json');
+ for(const kind of ['walk','run']){
+  const file=path.join(__dirname,'../assets/original-z-hf/'+kind+'-v3.webp');
+  const buf=fs.readFileSync(file);
+  assert(buf.length>100000,kind+' v3 source missing');
+  assert.equal(buf.subarray(0,4).toString('ascii'),'RIFF');
+  assert.equal(buf.subarray(8,12).toString('ascii'),'WEBP');
+  assert.deepEqual(Array.from(art[kind].size),[2048,1240]);
+  assert.deepEqual(Array.from(art[kind].cell),[512,620]);
+  assert.equal(art[kind].frames,8);
+  assert.equal(art[kind].frame_sizes.length,8);
+  assert.equal(art[kind].feet.length,8);
+  assert(art[kind].scales[0]>.2&&art[kind].scales[1]>.2,'shared half-cycle scales missing');
+  for(const [i,feet] of art[kind].feet.entries()){
+   assert.equal(feet,kind==='run'&&[2,6].includes(i)?566:600,'run airborne frames must be lifted');
+  }
+ }
 });
 console.log(`${checks} combat regression checks passed`);
