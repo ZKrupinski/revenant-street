@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Project Z - 8F Walk & Run Full-Body Motion Plan</title>
+<style>
+:root{font-family:Arial,"Noto Sans KR",sans-serif;color:#eef0f4;background:#0b1018}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:1240px;margin:auto;padding:20px 18px 42px}
+h1{font-size:clamp(25px,4vw,37px);letter-spacing:-1px;margin:5px 0}h1 span{color:#66ddec}
+.hint{color:#bac4d2;line-height:1.6;margin:9px 0 18px}.tag{color:#91e7df;font-size:12px;font-weight:800;letter-spacing:2px}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}.nav a,.btn{font-weight:800;color:#d6e7f0;padding:12px 16px;min-height:45px;border:1px solid #3c5264;background:#172334;border-radius:8px;text-decoration:none;cursor:pointer}.btn[aria-pressed="true"]{background:#266578;border-color:#75d8e8}
+.layout{display:grid;grid-template-columns:minmax(270px,.95fr) minmax(285px,1.05fr);gap:18px}
+.stage,.info,.control-panel{background:#141d2a;border:1px solid #2e4352;border-radius:12px;padding:15px;min-width:0}
+.framebox{position:relative;background:#f7f7f4;border-radius:8px;overflow:hidden;height:min(64vw,460px);display:flex;align-items:center;justify-content:center}
+.framebox img{display:block;max-height:100%;max-width:100%;object-fit:contain} .framebadge{position:absolute;left:12px;top:12px;background:#07141bdd;color:#f1f3f6;padding:8px 10px;font-weight:900;border-radius:7px}
+.info h2{margin:3px 0 12px;color:#f3f1f7}.note{line-height:1.7;font-size:15px;color:#d1dce5}.big{color:#6ee0ef;font-weight:900;font-size:19px;margin-top:5px}
+.data{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0}
+.cell{background:#203044;padding:11px;border-radius:8px;font-size:13px;line-height:1.7}.cell strong{display:block;color:#8cecf0}
+.control-panel{margin-top:16px}.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}input[type=range]{width:132px;accent-color:#64cbdc}output{font-weight:900;color:#85e5ed}
+.film{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:7px;margin-top:15px}
+.thumb{min-width:0;border:2px solid #314b5f;padding:0;border-radius:6px;background:white;cursor:pointer;overflow:hidden;color:#cce5e7}
+.thumb.active{border-color:#8df5da;box-shadow:0 0 0 1px #8df5da}
+.thumb img{display:block;width:100%;aspect-ratio:512/720;object-fit:contain}.thumb b{display:block;background:#0c1a2b;text-align:center;padding:4px 0}
+.legend{font-size:13px;color:#afbcca;margin:12px 0 0;line-height:1.7}.legend strong{color:#ed8a8a}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.framebox{height:370px}.film{grid-template-columns:repeat(4,minmax(0,1fr))}.wrap{padding:15px 10px 24px}}
+</style></head><body><main class="wrap">
+<div class="tag">REBELTREE / PROJECT Z · FULL-BODY GAIT DIRECTOR</div>
+<h1>걷기·달리기 <span>8F 포즈 기준표</span></h1>
+<p class="hint">팔·어깨·골반·다리 전체가 함께 움직이는 원화 제작용 포즈 가이드입니다. <b>검수용 비트맵</b>이며 현재 게임용 스프라이트는 아닙니다. 왼발/오른발의 교차 상태를 직접 프레임별로 확인할 수 있습니다.</p>
+<div class="nav">
+<button class="btn" id="walk" aria-pressed="true">걷기 WALK</button><button class="btn" id="run" aria-pressed="false">달리기 RUN</button>
+<a href="./z-frame-lab.html">기존 게임 스프라이트 검수실</a><a href="./">게임 실행</a><a href="https://github.com/ZKrupinski/revenant-street/blob/main/docs/z-locomotion-8f-spec.md">제작 규격 문서</a>
+</div>
+<div class="layout"><section class="stage"><div class="framebox"><img id="art" alt="전신 보행 포즈 가이드"/><span class="framebadge" id="phase">01 / 08</span></div></section>
+<section class="info"><div class="tag" id="kind">WALK / CONTACT & PASS</div><h2 id="name">왼발 앞 착지</h2><div class="big" id="step">왼발이 앞, 오른발이 뒤</div>
+<p class="note" id="motion"></p><div class="data"><div class="cell"><strong>팔과 어깨</strong><span id="arms"></span></div><div class="cell"><strong>골반·무게중심</strong><span id="hip"></span></div></div>
+<p class="note">고개는 안정적으로 유지. 발이 착지할 때 무게중심이 내려오고, 다리가 교차할 때 올라옵니다. 원화 제작 시 모든 프레임은 8프레임 완전 신규 드로잉이어야 합니다.</p>
+</section></div>
+<section class="control-panel"><div class="controls"><button class="btn" id="play">일시정지</button><button class="btn" id="prev">이전</button><button class="btn" id="next">다음</button><label>재생 속도 <output id="speed">8 FPS</output> <input id="fps" type="range" min="2" max="12" value="8" step="1"/></label></div>
+<div class="film" id="strip"></div><p class="legend"><strong>빨강</strong>은 가까운 왼쪽 다리, 파랑은 먼 오른쪽 다리입니다. 실제 게임에서는 색상을 사용하지 않고 동일한 검은 바지와 부츠로 그립니다. 특히 1↔5, 3↔7프레임을 비교해 앞뒤 다리와 반대팔 순서가 바뀌는지 검수합니다.</p>
+</section>
+</main><script>
+const stages={
+ walk:[
+ ['왼발 앞 착지','왼발이 앞, 오른발이 뒤','왼쪽 뒤꿈치를 착지한다. 오른발은 뒤에서 무릎을 접고 발끝으로 밀어낸다.','오른팔 전진, 왼팔 후진. 어깨 +4°','골반 -4°. 체중이 앞으로 이동'],
+ ['왼발 체중 지지','오른쪽 무릎 접힘','왼발을 바닥에 딛고, 오른발 뒤꿈치가 들린다.','양팔이 중앙으로 이동','착지로 무게중심 3px 내려감'],
+ ['오른다리 교차','오른쪽 무릎이 왼다리를 통과','오른무릎이 왼쪽 지지 다리를 앞질러 골반 바로 아래로 지나간다. 게걸음 방지 핵심 포즈.','팔이 갈비뼈 옆으로 교차. 어깨 중립','무게중심 4px 상승'],
+ ['오른발 전진','오른발이 골반보다 앞으로','오른발이 앞으로 뻗고 왼쪽 뒤꿈치가 들린다.','왼팔이 전진하기 시작','골반 회전 반전 시작'],
+ ['오른발 앞 착지','오른발이 앞, 왼발이 뒤','1번과 정확히 반대. 오른발 뒤꿈치 착지, 왼무릎 굽힘.','왼팔 전진, 오른팔 후진. 어깨 -4°','골반 +4°. 체중이 앞으로 이동'],
+ ['오른발 체중 지지','왼쪽 무릎 접힘','오른발을 딛고 왼발 뒤꿈치가 들린다.','양팔이 중앙으로 이동','착지로 무게중심 3px 내려감'],
+ ['왼다리 교차','왼쪽 무릎이 오른다리를 통과','왼무릎이 오른쪽 지지 다리를 앞질러 골반 아래로 지나간다. 3번의 반대 포즈.','팔이 갈비뼈 옆으로 교차. 어깨 중립','무게중심 4px 상승'],
+ ['왼발 전진','왼발이 골반보다 앞으로','왼발이 전방으로 뻗고 오른발 뒤꿈치가 들린다.','오른팔 전진 시작','다음 1프레임으로 순환']
+ ],
+ run:[
+ ['왼발 강착지','왼발 전방 접지','왼발이 앞으로 강하게 착지, 오른무릎은 뒤에서 접힌다.','오른주먹 전방, 왼팔 뒤','상체 전경사 13°, 충격에 하강'],
+ ['왼발 밀어차기','오른무릎 진입','왼발 발끝으로 밀고 오른쪽 무릎이 골반 아래로 진입한다.','양팔 강하게 반대 스윙','몸통 상승 시작'],
+ ['오른무릎 체공','양발 모두 공중','오른무릎이 먼저 앞에 나오고 왼다리는 뒤로 접힌다.','왼팔 전진, 오른팔 뒤, 어깨 ±8°','체공 높이 최대'],
+ ['오른발 착지 준비','오른발 선두','오른발이 전방으로 펴지면서 착지를 준비한다. 왼무릎은 뒤에 접힌다.','반대 스윙','상체 하강'],
+ ['오른발 강착지','오른발 전방 접지','1번과 완전히 반대. 오른발 착지, 왼무릎 뒤.','왼주먹 전방, 오른팔 뒤','상체 전경사 13°, 충격에 하강'],
+ ['오른발 밀어차기','왼무릎 진입','오른발 발끝으로 밀고 왼무릎이 골반 아래로 진입.','양팔 강하게 반대 스윙','몸통 상승 시작'],
+ ['왼무릎 체공','양발 모두 공중','왼무릎이 먼저 앞에 나오고 오른다리는 뒤로 접힌다.','오른팔 전진, 왼팔 뒤, 어깨 ±8°','체공 높이 최대'],
+ ['왼발 착지 준비','왼발 선두','왼발이 전방으로 펴지면서 착지 준비. 오른무릎은 뒤에 접힌다.','반대 스윙','1프레임으로 순환']
+ ]};
+let kind='walk',frame=0,playing=true,last=0,fps=8;
+const $=id=>document.getElementById(id),root='./assets/project-z-hero/pose-guides/';
+function uri(i){return root+kind+'-f'+String(i+1).padStart(2,'0')+'.png'}
+function show(){
+ const d=stages[kind][frame];$('art').src=uri(frame);$('phase').textContent=String(frame+1).padStart(2,'0')+' / 08';
+ $('kind').textContent=kind.toUpperCase()+' / 8 FRAME MOTION';$('name').textContent=d[0];$('step').textContent=d[1];
+ $('motion').textContent=d[2];$('arms').textContent=d[3];$('hip').textContent=d[4];
+ document.querySelectorAll('.thumb').forEach((b,i)=>b.classList.toggle('active',i===frame));
+}
+function thumbs(){$('strip').innerHTML='';for(let i=0;i<8;i++){const b=document.createElement('button');b.className='thumb';b.title=stages[kind][i][0];
+ const im=document.createElement('img');im.src=uri(i);im.alt='프레임 '+(i+1);const t=document.createElement('b');t.textContent=String(i+1).padStart(2,'0');
+ b.append(im,t);b.onclick=()=>{playing=false;$('play').textContent='재생';frame=i;show()};$('strip').append(b)}show()}
+function pick(s){kind=s;frame=0;for(const k of ['walk','run'])$(k).setAttribute('aria-pressed',String(k===s));thumbs()}
+$('walk').onclick=()=>pick('walk');$('run').onclick=()=>pick('run');
+$('play').onclick=()=>{playing=!playing;$('play').textContent=playing?'일시정지':'재생'};
+$('prev').onclick=()=>{playing=false;$('play').textContent='재생';frame=(frame+7)%8;show()};
+$('next').onclick=()=>{playing=false;$('play').textContent='재생';frame=(frame+1)%8;show()};
+$('fps').oninput=v=>{fps=Number(v.target.value);$('speed').textContent=fps+' FPS'};
+function tick(t){if(playing&&t-last>1000/fps){last=t;frame=(frame+1)%8;show()}requestAnimationFrame(tick)}
+thumbs();requestAnimationFrame(tick);
+</script></body></html>
