@@ -17,7 +17,7 @@ const js=page.slice(page.lastIndexOf('<script>')+8,page.lastIndexOf('</script>')
 new vm.Script(js);
 assert(page.includes("aria-pressed")&&page.includes("requestAnimationFrame(tick)"));
 assert(page.includes("frame=(frame+1)%8"));
-assert(spec.includes('어깨')&&spec.includes('골반')&&spec.includes('교차'));
+assert(spec.includes('shoulder')&&spec.includes('pelvis')&&spec.includes('pass'));
 assert(spec.includes('Frame 3')||spec.includes('|3|'));
 assert(spec.includes('Frame 7')||spec.includes('|7|'));
 console.log('PASS: '+total+' bitmap gait guides; interactive planner JS syntax; arm/shoulder/hip production spec');
