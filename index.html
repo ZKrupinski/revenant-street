@@ -742,7 +742,7 @@ function vibrateImpact(kind='punch'){
  const hasPad=pads.some(g=>g.vibrationActuator?.playEffect||g.hapticActuators?.[0]?.pulse);
  if(!hasTouch&&!hasPad)return false;
  const now=Date.now();
- if(now-lastImpactHaptic<.070)return false;
+ if(now-lastImpactHaptic<70)return false;
  lastImpactHaptic=now;
  const strong=kind==='heavy'||kind==='execution'||kind==='parry';
  try{if(hasTouch)navigator.vibrate(strong?[22,15,27]:[13])}catch(_){}
