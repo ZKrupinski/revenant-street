@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,getRiotGuardState,getRiotGuardFrame,control,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,getRiotGuardState,getRiotGuardFrame,pollPad,attackCheck,control,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('existing wave composition preserves assassin slots',()=>{g.startRun();assert.equal(t.getEnemies().filter(e=>e.type==='assassin').length,6)});
@@ -330,4 +330,79 @@ test('guard keeps its own original combat stats and previous actor systems intac
  assert.equal(e.reach,41);
  assert.equal(e.damage,13);
 });
+
+test('eight new boss animation atlases exist and are genuinely used by boss drawing',()=>{
+ const game=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ const script=fs.readFileSync(path.join(__dirname,'../assets/boss-hunter.js'),'utf8');
+ for(const name of ['idle','walk','dash','combo','slam','taunt','hit','death']){
+  const file=fs.readFileSync(path.join(__dirname,'../assets/boss-hunter/'+name+'.webp'));
+  assert(file.length>45000,name+' missing packed sprite');
+  assert.equal(file.subarray(0,4).toString('ascii'),'RIFF');
+  assert.equal(file.subarray(8,12).toString('ascii'),'WEBP');
+ }
+ assert(game.includes("if(a.type==='boss'&&window.RZBossHunter?.draw"),'boss must render new sprite');
+ assert(game.includes("window.RZBossHunter?.update(e,p,dt"),'boss behavior state machine not active');
+ assert(script.includes("e.bossPhasePending")&&script.includes("'slam'")&&script.includes("'combo'"));
+});
+test('boss introduction, charge, phase 2 and death select real animations',()=>{
+ const script=fs.readFileSync(path.join(__dirname,'../assets/boss-hunter.js'),'utf8');
+ const context={location:{search:''},Image:class{},console};context.window=context;
+ vm.runInNewContext(script,context);
+ const boss=context.RZBossHunter;
+ const e=t.makeEnemy('boss',1350,560,0),actor={x:1100,y:560};
+ const events={strikes:0,warnings:[],impacts:[]};
+ const api={attack:()=>events.strikes++,warning:(enemy,s)=>events.warnings.push(s),impact:(enemy,k)=>events.impacts.push(k)};
+ assert(boss.update(e,actor,.016,api));
+ assert.equal(e.bossMode,'taunt');
+ for(let i=0;i<90;i++)boss.update(e,actor,1/60,api);
+ e.bossCooldown=0;
+ assert(boss.update(e,actor,.016,api));
+ assert.equal(e.bossMode,'dash');
+ assert.equal(boss.state(e),'dash');
+ e.bossMode=null;e.bossPhasePending=true;e.phase=2;
+ assert(boss.update(e,actor,.016,api));assert.equal(e.bossMode,'taunt');
+ e.dead=true;e.deathAge=1.5;assert.equal(boss.state(e),'death');
+ assert.equal(boss.frame(e,'death'),7);
+});
+test('fire, bleed, shock and ice apply distinct combat statuses and visible bitmap impacts',()=>{
+ g.startRun();
+ const e=t.makeEnemy('raider',t.p.x+73,t.p.y,2);
+ t.setEnemies([e]);
+ t.p.mods=['fire','bleed','shock','ice'];t.p.mod='neuro';t.p.moveName='jab';
+ const hp=e.hp;
+ t.attackCheck();
+ assert(e.burn>0,'fire must ignite with its own timer');
+ assert(e.bleed>0,'bleed timer should not replace burn');
+ assert(e.shock>0,'electric stun should be applied');
+ assert(e.freeze>0,'ice slow should be applied');
+ assert(e.hp<hp,'actual combat damage');
+ const before=e.hp;
+ e.inv=0;e.stun=0;e.shock=0;e.groggy=0;
+ t.updateEnemies(.5);
+ assert(e.hp<before,'burn and bleed should damage target continuously');
+ const game=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ assert(game.includes('function drawModEnergy()'));
+ assert(game.includes('function createModImpact(e)'));
+ assert(game.includes('id="modStrip"'));
+});
+test('gamepad D-pad/left stick can choose and confirm upgrade options without auto-dash',()=>{
+ g.startRun();
+ const fake=Array.from({length:3},(_,i)=>({
+  disabled:false,dataset:{mod:['fire','shock','ice'][i]},clicked:0,
+  classList:{toggle(){}},click(){this.clicked++}
+ }));
+ const m=node('menu'),old=m.querySelectorAll;
+ m.querySelectorAll=()=>fake;
+ try{
+  t.p.x=4235;t.setEnemies([]);t.updateEnemies(0);
+  assert.equal(g.getState().gameState,'reward');
+  const pad={axes:[0,0],buttons:Array.from({length:18},()=>({pressed:false}))};
+  world.navigator.getGamepads=()=>[pad];
+  pad.buttons[15].pressed=true;t.pollPad();pad.buttons[15].pressed=false;t.pollPad();
+  pad.buttons[0].pressed=true;t.pollPad();t.pollPad();
+  assert.equal(fake[1].clicked,1,'A must confirm the second reward only once');
+  assert.equal(fake[0].clicked,0);
+ }finally{m.querySelectorAll=old;world.navigator.getGamepads=()=>[]}
+});
+
 console.log(`${checks} combat regression checks passed`);
