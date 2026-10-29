@@ -352,7 +352,7 @@ function anchorMaskedFrames(frames,key){
  return frames;
 }
 function getMaskedMove(e){
- if(e.dead)return 'fall';
+ if(e.dead)return e.z>12?'hitFly':'fall';
  if(e.reactionTime>0||e.pendingFall&&e.z>0)return e.hitAnimation||'hitHead';
  if(e.proneTime>0)return 'fall';
  if(e.riseTime>0)return 'getup';
@@ -363,7 +363,7 @@ function getMaskedMove(e){
 }
 function maskedFrame(e,key){
  const one=x=>Math.max(0,Math.min(7,Math.floor(x*8)));
- if(key==='fall')return e.dead?one((e.deathAge||0)/.7):one(1-e.proneTime/.62);
+ if(key==='fall')return e.dead?one((e.collapseAge||0)/.7):one(1-e.proneTime/.62);
  if(key==='getup')return one(1-e.riseTime/.67);
  if(key.startsWith('hit'))return one(1-e.reactionTime/Math.max(.001,e.reactionDuration||.48));
  if(key==='attack')return e.windup>0?Math.min(5,one((1-e.windup/Math.max(.001,e.windupDuration||.45))*.8)):
@@ -842,8 +842,10 @@ function updateEnemies(dt){
   e.visualMoving=false;e.visualSpeed=0;
   if(e.dead){
    e.deathAge=(e.deathAge||0)+dt;
-   if(e.type==='assassin')e.collapseAge=e.z<=4?(e.collapseAge||0)+dt:0;
-   if(e.deathAge>.72)e.fade-=dt*.74;
+   if(e.type==='assassin'||e.type==='raider')e.collapseAge=e.z<=4?(e.collapseAge||0)+dt:0;
+   e.hitFlash=Math.max(0,e.hitFlash-dt);
+   const groundAge=(e.type==='assassin'||e.type==='raider')?(e.collapseAge||0):e.deathAge;
+   if(groundAge>.72)e.fade-=dt*.74;
    continue;
   }
   if(e.type==='raider'||e.type==='assassin'){
