@@ -173,6 +173,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 <script src="./assets/assassin-b.js"></script>
 <script src="./assets/elite-ironmask.js"></script>
 <script src="./assets/boss-hunter.js"></script>
+<script src="./assets/hero-motion-fx.js"></script>
 <script>const EMBEDDED_ASSETS=window.RZ_ASSETS;</script>
 <script>
 (()=>{'use strict';
@@ -186,6 +187,7 @@ const zStride=key=>(key==='run'?32:key==='backwalk'?23:key==='walk'?24:24);
 const assetNames=['street','assassin','guard','boss','pipe_metal','pipe_charged','burst_red','burst_blue','burst_gold'];
 const img={};
 assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
+window.RZHeroFx?.init(img); // Bake raster effect atlases gradually during loading.
 // Both keys reference exactly the same embedded panorama; decode only once.
 img.street_pano=img.street;
 const offscreenArrow=new Image();offscreenArrow.src='./assets/ui/target-arrow.png';
@@ -662,7 +664,7 @@ function paintZ(x,y,z){
   p.motionKey=key;p.motionTime=0;
  }
  const fr=atlas&&atlas.ready?atlas.frames[currentZFrameIndex(key)]:(zLastGoodFrame||zArtState.idle?.frames[0]||null);
- if(fr)zLastGoodFrame=fr;
+ if(fr){zLastGoodFrame=fr;window.RZHeroFx?.capture(p,fr,key)}
  ctx.save();ctx.translate(x,Math.round(y-z+8));ctx.scale(p.facing<0?-1:1,1);
  // Visually compress and tilt only after an actual successful parry.
  const recoil=p.parryRecoilTime>0?clamp(p.parryRecoilTime/Math.max(.001,p.parryRecoilDuration),0,1):0;
@@ -936,7 +938,7 @@ function showMenu(html){
 function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;$('bottomTip').style.display='flex';showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1><p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p><div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div><div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button><button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div><p class="micro">가로 10화면 · 마스크 잡몹 A + 쌍단검 암살자 B + 철가면 엘리트 / 키보드·게임패드·드래그 조이스틱</p>`)}
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>공격 · 연속타격 · 공중 차기</div><div><kbd>↑ / K / Y / △</kbd>점프 (지상 횡베기 회피)</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
-function resetPlayer(){cameraX=0;p.regenPulseClock=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
+function resetPlayer(){window.RZHeroFx?.reset();cameraX=0;p.regenPulseClock=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
@@ -1334,6 +1336,7 @@ function enemyAttack(e){
   p.riposteWindow=1.25;p.riposteTarget=e;p.inv=Math.max(p.inv,.35);
   p.parryRecoilDuration=.24;p.parryRecoilTime=.24;
   p.parryRecoilRemaining=e.type==='boss'?25:19;
+  window.RZHeroFx?.event('parry',p);
   // Show the bitmap shield collision ONLY when enemyAttack is really parried.
   spawnParryShieldFx(p.x+p.facing*58,p.y-136,p.facing,e.type==='boss'?1.18:1);
   fxBurst(p.x+p.facing*66,p.y-134,'gold',1.15);
@@ -1344,7 +1347,7 @@ function enemyAttack(e){
   if(e.poise>=e.maxPoise){e.groggy=3.4;e.stun=3.4;floatText('GROGGY',e.x,e.y-185,'#8fe6ff')}
   return;
  }
- if(p.inv>0||p.dodge>0)return;const dmg=e.damage*(eliteCleave?1.42:1)*(e.bossDamageMult||1);
+ if(p.inv>0||p.dodge>0)return;window.RZHeroFx?.event('hurt',p);const dmg=e.damage*(eliteCleave?1.42:1)*(e.bossDamageMult||1);
  const damageTaken=dmg*clamp(1-modRank('guard')*.09,.49,1);
  p.hp=Math.max(0,p.hp-damageTaken);
  if(modRank('guard')){
@@ -1777,7 +1780,7 @@ function updateHud(){
 function update(dt){
  // Don't decode a full library of 2K sprite sheets while the user fights.
  // Required combat animations are prepared behind the loading screen.
-time+=dt;messageUpdate(dt);const pad=pollPad();if(gameState!=='playing')return;updateEffects(dt);if(hitStop>0){hitStop-=dt;updateHudThrottled(dt);return}control(dt,pad);cameraX+=(clamp(p.x-465,0,STAGE_WIDTH-W)-cameraX)*Math.min(1,dt*6.5);updateEnemies(dt*(slowMotion>0?.19:1));slowMotion=Math.max(0,slowMotion-dt);updateHudThrottled(dt);const cleared=gameState==='playing'&&waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
+time+=dt;messageUpdate(dt);const pad=pollPad();if(gameState!=='playing')return;updateEffects(dt);if(hitStop>0){hitStop-=dt;updateHudThrottled(dt);return}control(dt,pad);window.RZHeroFx?.update(dt,p,getZMove());cameraX+=(clamp(p.x-465,0,STAGE_WIDTH-W)-cameraX)*Math.min(1,dt*6.5);updateEnemies(dt*(slowMotion>0?.19:1));slowMotion=Math.max(0,slowMotion-dt);updateHudThrottled(dt);const cleared=gameState==='playing'&&waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
 // Cache photographic depth treatment once per loaded panorama. Ground stays original.
 const backdropDepthCache=new WeakMap();
 function depthBackdrop(bg){
@@ -1977,7 +1980,7 @@ function drawEnemyStatusIcons(e){
  ctx.restore();
 }
 function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=actorShakeOffset(a);const x=Math.round((isP?a.x:(a.renderX??a.x))+sx),y=Math.round((isP?a.y:(a.renderY??a.y))+sy),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?getZMove():'';
- if(isP){ellipseShadow(x,y,1.06,.45);drawHeroModAura(x,y,z);paintZ(x,y,z);return;}
+ if(isP){ellipseShadow(x,y,1.06,.45);drawHeroModAura(x,y,z);window.RZHeroFx?.drawBehind(ctx,p,act);paintZ(x,y,z);window.RZHeroFx?.drawFront(ctx,p,act);return;}
  if(a.type==='raider'){drawMaskedGrunt(a,x,y,z);return;}
  if(a.type==='assassin'){drawAssassin(a,x,y,z);return;}
  if(a.type==='elite'){window.RZElite.draw(a,x,y,z,{ctx,art:RZAssassinArt,maskedFrame,getAssassinMove,ellipseShadow,clamp,images:img,time});return;}
@@ -2181,7 +2184,7 @@ $('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b|
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();if(gameState!=='playing')return;b.setPointerCapture(e.pointerId);keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release)}
 for(let i=0;i<(window.matchMedia?.('(pointer: coarse)').matches?65:110);i++)rain.push({x:rnd(0,1280),y:rnd(0,720),s:rnd(220,590),len:rnd(5,18)});
-window.__revenant={getPerformance:()=>({...runtimePerf,liveEnemies:enemies.filter(e=>!e.dead).length,activeEffects:fx.length+attributeFx.length+floating.length,uniqueHeroAtlases:zArtFrameShared.size}),getState:()=>({gameState,wave,player:{x:p.x,y:p.y,z:p.z,hp:p.hp,stamina:p.stamina,weapon:p.weapon,mod:p.mod,mods:[...p.mods]},enemies:enemies.map(e=>({type:e.type,x:e.x,y:e.y,hp:e.hp,poise:e.poise,groggy:e.groggy})),perma}),startRun,attack:startAttack,parry,execute,selectMod,buyUpgrade,forceClear:()=>{enemies=[];updateEnemies(0)},getWorld:()=>({x:p.x,cameraX,wave,stageWidth:STAGE_WIDTH,enemyPositions:enemies.filter(e=>!e.dead).map(e=>e.x)}),getAnalog:()=>({...analog}),getAssassinArtStatus:()=>RZAssassinArt.status(),getArtStatus:(key)=>{const v=loadZMove(key||'idle');return{ready:v.ready,failed:v.failed,loading:v.loading,frames:v.frames?.length,error:v.error}}};
+window.__revenant={getHeroFxStatus:()=>window.RZHeroFx?.getStatus(),getPerformance:()=>({...runtimePerf,liveEnemies:enemies.filter(e=>!e.dead).length,activeEffects:fx.length+attributeFx.length+floating.length,uniqueHeroAtlases:zArtFrameShared.size}),getState:()=>({gameState,wave,player:{x:p.x,y:p.y,z:p.z,hp:p.hp,stamina:p.stamina,weapon:p.weapon,mod:p.mod,mods:[...p.mods]},enemies:enemies.map(e=>({type:e.type,x:e.x,y:e.y,hp:e.hp,poise:e.poise,groggy:e.groggy})),perma}),startRun,attack:startAttack,parry,execute,selectMod,buyUpgrade,forceClear:()=>{enemies=[];updateEnemies(0)},getWorld:()=>({x:p.x,cameraX,wave,stageWidth:STAGE_WIDTH,enemyPositions:enemies.filter(e=>!e.dead).map(e=>e.x)}),getAnalog:()=>({...analog}),getAssassinArtStatus:()=>RZAssassinArt.status(),getArtStatus:(key)=>{const v=loadZMove(key||'idle');return{ready:v.ready,failed:v.failed,loading:v.loading,frames:v.frames?.length,error:v.error}}};
 canvas.style.visibility='hidden';titleMenu();requestAnimationFrame(loop);
 })();
 
