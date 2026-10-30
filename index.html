@@ -831,7 +831,7 @@ function actorShakeOffset(a){
  return [Math.sin(time*103+seed)*amp,Math.sin(time*77+seed)*amp*.48];
 }
 function setStatus(s){$('statusLabel').textContent=s}function flash(text,duration=1.1){const m=$('gameMessage');m.textContent=text;m.classList.add('active');messageTime=duration}
-const menuPad={index:0,nav:0,confirm:false,back:false,armed:false,readyAt:0};
+const menuPad={index:0,nav:0,confirm:false,back:false,armed:false,readyAt:0,neutralAt:0};
 const heldKeyboard=new Set();
 const menuBlockedKeys=new Set();
 function menuReady(){return Date.now()>=menuPad.readyAt}
@@ -845,10 +845,10 @@ function selectMenuItem(step=0){
  selected.scrollIntoView?.({block:'nearest',inline:'nearest'});
  return selected;
 }
-function menuConfirm(){if(!menuReady())return false;const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
+function menuConfirm(){if(!menuReady()){menuPad.readyAt=Math.max(menuPad.readyAt,Date.now()+250);return false;}const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
 function menuBack(){const items=menuButtons();const back=items.find(b=>['resume','title','pauseMenu','hub'].includes(b.dataset.action));if(back){back.click();return true}return false}
 function showMenu(html){
- menuPad.readyAt=Date.now()+(gameState==='reward'?700:180);menuPad.armed=false;
+ menuPad.readyAt=Date.now()+(gameState==='reward'?700:180);menuPad.armed=false;menuPad.neutralAt=Date.now();
  menuBlockedKeys.clear();for(const key of heldKeyboard)menuBlockedKeys.add(key);
  canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;selectMenuItem(0)}
 function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
@@ -1259,14 +1259,15 @@ function pollPad(){
  let dx=Math.abs(g.axes[0])>.19?g.axes[0]:0,dy=Math.abs(g.axes[1])>.19?g.axes[1]:0;
  dx+=(g.buttons[15]?.pressed?1:0)-(g.buttons[14]?.pressed?1:0);
  dy+=(g.buttons[13]?.pressed?1:0)-(g.buttons[12]?.pressed?1:0);
- // A/cross confirms; attack X/square never accepts a reward.
+ // X/square (attack) confirms only after the opening guard and input release.
  if(gameState!=='playing'){
   const direction=Math.abs(dx)>.52?Math.sign(dx):Math.abs(dy)>.52?Math.sign(dy):0;
   if(direction&&direction!==menuPad.nav)selectMenuItem(direction);
   menuPad.nav=direction;
-  const accept=!!g.buttons[0]?.pressed;
+  const accept=!!g.buttons[2]?.pressed;
   const neutral=!g.buttons.some(b=>b?.pressed)&&Math.abs(dx)<.2&&Math.abs(dy)<.2;
-  if(menuReady()&&neutral)menuPad.armed=true;
+  if(!neutral)menuPad.neutralAt=Date.now();
+  if(menuReady()&&neutral&&Date.now()-menuPad.neutralAt>=250)menuPad.armed=true;
   if(accept&&!menuPad.confirm&&menuPad.armed&&menuReady()){menuPad.armed=false;menuConfirm()}
   // The same A button must not trigger a dash immediately after
   // confirming a menu selection that resumes combat.
@@ -1845,7 +1846,7 @@ function rewardMenu(reason='wave'){
  const headline=reason==='mid'?'전투 중 파워업':'구역 클리어 파워업';
  const explanation=reason==='mid'?'재화 없이 1개 선택하면 전투가 이어집니다. 기존 강화도 중첩 가능.':
  '무료 선택 · 체력 +20 회복 · 다음 지역으로 이동. 모든 강화는 최대 6레벨까지 중첩됩니다.';
- showMenu(`<div class="eyebrow">PROJECT Z / CYBERNETIC GROWTH</div><h2>${headline}</h2><p>${explanation}</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT GROWTH — ${p.mods.length} STACKS · LEVEL ${level}</div><div class="pad-hint">방향키 ↑ ↓ ← → / 십자키 · 스틱 이동　 Enter / 패드 A(×) 선택 · 공격키로 선택되지 않습니다</div>`);
+ showMenu(`<div class="eyebrow">PROJECT Z / CYBERNETIC GROWTH</div><h2>${headline}</h2><p>${explanation}</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT GROWTH — ${p.mods.length} STACKS · LEVEL ${level}</div><div class="pad-hint">WASD / 패드 십자키·스틱 이동　 ← / 패드 X(공격) 선택 · 창이 뜨면 입력을 놓고 다시 눌러주세요</div>`);
 }
 function requestSelectMod(m){
  if(wave!==2||upgradeReason==='mid'){selectMod(m);return}
@@ -1890,9 +1891,9 @@ function keyDown(ev){
  if(gameState!=='playing'){
   // Consume menu input entirely: no native focused-button click or combat fallthrough.
   if(menuBlockedKeys.has(k)||ev.repeat||held)return;
-  if(k==='arrowleft'||k==='arrowup'||k==='a'||k==='w'){selectMenuItem(-1);return}
-  if(k==='arrowright'||k==='arrowdown'||k==='d'||k==='s'){selectMenuItem(1);return}
-  if(k==='enter'||(k===' '&&gameState!=='reward')){menuConfirm();return}
+  if(k==='a'||k==='w'){selectMenuItem(-1);return}
+  if(k==='d'||k==='s'){selectMenuItem(1);return}
+  if(k==='arrowleft'){menuConfirm();return}
   if((k==='escape'||k==='p')&&menuReady())menuBack();
   return;
  }

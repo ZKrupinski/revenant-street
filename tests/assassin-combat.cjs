@@ -398,12 +398,12 @@ test('gamepad D-pad/left stick can choose and confirm upgrade options without au
   assert.equal(g.getState().gameState,'reward');
   const pad={axes:[0,0],buttons:Array.from({length:18},()=>({pressed:false}))};
   world.navigator.getGamepads=()=>[pad];
-  t.menuPad.readyAt=0;t.pollPad();
+  t.menuPad.readyAt=0;t.menuPad.neutralAt=0;t.pollPad();
   pad.buttons[15].pressed=true;t.pollPad();pad.buttons[15].pressed=false;t.pollPad();
-  pad.buttons[0].pressed=true;t.pollPad();t.pollPad();
-  assert.equal(fake[1].clicked,1,'A must confirm the second reward only once');
+  pad.buttons[2].pressed=true;t.pollPad();t.pollPad();
+  assert.equal(fake[1].clicked,1,'X must confirm the second reward only once');
   assert.equal(fake[0].clicked,0);
- }finally{m.querySelectorAll=old;world.navigator.getGamepads=()=>[]}
+ }finally{m.querySelectorAll=old;world.navigator.getGamepads=()=>[];t.pollPad()}
 });
 
 
@@ -666,7 +666,7 @@ test('air heel kick holds its charge then dives, hits once and recovers at groun
   assert.equal(e.hp,hp,'landing cannot duplicate the hit');assert.equal(t.p.airKickPhase,'');
  }
 });
-test('keyboard arrows move actual reward focus and Enter confirms only the selected card',()=>{
+test('WASD moves reward focus and left arrow confirms only the selected card',()=>{
  g.startRun();t.heldKeyboard.clear();
  const fake=Array.from({length:3},(_,i)=>({disabled:false,dataset:{mod:['fire','ice','shock'][i]},clicked:0,focused:0,
   classList:{toggle(){}},focus(){this.focused++},scrollIntoView(){},click(){this.clicked++}}));
@@ -677,26 +677,26 @@ test('keyboard arrows move actual reward focus and Enter confirms only the selec
   // Hold the combat arrow through the transition: it must not move the reward cursor.
   press('ArrowLeft');t.p.x=4235;t.setEnemies([]);t.updateEnemies(0);
   press('ArrowLeft',true);assert.equal(t.menuPad.index,0);release('ArrowLeft');
-  press('ArrowRight');release('ArrowRight');assert.equal(t.menuPad.index,1);assert(fake[1].focused>0);
-  press('ArrowDown');release('ArrowDown');assert.equal(t.menuPad.index,2);
-  press('ArrowUp');release('ArrowUp');assert.equal(t.menuPad.index,1);
-  press('Enter');assert.equal(fake[1].clicked,0,'opening grace period blocks confirmation');
-  t.menuPad.readyAt=0;press('Enter',true);assert.equal(fake[1].clicked,0,'held Enter cannot carry through grace period');
-  release('Enter');press(' ');release(' ');press('j');release('j');assert.equal(fake[1].clicked,0);
-  press('Enter');release('Enter');assert.equal(fake[1].clicked,1);assert.equal(fake[0].clicked,0);
+  press('d');release('d');assert.equal(t.menuPad.index,1);assert(fake[1].focused>0);
+  press('s');release('s');assert.equal(t.menuPad.index,2);
+  press('w');release('w');assert.equal(t.menuPad.index,1);
+  press('ArrowLeft');assert.equal(fake[1].clicked,0,'opening grace period blocks confirmation');
+  t.menuPad.readyAt=0;press('ArrowLeft',true);assert.equal(fake[1].clicked,0,'held left arrow cannot carry through grace period');
+  release('ArrowLeft');press(' ');release(' ');press('j');release('j');assert.equal(fake[1].clicked,0);
+  press('ArrowLeft');release('ArrowLeft');assert.equal(fake[1].clicked,1);assert.equal(fake[0].clicked,0);
  }finally{m.querySelectorAll=old;t.heldKeyboard.clear()}
 });
-test('pad attack mashing and held dash cannot auto-pick a reward',()=>{
+test('held pad attack cannot auto-pick until released; X confirms and A does not',()=>{
  g.startRun();const fake=Array.from({length:3},()=>({disabled:false,dataset:{},clicked:0,classList:{toggle(){}},click(){this.clicked++}}));
  const m=node('menu'),old=m.querySelectorAll;m.querySelectorAll=()=>fake;
  const pad={axes:[0,0],buttons:Array.from({length:18},()=>({pressed:false}))};world.navigator.getGamepads=()=>[pad];
  try{
-  pad.buttons[0].pressed=true;t.p.x=4235;t.setEnemies([]);t.updateEnemies(0);
+  pad.buttons[2].pressed=true;t.p.x=4235;t.setEnemies([]);t.updateEnemies(0);
   t.pollPad();t.menuPad.readyAt=0;for(let i=0;i<10;i++)t.pollPad();assert.equal(fake[0].clicked,0);
-  pad.buttons[0].pressed=false;t.pollPad();
-  for(let i=0;i<10;i++){pad.buttons[2].pressed=true;t.pollPad();pad.buttons[2].pressed=false;t.pollPad()}
-  assert.equal(fake[0].clicked,0,'attack X/square must never confirm');
-  pad.buttons[0].pressed=true;t.pollPad();t.pollPad();assert.equal(fake[0].clicked,1);
- }finally{m.querySelectorAll=old;world.navigator.getGamepads=()=>[]}
+  pad.buttons[2].pressed=false;t.menuPad.neutralAt=0;t.pollPad();
+  for(let i=0;i<10;i++){pad.buttons[0].pressed=true;t.pollPad();pad.buttons[0].pressed=false;t.pollPad()}
+  assert.equal(fake[0].clicked,0,'A/cross must not confirm');
+  pad.buttons[2].pressed=true;t.pollPad();t.pollPad();assert.equal(fake[0].clicked,1);
+ }finally{m.querySelectorAll=old;world.navigator.getGamepads=()=>[];t.pollPad()}
 });
 console.log(`${checks} combat regression checks passed`);
