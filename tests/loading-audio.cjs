@@ -61,15 +61,17 @@ async function combatVoices(){
  const voices=w.window.__zCombatVoice;
  assert.equal(voices.state().ready,false);
  await voices.prepare(ctx);
- assert.equal(fetches,4,'all four actual voice clips are fetched before combat');
- assert.equal(decoded,4);
+ assert.equal(fetches,7,'three new hero kiai and four original enemy vocals must load before combat');
+ assert.equal(decoded,7);
  assert.equal(voices.state().ready,true);
- await voices.prepare(ctx);assert.equal(fetches,4,'voice bank decodes only once');
+ await voices.prepare(ctx);assert.equal(fetches,7,'voice bank decodes only once');
  const hero={x:300,y:560},foe={x:420,y:560,type:'raider'},boss={x:560,y:560,type:'boss'};
  assert.equal(voices.play('heroStrike',hero,hero),true);
+ assert(/hero-kiai-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero first normal strike uses new kiai, not an enemy scream');
  assert.equal(voices.play('heroStrike',hero,hero),false,'one hero cannot stack grunts');
  ctx.currentTime=.06;
  assert.equal(voices.play('heroDeath',hero,hero),true,'lethal vocal must override a recent strike grunt');
+ assert(createdSources.at(-1).buffer.clip.endsWith('hero-kiai-power.mp3'),'hero death must not borrow enemy yell');
  ctx.currentTime=.6;
  assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy pain follows the real damage event');
  assert.equal(voices.play('enemyHurt',foe,hero),false,'injury voice is rate limited');
@@ -78,7 +80,7 @@ async function combatVoices(){
  ctx.currentTime=1.9;
  assert.equal(voices.play('heroPower',hero,hero),true,'heavy attack emits a hero effort grunt');
  const powerClip=createdSources.at(-1).buffer.clip;
- assert(powerClip.endsWith('hero-grunt-b.wav'),'heavy attack MUST NOT use enemy scream file');
+ assert(powerClip.endsWith('hero-kiai-power.mp3'),'heavy attack MUST use new power kiai, not old enemy voice');
  assert(!powerClip.includes('voice-yell'),'hero power must not play the death wail');
  ctx.currentTime=2.5;
  // In a real browser voice sources have ended by 2.5s; advance mocked
@@ -89,7 +91,7 @@ async function combatVoices(){
  assert(createdSources.at(-1).startedAt>=ctx.currentTime+.075,'the crack of impact should precede the groan');
  ctx.currentTime=3.0;
  assert.equal(voices.play('heroStrike',hero,hero),true,'normal hero strikes use short grunts');
- assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'hero normal hits never use enemy scream clips');
+ assert(/hero-kiai-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero normal hits never use former protagonist/enemy scream clips');
  assert(createdSources.length>=3,'all voice families use genuine recorded buffers');
  assert(!voiceScript.includes('duckImpact'),'vocals do not change BGM volume');
  assert(html.includes("playImpactSound(kind,heavy?1.15:1)"),'character impact sound must continue alongside grunt');
@@ -97,10 +99,15 @@ async function combatVoices(){
  assert(!voiceScript.includes('window.__revenantBgm'),'the voice engine must never lower the music');
  for(const file of ['hero-grunt-a.wav','hero-grunt-b.wav','voice-yell.wav','voice-roar.wav']){
   const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
-  assert(bytes.length>10000,'real recording is present: '+file);
+  assert(bytes.length>10000,'CC0 voice file is present: '+file);
   assert.equal(bytes.subarray(0,4).toString(),'RIFF');
  }
- console.log('PASS: 4 CC0 human voices decoded before start; battle cries, pain and boss calls rate-limited; no BGM duck');
+ for(const file of ['hero-kiai-a.mp3','hero-kiai-b.mp3','hero-kiai-power.mp3']){
+  const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
+  assert(bytes.length>6000,'new hero kiai is shipped locally: '+file);
+  assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'new voice is mp3: '+file);
+ }
+ console.log('PASS: 3 distinct new high-pitched hero kiai samples and 4 CC0 enemy vocals preloaded; voice identity and physical hit preserved');
 }
 function spriteRetry(){
  const images=[];let now=1000;
