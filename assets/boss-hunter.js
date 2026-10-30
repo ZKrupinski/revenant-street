@@ -127,7 +127,9 @@ function draw(e,x,y,z,api){
  const i=frame(e,chosen===item?key:'idle');
  ctx.save();ctx.translate(x,y-z+19);ctx.scale(e.face>0?-1:1,1);
  ctx.globalAlpha=alpha;
- if(e.hitFlash>0)ctx.filter='brightness(1.35)';
+ // Full-body bitmap silhouette flash, including the boss's arm and helmet.
+ if(e.hitFlash>0)ctx.filter=e.hitFlash>.12?
+  'brightness(3.8) saturate(0) contrast(1.28)':'brightness(2.3) saturate(.3)';
  ctx.drawImage(chosen.img,(i%4)*CELL_W,Math.floor(i/4)*CELL_H,CELL_W,CELL_H,-w/2,-h,w,h);
  ctx.restore();
  if(!e.dead){
