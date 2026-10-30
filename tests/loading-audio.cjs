@@ -48,12 +48,12 @@ async function audio(){
 async function combatVoices(){
  const voiceScript=fs.readFileSync(path.join(root,'assets/voice/voice-engine.js'),'utf8');
  let fetches=0,decoded=0;
- const createdSources=[];
+ const createdSources=[],voiceGains=[];
  const param=()=>({value:0,setValueAtTime(v){this.value=v},linearRampToValueAtTime(v){this.value=v}});
  const node=()=>({gain:param(),frequency:param(),threshold:param(),knee:param(),ratio:param(),attack:param(),release:param(),playbackRate:{value:1},
   connect(x){return x},disconnect(){},start(when){this.started=true;this.startedAt=when},stop(){this.stopped=true}});
  const ctx={currentTime:0,destination:node(),
-  createDynamicsCompressor:()=>node(),createGain:()=>node(),createBiquadFilter:()=>node(),
+  createDynamicsCompressor:()=>node(),createGain:()=>{const g=node();voiceGains.push(g);return g},createBiquadFilter:()=>node(),
   createBufferSource:()=>{const s=node();createdSources.push(s);return s},
   decodeAudioData:async bytes=>{decoded++;return{duration:.9,clip:bytes.clip}}};
  const w={window:{},Math,fetch:async url=>{fetches++;return{ok:true,arrayBuffer:async()=>({clip:url})}}};
@@ -67,6 +67,7 @@ async function combatVoices(){
  await voices.prepare(ctx);assert.equal(fetches,7,'voice bank decodes only once');
  const hero={x:300,y:560},foe={x:420,y:560,type:'raider'},boss={x:560,y:560,type:'boss'};
  assert.equal(voices.play('heroStrike',hero,hero),true);
+ assert.equal(voiceGains[0].gain.value,.58,'voice master should be only slightly quieter and separate from SFX');
  assert(/hero-kiai-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero first normal strike uses new kiai, not an enemy scream');
  assert.equal(voices.play('heroStrike',hero,hero),false,'one hero cannot stack grunts');
  ctx.currentTime=.06;
