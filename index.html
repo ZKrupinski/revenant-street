@@ -962,7 +962,7 @@ function vibrateImpact(kind='punch'){
  return true;
 }
 function applyImpactFeedback(target,heavy=false,kind='punch'){
- target.bodyShakeDuration=heavy?.25:.19;
+ target.bodyShakeDuration=heavy?.24:.18;
  target.bodyShakeTime=target.bodyShakeDuration;
  target.bodyShakePower=heavy?14:9;
  screenShake=Math.max(screenShake,heavy?24:16);
