@@ -19,7 +19,7 @@ function load(name){
 function init(e){
  if(e.bossReady)return;
  e.bossReady=true;e.bossMode=null;e.bossAge=0;e.bossDuration=0;
- e.bossHitMask=0;e.bossCycle=0;e.bossCooldown=1.3;
+ e.bossHitMask=0;e.bossCycle=0;e.bossCooldown=.30;
  e.bossIntroduced=false;e.bossPhasePending=false;
  e.bossDashDir=0;e.bossMoving=false;
  load('idle');load('walk');load('death');
@@ -48,12 +48,12 @@ function update(e,p,dt,api){
  e.bossMoving=false;
  if(e.bossPhasePending){
   e.bossPhasePending=false;
-  start(e,'taunt',1.08,api);e.bossCooldown=.55;
+  start(e,'taunt',.72,api);e.bossCooldown=.17;
   return true;
  }
  if(!e.bossIntroduced&&dist<850){
   e.bossIntroduced=true;
-  start(e,'taunt',1.18,api);e.bossCooldown=.75;
+  start(e,'taunt',.68,api);e.bossCooldown=.24;
   return true;
  }
  if(e.groggy>0){e.bossMode=null;return false}
@@ -63,7 +63,12 @@ function update(e,p,dt,api){
   if(e.bossMode==='dash'){
     if(phase>.30&&phase<.89){
      const from=e.x,ty=p.x-e.bossDashDir*37,rate=e.phase===2?830:665;
-     e.x=Math.max(55,Math.min(12735,e.x+e.bossDashDir*Math.min(rate*dt,Math.max(0,(ty-e.x)*e.bossDashDir))));
+     // Old arena right edge 12735 made the boss teleport 18K pixels!
+     // Use the live world boundary and keep each charge step continuous.
+     const worldEnd=Number.isFinite(api.stageWidth)?api.stageWidth-55:31945;
+     const toward=Math.max(0,(ty-e.x)*e.bossDashDir);
+     const step=e.bossDashDir*Math.min(rate*dt,toward);
+     e.x=Math.max(55,Math.min(worldEnd,e.x+step));
      const moved=Math.abs(e.x-from);
      e.spriteDistance+=moved;e.visualMoving=moved>0;e.visualSpeed=dt>0?moved/dt:0;
      e.bossMoving=moved>0;
@@ -80,17 +85,22 @@ function update(e,p,dt,api){
     }
   }
   if(phase>=1){
+    const finished=e.bossMode;
     e.bossMode=null;e.bossAge=0;
-    e.cooldown=Math.max(e.cooldown,.45);
-    e.bossCooldown=e.phase===2?1.25:2.0;
+    e.cooldown=Math.max(e.cooldown,.32);
+    // Recovery after a visual taunt should not stall the first offensive
+    // move for another 2s. Real dash/slam patterns get shorter but readable
+    // gaps so the hunter keeps threatening the player.
+    e.bossCooldown=finished==='taunt'?(e.phase===2?.17:.25):
+      e.phase===2?.76:1.08;
   }
   return true;
  }
- if(e.stun>0||e.windup>0||e.z>45)return false;
- if(dist>1000||Math.abs(dy)>125)return false;
- if(e.bossCooldown>0)return false;
+ if(e.stun>0||e.windup>0||e.z>45)return true;
+ if(dist>1000||Math.abs(dy)>125)return true;
+ if(e.bossCooldown>0)return true;
  e.face=dx>=0?1:-1;
- const cycle=e.bossCycle++;
+ e.bossCycle++;
  if(dist>210){
   start(e,'dash',e.phase===2?.70:.88,api);
  }else{
