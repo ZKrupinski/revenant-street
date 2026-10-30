@@ -720,4 +720,38 @@ test('parry shield is a real eight-frame transparent PNG',()=>{
  assert.equal(png.readUInt32BE(16),512);assert.equal(png.readUInt32BE(20),256);
  assert(html.includes("parryShieldImage.src='./assets/fx/parry-shield.png'"));
 });
+test('all twenty distinct bitmap attack atlases are archived locally and playable',()=>{
+ const attacks=[
+  'jab','cross','hook','uppercut','backfist','hammerfist','spinning_elbow',
+  'rising_elbow','superman_punch','shovel_hook','frontkick','roundkick',
+  'lowkick','axe_kick','sidekick','spinning_heel','crescent_kick',
+  'diagonal_airkick','rising_headbutt','forward_headbutt'
+ ];
+ const artSrc=fs.readFileSync(path.join(__dirname,'../assets/attacks-20.js'),'utf8');
+ const artContext={window:{}};
+ vm.runInNewContext(artSrc,artContext);
+ const map=artContext.window.RZ_LOCAL_20_ATTACKS;
+ assert.equal(Object.keys(map).length,20);
+ assert.equal(new Set(Object.values(map)).size,20);
+ for(const move of attacks){
+  assert.equal(map[move],'./assets/z-attacks-20/'+move+'.webp');
+  const bytes=fs.readFileSync(path.join(__dirname,'..',map[move]));
+  assert(bytes.length>12000,'missing art for '+move);
+  assert.equal(bytes.subarray(0,4).toString(),'RIFF');
+  assert.equal(bytes.subarray(8,12).toString(),'WEBP');
+ }
+ assert(html.includes('Object.assign(Z_REMOTE_ATLAS,window.RZ_LOCAL_20_ATTACKS||{})'));
+ assert(html.includes('warmZSprites(dt);'),'progressive combat art loader must run');
+ assert(html.includes("p.moveName=diagonal?'diagonal_airkick':'axe_kick'"),
+   'both unique aerial attacks need live selection paths');
+});
+test('elite and boss use pure white bitmap flash and jump has longer vertical travel',()=>{
+ const elite=fs.readFileSync(path.join(__dirname,'../assets/elite-ironmask.js'),'utf8');
+ const boss=fs.readFileSync(path.join(__dirname,'../assets/boss-hunter.js'),'utf8');
+ assert(elite.includes("'brightness(0) invert(1)'"),'elite flash should whiten actual sprite');
+ assert(boss.includes("'brightness(0) invert(1)'"),'boss flash should whiten actual sprite');
+ assert(html.includes("p.vz=760;p.z=2"),'higher jump impulse');
+ assert(html.includes("p.vz=-1150"),'fast downward kick');
+ assert(html.includes("p.airKickPhase==='dive'?1950:1440"),'dive gravity exceeds jump gravity');
+});
 console.log(`${checks} combat regression checks passed`);
