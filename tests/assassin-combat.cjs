@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('existing wave composition preserves assassin slots',()=>{g.startRun();assert.equal(t.getEnemies().filter(e=>e.type==='assassin').length,6)});
@@ -398,6 +398,7 @@ test('gamepad D-pad/left stick can choose and confirm upgrade options without au
   assert.equal(g.getState().gameState,'reward');
   const pad={axes:[0,0],buttons:Array.from({length:18},()=>({pressed:false}))};
   world.navigator.getGamepads=()=>[pad];
+  t.menuPad.readyAt=0;t.pollPad();
   pad.buttons[15].pressed=true;t.pollPad();pad.buttons[15].pressed=false;t.pollPad();
   pad.buttons[0].pressed=true;t.pollPad();t.pollPad();
   assert.equal(fake[1].clicked,1,'A must confirm the second reward only once');
@@ -664,5 +665,38 @@ test('air heel kick holds its charge then dives, hits once and recovers at groun
   for(let i=0;i<30;i++)t.control(1/60,{dx:0,dy:0});
   assert.equal(e.hp,hp,'landing cannot duplicate the hit');assert.equal(t.p.airKickPhase,'');
  }
+});
+test('keyboard arrows move actual reward focus and Enter confirms only the selected card',()=>{
+ g.startRun();t.heldKeyboard.clear();
+ const fake=Array.from({length:3},(_,i)=>({disabled:false,dataset:{mod:['fire','ice','shock'][i]},clicked:0,focused:0,
+  classList:{toggle(){}},focus(){this.focused++},scrollIntoView(){},click(){this.clicked++}}));
+ const m=node('menu'),old=m.querySelectorAll;m.querySelectorAll=()=>fake;
+ const press=(key,repeat=false)=>t.keyDown({key,repeat,preventDefault(){}});
+ const release=key=>t.keyUp({key});
+ try{
+  // Hold the combat arrow through the transition: it must not move the reward cursor.
+  press('ArrowLeft');t.p.x=4235;t.setEnemies([]);t.updateEnemies(0);
+  press('ArrowLeft',true);assert.equal(t.menuPad.index,0);release('ArrowLeft');
+  press('ArrowRight');release('ArrowRight');assert.equal(t.menuPad.index,1);assert(fake[1].focused>0);
+  press('ArrowDown');release('ArrowDown');assert.equal(t.menuPad.index,2);
+  press('ArrowUp');release('ArrowUp');assert.equal(t.menuPad.index,1);
+  press('Enter');assert.equal(fake[1].clicked,0,'opening grace period blocks confirmation');
+  t.menuPad.readyAt=0;press('Enter',true);assert.equal(fake[1].clicked,0,'held Enter cannot carry through grace period');
+  release('Enter');press(' ');release(' ');press('j');release('j');assert.equal(fake[1].clicked,0);
+  press('Enter');release('Enter');assert.equal(fake[1].clicked,1);assert.equal(fake[0].clicked,0);
+ }finally{m.querySelectorAll=old;t.heldKeyboard.clear()}
+});
+test('pad attack mashing and held dash cannot auto-pick a reward',()=>{
+ g.startRun();const fake=Array.from({length:3},()=>({disabled:false,dataset:{},clicked:0,classList:{toggle(){}},click(){this.clicked++}}));
+ const m=node('menu'),old=m.querySelectorAll;m.querySelectorAll=()=>fake;
+ const pad={axes:[0,0],buttons:Array.from({length:18},()=>({pressed:false}))};world.navigator.getGamepads=()=>[pad];
+ try{
+  pad.buttons[0].pressed=true;t.p.x=4235;t.setEnemies([]);t.updateEnemies(0);
+  t.pollPad();t.menuPad.readyAt=0;for(let i=0;i<10;i++)t.pollPad();assert.equal(fake[0].clicked,0);
+  pad.buttons[0].pressed=false;t.pollPad();
+  for(let i=0;i<10;i++){pad.buttons[2].pressed=true;t.pollPad();pad.buttons[2].pressed=false;t.pollPad()}
+  assert.equal(fake[0].clicked,0,'attack X/square must never confirm');
+  pad.buttons[0].pressed=true;t.pollPad();t.pollPad();assert.equal(fake[0].clicked,1);
+ }finally{m.querySelectorAll=old;world.navigator.getGamepads=()=>[]}
 });
 console.log(`${checks} combat regression checks passed`);

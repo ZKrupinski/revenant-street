@@ -831,17 +831,26 @@ function actorShakeOffset(a){
  return [Math.sin(time*103+seed)*amp,Math.sin(time*77+seed)*amp*.48];
 }
 function setStatus(s){$('statusLabel').textContent=s}function flash(text,duration=1.1){const m=$('gameMessage');m.textContent=text;m.classList.add('active');messageTime=duration}
-const menuPad={index:0,nav:0,confirm:false,back:false};
+const menuPad={index:0,nav:0,confirm:false,back:false,armed:false,readyAt:0};
+const heldKeyboard=new Set();
+const menuBlockedKeys=new Set();
+function menuReady(){return Date.now()>=menuPad.readyAt}
 function menuButtons(){return Array.from($('menu').querySelectorAll('button')).filter(b=>!b.disabled)}
 function selectMenuItem(step=0){
  const items=menuButtons();if(!items.length){menuPad.index=0;return null}
  menuPad.index=(menuPad.index+step+items.length*4)%items.length;
  for(let i=0;i<items.length;i++)items[i].classList.toggle('pad-selected',i===menuPad.index);
- return items[menuPad.index];
+ const selected=items[menuPad.index];
+ selected.focus?.({preventScroll:true});
+ selected.scrollIntoView?.({block:'nearest',inline:'nearest'});
+ return selected;
 }
-function menuConfirm(){const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
+function menuConfirm(){if(!menuReady())return false;const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
 function menuBack(){const items=menuButtons();const back=items.find(b=>['resume','title','pauseMenu','hub'].includes(b.dataset.action));if(back){back.click();return true}return false}
-function showMenu(html){canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;selectMenuItem(0)}
+function showMenu(html){
+ menuPad.readyAt=Date.now()+(gameState==='reward'?700:180);menuPad.armed=false;
+ menuBlockedKeys.clear();for(const key of heldKeyboard)menuBlockedKeys.add(key);
+ canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;selectMenuItem(0)}
 function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;$('bottomTip').style.display='flex';showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1><p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p><div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div><div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button><button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div><p class="micro">가로 10화면 · 마스크 잡몹 A + 쌍단검 암살자 B + 철가면 엘리트 / 키보드·게임패드·드래그 조이스틱</p>`)}
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>공격 · 연속타격 · 공중 차기</div><div><kbd>↑ / K / Y / △</kbd>점프 (지상 횡베기 회피)</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
@@ -1250,19 +1259,21 @@ function pollPad(){
  let dx=Math.abs(g.axes[0])>.19?g.axes[0]:0,dy=Math.abs(g.axes[1])>.19?g.axes[1]:0;
  dx+=(g.buttons[15]?.pressed?1:0)-(g.buttons[14]?.pressed?1:0);
  dy+=(g.buttons[13]?.pressed?1:0)-(g.buttons[12]?.pressed?1:0);
- // Gamepad left stick and D-pad navigate menus, A/X confirms, B returns.
+ // A/cross confirms; attack X/square never accepts a reward.
  if(gameState!=='playing'){
   const direction=Math.abs(dx)>.52?Math.sign(dx):Math.abs(dy)>.52?Math.sign(dy):0;
   if(direction&&direction!==menuPad.nav)selectMenuItem(direction);
   menuPad.nav=direction;
-  const accept=!!(g.buttons[0]?.pressed||g.buttons[2]?.pressed);
-  if(accept&&!menuPad.confirm)menuConfirm();
+  const accept=!!g.buttons[0]?.pressed;
+  const neutral=!g.buttons.some(b=>b?.pressed)&&Math.abs(dx)<.2&&Math.abs(dy)<.2;
+  if(menuReady()&&neutral)menuPad.armed=true;
+  if(accept&&!menuPad.confirm&&menuPad.armed&&menuReady()){menuPad.armed=false;menuConfirm()}
   // The same A button must not trigger a dash immediately after
   // confirming a menu selection that resumes combat.
   padPrev.dodge=accept;padPrev.attack=!!g.buttons[2]?.pressed;
   menuPad.confirm=accept;
   const back=!!g.buttons[1]?.pressed;
-  if(back&&!menuPad.back)menuBack();
+  if(back&&!menuPad.back&&menuPad.armed&&menuReady())menuBack();
   menuPad.back=back;
   return{dx:0,dy:0};
  }
@@ -1834,7 +1845,7 @@ function rewardMenu(reason='wave'){
  const headline=reason==='mid'?'전투 중 파워업':'구역 클리어 파워업';
  const explanation=reason==='mid'?'재화 없이 1개 선택하면 전투가 이어집니다. 기존 강화도 중첩 가능.':
  '무료 선택 · 체력 +20 회복 · 다음 지역으로 이동. 모든 강화는 최대 6레벨까지 중첩됩니다.';
- showMenu(`<div class="eyebrow">PROJECT Z / CYBERNETIC GROWTH</div><h2>${headline}</h2><p>${explanation}</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT GROWTH — ${p.mods.length} STACKS · LEVEL ${level}</div><div class="pad-hint">◀ ▶ / 십자키 · 스틱 이동　 A / × 선택</div>`);
+ showMenu(`<div class="eyebrow">PROJECT Z / CYBERNETIC GROWTH</div><h2>${headline}</h2><p>${explanation}</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT GROWTH — ${p.mods.length} STACKS · LEVEL ${level}</div><div class="pad-hint">방향키 ↑ ↓ ← → / 십자키 · 스틱 이동　 Enter / 패드 A(×) 선택 · 공격키로 선택되지 않습니다</div>`);
 }
 function requestSelectMod(m){
  if(wave!==2||upgradeReason==='mid'){selectMod(m);return}
@@ -1872,18 +1883,27 @@ function deadMenu(){if(gameState==='dead')return;gameState='dead';setStatus('SIG
 function hubMenu(){gameState='hub';$('bossHud').hidden=true;setStatus('REBEL HUB');const opts=[['core','외골격 증설','최대 체력 +20','20 HP'],['servo','동력 관절 보정','모든 공격 피해 +2','ATK +2'],['reflex','인공 반사신경','패링 유효시간 +0.035초','PARRY +']];const html=opts.map(([id,title,txt,short])=>`<button class="upgrade-btn" data-perma="${id}" ${perma.shards<2?'disabled':''}><span class="sym">${short}</span><strong>${title} <small>Lv.${perma[id]}</small></strong><small>${txt} / 비용 2 파편</small></button>`).join('');showMenu(`<div class="eyebrow">SAFE ZONE / CYBERNETIC UNDERGROUND</div><h2>REBEL HUB</h2><p>전투에서 획득한 <b class='key'>◆ 파편</b>으로 영구 강화합니다. 일반 적 4명 처치마다 1개, 방패병 1개, 엘리트 2개, 보스 4개. <b>₩ 크레딧은 전투 점수</b>이며 구매 재화가 아닙니다.</p><div class="hub-stat"><span>영구 강화 자원</span><strong>${perma.shards} SHARDS</strong></div><div class="choice-grid">${html}</div><div class="buttons"><button class="main-btn" data-action="start">다시 거리로</button><button class="secondary-btn" data-action="title">타이틀로</button></div>`)}
 function buyUpgrade(k){if(perma.shards<2)return;perma.shards-=2;perma[k]++;save();hubMenu();sound('parry')}
 function pauseToggle(){if(gameState==='playing'){gameState='paused';setStatus('PAUSED');showMenu(`<div class="eyebrow">SYSTEM SUSPENDED</div><h2>일시 정지</h2><p>전투가 일시 정지되었습니다.</p><div class="buttons"><button class="main-btn" data-action="resume">▶ 계속 플레이</button><button class="secondary-btn" data-action="guideResume">조작 안내</button><button class="secondary-btn" data-action="title">타이틀로</button></div>`)}else if(gameState==='paused'){gameState='playing';setStatus('COMBAT LIVE');hideMenu()}}
-function keyDown(ev){const k=ev.key.toLowerCase();if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(k))ev.preventDefault();
+function keyDown(ev){
+ const k=ev.key.toLowerCase();
+ const held=heldKeyboard.has(k);heldKeyboard.add(k);
+ if([' ','enter','arrowup','arrowdown','arrowleft','arrowright'].includes(k))ev.preventDefault();
  if(gameState!=='playing'){
+  // Consume menu input entirely: no native focused-button click or combat fallthrough.
+  if(menuBlockedKeys.has(k)||ev.repeat||held)return;
   if(k==='arrowleft'||k==='arrowup'||k==='a'||k==='w'){selectMenuItem(-1);return}
   if(k==='arrowright'||k==='arrowdown'||k==='d'||k==='s'){selectMenuItem(1);return}
-  if(k==='enter'||k===' '){if(menuConfirm())return}
+  if(k==='enter'||(k===' '&&gameState!=='reward')){menuConfirm();return}
+  if((k==='escape'||k==='p')&&menuReady())menuBack();
+  return;
  }
- if(keys.has(k))return;keys.add(k);
+ if(keys.has(k)||ev.repeat)return;keys.add(k);
  if(k==='arrowleft'||k==='j')startAttack();
  else if(k==='arrowup'||k==='k'||k===' ')jump();
  else if(k==='arrowright'||k==='l')parry();
- else if(k==='arrowdown'||k==='shift')dodge();else if(k==='escape'||k==='p')pauseToggle();else if(k==='enter'&&gameState==='menu'&&!$('overlay').querySelector('[data-action="start"]')?.disabled)requestRunStart()}
-window.addEventListener('keydown',keyDown);window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+ else if(k==='arrowdown'||k==='shift')dodge();else if(k==='escape'||k==='p')pauseToggle();
+}
+function keyUp(ev){const k=ev.key.toLowerCase();keys.delete(k);heldKeyboard.delete(k);menuBlockedKeys.delete(k)}
+window.addEventListener('keydown',keyDown);window.addEventListener('keyup',keyUp);
 const analogPad=$('analogPad'),analogThumb=$('analogThumb');
 function resetAnalog(){analog.dx=0;analog.dy=0;analog.pointerId=null;analogThumb.style.translate='0px 0px';analogPad.classList.remove('engaged')}
 function trackAnalog(e){
@@ -1908,11 +1928,12 @@ function resetInputs(){
  keys.clear();resetAnalog();p.attackQueued=false;
  document.querySelectorAll('.touch-controls .pressed').forEach(b=>b.classList.remove('pressed'));
 }
-function suspendGame(){resetInputs();if(gameState==='playing')pauseToggle()}
+function suspendGame(){heldKeyboard.clear();menuBlockedKeys.clear();resetInputs();if(gameState==='playing')pauseToggle()}
 window.addEventListener('blur',suspendGame);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame()});
 
-$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')hubMenu();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)buyUpgrade(b.dataset.perma)});
+$('menu').addEventListener('focusin',e=>{const items=menuButtons(),i=items.indexOf(e.target);if(i<0)return;menuPad.index=i;items.forEach((b,n)=>b.classList.toggle('pad-selected',n===i))});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')hubMenu();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)buyUpgrade(b.dataset.perma)});
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();if(gameState!=='playing')return;b.setPointerCapture(e.pointerId);keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release)}
 for(let i=0;i<110;i++)rain.push({x:rnd(0,1280),y:rnd(0,720),s:rnd(220,590),len:rnd(5,18)});
