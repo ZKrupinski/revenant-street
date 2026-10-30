@@ -1476,6 +1476,21 @@ test('normal attacks exhaust the ready repertoire without repeats across pauses'
  for(let cycle=0;cycle<3;cycle++)assert.equal(new Set(moves.slice(cycle*19,cycle*19+19)).size,19);
  for(let i=8;i<moves.length;i++)assert(!moves.slice(i-8,i).includes(moves[i]));
 });
+test('first eight combo strikes display different silhouette families and readable animation',()=>{
+ g.startRun();t.setEnemies([]);
+ for(const move of t.COMBO_ROTATION)t.zArtState[move]={ready:true};
+ const first=[];
+ for(let i=0;i<8;i++){
+  t.p.attack=0;t.p.stamina=100;t.startAttack();
+  assert(t.p.attackDuration>=.39,'eight-frame strikes must remain readable');
+  first.push(t.p.moveName);
+ }
+ const kicks=new Set(['roundkick','frontkick','lowkick','axe_kick','sidekick','spinning_heel','crescent_kick']);
+ assert.equal(new Set(first).size,8,'the scripted eight-strike combo cannot repeat');
+ assert(first.filter(m=>kicks.has(m)).length>=3,'three visually different kicks must enter early');
+ assert(first.some(m=>m.includes('elbow')),'show elbow within the first eight');
+ assert(first.some(m=>m.includes('headbutt')),'show headbutt within the first eight');
+});
 test('unavailable attacks are skipped and failed inputs do not consume moves',()=>{
  g.startRun();t.setEnemies([]);
  for(const move of t.COMBO_ROTATION)t.zArtState[move]={ready:['jab','frontkick','hook'].includes(move)};
