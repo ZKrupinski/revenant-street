@@ -1,0 +1,27 @@
+{
+  "expected": 20,
+  "imported": 20,
+  "local": [
+    "axe_kick",
+    "backfist",
+    "crescent_kick",
+    "cross",
+    "diagonal_airkick",
+    "forward_headbutt",
+    "frontkick",
+    "hammerfist",
+    "hook",
+    "jab",
+    "lowkick",
+    "rising_elbow",
+    "rising_headbutt",
+    "roundkick",
+    "shovel_hook",
+    "sidekick",
+    "spinning_elbow",
+    "spinning_heel",
+    "superman_punch",
+    "uppercut"
+  ],
+  "errors": {}
+}
