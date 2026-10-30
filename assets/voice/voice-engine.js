@@ -30,7 +30,7 @@
   return loading;
  }
  function play(kind,actor,hero) {
-  if(!context||!buffers.a||!actor||!hero)return false;
+  if(!context||!buffers.heroA||!actor||!hero)return false;
   try {
    const now=context.currentTime,isHero=actor===hero,boss=!isHero&&actor.type==='boss';
    if(!isHero&&Math.abs(actor.x-hero.x)>1100)return false;
