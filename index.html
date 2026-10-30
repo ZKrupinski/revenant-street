@@ -173,7 +173,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 <script src="./assets/assassin-b.js"></script>
 <script src="./assets/elite-ironmask.js"></script>
 <script src="./assets/boss-hunter.js"></script>
-<script src="./assets/hero-motion-fx.js?v=26db524"></script>
+<script src="./assets/hero-motion-fx.js?v=b3a5abf"></script>
 <script>const EMBEDDED_ASSETS=window.RZ_ASSETS;</script>
 <script>
 (()=>{'use strict';
@@ -1184,6 +1184,9 @@ function awardEnemyKill(e){
 }
 function hurtEnemy(e,dmg,poise){
  if(e.dead)return;
+ // Actual damage event ONLY: contact flash belongs to the enemy while the
+ // forward blade trail stays attached to Z's own attack animation.
+ window.RZHeroFx?.onHit(e,p,poise>54||dmg>=45);
  e.hp-=dmg;e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:e.type==='elite'?.80:1),0,e.maxPoise);
  // Twelve distinct impacts: head snaps, gut folds, ankle buckles, spins,
  // side stumbles and aerial knockdowns. Keep the existing enemy bitmap.
