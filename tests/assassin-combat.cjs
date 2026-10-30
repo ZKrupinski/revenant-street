@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,gamepadRumble,activeRumbleActuator,stopGamepadRumble,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,gamepadRumble,activeRumbleActuator,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('opening battle spawns one small squad just beyond the screen',()=>{
@@ -345,12 +345,96 @@ test('pause vibration test is reachable and stops effects safely',()=>{
  try{
   assert.equal(t.vibrateImpact('test',true),true);
   assert.equal(calls.length,1);
-  assert.equal(calls[0].data.duration,225);
+  assert.equal(calls[0].data.duration,290);
   t.stopGamepadRumble();
   assert.equal(resets.length,1);
   assert(html.includes('data-action="rumbleTest"'));
   assert(html.includes('id="rumbleStatus"'));
  }finally{world.navigator.getGamepads=previous}
+});
+test('strong gamepad impacts use hardware maximum motors and longest cinematic pulses',()=>{
+ const p=t.RUMBLE_PROFILES;
+ for(const kind of ['heavy','parry','execution','dashImpact','slam']){
+  assert.equal(p[kind][1],1,'MAX weak motor on '+kind);
+  assert.equal(p[kind][2],1,'MAX strong motor on '+kind);
+ }
+ assert(p.punch[2]>.9,'ordinary punches must now hit much harder');
+ assert(p.heavy[0]>130&&p.parry[0]>150&&p.hurt[0]>160,
+  'regular hits, parry and hero hurt all need longer pulses');
+ assert(p.dashImpact[0]>=375,'dash punch should sustain maximum vibration');
+ assert(p.slam[0]>=440,'heel slam gets the longest maximum vibration');
+ assert(p.footwalk[2]<p.footrun[2],'running should rumble harder than walking');
+ assert(p.footrun[2]<p.heavy[2],'impact must stay stronger than footsteps');
+});
+test('walking and running trigger genuine rhythmic controller footsteps, never idle rumble',()=>{
+ const prior=world.navigator.getGamepads,phone=world.navigator.vibrate;
+ const calls=[],phoneCalls=[];
+ world.navigator.getGamepads=()=>[{connected:true,vibrationActuator:{
+  playEffect:(effect,options)=>{calls.push({effect,...options});return Promise.resolve('complete')},
+  reset:()=>Promise.resolve('complete')
+ }}];
+ world.navigator.vibrate=pattern=>{phoneCalls.push(pattern);return true};
+ try{
+  g.startRun();t.setEnemies([]);t.p.x=2500;t.p.y=570;
+  for(let i=0;i<85;i++){
+   t.setHapticTime(i/60+7);t.control(1/60,{dx:.7,dy:0});
+  }
+  const walking=calls.filter(v=>v.duration===65);
+  assert(walking.length>=2,'walking footsteps should pulse multiple times');
+  calls.length=0;
+  g.startRun();t.setEnemies([]);t.p.x=2500;t.p.y=570;
+  for(let i=0;i<85;i++){
+   t.setHapticTime(i/60+11);t.control(1/60,{dx:1,dy:0});
+  }
+  const running=calls.filter(v=>v.duration===85);
+  assert(running.length>=3,'running footsteps should be frequent');
+  assert(running.every(v=>v.strongMagnitude>.7),'running motor stronger than walk');
+  const count=calls.length;
+  for(let i=0;i<30;i++){
+   t.setHapticTime(i/60+13);t.control(1/60,{dx:0,dy:0});
+  }
+  assert.equal(calls.length,count,'standing still cannot vibrate footsteps');
+  assert.equal(phoneCalls.length,0,'footstep pulse does not vibrate the phone');
+ }finally{world.navigator.getGamepads=prior;if(phone)world.navigator.vibrate=phone;else delete world.navigator.vibrate}
+});
+test('long slam and dash punch rumble outranks steps until the maximum pulse ends',()=>{
+ const prior=world.navigator.getGamepads;
+ const calls=[];
+ world.navigator.getGamepads=()=>[{connected:true,vibrationActuator:{
+  playEffect:(effect,opts)=>{calls.push(opts);return Promise.resolve('complete')}
+ }}];
+ try{
+  g.startRun();t.setEnemies([]);t.p.x=2600;
+  t.setHapticTime(20);
+  assert.equal(t.vibrateImpact('slam',true),true);
+  assert.equal(calls[0].duration,440);
+  assert(t.getHapticPriorityUntil()>20.48);
+  for(let i=0;i<25;i++){
+   t.setHapticTime(20+i/60);t.control(1/60,{dx:1,dy:0});
+  }
+  assert.equal(calls.length,1,'footsteps cannot interrupt a 440ms landing slam');
+  for(let i=25;i<72;i++){
+   t.setHapticTime(20+i/60);t.control(1/60,{dx:1,dy:0});
+  }
+  assert(calls.some(c=>c.duration===85),'running footsteps resume naturally after slam');
+  t.setHapticTime(23);
+  const before=calls.length;
+  assert.equal(t.vibrateImpact('dashImpact',true),true);
+  assert.equal(calls[before].duration,375);
+  assert.equal(calls[before].weakMagnitude,1);
+  assert.equal(calls[before].strongMagnitude,1);
+ }finally{world.navigator.getGamepads=prior}
+});
+test('no connected actuator means no continuous footsteps or audio loop',()=>{
+ const prior=world.navigator.getGamepads;
+ world.navigator.getGamepads=()=>[];
+ try{
+  g.startRun();t.p.x=2500;t.setHapticTime(35);
+  for(let i=0;i<70;i++){
+   t.setHapticTime(35+i/60);t.control(1/60,{dx:1,dy:0});
+  }
+  assert.equal(t.footstepRumble(1/60,80),false);
+ }finally{world.navigator.getGamepads=prior}
 });
 test('rear-side enemy attacks are caught by parry and hero immediately turns',()=>{
  g.startRun();
