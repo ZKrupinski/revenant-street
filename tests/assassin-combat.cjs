@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
-const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(s=>s.trim());
 const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
@@ -1137,7 +1137,8 @@ test('all twenty distinct bitmap attack atlases are archived locally and playabl
   assert.equal(bytes.subarray(8,12).toString(),'WEBP');
  }
  assert(html.includes('Object.assign(Z_REMOTE_ATLAS,window.RZ_LOCAL_20_ATTACKS||{})'));
- assert(html.includes('warmZSprites(dt);'),'progressive combat art loader must run');
+ assert(html.includes('...Object.keys(Z_REMOTE_ATLAS).map'),'all combat moves must preload before play');
+ assert(!html.includes('return;warmZSprites(dt);'),'combat must not decode new atlases in the update loop');
  assert(html.includes("p.moveName='axe_kick';loadZMove('axe_kick');"),
    'aerial attack must select the dedicated vertical axe-kick, not a sideways kick');
  assert(html.includes("p.moveName='jumpstart';"),

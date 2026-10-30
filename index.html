@@ -1359,12 +1359,13 @@ let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
   ['배경',()=>({ready:img.street_pano?.complete&&img.street_pano.naturalWidth>0,failed:false})],
+  ['패링 이펙트',()=>({ready:parryShieldImage.complete&&parryShieldImage.naturalWidth>0,failed:false})],
   ['적 방향 아이콘',()=>({ready:offscreenArrow.complete&&offscreenArrow.naturalWidth>0,failed:false})],
   ['이펙트',()=>({ready:['burst_red','burst_blue','burst_gold'].every(k=>img[k]?.complete&&img[k].naturalWidth>0),failed:false})],
-  ...['idle','walk','run','jab','frontkick','axe_kick','diagonal_airkick','hit'].map(k=>['Z '+k,()=>loadZMove(k)]),
-  ...['idle','walk','attack'].map(k=>['잡몹 '+k,()=>loadMaskedMove(k)]),
-  ...['idle','walk','attack'].map(k=>['암살자 '+k,()=>RZAssassinArt.load(k)]),
-  ...['idle','walk'].map(k=>['방패 '+k,()=>loadRiotGuard(k)])
+  ...Object.keys(Z_REMOTE_ATLAS).map(k=>['Z '+k,()=>loadZMove(k)]),
+  ...Object.keys(MASKED_GRUNT_ATLAS).map(k=>['잡몹 '+k,()=>loadMaskedMove(k)]),
+  ...RZAssassinArt.keys.map(k=>['암살자 '+k,()=>RZAssassinArt.load(k)]),
+  ...RIOT_GUARD_KEYS.map(k=>['방패 '+k,()=>loadRiotGuard(k)])
  ];
  if(preview&&window.RZBossHunter?.isEnabled?.())for(const k of ['idle','walk','taunt','dash','slam','death','hit'])checks.push(['보스 '+k,()=>window.RZBossHunter.load(k)]);
  return checks;
@@ -1374,8 +1375,9 @@ function waitSceneArt(preview,onProgress){
  let cursor=0;
  return new Promise((resolve,reject)=>{
   const timer=setInterval(()=>{
-   if(cursor<checks.length){
-    for(let i=0;i<2&&cursor<checks.length;i++,cursor++){
+   const pending=checks.slice(0,cursor).filter(([,fetch])=>!fetch().ready).length;
+   if(cursor<checks.length&&pending<3){
+    for(let i=pending;i<3&&cursor<checks.length;i++,cursor++){
      try{checks[cursor][1]()}catch(err){clearInterval(timer);reject(err);return}
     }
    }
@@ -1386,7 +1388,7 @@ function waitSceneArt(preview,onProgress){
    }
    onProgress?.(completed,checks.length,cursor<checks.length?checks[cursor][0]:'마지막 리소스 확인');
    if(completed===checks.length){clearInterval(timer);resolve(true)}
-   else if(failed.length||performance.now()-started>35000){
+   else if(failed.length||performance.now()-started>120000){
     clearInterval(timer);reject(Error(failed.length?'리소스 로딩 실패: '+failed.join(', '):'리소스 로딩 시간 초과'));
    }
   },90);
@@ -1396,13 +1398,25 @@ async function requestRunStart(){
  if(loadingRun)return;
  loadingRun=true;gameState='loading';
  const preview=/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'');
- showMenu(`<div class="eyebrow">PROJECT Z / RESOURCE PREPARATION</div><h2>게임 리소스 준비 중</h2><p id="loadStatus">스프라이트와 배경을 불러옵니다. 전투 화면은 모두 준비된 뒤 표시됩니다.</p><div class="bar hp"><div class="bar-fill" id="loadBar" style="width:0%"></div></div><p class="micro">고해상도 비트맵 압축 해제 · 프레임 8장 정렬 중</p>`);
+ showMenu(`<div class="eyebrow">PROJECT Z / RESOURCE PREPARATION</div><h2>게임 리소스 준비 중</h2><p id="loadStatus">음악 전체와 전투 애니메이션을 준비합니다. 준비가 끝나면 시작됩니다.</p><div class="bar hp"><div class="bar-fill" id="loadBar" style="width:0%"></div></div><p class="micro">고해상도 비트맵 압축 해제 · 프레임 8장 정렬 중</p>`);
  try{
+  const music=window.__revenantBgm;
+  if(!music)throw Error('음악 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');
+  void music.beginPlayback(); // Preserve the initiating user gesture on mobile.
+  const musicReady=music.prepare();
+  // Attach a rejection handler immediately while artwork is prepared.
+  const musicResult=musicReady.then(()=>null,error=>error);
   await waitSceneArt(preview,(done,total,name)=>{
    const status=$('loadStatus'),bar=$('loadBar');
    if(status)status.textContent=`준비 ${done}/${total} — ${name}`;
    if(bar)bar.style.width=`${Math.floor(100*done/total)}%`;
   });
+  $('loadStatus').textContent='배경 효과 준비 중';
+  await new Promise(resolve=>setTimeout(resolve,0));
+  depthBackdrop(img.street_pano);
+  $('loadStatus').textContent='음악 전체 다운로드 및 재생 준비 중';
+  const musicError=await musicResult;if(musicError)throw musicError;
+  await music.beginPlayback();
   loadingRun=false;startRun();
  }catch(err){
   loadingRun=false;
@@ -2487,7 +2501,7 @@ function updateHud(){
 function update(dt){
  // Don't decode a full library of 2K sprite sheets while the user fights.
  // Required combat animations are prepared behind the loading screen.
-time+=dt;messageUpdate(dt);const pad=pollPad();if(gameState!=='playing')return;warmZSprites(dt);updateEffects(dt);updateComboCamera(dt);if(hitStop>0){hitStop-=dt;followComboCamera(dt);updateHudThrottled(dt);return}control(dt,pad);followComboCamera(dt);updateEnemies(dt*(slowMotion>0?.19:1));slowMotion=Math.max(0,slowMotion-dt);updateHudThrottled(dt);const cleared=gameState==='playing'&&waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
+time+=dt;messageUpdate(dt);const pad=pollPad();if(gameState!=='playing')return;updateEffects(dt);updateComboCamera(dt);if(hitStop>0){hitStop-=dt;followComboCamera(dt);updateHudThrottled(dt);return}control(dt,pad);followComboCamera(dt);updateEnemies(dt*(slowMotion>0?.19:1));slowMotion=Math.max(0,slowMotion-dt);updateHudThrottled(dt);const cleared=gameState==='playing'&&waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
 // Cache photographic depth treatment once per loaded panorama. Ground stays original.
 const backdropDepthCache=new WeakMap();
 function depthBackdrop(bg){
@@ -2765,6 +2779,7 @@ function drawEffects(){drawModEnergy();const left=cameraX-320,right=cameraX+W+32
   ctx.restore();continue;
  }
  let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}for(const f of floating){if(f.x<left||f.x>right)continue;ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;ctx.lineWidth=4;ctx.strokeStyle='#10131c';ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);ctx.restore()}}
+const visibleActors=[];
 function draw(){
  if(gameState!=='playing')return;
  ctx.clearRect(0,0,W,H);ctx.save();
@@ -2775,7 +2790,10 @@ function draw(){
  }
  drawBackdrop();
  ctx.save();ctx.translate(-Math.round(cameraX),0);
- const actors=[p,...enemies.filter(e=>!e.dead||e.fade>0)].filter(e=>e.x>cameraX-300&&e.x<cameraX+W+300).sort((a,b)=>a.y-b.y);
+ const actors=visibleActors;actors.length=0;
+ if(p.x>cameraX-300&&p.x<cameraX+W+300)actors.push(p);
+ for(const e of enemies)if((!e.dead||e.fade>0)&&e.x>cameraX-300&&e.x<cameraX+W+300)actors.push(e);
+ actors.sort((a,b)=>a.y-b.y);
  actors.forEach(drawActor);
  drawEffects();for(const e of actors)if(e!==p&&!e.dead)drawEnemyStatusIcons(e);
  ctx.restore();syncZSprite();
@@ -2911,11 +2929,11 @@ $('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activ
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();if(gameState!=='playing')return;b.setPointerCapture(e.pointerId);keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release)}
 for(let i=0;i<(window.matchMedia?.('(pointer: coarse)').matches?65:110);i++)rain.push({x:rnd(0,1280),y:rnd(0,720),s:rnd(220,590),len:rnd(5,18)});
-window.__revenant={getPerformance:()=>({...runtimePerf,liveEnemies:enemies.filter(e=>!e.dead).length,activeEffects:fx.length+attributeFx.length+floating.length,heroAfterimages:heroAfterimages.length,heroAfterimageLimit:MAX_HERO_GHOSTS,uniqueHeroAtlases:zArtFrameShared.size}),getState:()=>({gameState,wave,player:{x:p.x,y:p.y,z:p.z,hp:p.hp,stamina:p.stamina,weapon:p.weapon,mod:p.mod,mods:[...p.mods]},enemies:enemies.map(e=>({type:e.type,x:e.x,y:e.y,hp:e.hp,poise:e.poise,groggy:e.groggy})),perma}),startRun,attack:startAttack,parry,execute,selectMod,buyUpgrade,forceClear:()=>{enemies=[];updateEnemies(0)},getWorld:()=>({x:p.x,cameraX,wave,stageWidth:STAGE_WIDTH,enemyPositions:enemies.filter(e=>!e.dead).map(e=>e.x)}),getAnalog:()=>({...analog}),getAssassinArtStatus:()=>RZAssassinArt.status(),getArtStatus:(key)=>{const v=loadZMove(key||'idle');return{ready:v.ready,failed:v.failed,loading:v.loading,frames:v.frames?.length,error:v.error}}};
+window.__revenant={getMusicState:()=>gameState,getPerformance:()=>({...runtimePerf,liveEnemies:enemies.filter(e=>!e.dead).length,activeEffects:fx.length+attributeFx.length+floating.length,heroAfterimages:heroAfterimages.length,heroAfterimageLimit:MAX_HERO_GHOSTS,uniqueHeroAtlases:zArtFrameShared.size}),getState:()=>({gameState,wave,player:{x:p.x,y:p.y,z:p.z,hp:p.hp,stamina:p.stamina,weapon:p.weapon,mod:p.mod,mods:[...p.mods]},enemies:enemies.map(e=>({type:e.type,x:e.x,y:e.y,hp:e.hp,poise:e.poise,groggy:e.groggy})),perma}),startRun,attack:startAttack,parry,execute,selectMod,buyUpgrade,forceClear:()=>{enemies=[];updateEnemies(0)},getWorld:()=>({x:p.x,cameraX,wave,stageWidth:STAGE_WIDTH,enemyPositions:enemies.filter(e=>!e.dead).map(e=>e.x)}),getAnalog:()=>({...analog}),getAssassinArtStatus:()=>RZAssassinArt.status(),getArtStatus:(key)=>{const v=loadZMove(key||'idle');return{ready:v.ready,failed:v.failed,loading:v.loading,frames:v.frames?.length,error:v.error}}};
 canvas.style.visibility='hidden';titleMenu();requestAnimationFrame(loop);
 })();
 
 </script>
-<script src="./assets/industrial-combat-bgm.js?v=20261030-ducking1"></script>
+<script src="./assets/industrial-combat-bgm.js?v=20261030-preload2"></script>
 </body>
 </html>

@@ -18,13 +18,46 @@
   let started = false;
   let bgmEnabled = true;
   try { bgmEnabled = localStorage.getItem('z_bgm_enabled') !== 'false'; } catch (_) {}
-  bgm.addEventListener('error', () => {
-    if (fallbackTried) return;
-    fallbackTried = true;
-    bgm.src = FALLBACK;
-    bgm.load();
-    if (unlocked) void beginPlayback();
-  });
+  let ready = false, preparing = null, objectUrl = null, playPending = null;
+  // Fetch the complete file, then play from a local blob: no combat-time buffering.
+  function prepare() {
+    if (ready) return Promise.resolve();
+    if (preparing) return preparing;
+    preparing = (async () => {
+      let lastError;
+      for (const source of [LOCAL, FALLBACK]) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 45000);
+        try {
+          const response = await fetch(source, { signal: controller.signal });
+          if (!response.ok) throw Error('HTTP ' + response.status);
+          const blob = await response.blob();
+          if (!blob.size) throw Error('Empty music file');
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+          objectUrl = URL.createObjectURL(blob);
+          await new Promise((resolve, reject) => {
+            const timer = setTimeout(() => finish(Error('음악 재생 준비 시간 초과')), 15000);
+            function finish(error) {
+              clearTimeout(timer);
+              bgm.removeEventListener('canplay', onReady);
+              bgm.removeEventListener('error', onError);
+              error ? reject(error) : resolve();
+            }
+            const onReady = () => finish();
+            const onError = () => finish(Error('음악 파일을 재생할 수 없습니다'));
+            bgm.addEventListener('canplay', onReady);
+            bgm.addEventListener('error', onError);
+            bgm.src = objectUrl; bgm.load();
+          });
+          fallbackTried = source === FALLBACK;
+          ready = true; return;
+        } catch (error) { lastError = error; }
+        finally { clearTimeout(timeout); }
+      }
+      throw Error('음악 로딩 실패. 다시 불러오기를 눌러주세요. ' + (lastError?.message || ''));
+    })().finally(() => { preparing = null; });
+    return preparing;
+  }
   const button = document.createElement('button');
   button.type = 'button';
   button.id = 'zBgmToggle';
@@ -39,7 +72,7 @@
   // Reduce only the music level; combat sound effects are handled separately.
   function gameMusicVolume() {
     try {
-      const state = window.__revenant?.getState?.().gameState;
+      const state = window.__revenant?.getMusicState?.();
       if (state === 'playing') return .29;
       if (state === 'reward') return .21;
     } catch (_) {}
@@ -47,11 +80,14 @@
   }
   function beginPlayback() {
     if (!bgmEnabled || !globalSoundOn() || document.hidden) return Promise.resolve();
+    if (playPending) return playPending;
+    if (!bgm.paused) return Promise.resolve();
     const result = bgm.play();
-    if (result?.then) return result.then(() => { started = true; }).catch(() => { started = false; });
+    if (result?.then) return playPending = result.then(() => { started = true; }).catch(() => { started = false; }).finally(() => { playPending = null; });
     started = true; return Promise.resolve();
   }
   function unlock() {
+    if (unlocked && !bgm.paused) return;
     unlocked = true;
     if (bgmEnabled && globalSoundOn()) void beginPlayback();
   }
@@ -84,7 +120,9 @@
     if (target>0 && unlocked && (!started || bgm.paused)) void beginPlayback();
   }, 180);
   window.__revenantBgm = {
-    getState: () => ({ enabled: bgmEnabled, playing: !bgm.paused, volume: bgm.volume, source: bgm.currentSrc || bgm.src, fallbackTried }),
+    prepare, beginPlayback,
+    getState: () => ({ ready, loading: !!preparing, enabled: bgmEnabled, playing: !bgm.paused, volume: bgm.volume, source: bgm.currentSrc || bgm.src, fallbackTried }),
     toggle: () => button.click()
   };
+  void prepare().catch(() => {});
 })();
