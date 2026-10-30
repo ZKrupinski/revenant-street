@@ -522,7 +522,7 @@ test('a successful parry rapidly launches the target to the current visible scre
   assert.equal(enemy.hp,enemy.maxHp);
  }
 });
-test('one follow-up attack tracks the actual parried target and lands near-fatal punch once',()=>{
+test('one follow-up attack tracks the parried target, kills ordinary foes, and keeps the launch',()=>{
  for(const sign of [-1,1]){
   g.startRun();t.setEnemies([]);
   t.p.x=2650;t.p.y=565;t.p.facing=sign;t.p.stamina=100;
@@ -551,11 +551,41 @@ test('one follow-up attack tracks the actual parried target and lands near-fatal
   assert(sawStrike,'automatically close in and transition to powerful 8-frame punch');
   assert(maxEnemyDisplacement>(sign>0?350:160),'parried enemy must visibly fly toward the screen boundary');
   assert((t.p.x-initialHeroX)*sign>125,'hero must physically sprint toward the enemy');
-  assert(enemy.hp<=originalHP*.09,'follow-up should leave the enemy nearly dead');
-  assert(enemy.knockVX*sign>0,'second hit launches target in original direction');
+  assert.equal(enemy.dead,true,'ordinary enemies should die rather than return with forced sliver of HP');
+  assert.equal(enemy.hp,0,'finisher must not reserve one-digit HP');
+  assert(enemy.knockVX*sign>0,'lethal second hit still launches target in original direction');
+  assert(enemy.z>=0,'lethal hit preserves airborne knockback physics');
   assert.equal(other.hp,other.maxHp,'pursuit counter only damages the parried target');
   assert.equal(t.p.riposteChasing,false);
   assert.equal(t.p.riposteStrikeTarget,null,'consume the special hit exactly once');
+ }
+});
+test('finisher damage scales by enemy type without a forced survival threshold',()=>{
+ for(const [type,expectedRemaining] of [['guard',0],['assassin',0],['elite',.22],['boss',.76]]){
+  g.startRun();t.setEnemies([]);t.p.x=3000;t.p.facing=1;t.p.stamina=100;
+  const e=t.makeEnemy(type,t.p.x+130,t.p.y,0);
+  t.setEnemies([e]);t.p.riposteStrikeTarget=e;
+  t.attackCheck();
+  if(expectedRemaining===0){
+   assert.equal(e.dead,true,type+' must be finishable by a full-HP counter');
+   assert.equal(e.hp,0,type+' must not return with 1 HP');
+  }else{
+   assert.equal(e.dead,false,type+' should retain boss/elite durability');
+   const ratio=e.hp/e.maxHp;
+   assert(Math.abs(ratio-expectedRemaining)<.02,type+' should take real fixed damage instead of ending at a forced HP floor');
+  }
+  assert(e.knockVX>1200,type+' must still receive the dramatic second launch');
+  assert.equal(t.p.riposteStrikeTarget,null,'special counter consumed exactly once');
+ }
+});
+test('weakened elites and bosses can die to a finisher instead of being saved',()=>{
+ for(const type of ['elite','boss']){
+  g.startRun();t.setEnemies([]);t.p.x=3000;t.p.facing=1;
+  const e=t.makeEnemy(type,t.p.x+130,t.p.y,0);e.hp=e.maxHp*.10;
+  t.setEnemies([e]);t.p.riposteStrikeTarget=e;t.attackCheck();
+  assert(e.dead,type+' must be killable without special HP protection');
+  assert.equal(e.hp,0,'finisher should deal remaining HP and kill');
+  assert(e.knockVX>1000,'fatal counter retains the air launch');
  }
 });
 test('without attack input, parry launch never auto-chases or causes free punch damage',()=>{

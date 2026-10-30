@@ -1794,19 +1794,21 @@ function attackCheck(){
  if(p.riposteStrikeTarget){
   const e=p.riposteStrikeTarget;p.riposteStrikeTarget=null;
   if(e.dead||!enemies.includes(e))return;
-  const reserve=e.type==='boss'?.16:e.type==='elite'?.075:.045;
-  const almostDead=Math.max(1,Math.ceil(e.maxHp*reserve));
-  const dmg=Math.max(1,Math.ceil(e.hp-almostDead));
+  // The follow-up is a genuine finishing blow, never an artificial HP floor.
+  // Ordinary foes die on a full-strength counter, while durable elites and
+  // bosses take large but finite max-HP-relative damage.
+  const damageRatio=e.type==='boss'?.24:e.type==='elite'?.78:1.10;
+  const dmg=Math.min(e.hp,Math.max(1,Math.ceil(e.maxHp*damageRatio)));
   hurtEnemy(e,dmg,215);
-  if(!e.dead){
-   // Second huge launch, still integrated over successive physics frames.
-   const resist=e.type==='boss'?.72:1;
-   e.knockVX=p.facing*3150*resist;e.knockDrag=2.15;
-   e.knockVY=clamp((e.y-p.y)*.65,-95,95);
-   e.z=Math.max(e.z,18);e.vz=e.type==='boss'?310:620;
-   e.stun=Math.max(e.stun,1.12);e.reactionTime=e.reactionDuration=.85;
-   e.hitAnimation='hitFly';e.pendingFall=e.type!=='boss';
-  }
+  // Carry the second spectacular launch through even if this blow kills.
+  // Dead characters keep world-space airborne physics until they land;
+  // they do not recover with a token amount of HP and rush back.
+  const resist=e.type==='boss'?.72:1;
+  e.knockVX=p.facing*3150*resist;e.knockDrag=2.15;
+  e.knockVY=clamp((e.y-p.y)*.65,-95,95);
+  e.z=Math.max(e.z,18);e.vz=e.type==='boss'?310:620;
+  e.stun=Math.max(e.stun,1.12);e.reactionTime=e.reactionDuration=.85;
+  e.hitAnimation='hitFly';e.pendingFall=!e.dead&&e.type!=='boss';
   e.reactionDir=p.facing;
   hitStop=Math.max(hitStop,.18);screenShake=Math.max(screenShake,30);
   screenTint=Math.max(screenTint,.55);
