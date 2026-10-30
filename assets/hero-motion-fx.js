@@ -203,11 +203,23 @@
  }
  function renderStamps(ctx){
   for(const a of stamps){
+   if(a.type==='impact')continue; // Impact belongs on top of its victim, after all actors.
    const phase=clamp(1-a.life/a.maxLife,0,.999),frame=Math.min(7,Math.floor(phase*8));
    const lift=a.type==='dust'?phase*15:a.type==='land'?0:0;
    const grow=1+phase*.27;
    cell(ctx,a.type,frame,a.x,a.y-a.z-lift,(a.type==='dust'?198:166)*a.scale*grow,(a.type==='dust'?139:117)*a.scale*grow,
      a.type==='dust'?Math.min(1,.45+a.life/a.maxLife*.8):Math.min(1,.29+a.life/a.maxLife*.85),a.facing);
+  }
+ }
+ function drawImpacts(ctx){
+  if(!ready)return;
+  for(const a of stamps){
+   if(a.type!=='impact')continue;
+   const phase=clamp(1-a.life/a.maxLife,0,.999);
+   const frame=Math.min(7,Math.floor(phase*8));
+   const grow=1+phase*.24;
+   cell(ctx,'impact',frame,a.x,a.y-a.z,153*a.scale*grow,141*a.scale*grow,
+    Math.min(1,.42+a.life/a.maxLife*.74),a.facing);
   }
  }
  function drawEchoes(ctx){
@@ -311,6 +323,6 @@
    cell(ctx,'leap',(f+2)%8,x,y-z+37,137,176,.64,face);
   }
  }
- window.RZHeroFx={init,update,capture,drawBehind,drawFront,event,onHit,reset,
+ window.RZHeroFx={init,update,capture,drawBehind,drawFront,drawImpacts,event,onHit,reset,
   getStatus:()=>({ready,atlasCount:Object.keys(atlases).length,stamps:stamps.length,echoes:echoes.length,drawCalls:totalDrawCalls})};
 })();
