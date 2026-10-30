@@ -51,7 +51,7 @@ async function combatVoices(){
  const createdSources=[];
  const param=()=>({value:0,setValueAtTime(v){this.value=v},linearRampToValueAtTime(v){this.value=v}});
  const node=()=>({gain:param(),frequency:param(),threshold:param(),knee:param(),ratio:param(),attack:param(),release:param(),playbackRate:{value:1},
-  connect(x){return x},disconnect(){},start(){this.started=true},stop(){this.stopped=true}});
+  connect(x){return x},disconnect(){},start(when){this.started=true;this.startedAt=when},stop(){this.stopped=true}});
  const ctx={currentTime:0,destination:node(),
   createDynamicsCompressor:()=>node(),createGain:()=>node(),createBiquadFilter:()=>node(),
   createBufferSource:()=>{const s=node();createdSources.push(s);return s},
@@ -82,12 +82,16 @@ async function combatVoices(){
  assert(!powerClip.includes('voice-yell'),'hero power must not play the death wail');
  ctx.currentTime=2.5;
  assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy gets its own wounded vocal');
- assert(createdSources.at(-1).buffer.clip.endsWith('voice-yell.wav'),'enemy pain bank must remain separate from protagonist attacks');
+ assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'ordinary pain must grunt instead of death-screaming');
+ assert(createdSources.at(-1).startedAt>=ctx.currentTime+.075,'the crack of impact should precede the groan');
  ctx.currentTime=3.0;
  assert.equal(voices.play('heroStrike',hero,hero),true,'normal hero strikes use short grunts');
  assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'hero normal hits never use enemy scream clips');
  assert(createdSources.length>=3,'all voice families use genuine recorded buffers');
  assert(!voiceScript.includes('duckImpact'),'vocals do not change BGM volume');
+ assert(html.includes("playImpactSound(kind,heavy?1.15:1)"),'character impact sound must continue alongside grunt');
+ assert(html.includes("applyImpactFeedback(e,smash||p.dashSmash"),'striking an enemy must still play the physical hit sound');
+ assert(!voiceScript.includes('window.__revenantBgm'),'the voice engine must never lower the music');
  for(const file of ['hero-grunt-a.wav','hero-grunt-b.wav','voice-yell.wav','voice-roar.wav']){
   const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
   assert(bytes.length>10000,'real recording is present: '+file);
