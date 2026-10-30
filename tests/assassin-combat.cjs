@@ -500,18 +500,24 @@ test('rear-side enemy attacks are caught by parry and hero immediately turns',()
  assert(e.knockVX<0,'rear attacker must be knocked away to the left');
  assert.equal(t.p.riposteTarget,e,'counter must target the enemy that attacked from behind');
 });
-test('a successful parry immediately blasts the attacking enemy almost one screen away',()=>{
+test('a successful parry rapidly launches the target to the current visible screen edge',()=>{
  for(const sign of [-1,1]){
   g.startRun();t.setEnemies([]);t.p.x=2600;t.p.y=570;t.p.facing=sign;t.p.stamina=100;
+  t.setCameraX(t.p.x-465);
   const enemy=t.makeEnemy('raider',t.p.x+sign*80,t.p.y,0);
   t.setEnemies([enemy]);const initial=enemy.x;
+  const visibleEdge=sign>0?t.getCameraX()+1280-130:t.getCameraX()+130;
   t.parry();t.enemyAttack(enemy);
   assert(enemy.knockVX*sign>2000,'parried raider must launch very fast');
   assert.equal(t.p.riposteTarget,enemy);
   assert(t.p.riposteWindow>=1.8,'give a responsive follow-up opportunity');
   for(let n=0;n<75;n++)t.updateEnemies(1/60);
   const travel=(enemy.x-initial)*sign;
-  assert(travel>900&&travel<1400,'parried enemy should travel almost full screen, not teleport');
+  assert(travel>145,'parried enemy should still fly away at high speed');
+  assert(Math.abs(enemy.x-visibleEdge)<7,'enemy must stop at the visible boundary instead of leaving the screen');
+  const stoppedAt=enemy.x;
+  for(let n=0;n<50;n++)t.updateEnemies(1/60);
+  assert(Math.abs(enemy.x-stoppedAt)<2,'residual knockback cannot carry the parried enemy offscreen');
   assert.equal(enemy.dead,false,'parry alone is a launch, not instant lethal damage');
   assert.equal(enemy.hp,enemy.maxHp);
  }
@@ -520,6 +526,7 @@ test('one follow-up attack tracks the actual parried target and lands near-fatal
  for(const sign of [-1,1]){
   g.startRun();t.setEnemies([]);
   t.p.x=2650;t.p.y=565;t.p.facing=sign;t.p.stamina=100;
+  t.setCameraX(t.p.x-465);
   const enemy=t.makeEnemy('raider',t.p.x+sign*88,t.p.y,0);
   const other=t.makeEnemy('guard',t.p.x-sign*390,t.p.y,1);
   other.stun=30;t.setEnemies([enemy,other]);
@@ -538,8 +545,8 @@ test('one follow-up attack tracks the actual parried target and lands near-fatal
    if(t.p.moveName==='superman_punch')sawStrike=true;
   }
   assert(sawStrike,'automatically close in and transition to powerful 8-frame punch');
-  assert(maxEnemyDisplacement>350,'parried enemy must move far before being intercepted');
-  assert((t.p.x-initialHeroX)*sign>200,'hero must physically sprint toward the enemy');
+  assert(maxEnemyDisplacement>(sign>0?350:160),'parried enemy must visibly fly toward the screen boundary');
+  assert((t.p.x-initialHeroX)*sign>125,'hero must physically sprint toward the enemy');
   assert(enemy.hp<=originalHP*.09,'follow-up should leave the enemy nearly dead');
   assert(enemy.knockVX*sign>0,'second hit launches target in original direction');
   assert.equal(other.hp,other.maxHp,'pursuit counter only damages the parried target');

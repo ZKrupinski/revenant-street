@@ -877,7 +877,7 @@ let strikeCameraTime=0,strikeCameraTarget=1;
 const CAMERA_RECENTER_INTERVAL=4.6,CAMERA_RECENTER_DURATION=1.75;
 let cameraRecenterClock=0,cameraRecenterHold=0,cameraRecenterBlend=0;
 function updatePeriodicCamera(dt){
- const cinematic=strikeCameraTime>0||comboCameraLock>0||p.riposteChasing||!!p.riposteStrikeTarget;
+ const cinematic=strikeCameraTime>0||comboCameraLock>0||p.riposteWindow>0||p.riposteChasing||!!p.riposteStrikeTarget;
  if(cinematic){
   // Manual cinematic zoom and parry pursuit always take priority.
   cameraRecenterHold=0;
@@ -926,6 +926,15 @@ function followComboCamera(dt){
   normalX+((p.x-W*.5)-normalX)*cameraRecenterBlend;
  const target=clamp(x,0,STAGE_WIDTH-W);
  cameraX+=(target-cameraX)*Math.min(1,dt*(striking?30:comboCameraLock>0?22:cameraRecenterBlend>.02?10:6.5));
+}
+// World-space limit of the *currently visible* view, accounting for attack zoom.
+// Leave enough space for the full enemy silhouette to remain on-screen.
+function parryViewportEdge(enemy,face){
+ const zoom=clamp(cameraZoom,1,1.36),focus=W*.52;
+ const left=cameraX+focus-focus/zoom;
+ const right=cameraX+focus+(W-focus)/zoom;
+ const margin=Math.max(130,bodyHalfX(enemy)+65);
+ return face>0?Math.max(enemy.x,right-margin):Math.min(enemy.x,left+margin);
 }
 const MOD_META={
  fire:{icon:'🔥',short:'화염',title:'IGNITION',color:'#ffa852',source:'burst_gold',filter:'hue-rotate(-24deg) saturate(1.7)'},
@@ -1662,6 +1671,9 @@ function awardEnemyKill(e){
 }
 function hurtEnemy(e,dmg,poise){
  if(e.dead)return;
+ // A new real hit (including the pursuit finisher) cancels the parry-only
+ // viewport restraint; regular heavy launches keep their original physics.
+ e.parryScreenDir=0;e.parryScreenEdge=null;
  e.encountered=true; // A hit counts as detection even through long stun / knockback.
  e.hp-=dmg;e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:e.type==='elite'?.80:1),0,e.maxPoise);
  // Twelve distinct impacts: head snaps, gut folds, ankle buckles, spins,
@@ -1885,8 +1897,10 @@ function enemyAttack(e){
   p.facing=e.x>=p.x?1:-1;
   e.stun=e.type==='boss'?.88:eliteCleave?2.25:1.65;
   e.windup=0;e.cooldown=1.2;e.poise=clamp(e.poise+(e.type==='boss'?48:eliteCleave?e.maxPoise:95),0,e.maxPoise);
-  // Apply a strong impulse to existing damped knockback, not a position teleport.
-  // Fast parry blast covers almost one viewport, rather than teleporting.
+  // Preserve the explosive impulse, but stop the initial parry throw at the
+  // visible screen edge instead of allowing its momentum to carry offscreen.
+  e.parryScreenDir=p.facing;
+  e.parryScreenEdge=parryViewportEdge(e,p.facing);
   e.knockVX=p.facing*(e.type==='boss'?1650:2350);
   e.knockDrag=e.type==='boss'?2.15:1.92;
   e.knockVY=rnd(-70,70);e.z=Math.max(e.z,8);
@@ -2246,7 +2260,11 @@ function updateEnemies(dt){
  const nearbyEnemies=enemies.filter(e=>!e.dead&&Math.abs(e.x-p.x)<1150);
  for(const e of enemies){
   if(Math.abs(e.knockVX)>1||Math.abs(e.knockVY)>1){
-   e.x=clamp(e.x+e.knockVX*dt,45,STAGE_WIDTH-45);
+   const nextX=clamp(e.x+e.knockVX*dt,45,STAGE_WIDTH-45);
+   if(e.parryScreenDir&&e.knockVX*e.parryScreenDir>0){
+    e.x=e.parryScreenDir>0?Math.min(nextX,e.parryScreenEdge):Math.max(nextX,e.parryScreenEdge);
+    if(Math.abs(e.x-nextX)>.001)e.knockVX=0;
+   }else e.x=nextX;
    e.y=groundY(e.y+e.knockVY*dt);
    const drag=Math.exp(-(e.knockDrag||3.55)*dt);
    e.knockVX*=drag;e.knockVY*=drag;
@@ -2376,6 +2394,13 @@ function updateEnemies(dt){
   e.spriteDistance+=moved;
  }
  resolveBodyCollisions(dt);
+ // Group separation must not shove a parried target back out of the screen.
+ for(const e of enemies)if(e.parryScreenDir){
+  e.x=e.parryScreenDir>0?Math.min(e.x,e.parryScreenEdge):Math.max(e.x,e.parryScreenEdge);
+  if(e.reactionTime<=0&&Math.abs(e.knockVX)<1){
+   e.parryScreenDir=0;e.parryScreenEdge=null;
+  }
+ }
  // Smooth render positions separately from the responsive combat hitboxes.
  for(const e of enemies){
   // Smooth speed and apply hysteresis to avoid IDLE/WALK/RUN oscillation.
