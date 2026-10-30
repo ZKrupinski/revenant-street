@@ -1,0 +1,33 @@
+name: Import original REVENANT STREET combat BGM
+on:
+  push:
+    paths:
+      - '.github/workflows/import-original-bgm.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-original-music:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Download generated original instrumental
+        env:
+          TRACK_URL: https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261030_101824_01a58590-8464-4c1b-b4d9-0cfaf77e7629.m4a
+        run: |
+          mkdir -p assets/bgm
+          curl -fLsS --retry 3 --retry-all-errors --connect-timeout 20 --max-time 150 "$TRACK_URL" -o assets/bgm/revenant-industrial-184bpm.m4a
+          test "$(wc -c < assets/bgm/revenant-industrial-184bpm.m4a)" -gt 100000
+          file assets/bgm/revenant-industrial-184bpm.m4a
+      - name: Commit soundtrack to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/bgm/revenant-industrial-184bpm.m4a
+          if ! git diff --cached --quiet; then
+            git commit -m "assets(audio): vendor original 184 BPM industrial-metal combat theme"
+            git push origin HEAD:main
+          fi
