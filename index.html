@@ -96,6 +96,26 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 #menu .pad-hint{margin:10px 0 0;color:#c7e8ff;font:900 12px Arial,'Malgun Gothic',sans-serif}
 @media(max-width:590px){.mod-chip{font-size:10px;padding:3px 4px}.mod-chip .icon{font-size:13px}.mod-strip{gap:3px;max-width:210px}}
 </style>
+<style id="mod-compact-ui">
+/* Minimal combat HUD: bitmap-like icons plus legible stack counters. */
+#modStrip.mod-strip{display:flex;flex-wrap:wrap;align-items:center;gap:4px;
+ max-width:340px;max-height:68px;overflow:hidden;margin-top:4px}
+#modStrip .mod-chip.compact{min-width:43px;min-height:27px;padding:3px 5px;
+ display:inline-flex;align-items:center;justify-content:center;gap:3px;
+ color:#f8faff;border:1px solid #8996ae7a;border-radius:5px;
+ background:#0a111edb;font:900 14px/1 Arial,'Malgun Gothic',sans-serif;
+ box-shadow:0 2px 5px #0008;text-shadow:0 1px 2px #000}
+#modStrip .mod-chip.compact .icon{font-size:17px;line-height:1;flex-shrink:0}
+#modStrip .mod-chip.compact b{font-size:14px;letter-spacing:-.3px;color:#ffe8a0;
+ font-variant-numeric:tabular-nums;white-space:nowrap}
+#modStrip .mod-chip.compact.neuro{border-color:#c6a0fb}
+#hud .mod-hud-caption{display:none}
+@media(max-width:790px){#modStrip.mod-strip{max-width:240px;max-height:63px;gap:2px}
+ #modStrip .mod-chip.compact{min-width:37px;min-height:25px;padding:2px 3px;gap:2px}
+ #modStrip .mod-chip.compact .icon{font-size:14px}
+ #modStrip .mod-chip.compact b{font-size:12px}}
+@media(max-width:590px){#modStrip.mod-strip{max-width:178px;max-height:58px}}
+</style>
 </head>
 <body>
 <div id="app">
@@ -110,7 +130,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
         <div class="hud-name"><span class="player-mark">Z</span><span>REVENANT <small>Lv. <b id="level">01</b></small></span></div>
         <div class="bar hp"><div class="bar-fill" id="hpFill"></div><span id="hpText">100 / 100</span></div>
         <div class="bar stamina"><div class="bar-fill" id="staminaFill"></div><span>STAMINA</span></div>
-        <div class="player-stats"><span>STYLE <b id="weaponCount">BARE FISTS</b></span><span>MOD <b id="modName">NONE</b></span></div>
+        <div class="player-stats"><span>STYLE <b id="weaponCount">BARE FISTS</b></span><span class="mod-hud-caption" id="modName" aria-hidden="true">EFFECTS</span></div>
         <div class="mod-strip" id="modStrip" aria-label="선택한 전투 속성"><span class="empty-mod">속성 미장착</span></div>
       </div>
       <div class="hud-center"><div class="chapter" id="chapter">01 / 침수된 거리</div><div class="wave-label" id="waveLabel">WAVE 01 — 침입자</div><div class="kill-count" id="enemyCount">REMAINING 03</div></div>
@@ -677,6 +697,9 @@ const STAGE_WIDTH=12800;let cameraX=0;const MOD_META={
 };
 const modRank=id=>p.mods.reduce((n,m)=>n+(m===id?1:0),0);
 const MOD_LEVEL_CAP=6;
+const MOD_UI_ORDER=['fire','shock','bleed','ice','power','crit','rush','impact','momentum','chain','nova','vital','regen','leech','guard','haste'];
+function activeModStacks(){const counts=new Map();for(const id of p.mods)counts.set(id,(counts.get(id)||0)+1);return MOD_UI_ORDER.filter(id=>counts.has(id)).map(id=>({id,n:counts.get(id),meta:MOD_META[id]}))}
+
 let upgradeReason='wave',nextUpgradeMilestone=0;
 const UPGRADE_MILESTONES=[5,11,17,23,31,39];
 let attributeFx=[];
@@ -1672,9 +1695,9 @@ function updateHudThrottled(dt){
  hudAccumulator%=.085;updateHud();
 }
 function updateHud(){
- const badges=[...new Set(p.mods)].map(mod=>{const m=MOD_META[mod];return m?'<span class="mod-chip '+mod+'" title="'+m.title+'"><span class="icon">'+m.icon+'</span>'+m.short+' <b>×'+modRank(mod)+'</b></span>':''}).join('')+
-  (p.mod==='neuro'?'<span class="mod-chip neuro">⚡ NEURO</span>':'');
- const markup=badges||'<span class="empty-mod">속성 미장착</span>';
+ const badges=activeModStacks().map(({id,n,meta})=>'<span class="mod-chip compact '+id+'" title="'+meta.title+' : '+(meta.desc||meta.short)+'" aria-label="'+meta.short+' '+n+'중첩"><span class="icon">'+meta.icon+'</span><b>x'+n+'</b></span>').join('')+
+  (p.mod==='neuro'?'<span class="mod-chip compact neuro" title="NEURO · 전격과 출혈의 복합 효과" aria-label="NEURO 발동"><span class="icon">🟣</span><b>x1</b></span>':'');
+ const markup=badges||'<span class="empty-mod">효과 없음</span>';
  if(modStripCache!==markup){$('modStrip').innerHTML=markup;modStripCache=markup}
  $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'BARE FISTS';$('modName').textContent=p.mod==='neuro'?'NEURO':p.mod==='none'?'NONE':p.mods.map(n=>({fire:'FIRE',shock:'VOLT',bleed:'BLEED',ice:'ICE'})[n]).join('+');$('credits').textContent=String(p.credits).padStart(4,'0');$('shardCount').textContent=String(perma.shards);if(p.hits!==lastHudCombo){$('combo').innerHTML=`${p.hits} <small>HITS</small>`;lastHudCombo=p.hits}$('enemyCount').textContent=`REMAINING ${String(enemies.filter(e=>!e.dead).length).padStart(2,'0')}`;$('level').textContent=String(level).padStart(2,'0');const eliteOrBoss=enemies.find(e=>!e.dead&&e.type==='boss'&&Math.abs(e.x-p.x)<1050)||enemies.find(e=>!e.dead&&e.type==='elite'&&Math.abs(e.x-p.x)<850);$('bossHud').hidden=gameState!=='playing'||!eliteOrBoss;if(eliteOrBoss){$('bossName').textContent=eliteOrBoss.type==='elite'?'IRON MASK / 철가면 추적자':'HUNTER / 붉은 집행자';$('bossFill').style.width=`${clamp(100*eliteOrBoss.hp/eliteOrBoss.maxHp,0,100)}%`;$('bossPhase').textContent=String(eliteOrBoss.phase).padStart(2,'0')} }
 function update(dt){
