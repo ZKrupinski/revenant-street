@@ -35,9 +35,15 @@
   button.style.cssText = 'font:900 10px Arial,sans-serif;letter-spacing:.3px;padding:5px 7px;min-height:27px;color:#f8d6dc;background:#36151bc9;border:1px solid #a54e5f;border-radius:4px;white-space:nowrap;';
   if (status) status.append(button);
   function globalSoundOn() { return !soundButton || !/\bOFF\b/.test(soundButton.textContent); }
-  function gameIsPlaying() {
-    try { return window.__revenant?.getState?.().gameState === 'playing'; }
-    catch (_) { return false; }
+  // Keep the same audio stream playing during mid-run and between-wave upgrades.
+  // Reduce only the music level; combat sound effects are handled separately.
+  function gameMusicVolume() {
+    try {
+      const state = window.__revenant?.getState?.().gameState;
+      if (state === 'playing') return .29;
+      if (state === 'reward') return .21;
+    } catch (_) {}
+    return 0;
   }
   function beginPlayback() {
     if (!bgmEnabled || !globalSoundOn() || document.hidden) return Promise.resolve();
@@ -64,15 +70,15 @@
     if (document.hidden) { bgm.pause(); started = false; }
     else if (unlocked) void beginPlayback();
   });
-  // Non-blocking music fade. Keep the track playing quietly across reward/menu
-  // transitions to avoid browser autoplay restrictions on gamepad navigation.
+  // Fade the music down gently while choosing upgrades, then restore combat
+  // volume without pausing, restarting, or seeking in the underlying audio.
   let lastTime = performance.now();
   setInterval(() => {
     const now = performance.now();
     const delta = Math.min((now - lastTime) / 1000, .4);
     lastTime = now;
-    const target = bgmEnabled && globalSoundOn() && !document.hidden && gameIsPlaying() ? .29 : 0;
-    const step = delta * .9;
+    const target = bgmEnabled && globalSoundOn() && !document.hidden ? gameMusicVolume() : 0;
+    const step = delta * .3;
     const v = Math.max(0, Math.min(1, bgm.volume + Math.max(-step, Math.min(step, target - bgm.volume))));
     if (Math.abs(bgm.volume-v)>.0001) bgm.volume = v;
     if (target>0 && unlocked && (!started || bgm.paused)) void beginPlayback();
