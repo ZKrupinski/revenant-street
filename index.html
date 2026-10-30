@@ -680,8 +680,8 @@ function currentZFrameIndex(key){
  if(key==='landing')return oneshot(1-p.landingTimer/.24);
  if(p.airKickPhase&&p.attack>0&&key==='axe_kick'){
   const age=p.attackDuration-p.attack;
-  if(p.airKickPhase==='charge')return age<.06?1:age<.12?2:3;
-  if(p.airKickPhase==='dive')return p.hitDone?6:5;
+  if(p.airKickPhase==='charge')return age<.07?0:age<.13?1:age<.20?2:3;
+  if(p.airKickPhase==='dive')return p.hitDone?6:p.z<110?5:4;
   return p.attack>.08?6:7;
  }
  if(Z_ALL_ATTACKS.includes(key)||key==='airkick')return oneshot(1-p.attack/Math.max(.001,p.attackDuration||.4));
@@ -1176,7 +1176,7 @@ function startAttack(){
  if(p.z>16){
   if(p.airKickUsed||p.stamina<15)return;
   p.airAttack=true;p.airKickUsed=true;p.counterBoost=false;p.stamina-=15;
-  p.attackDuration=.64;p.attack=.64;p.moveName='axe_kick';
+  p.attackDuration=.76;p.attack=.76;p.moveName='axe_kick';
   p.airKickPhase='charge';p.airKickLaunched=false;p.attackDriveRemaining=0;
   p.hitDone=false;p.attackQueued=false;p.comboWindow=0;
   p.vz=0;p.inv=Math.max(p.inv,.14);
@@ -1244,7 +1244,7 @@ function dodge(){
  p.evadeBackstep=backInput;p.dodge=.30;p.inv=.34;p.dodgeX=backInput?-p.facing:p.facing;p.stamina-=19;
  fxBurst(p.x-p.facing*22,p.y-24,'blue',.42);sound('attack');
 }
-function jump(){if(gameState!=='playing'||p.attack>0||p.parry>0||p.dodge>0||p.z>1||p.stun>0||p.downTimer>0||p.getupTimer>0)return;p.vz=530;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;p.airKickUsed=false;sound('attack')}
+function jump(){if(gameState!=='playing'||p.attack>0||p.parry>0||p.dodge>0||p.z>1||p.stun>0||p.downTimer>0||p.getupTimer>0)return;p.vz=760;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;p.airKickUsed=false;sound('attack')}
 function execute(target){
  if(gameState!=='playing'||p.stun>0||!target||target.dead||target.groggy<=0)return false;
  p.facing=target.x>=p.x?1:-1;p.inv=.9;p.z=0;p.vz=0;
@@ -1359,8 +1359,8 @@ function attackCheck(){
  if(p.airKickPhase==='dive'){
   // Drive victims down rather than launch them away from the heel.
   if(e.type!=='boss'){e.vz=-240;e.z=Math.max(0,e.z);e.pendingFall=true}
-  hitStop=Math.max(hitStop,.085);screenShake=Math.max(screenShake,13);
-  fxBurst(e.x,e.y-40,'gold',1.45);
+  hitStop=Math.max(hitStop,.11);screenShake=Math.max(screenShake,19);
+  fxBurst(e.x,e.y-40,'gold',1.75);
  }
  const priorHealHp=p.hp;
  p.hp=clamp(p.hp+dmg*modRank('leech')*.04,0,p.maxHp);
@@ -1552,13 +1552,13 @@ function control(dt,pad){
  // Hold the raised heel briefly, then commit to a fast downward strike.
  if(p.airAttack&&p.attack>0&&p.stun<=0){
   const age=p.attackDuration-p.attack;
-  if(age>=.18&&!p.airKickLaunched){
-   p.airKickLaunched=true;p.airKickPhase='dive';p.vz=-760;sound('attack');
+  if(age>=.22&&!p.airKickLaunched){
+   p.airKickLaunched=true;p.airKickPhase='dive';p.vz=-1150;sound('attack');
   }
  }else if(p.stun>0){p.airKickPhase='';p.airAttack=false}
  if(p.z>0||p.vz>0){
   const charging=p.airAttack&&p.airKickPhase==='charge';
-  if(!charging){p.z+=p.vz*dt;p.vz-=1320*dt}
+  if(!charging){p.z+=p.vz*dt;p.vz-=(p.airKickPhase==='dive'?1950:1440)*dt}
   if(p.airAttack&&p.airKickPhase==='dive'&&!p.hitDone&&p.z<=90){
    p.hitDone=true;attackCheck();
   }
@@ -1568,8 +1568,9 @@ function control(dt,pad){
    if(p.airAttack&&p.airKickPhase==='dive'){
     if(!p.hitDone){p.hitDone=true;attackCheck()}
     p.airKickPhase='recover';p.attack=.19;p.landingTimer=.30;
-    screenShake=Math.max(screenShake,9);fxBurst(p.x+p.facing*35,p.y-8,'gold',.85);
-    playImpactSound('heavy',.65);
+    screenShake=Math.max(screenShake,16);hitStop=Math.max(hitStop,.078);
+    fxBurst(p.x+p.facing*35,p.y-8,'gold',1.15);
+    playImpactSound('heavy',.90);
    }else if(landed)p.landingTimer=.24;
    p.airKickUsed=false;p.airAttack=false;
   }
