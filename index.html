@@ -871,6 +871,27 @@ let cameraZoom=1,comboCameraLock=0,comboCameraFocusX=0;
 let comboCameraPulse=0,comboCameraLastSnap=-99;
 // Special input closeup overrides combo zoom while active.
 let strikeCameraTime=0,strikeCameraTarget=1;
+// Leave the established 465px lead framing intact most of the time.
+// Every few seconds, ease the hero to true screen center so the entire
+// layered street makes a noticeable lateral sweep, then return to normal.
+const CAMERA_RECENTER_INTERVAL=4.6,CAMERA_RECENTER_DURATION=1.75;
+let cameraRecenterClock=0,cameraRecenterHold=0,cameraRecenterBlend=0;
+function updatePeriodicCamera(dt){
+ const cinematic=strikeCameraTime>0||comboCameraLock>0||p.riposteChasing||!!p.riposteStrikeTarget;
+ if(cinematic){
+  // Manual cinematic zoom and parry pursuit always take priority.
+  cameraRecenterHold=0;
+  cameraRecenterClock=Math.min(cameraRecenterClock,CAMERA_RECENTER_INTERVAL-.8);
+ }else{
+  cameraRecenterClock+=dt;
+  if(cameraRecenterClock>=CAMERA_RECENTER_INTERVAL){
+   cameraRecenterClock%=CAMERA_RECENTER_INTERVAL;
+   cameraRecenterHold=CAMERA_RECENTER_DURATION;
+  }else cameraRecenterHold=Math.max(0,cameraRecenterHold-dt);
+ }
+ const goal=!cinematic&&cameraRecenterHold>0?1:0;
+ cameraRecenterBlend+=(goal-cameraRecenterBlend)*Math.min(1,dt*(goal?5.7:4.2));
+}
 function triggerStrikeCamera(kind){
  strikeCameraTime=kind==='air'?.52:.43;
  strikeCameraTarget=kind==='air'?1.34:1.32;
@@ -895,13 +916,16 @@ function updateComboCamera(dt){
  strikeCameraTime=Math.max(0,strikeCameraTime-dt);
  comboCameraLock=Math.max(0,comboCameraLock-dt);
  comboCameraPulse=Math.max(0,comboCameraPulse-dt*.12);
+ updatePeriodicCamera(dt);
 }
 function followComboCamera(dt){
  const striking=strikeCameraTime>0;
- const x=striking?p.x-W*.52:comboCameraLock>0?
+ const normalX=comboCameraLock>0?
   clamp(comboCameraFocusX-540,p.x-555,p.x-372):p.x-465;
+ const x=striking?p.x-W*.52:
+  normalX+((p.x-W*.5)-normalX)*cameraRecenterBlend;
  const target=clamp(x,0,STAGE_WIDTH-W);
- cameraX+=(target-cameraX)*Math.min(1,dt*(striking?30:comboCameraLock>0?22:6.5));
+ cameraX+=(target-cameraX)*Math.min(1,dt*(striking?30:comboCameraLock>0?22:cameraRecenterBlend>.02?10:6.5));
 }
 const MOD_META={
  fire:{icon:'🔥',short:'화염',title:'IGNITION',color:'#ffa852',source:'burst_gold',filter:'hue-rotate(-24deg) saturate(1.7)'},
@@ -1310,11 +1334,12 @@ function showMenu(html){
  canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;selectMenuItem(0)}
 function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;$('bottomTip').style.display='flex';showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1><p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p><div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div><div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button><button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div><p class="micro">가로 10화면 · 마스크 잡몹 A + 쌍단검 암살자 B + 철가면 엘리트 / 키보드·게임패드·드래그 조이스틱</p>`)}
-function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>지상 연속타격 · 점프 후 새로 누르면 수직 내려차기와 착지 광역타</div><div><kbd>↑ / K / Y / △</kbd>점프 · 이동 도약 / 자동 착지 공격 없음</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
+function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>지상 연속타격 · 점프 후 새로 누르면 수직 내려차기와 착지 광역타</div><div><kbd>↑ / K / Y / △</kbd>점프 · 이동 도약 / 자동 착지 공격 없음</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링 성공으로 적을 멀리 날려 보낸 직후 <b class="key">공격 버튼을 한 번</b> 누르면 자동 대쉬 추격과 빈사 강타가 이어집니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
 function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
  footstepRumbleDistance=0;lastFootstepRumbleTime=-99;hapticPriorityUntil=-99;
  comboCameraFocusX=0;comboCameraPulse=0;comboCameraLastSnap=-99;
  strikeCameraTime=0;strikeCameraTarget=1;
+ cameraRecenterClock=0;cameraRecenterHold=0;cameraRecenterBlend=0;
  resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
  p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
  p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}

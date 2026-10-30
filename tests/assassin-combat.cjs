@@ -1271,6 +1271,21 @@ test('dash cross covers more distance than old 140px kick, without frame telepor
  assert(farthest-origin>220,'attack should add a whole extra long punch lunge');
  assert(maxFrame<45,'forward motion must be frame-smoothed, not instant teleport');
 });
+test('periodic camera recenter keeps normal framing, briefly centers hero, then returns',()=>{
+ g.startRun();t.setEnemies([]);t.p.x=3000;t.p.y=570;t.setCameraX(3000-465);
+ const normal=t.getCameraX();
+ // 4.6-second interval, with gentle camera easing rather than teleport.
+ for(let i=0;i<320;i++){t.updateComboCamera(1/60);t.followComboCamera(1/60)}
+ const centered=t.getCameraX();
+ assert(centered<normal-115,'center pass must sweep the street visibly sideways');
+ assert(Math.abs(centered-(t.p.x-640))<45,'hero should reach screen center during a pass');
+ for(let i=0;i<165;i++){t.updateComboCamera(1/60);t.followComboCamera(1/60)}
+ assert(Math.abs(t.getCameraX()-normal)<30,'camera returns to original 465px hero framing');
+ assert(t.getCameraZoom()<1.02,'periodic centering never adds an unwanted zoom');
+ g.startRun();t.setEnemies([]);t.p.x=3000;t.setCameraX(3000-465);
+ for(let i=0;i<70;i++){t.updateComboCamera(1/60);t.followComboCamera(1/60)}
+ assert(Math.abs(t.getCameraX()-(3000-465))<3,'fresh run resets the recenter timer');
+});
 test('camera snaps into hero focus on dash-punch PRESS and eases back',()=>{
  g.startRun();t.setEnemies([]);t.p.x=2200;t.p.y=570;t.p.facing=1;t.p.moveDX=0;
  t.dodge();t.startAttack();
