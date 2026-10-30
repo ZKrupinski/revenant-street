@@ -159,6 +159,8 @@ const assetNames=['street','assassin','guard','boss','pipe_metal','pipe_charged'
 const img={};
 assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
 const offscreenArrow=new Image();offscreenArrow.src='./assets/ui/target-arrow.png';
+// 4x2 real transparent PNG sprite sheet: spark-filled metal shield impact.
+const parryShieldImage=new Image();parryShieldImage.src='./assets/fx/parry-shield.png';
 const keys=new Set(), padPrev={}, touchKey={};
 const p={x:270,y:570,z:0,vz:0,facing:1,hp:100,maxHp:100,stamina:100,stagger:0,inv:0,stun:0,attack:0,attackDuration:0,hitDone:false,comboIdx:0,comboWindow:0,parry:0,dodge:0,dodgeX:0,weapon:0,maxWeapon:18,moveDX:0,moveDY:0,moveName:'idle',kickIdx:-1,punchIdx:-1,animAge:0,mod:'none',mods:[],credits:0,hits:0,hitTimeout:0,damageBoost:0,glow:0};
 
@@ -626,6 +628,9 @@ function paintZ(x,y,z){
  const fr=atlas&&atlas.ready?atlas.frames[currentZFrameIndex(key)]:(zLastGoodFrame||zArtState.idle?.frames[0]||null);
  if(fr)zLastGoodFrame=fr;
  ctx.save();ctx.translate(x,Math.round(y-z+8));ctx.scale(p.facing<0?-1:1,1);
+ // Visually compress and tilt only after an actual successful parry.
+ const recoil=p.parryRecoilTime>0?clamp(p.parryRecoilTime/Math.max(.001,p.parryRecoilDuration),0,1):0;
+ if(recoil){ctx.rotate(-.10*recoil);ctx.scale(1+.04*recoil,1-.14*recoil)}
  if(fr){
   const b=fr.bounds,sc=fr.unitScale;
   ctx.globalAlpha=p.inv>0&&Math.sin(time*33)>0?.67:1;
@@ -639,7 +644,6 @@ function paintZ(x,y,z){
  if(p.weapon>0&&!(p.attack>0&&(Z_KICK_MOVES.has(p.moveName)||Z_HEAD_MOVES.has(p.moveName)||p.airAttack))){const weapon=img.pipe_charged;
   if(weapon&&weapon.complete&&weapon.naturalWidth){ctx.save();ctx.rotate(p.attack>0?-.5:-.8);ctx.drawImage(weapon,15,-135,148,32);ctx.restore()}
  }
- if(p.parry>0){const effect=img.burst_blue;if(effect&&effect.complete&&effect.naturalWidth){ctx.globalAlpha=clamp(p.parry*3.5,0,.8);ctx.drawImage(effect,-40,-218,128,128)}}
  ctx.restore();return true;
 }
 function syncZSprite(){if(zArtNode)zArtNode.style.display='none'}
@@ -854,7 +858,7 @@ function showMenu(html){
 function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;$('bottomTip').style.display='flex';showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1><p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p><div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div><div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button><button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div><p class="micro">가로 10화면 · 마스크 잡몹 A + 쌍단검 암살자 B + 철가면 엘리트 / 키보드·게임패드·드래그 조이스틱</p>`)}
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>공격 · 연속타격 · 공중 차기</div><div><kbd>↑ / K / Y / △</kbd>점프 (지상 횡베기 회피)</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
-function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0}
+function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
@@ -1063,7 +1067,8 @@ function parry(){
   .sort((a,b)=>a.windup-b.windup||Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0];
  if(incoming)p.facing=incoming.x>=p.x?1:-1;
  p.inv=Math.max(p.inv,.08);p.stamina-=7;
- fxBurst(p.x+46*p.facing,p.y-130,'blue',.65);sound('parry');
+ // Ordinary parry preparation has no impact flash.
+ sound('parry');
 }
 function dodge(){
  if(gameState!=='playing'||p.dodge>0||p.stun>0||p.downTimer>0||p.getupTimer>0||p.stamina<19)return;
@@ -1224,17 +1229,22 @@ function enemyAttack(e){
  if(parryWindow){
   const rearHit=(e.x-p.x)*p.facing<0;
   p.facing=e.x>=p.x?1:-1;
-  if(rearHit)fxBurst(p.x+p.facing*42,p.y-118,'blue',.9);
   e.stun=e.type==='boss'?.88:eliteCleave?2.25:1.65;
   e.windup=0;e.cooldown=1.2;e.poise=clamp(e.poise+(e.type==='boss'?48:eliteCleave?e.maxPoise:95),0,e.maxPoise);
-  e.knockVX=p.facing*(e.type==='boss'?255:590);e.knockVY=rnd(-65,65);
-  e.vz=e.type==='boss'?85:235;
+  // Apply a strong impulse to existing damped knockback, not a position teleport.
+  e.knockVX=p.facing*(e.type==='boss'?430:e.type==='elite'?1020:1120);
+  e.knockVY=rnd(-38,38);e.vz=e.type==='boss'?95:235;
+  e.eliteRush=0;
   p.parry=Math.max(p.parry,.30);p.parryDuration=Math.max(p.parryDuration,.34);
   p.riposteWindow=1.25;p.riposteTarget=e;p.inv=Math.max(p.inv,.35);
-  fxBurst((p.x+e.x)/2,p.y-125,'blue',2.2);
+  p.parryRecoilDuration=.24;p.parryRecoilTime=.24;
+  p.parryRecoilRemaining=e.type==='boss'?25:19;
+  // Show the bitmap shield collision ONLY when enemyAttack is really parried.
+  spawnParryShieldFx(p.x+p.facing*58,p.y-136,p.facing,e.type==='boss'?1.18:1);
+  fxBurst(p.x+p.facing*66,p.y-134,'gold',1.15);
   floatText('JUST PARRY!',p.x,p.y-220,'#7df7ff');
   flash('패링 성공! 지금 공격!',1.2);
-  screenShake=18;hitStop=.11;slowMotion=.86;playImpactSound('parry',1.25);vibrateImpact('parry');
+  screenShake=Math.max(screenShake,22);hitStop=Math.max(hitStop,.12);slowMotion=Math.max(slowMotion,.86);playImpactSound('parry',1.35);vibrateImpact('parry');
   p.stamina=clamp(p.stamina+25,0,100);sound('parry');
   if(e.poise>=e.maxPoise){e.groggy=3.4;e.stun=3.4;floatText('GROGGY',e.x,e.y-185,'#8fe6ff')}
   return;
@@ -1250,6 +1260,7 @@ function enemyAttack(e){
  }
  p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(dmg),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)deadMenu()}
 function fxBurst(x,y,color='red',scale=1){fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8)})}
+function spawnParryShieldFx(x,y,face=1,scale=1){fx.push({kind:'parryShield',x,y,face,scale,life:.36,maxLife:.36})}
 function floatText(text,x,y,color){floating.push({text,x,y,color,life:1.05})}
 function messageUpdate(dt){if(messageTime>0){messageTime-=dt;if(messageTime<=0)$('gameMessage').classList.remove('active')}}
 function pollPad(){
@@ -1302,6 +1313,8 @@ function control(dt,pad){
  const gamepadMag=Math.hypot(pad.dx,pad.dy);
  p.running=(stickMag>.84||gamepadMag>.92)&&p.z<=2&&p.attack<=0&&p.dodge<=0&&p.parry<=0;
  const movementStartX=p.x,movementStartY=p.y;
+ // Post-impact brace briefly suppresses movement input while taking a low step back.
+ if(p.parryRecoilTime>0){dx=0;dy=0}
  if(p.stun<=0&&p.downTimer<=0&&p.getupTimer<=0){
   let speed=p.running?395:218;
   if(p.dodge>0){dx=p.dodgeX;dy=0;speed=880}
@@ -1337,6 +1350,12 @@ function control(dt,pad){
   }
   if(!p.airAttack&&p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx>.1)p.facing=1;
   else if(!p.airAttack&&p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx<-.1)p.facing=-1;
+ }
+ if(p.parryRecoilTime>0){
+  const step=Math.min(p.parryRecoilRemaining,110*dt);
+  const moved=clamp(p.x-p.facing*step,64,STAGE_WIDTH-64);
+  p.parryRecoilRemaining=Math.max(0,p.parryRecoilRemaining-Math.abs(moved-p.x));
+  p.x=moved;p.parryRecoilTime=Math.max(0,p.parryRecoilTime-dt);
  }
  const distanceTraveled=Math.hypot(p.x-movementStartX,(p.y-movementStartY)*1.9);
  if(distanceTraveled>.001&&p.attack<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){
@@ -1807,12 +1826,27 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  if(impacted)ctx.scale(1+(scalesX[variant]-1)*snap,1+(scalesY[variant]-1)*snap);
  const bob=Math.sin(time*5+a.x)*1.5;
  ctx.drawImage(picture,-w/2,-h+bob,w,h);
- if(isP){const swing=p.attack>0?(1-p.attack/p.attackDuration):0;const offsetX=29,offsetY=-120;ctx.save();ctx.translate(offsetX,offsetY);ctx.rotate(p.attack>0?(-.85+2.2*swing):-.88);const weapon=img['pipe_charged'];if(p.weapon>0&&weapon.complete)ctx.drawImage(weapon,-12,-18,150,38);ctx.restore();if(p.parry>0){ctx.globalAlpha=clamp(p.parry*4,0,1);const ef=img.burst_blue;ctx.drawImage(ef,5,-230,125,125)}}
+ if(isP){const swing=p.attack>0?(1-p.attack/p.attackDuration):0;const offsetX=29,offsetY=-120;ctx.save();ctx.translate(offsetX,offsetY);ctx.rotate(p.attack>0?(-.85+2.2*swing):-.88);const weapon=img['pipe_charged'];if(p.weapon>0&&weapon.complete)ctx.drawImage(weapon,-12,-18,150,38);ctx.restore();}
  if(a.hitFlash>0){ctx.globalAlpha=clamp(a.hitFlash*3,0,.4);ctx.fillStyle='#ffb2bc';ctx.fillRect(-w*.35,-h*.95,w*.7,h*.81)}
  ctx.restore();
  if(!isP&&!a.dead){const y0=y-z-h-13;const bw=boss?220:96;ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,y0,bw,7);ctx.fillStyle=boss?'#fe3c54':'#d9aeb2';ctx.fillRect(x-bw/2,y0,bw*clamp(a.hp/a.maxHp,0,1),7);if(a.poise>0){ctx.fillStyle='#7ee5fa';ctx.fillRect(x-bw/2,y0+9,bw*(a.poise/a.maxPoise),4)}if(a.windup>0){ctx.textAlign='center';ctx.fillStyle='#ff697b';ctx.font=`900 ${boss?40:27}px Arial`;ctx.fillText('!',x,y0-13)}
  if(a.chargePrep>0){ctx.textAlign='center';ctx.fillStyle='#ffb842';ctx.font='900 31px Arial';ctx.fillText('!!',x,y0-18)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('공격 → 처형',x,y0-12)}}}
-function drawEffects(){drawModEnergy();for(const f of fx){let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}for(const f of floating){ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;ctx.lineWidth=4;ctx.strokeStyle='#10131c';ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);ctx.restore()}}
+function drawEffects(){drawModEnergy();for(const f of fx){
+ if(f.kind==='parryShield'){
+  const a=parryShieldImage,progress=clamp(1-f.life/f.maxLife,0,.9999),frame=Math.min(7,Math.floor(progress*8));
+  const size=285*f.scale;
+  ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.face,1);
+  ctx.globalAlpha=Math.min(1,f.life/.08);
+  if(a.complete&&a.naturalWidth>=4&&a.naturalHeight>=2){
+   const fw=a.naturalWidth/4,fh=a.naturalHeight/2;
+   ctx.drawImage(a,(frame%4)*fw,Math.floor(frame/4)*fh,fw,fh,-size*.5,-size*.5,size,size);
+  }else{
+   const fallback=img.burst_blue;
+   if(fallback?.complete&&fallback.naturalWidth)ctx.drawImage(fallback,-size*.43,-size*.43,size*.86,size*.86);
+  }
+  ctx.restore();continue;
+ }
+ let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}for(const f of floating){ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;ctx.lineWidth=4;ctx.strokeStyle='#10131c';ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);ctx.restore()}}
 function draw(){
  if(gameState==='loading'||gameState==='menu'||gameState==='hub')return;
  ctx.clearRect(0,0,W,H);ctx.save();

@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('existing wave composition preserves assassin slots',()=>{g.startRun();assert.equal(t.getEnemies().filter(e=>e.type==='assassin').length,6)});
@@ -698,5 +698,24 @@ test('held pad attack cannot auto-pick until released; X confirms and A does not
   assert.equal(fake[0].clicked,0,'A/cross must not confirm');
   pad.buttons[2].pressed=true;t.pollPad();t.pollPad();assert.equal(fake[0].clicked,1);
  }finally{m.querySelectorAll=old;world.navigator.getGamepads=()=>[];t.pollPad()}
+});
+
+test('successful parry launches a strong physical knockback and short player recoil',()=>{
+ g.startRun();t.setEnemies([]);
+ const e=t.makeEnemy('assassin',t.p.x+68,t.p.y,0);t.setEnemies([e]);
+ t.parry();
+ assert.equal(t.getFx().filter(f=>f.kind==='parryShield').length,0,'no bitmap shield for parry startup');
+ t.enemyAttack(e);
+ assert(e.knockVX>=1000,'stronger velocity launch, not teleport');
+ assert.equal(t.getFx().filter(f=>f.kind==='parryShield').length,1,'only on successful attack contact');
+ assert(t.p.parryRecoilTime>0&&t.p.parryRecoilRemaining>0);
+ const x=t.p.x;t.control(1/60,{dx:0,dy:0});
+ assert(t.p.x<x&&t.p.x>x-6,'gradual short backward player slide');
+});
+test('parry shield is a real eight-frame transparent PNG',()=>{
+ const png=fs.readFileSync(path.join(__dirname,'../assets/fx/parry-shield.png'));
+ assert.equal(png.subarray(1,4).toString(),'PNG');
+ assert.equal(png.readUInt32BE(16),512);assert.equal(png.readUInt32BE(20),256);
+ assert(html.includes("parryShieldImage.src='./assets/fx/parry-shield.png'"));
 });
 console.log(`${checks} combat regression checks passed`);
