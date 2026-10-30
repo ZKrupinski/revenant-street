@@ -364,6 +364,20 @@ test('Gamepad API exposes unsupported dual-rumble: do not report a false success
   assert(node('rumbleStatus').textContent.includes('지원하지 않음'));
  }finally{world.navigator.getGamepads=old;if(phone)world.navigator.vibrate=phone}
 });
+test('G8+ dual-rumble unavailable but legacy pulse present falls back to pulse',()=>{
+ const old=world.navigator.getGamepads,calls=[];
+ world.navigator.getGamepads=()=>[{id:'GameSir G8+',connected:true,buttons:[],axes:[0,0],vibrationActuator:{
+  effects:[],playEffect(){throw Error('unsupported dual-rumble')},
+  pulse:(strength,duration)=>{calls.push({strength,duration});return Promise.resolve(true)}
+ }}];
+ try{
+  assert.equal(t.gamepadHapticDiagnostics().dual,false);
+  assert.equal(t.gamepadHapticDiagnostics().pulse,true);
+  assert.equal(t.gamepadRumble('heavy'),true,'legacy rumble should still work');
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].duration,220);
+ }finally{world.navigator.getGamepads=old}
+});
 test('rumble UI only claims that browser processed a command, never claims physical feedback',()=>{
  const file=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
  assert(file.includes("result===true||output==='complete'"));
