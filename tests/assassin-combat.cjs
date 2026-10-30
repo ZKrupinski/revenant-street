@@ -500,6 +500,72 @@ test('rear-side enemy attacks are caught by parry and hero immediately turns',()
  assert(e.knockVX<0,'rear attacker must be knocked away to the left');
  assert.equal(t.p.riposteTarget,e,'counter must target the enemy that attacked from behind');
 });
+test('a successful parry immediately blasts the attacking enemy almost one screen away',()=>{
+ for(const sign of [-1,1]){
+  g.startRun();t.setEnemies([]);t.p.x=2600;t.p.y=570;t.p.facing=sign;t.p.stamina=100;
+  const enemy=t.makeEnemy('raider',t.p.x+sign*80,t.p.y,0);
+  t.setEnemies([enemy]);const initial=enemy.x;
+  t.parry();t.enemyAttack(enemy);
+  assert(enemy.knockVX*sign>2000,'parried raider must launch very fast');
+  assert.equal(t.p.riposteTarget,enemy);
+  assert(t.p.riposteWindow>=1.8,'give a responsive follow-up opportunity');
+  for(let n=0;n<75;n++)t.updateEnemies(1/60);
+  const travel=(enemy.x-initial)*sign;
+  assert(travel>900&&travel<1400,'parried enemy should travel almost full screen, not teleport');
+  assert.equal(enemy.dead,false,'parry alone is a launch, not instant lethal damage');
+  assert.equal(enemy.hp,enemy.maxHp);
+ }
+});
+test('one follow-up attack tracks the actual parried target and lands near-fatal punch once',()=>{
+ for(const sign of [-1,1]){
+  g.startRun();t.setEnemies([]);
+  t.p.x=2650;t.p.y=565;t.p.facing=sign;t.p.stamina=100;
+  const enemy=t.makeEnemy('raider',t.p.x+sign*88,t.p.y,0);
+  const other=t.makeEnemy('guard',t.p.x-sign*390,t.p.y,1);
+  other.stun=30;t.setEnemies([enemy,other]);
+  t.parry();t.enemyAttack(enemy);
+  const initialEnemyX=enemy.x,initialHeroX=t.p.x,originalHP=enemy.hp;
+  t.startAttack();
+  assert.equal(t.p.riposteChasing,true,'attack button arms the target-tracking sprint');
+  assert.equal(t.p.riposteChaseTarget,enemy,'lock onto the actual attacker, not another enemy');
+  assert.equal(t.getZMove(),'dash','dash art shows while sprinting');
+  assert(t.p.riposteChaseWarmup>=.30,'allow enemy to fly before contact');
+  let maxEnemyDisplacement=0,sawStrike=false;
+  for(let n=0;n<150;n++){
+   t.control(1/60,{dx:0,dy:0});
+   t.updateEnemies(1/60);
+   maxEnemyDisplacement=Math.max(maxEnemyDisplacement,Math.abs(enemy.x-initialEnemyX));
+   if(t.p.moveName==='superman_punch')sawStrike=true;
+  }
+  assert(sawStrike,'automatically close in and transition to powerful 8-frame punch');
+  assert(maxEnemyDisplacement>350,'parried enemy must move far before being intercepted');
+  assert((t.p.x-initialHeroX)*sign>200,'hero must physically sprint toward the enemy');
+  assert(enemy.hp<=originalHP*.09,'follow-up should leave the enemy nearly dead');
+  assert(enemy.knockVX*sign>0,'second hit launches target in original direction');
+  assert.equal(other.hp,other.maxHp,'pursuit counter only damages the parried target');
+  assert.equal(t.p.riposteChasing,false);
+  assert.equal(t.p.riposteStrikeTarget,null,'consume the special hit exactly once');
+ }
+});
+test('without attack input, parry launch never auto-chases or causes free punch damage',()=>{
+ g.startRun();t.setEnemies([]);t.p.x=2500;
+ const e=t.makeEnemy('raider',t.p.x+80,t.p.y,0);t.setEnemies([e]);
+ t.parry();t.enemyAttack(e);
+ for(let n=0;n<130;n++){t.control(1/60,{dx:0,dy:0});t.updateEnemies(1/60)}
+ assert.equal(t.p.riposteChasing,false);
+ assert.equal(t.p.riposteStrikeTarget,null);
+ assert.equal(e.hp,e.maxHp,'parry alone must not damage enemy');
+});
+test('dying parried opponent cancels pursuit rather than striking another enemy',()=>{
+ g.startRun();t.setEnemies([]);t.p.x=2500;
+ const e=t.makeEnemy('raider',t.p.x+80,t.p.y,0),other=t.makeEnemy('guard',t.p.x-250,t.p.y,1);
+ other.stun=5;t.setEnemies([e,other]);t.parry();t.enemyAttack(e);t.startAttack();
+ assert.equal(t.p.riposteChasing,true);
+ e.dead=true;t.control(1/60,{dx:0,dy:0});
+ assert.equal(t.p.riposteChasing,false);
+ assert.equal(t.p.riposteStrikeTarget,null);
+ assert.equal(other.hp,other.maxHp);
+});
 test('parry button pre-turns to a winding-up enemy behind',()=>{
  g.startRun();
  const e=t.makeEnemy('assassin',t.p.x-115,t.p.y,0);e.windup=.12;
