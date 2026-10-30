@@ -46,7 +46,7 @@ function draw(e,x,y,z,api){
   else if(e.eliteRush>0){ctx.shadowColor='#75e1f5';ctx.shadowBlur=14}
   // Bright, complete original bitmap silhouette, not any rectangular overlay.
   if(e.hitFlash>0)ctx.filter=e.hitFlash>.12?
-   'brightness(3.75) saturate(0) contrast(1.25)':'brightness(2.4) saturate(.28)';
+   'brightness(0) invert(1)':'brightness(2.4) saturate(.28)';
   ctx.drawImage(colored(fr),-art.anchorX*1.13,-art.anchorY*1.13,fr.canvas.width*1.13,fr.canvas.height*1.13);
  }else{
   ctx.fillStyle='#254154';ctx.fillRect(-24,-210,48,190);
