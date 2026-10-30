@@ -1123,27 +1123,63 @@ function playImpactSound(kind='punch',intensity=1){
   return true;
  }catch(_){return false}
 }
-function vibrateImpact(kind='punch'){
- const hasTouch=typeof navigator.vibrate==='function';
- let pads=[];
- try{pads=Array.from(navigator.getGamepads?.()||[]).filter(Boolean)}catch(_){}
- const hasPad=pads.some(g=>g.vibrationActuator?.playEffect||g.hapticActuators?.[0]?.pulse);
- if(!hasTouch&&!hasPad)return false;
- const now=Date.now();
- if(now-lastImpactHaptic<70)return false;
- lastImpactHaptic=now;
- const strong=kind==='heavy'||kind==='execution'||kind==='parry';
- try{if(hasTouch)navigator.vibrate(strong?[22,15,27]:[13])}catch(_){}
- for(const gamepad of pads){
+// Single active controller, compatible with current Gamepad.vibrationActuator
+// and older hapticActuators. Controllers and mobile browsers may omit both.
+const RUMBLE_PROFILES={
+ punch:[65,.44,.57],heavy:[132,.84,.94],parry:[157,.93,.77],
+ hurt:[166,.72,.94],execution:[235,1,1],
+ dash:[83,.34,.72],air:[110,.53,.84],test:[225,.91,.91]
+};
+function activeRumbleActuator(){
+ try{
+  // Gameplay reads only the first controller; don't buzz unrelated pads.
+  const pad=Array.from(navigator.getGamepads?.()||[]).find(g=>g&&g.connected!==false);
+  const all=[pad?.vibrationActuator,...(pad?.hapticActuators||[])].filter(Boolean);
+  return all.find(a=>typeof a.playEffect==='function'||typeof a.pulse==='function')||null;
+ }catch(_){return null}
+}
+function gamepadRumble(kind='punch'){
+ const actuator=activeRumbleActuator();
+ if(!actuator)return false;
+ const [duration,weak,strong]=RUMBLE_PROFILES[kind]||RUMBLE_PROFILES.punch;
+ try{
+  const result=typeof actuator.playEffect==='function'?
+    actuator.playEffect('dual-rumble',{
+     duration,startDelay:0,weakMagnitude:weak,strongMagnitude:strong
+    }):actuator.pulse(Math.max(weak,strong),duration);
+  if(result&&typeof result.catch==='function')result.catch(()=>{});
+  return true;
+ }catch(_){
   try{
-   const actuator=gamepad.vibrationActuator;
-   if(actuator?.playEffect)actuator.playEffect('dual-rumble',{
-    duration:strong?105:55,startDelay:0,weakMagnitude:strong?.95:.48,strongMagnitude:strong?.89:.52
-   }).catch?.(()=>{});
-   else gamepad.hapticActuators?.[0]?.pulse?.(strong?.9:.48,strong?105:55)?.catch?.(()=>{});
+   if(typeof actuator.pulse==='function'){
+    const result=actuator.pulse(Math.max(weak,strong),duration);
+    if(result&&typeof result.catch==='function')result.catch(()=>{});
+    return true;
+   }
   }catch(_){}
+  return false;
  }
- return true;
+}
+function vibrateImpact(kind='punch',force=false){
+ const now=Date.now();
+ if(!force&&now-lastImpactHaptic<70)return false;
+ const padSent=gamepadRumble(kind);
+ let phoneSent=false;
+ // On mobile, prefer an actual paired gamepad to phone vibration.
+ if(!padSent&&typeof navigator.vibrate==='function'){
+  const strong=['heavy','parry','execution','hurt','test'].includes(kind);
+  try{phoneSent=!!navigator.vibrate(strong?[22,16,30]:[14])}catch(_){}
+ }
+ if(padSent||phoneSent){lastImpactHaptic=now;return true}
+ return false;
+}
+function stopGamepadRumble(){
+ const actuator=activeRumbleActuator();
+ try{if(typeof actuator?.reset==='function'){
+  const result=actuator.reset();
+  if(result&&typeof result.catch==='function')result.catch(()=>{});
+ }}catch(_){}
+ try{navigator.vibrate?.(0)}catch(_){}
 }
 function applyImpactFeedback(target,heavy=false,kind='punch'){
  target.bodyShakeDuration=heavy?.24:.18;
@@ -1153,7 +1189,7 @@ function applyImpactFeedback(target,heavy=false,kind='punch'){
  screenTint=Math.max(screenTint,heavy?.22:.105);
  hitStop=Math.max(hitStop,heavy?.105:.072);
  playImpactSound(kind,heavy?1.15:1);
- vibrateImpact(kind);
+ vibrateImpact(target===p?'hurt':kind);
 }
 function actorShakeOffset(a){
  const age=a.bodyShakeTime||0;
@@ -1382,7 +1418,7 @@ function startAttack(){
   p.attackDriveTotal=280;p.attackDriveRemaining=280;
   p.comboWindow=.95;p.comboIdx=2;p.stamina-=16;p.animAge=0;
   p.recentMoves.push('cross');if(p.recentMoves.length>5)p.recentMoves.shift();
-  p.inv=Math.max(p.inv,.14);triggerStrikeCamera('dash');sound('attack');
+  p.inv=Math.max(p.inv,.14);triggerStrikeCamera('dash');vibrateImpact('dash');sound('attack');
   return;
  }
  p.dashSmash=false;
@@ -1396,7 +1432,7 @@ function startAttack(){
   p.airKickPhase='charge';p.airKickLaunched=false;p.attackDriveRemaining=0;
   p.hitDone=false;p.attackQueued=false;p.comboWindow=0;
   p.vz=0;p.inv=Math.max(p.inv,.14);
-  triggerStrikeCamera('air');sound('attack');return;
+  triggerStrikeCamera('air');vibrateImpact('air');sound('attack');return;
  }
  p.airKickPhase='';
  const finisher=p.riposteWindow>0?null:findExecutionTarget();
@@ -1492,7 +1528,7 @@ function execute(target){
  hurtEnemy(target,target.type==='boss'?260:999,100);
  screenShake=25;screenTint=.6;hitStop=.15;
  fxBurst(target.x,target.y-130,target.type==='boss'?'red':'gold',2.4);
- flash('EXECUTION!',1.1);sound('execution');return true
+ flash('EXECUTION!',1.1);vibrateImpact('execution');sound('execution');return true
 }
 function awardEnemyKill(e){
  if(e.killAwarded)return;
@@ -2588,7 +2624,7 @@ function completeMenu(){gameState='complete';setStatus('RUN COMPLETE');perma.sha
 function deadMenu(){if(gameState==='dead')return;gameState='dead';setStatus('SIGNAL LOST');perma.shards+=1;save();$('hint').hidden=true;showMenu(`<div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1><p>기계 신체가 파괴됐습니다. 영구 자원 <b class="key">+1</b>을 회수했습니다.</p><div class="hub-stat"><span>이번 런의 처치 ${runKills}명</span><strong>SHARDS +1</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB</button><button class="secondary-btn" data-action="start">즉시 재시작</button></div>`)}
 function hubMenu(){gameState='hub';$('bossHud').hidden=true;setStatus('REBEL HUB');const opts=[['core','외골격 증설','최대 체력 +20','20 HP'],['servo','동력 관절 보정','모든 공격 피해 +2','ATK +2'],['reflex','인공 반사신경','패링 유효시간 +0.035초','PARRY +']];const html=opts.map(([id,title,txt,short])=>`<button class="upgrade-btn" data-perma="${id}" ${perma.shards<2?'disabled':''}><span class="sym">${short}</span><strong>${title} <small>Lv.${perma[id]}</small></strong><small>${txt} / 비용 2 파편</small></button>`).join('');showMenu(`<div class="eyebrow">SAFE ZONE / CYBERNETIC UNDERGROUND</div><h2>REBEL HUB</h2><p>전투에서 획득한 <b class='key'>◆ 파편</b>으로 영구 강화합니다. 일반 적 4명 처치마다 1개, 방패병 1개, 엘리트 2개, 보스 4개. <b>₩ 크레딧은 전투 점수</b>이며 구매 재화가 아닙니다.</p><div class="hub-stat"><span>영구 강화 자원</span><strong>${perma.shards} SHARDS</strong></div><div class="choice-grid">${html}</div><div class="buttons"><button class="main-btn" data-action="start">다시 거리로</button><button class="secondary-btn" data-action="title">타이틀로</button></div>`)}
 function buyUpgrade(k){if(perma.shards<2)return;perma.shards-=2;perma[k]++;save();hubMenu();sound('parry')}
-function pauseToggle(){if(gameState==='playing'){gameState='paused';setStatus('PAUSED');showMenu(`<div class="eyebrow">SYSTEM SUSPENDED</div><h2>일시 정지</h2><p>전투가 일시 정지되었습니다.</p><div class="buttons"><button class="main-btn" data-action="resume">▶ 계속 플레이</button><button class="secondary-btn" data-action="guideResume">조작 안내</button><button class="secondary-btn" data-action="title">타이틀로</button></div>`)}else if(gameState==='paused'){gameState='playing';setStatus('COMBAT LIVE');hideMenu()}}
+function pauseToggle(){if(gameState==='playing'){gameState='paused';stopGamepadRumble();setStatus('PAUSED');showMenu(`<div class="eyebrow">SYSTEM SUSPENDED</div><h2>일시 정지</h2><p>전투가 일시 정지되었습니다.</p><div class="buttons"><button class="main-btn" data-action="resume">▶ 계속 플레이</button><button class="secondary-btn" data-action="rumbleTest">🎮 패드 진동 테스트</button><button class="secondary-btn" data-action="guideResume">조작 안내</button><button class="secondary-btn" data-action="title">타이틀로</button></div><p class="micro" id="rumbleStatus">컨트롤러 진동 지원은 브라우저 및 기기마다 다릅니다.</p>`)}else if(gameState==='paused'){gameState='playing';setStatus('COMBAT LIVE');hideMenu()}}
 function keyDown(ev){
  const k=ev.key.toLowerCase();
  const held=heldKeyboard.has(k);heldKeyboard.add(k);
@@ -2634,12 +2670,19 @@ function resetInputs(){
  keys.clear();resetAnalog();p.attackQueued=false;
  document.querySelectorAll('.touch-controls .pressed').forEach(b=>b.classList.remove('pressed'));
 }
-function suspendGame(){heldKeyboard.clear();menuBlockedKeys.clear();resetInputs();if(gameState==='playing')pauseToggle()}
+function suspendGame(){heldKeyboard.clear();menuBlockedKeys.clear();resetInputs();stopGamepadRumble();if(gameState==='playing')pauseToggle()}
 window.addEventListener('blur',suspendGame);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame()});
 
 $('menu').addEventListener('focusin',e=>{const items=menuButtons(),i=items.indexOf(e.target);if(i<0)return;menuPad.index=i;items.forEach((b,n)=>b.classList.toggle('pad-selected',n===i))});
-$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')hubMenu();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)buyUpgrade(b.dataset.perma)});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){
+ const supported=!!activeRumbleActuator();
+ const sent=supported&&vibrateImpact('test',true);
+ const el=$('rumbleStatus');
+ if(el)el.textContent=!supported?'연결한 패드 또는 브라우저가 진동 API를 제공하지 않습니다.':
+  sent?'진동 신호를 보냈습니다. 실제 진동 여부는 패드의 브라우저 지원에 따라 달라집니다.':
+  '진동 신호를 보낼 수 없습니다.';
+}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')hubMenu();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)buyUpgrade(b.dataset.perma)});
 $('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activeModStacks().length+(p.mod==='neuro'?1:0))};
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();if(gameState!=='playing')return;b.setPointerCapture(e.pointerId);keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release)}
