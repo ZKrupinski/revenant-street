@@ -68,6 +68,8 @@ async function combatVoices(){
  const hero={x:300,y:560},foe={x:420,y:560,type:'raider'},boss={x:560,y:560,type:'boss'};
  assert.equal(voices.play('heroStrike',hero,hero),true);
  assert.equal(voices.play('heroStrike',hero,hero),false,'one hero cannot stack grunts');
+ ctx.currentTime=.06;
+ assert.equal(voices.play('heroDeath',hero,hero),true,'lethal vocal must override a recent strike grunt');
  ctx.currentTime=.6;
  assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy pain follows the real damage event');
  assert.equal(voices.play('enemyHurt',foe,hero),false,'injury voice is rate limited');
