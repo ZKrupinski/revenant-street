@@ -753,7 +753,7 @@ test('elite and boss use pure white bitmap flash and jump has longer vertical tr
  assert(boss.includes("'brightness(0) invert(1)'"),'boss flash should whiten actual sprite');
  assert(html.includes("p.vz=760;p.z=2"),'higher jump impulse');
  assert(html.includes("p.vz=-1150"),'fast downward kick');
- assert(html.includes("p.airKickPhase==='dive'?1950:1440"),'dive gravity exceeds jump gravity');
+ assert(html.includes("p.airKickPhase==='dive'?1950:p.jumpHeel&&p.vz<0?1780:1440"),'both ordinary heel-slam descent and powered dive exceed jumping ascent gravity');
 });
 test('stationary jump shows real descending heel-kick sheet and triggers one AoE slam',()=>{
  g.startRun();t.keys.clear();t.p.x=1600;t.p.y=575;
