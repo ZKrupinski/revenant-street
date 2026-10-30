@@ -69,7 +69,7 @@
   if (status) status.append(button);
   function globalSoundOn() { return !soundButton || !/\bOFF\b/.test(soundButton.textContent); }
   // Keep the same audio stream playing during mid-run and between-wave upgrades.
-  // Reduce only the music level; combat sound effects are handled separately.
+  // Upgrade selections retain a softer soundtrack; combat hits never alter its volume.
   function gameMusicVolume() {
     try {
       const state = window.__revenant?.getMusicState?.();
@@ -77,15 +77,6 @@
       if (state === 'reward') return .21;
     } catch (_) {}
     return 0;
-  }
-  let impactDuckUntil=0,impactDuckLevel=1;
-  function duckImpact(heavy=false){
-    if(!bgmEnabled||!globalSoundOn()||document.hidden||window.__revenant?.getMusicState?.()!=='playing')return;
-    const now=performance.now(),level=heavy?.18:.32;
-    impactDuckLevel=now<impactDuckUntil?Math.min(impactDuckLevel,level):level;
-    impactDuckUntil=Math.max(impactDuckUntil,now+(heavy?370:220));
-    // Lower only the mix level, never pause or reset the audio stream.
-    bgm.volume=Math.min(bgm.volume,gameMusicVolume()*impactDuckLevel);
   }
   function beginPlayback() {
     if (!bgmEnabled || !globalSoundOn() || document.hidden) return Promise.resolve();
@@ -122,14 +113,14 @@
     const now = performance.now();
     const delta = Math.min((now - lastTime) / 1000, .4);
     lastTime = now;
-    const target = bgmEnabled && globalSoundOn() && !document.hidden ? gameMusicVolume()*(now<impactDuckUntil?impactDuckLevel:1) : 0;
+    const target = bgmEnabled && globalSoundOn() && !document.hidden ? gameMusicVolume() : 0;
     const step = delta * (target<bgm.volume?4.0:2.4);
     const v = Math.max(0, Math.min(1, bgm.volume + Math.max(-step, Math.min(step, target - bgm.volume))));
     if (Math.abs(bgm.volume-v)>.0001) bgm.volume = v;
     if (target>0 && unlocked && (!started || bgm.paused)) void beginPlayback();
   }, 50);
   window.__revenantBgm = {
-    prepare, beginPlayback, duckImpact,
+    prepare, beginPlayback,
     getState: () => ({ ready, loading: !!preparing, enabled: bgmEnabled, playing: !bgm.paused, volume: bgm.volume, source: bgm.currentSrc || bgm.src, fallbackTried }),
     toggle: () => button.click()
   };
