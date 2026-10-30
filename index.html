@@ -1410,6 +1410,7 @@ function awardEnemyKill(e){
 }
 function hurtEnemy(e,dmg,poise){
  if(e.dead)return;
+ e.encountered=true; // A hit counts as detection even through long stun / knockback.
  e.hp-=dmg;e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:e.type==='elite'?.80:1),0,e.maxPoise);
  // Twelve distinct impacts: head snaps, gut folds, ankle buckles, spins,
  // side stumbles and aerial knockdowns. Keep the existing enemy bitmap.
@@ -1956,6 +1957,8 @@ function updateEnemies(dt){
   e.stun=Math.max(0,e.stun-dt);
   e.inv=Math.max(0,e.inv-dt);
   e.hitFlash=Math.max(0,e.hitFlash-dt);
+  // Perception is permanent, including while knocked down or staggered.
+  if(Math.abs(e.x-p.x)<=1060)e.encountered=true;
   e.shock=Math.max(0,e.shock-dt);
   e.freeze=Math.max(0,e.freeze-dt);
   e.bleed=Math.max(0,e.bleed-dt);e.burn=Math.max(0,(e.burn||0)-dt);
