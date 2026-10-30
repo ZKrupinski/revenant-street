@@ -34,10 +34,12 @@ async function audio(){
  assert.equal(bgm.getState().ready,true);assert.equal(bgm.getState().source,'blob:complete');
  await bgm.beginPlayback();for(let i=0;i<8;i++){now+=180;tick()}
  assert(Math.abs(bgm.getState().volume-.29)<.001);
- bgm.duckImpact(true);assert(bgm.getState().volume<.09,'heavy impact must strongly duck music beneath the foreground hit');
- assert.equal(bgm.getState().playing,true,'duck never pauses music');
+ // Hits must not have any route to lower music; only upgrade screens fade.
+ assert.equal(typeof bgm.duckImpact,'undefined','combat hit ducking API is removed');
+ const combatLevel=bgm.getState().volume;
  for(let i=0;i<10;i++){now+=50;tick()}
- assert(Math.abs(bgm.getState().volume-.29)<.001,'music recovers after hit');
+ assert.equal(bgm.getState().volume,combatLevel,'playing combat BGM remains constant');
+ assert(!html.includes('__revenantBgm?.duckImpact'),'impact sounds must never touch BGM volume');
  state='reward';for(let i=0;i<8;i++){now+=180;tick()}
  assert(Math.abs(bgm.getState().volume-.21)<.001);assert.equal(plays,1,'upgrade must preserve playback');
  await bgm.prepare();assert.equal(fetches,1,'restart reuses full audio');
@@ -68,4 +70,4 @@ function optionalArt(){
  }
  console.log('PASS: unavailable extra combo does not block start; required artwork still blocks');
 }
-(async()=>{spriteRetry();optionalArt();await startup();await startup(true);await audio();console.log('PASS: start waits for art + full BGM; failures block start; repeated starts deduplicate; upgrades keep music playing and duck volume');})().catch(e=>{console.error(e);process.exitCode=1});
+(async()=>{spriteRetry();optionalArt();await startup();await startup(true);await audio();console.log('PASS: start waits for art + full BGM; failures block start; repeated starts deduplicate; upgrades soften music but combat impact never ducks music');})().catch(e=>{console.error(e);process.exitCode=1});
