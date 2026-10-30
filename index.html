@@ -1061,7 +1061,7 @@ function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
  comboCameraFocusX=0;comboCameraPulse=0;comboCameraLastSnap=-99;
  resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
  p.jumpHeel=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
- p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
+ p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
@@ -1154,9 +1154,9 @@ function spawnWave(){
 function makeEnemy(type,x,y,index){
  // Grunts stay punchy and quick to defeat. Specials gain real durability.
  // Normal enemies gain moderate health/damage each wave, unlike the boss.
- const map={raider:[43,70,114,8,33],assassin:[38,68,159,9,31],
-  elite:[430,260,144,22,66],guard:[100,132,99,13,41],
-  boss:[3400,920,87,35,92]};
+ const map={raider:[70,70,114,8,33],assassin:[64,68,159,9,31],
+  elite:[530,260,144,22,66],guard:[145,132,99,13,41],
+  boss:[3900,920,87,35,92]};
  const difficulty=type==='boss'?1:type==='elite'?(wave===2?1.36:1):
   wave===2?1.30:1;
  const attackGrowth=type==='boss'?1:wave===2?1.19:1;
@@ -1223,8 +1223,26 @@ function findExecutionTarget(){
  .sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0]||null;
 }
 function startAttack(){
- if(gameState!=='playing'||p.stun>0||p.dodge>0||p.downTimer>0||p.getupTimer>0)return;
+ if(gameState!=='playing'||p.stun>0||(p.dodge>0&&p.dashFollowWindow<=0)||
+  p.downTimer>0||p.getupTimer>0)return;
  if(p.attack>0){p.attackQueued=true;return}
+ // Forward dash + attack is a deliberate single-frame-window strong shove.
+ if(p.dashFollowWindow>0&&p.z<=16){
+  if(p.stamina<16)return;
+  const dashDir=p.dodgeX||p.facing;
+  p.dashFollowWindow=0;p.dodge=0;p.evadeBackstep=false;
+  p.dashSmash=true;p.counterBoost=false;p.airAttack=false;
+  p.facing=dashDir;p.moveName='sidekick';loadZMove('sidekick');
+  p.attackDuration=.49/(1+modRank('haste')*.08);
+  p.attack=p.attackDuration;p.hitDone=false;p.attackQueued=false;
+  p.attackDriveX=dashDir;p.attackDriveY=0;
+  p.attackDriveTotal=140;p.attackDriveRemaining=140;
+  p.comboWindow=.95;p.comboIdx=2;p.stamina-=16;p.animAge=0;
+  p.recentMoves.push('sidekick');if(p.recentMoves.length>5)p.recentMoves.shift();
+  p.inv=Math.max(p.inv,.14);sound('attack');
+  return;
+ }
+ p.dashSmash=false;
  if(p.z>16){
   if(p.airKickUsed||p.stamina<15)return;
   p.airAttack=true;p.airKickUsed=true;p.counterBoost=false;p.stamina-=15;
@@ -1245,7 +1263,7 @@ function startAttack(){
   const target=p.riposteTarget;p.facing=target.x>=p.x?1:-1;
   p.riposteWindow=0;p.riposteTarget=null;p.counterRush=.29;p.counterBoost=true;
   p.attackDriveTotal=0;p.attackDriveRemaining=0;
-  p.airAttack=false;p.attackQueued=false;p.moveName='cross';p.attackDuration=.44;p.attack=.44;
+  p.airAttack=false;p.dashSmash=false;p.dashFollowWindow=0;p.attackQueued=false;p.moveName='cross';p.attackDuration=.44;p.attack=.44;
   p.hitDone=false;p.comboWindow=0;p.stamina=Math.max(0,p.stamina-8);
   screenShake=Math.max(screenShake,9);fxBurst(p.x+p.facing*70,p.y-115,'blue',1.3);
   flash('PARRY COUNTER!',.7);sound('attack');return;
@@ -1281,6 +1299,7 @@ function startAttack(){
 function parry(){
  if(gameState!=='playing'||p.stun>0||p.parry>0||p.downTimer>0||p.getupTimer>0||p.stamina<7)return;
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.attackDriveRemaining=0;p.counterRush=0;
+ p.dashSmash=false;p.dashFollowWindow=0;
  p.parryDuration=.34+perma.reflex*.035;p.parry=p.parryDuration;
  // Immediately face the most imminent attacker, including enemies behind.
  // Selecting a target NEVER triggers parry automatically; the player still
@@ -1296,8 +1315,10 @@ function parry(){
 function dodge(){
  if(gameState!=='playing'||p.dodge>0||p.stun>0||p.downTimer>0||p.getupTimer>0||p.stamina<19)return;
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.attackDriveRemaining=0;p.parry=0;
+ p.dashSmash=false;p.dashFollowWindow=0;
  const backInput=p.moveDX*p.facing<-.42||analog.dx*p.facing<-.42||(keys.has('a')&&p.facing>0)||(keys.has('d')&&p.facing<0);
  p.evadeBackstep=backInput;p.dodge=.30;p.inv=.34;p.dodgeX=backInput?-p.facing:p.facing;p.stamina-=19;
+ p.dashFollowWindow=backInput?0:.63;
  fxBurst(p.x-p.facing*22,p.y-24,'blue',.42);sound('attack');
 }
 function jump(){
@@ -1315,6 +1336,7 @@ function jump(){
  p.jumpLaunchX=p.jumpLeap?(Math.abs(ix)>.20?ix:p.facing*.78):0;
  p.jumpLaunchY=p.jumpLeap?iy:0;
  p.jumpHeel=true;p.jumpLandingTriggered=false;p.jumpLandingVisual=0;
+ p.dashSmash=false;p.dashFollowWindow=0;
  p.jumpTime=0;p.moveName=p.jumpLeap?'diagonal_airkick':'axe_kick';
  p.vz=760;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;
  p.airKickUsed=false;sound('attack');
@@ -1553,6 +1575,7 @@ function enemyAttack(e){
  }else{
   p.stun=heavy?.49:.28;p.hitDuration=p.stun;p.hitHeavyTimer=heavy?p.stun:0;p.inv=.75;
  }
+ p.dashSmash=false;p.dashFollowWindow=0;
  p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)deadMenu()}
 function fxBurst(x,y,color='red',scale=1){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8)})}
 function spawnParryShieldFx(x,y,face=1,scale=1){fx.push({kind:'parryShield',x,y,face,scale,life:.36,maxLife:.36})}
@@ -1711,6 +1734,7 @@ function control(dt,pad){
  }else if(p.getupTimer>0)p.getupTimer=Math.max(0,p.getupTimer-dt);
  p.stun=Math.max(0,p.stun-dt);p.inv=Math.max(0,p.inv-dt);
  p.parry=Math.max(0,p.parry-dt);p.dodge=Math.max(0,p.dodge-dt);
+ p.dashFollowWindow=Math.max(0,(p.dashFollowWindow||0)-dt);
  p.riposteWindow=Math.max(0,p.riposteWindow-dt);
  if(p.riposteWindow===0)p.riposteTarget=null;
  p.stamina=clamp(p.stamina+(17+modRank('haste')*4)*dt,0,100);
@@ -1730,7 +1754,7 @@ function control(dt,pad){
   p.attack-=dt;
   if(!p.airKickPhase&&!p.hitDone&&p.attack<p.attackDuration*.58){p.hitDone=true;attackCheck()}
   p.attack=Math.max(0,p.attack);
-  if(p.attack===0){p.airKickPhase='';p.counterBoost=false;if(!p.z)p.airAttack=false}
+  if(p.attack===0){p.airKickPhase='';p.counterBoost=false;p.dashSmash=false;if(!p.z)p.airAttack=false}
  }
  if((p.attackQueued||keys.has('j')||padPrev.attack)&&p.attack===0&&p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){p.attackQueued=false;startAttack()}
 }
