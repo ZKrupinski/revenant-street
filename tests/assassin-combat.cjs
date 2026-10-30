@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,gamepadRumble,activeRumbleActuator,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('opening battle spawns one small squad just beyond the screen',()=>{
@@ -334,6 +334,42 @@ test('unsupported gamepads never break combat and fall back to phone haptics',()
   delete world.navigator.vibrate;
   assert.equal(t.vibrateImpact('heavy',true),false,'unsupported devices run without any rumble');
  }finally{world.navigator.getGamepads=previous;if(phone)world.navigator.vibrate=phone;else delete world.navigator.vibrate}
+});
+test('G8+ Bluetooth Android detection shows exact controller name and missing vibration API',()=>{
+ const old=world.navigator.getGamepads;
+ try{
+  world.navigator.getGamepads=()=>[{id:'GameSir-G8+ Bluetooth',connected:true,buttons:[],axes:[0,0]}];
+  const info=t.gamepadHapticDiagnostics();
+  assert.equal(info.connected,true);
+  assert.equal(info.name,'GameSir-G8+ Bluetooth');
+  assert.equal(info.hasActuator,false,'gamepad input need not imply motor support');
+  t.updateRumbleDiagnostics();
+  assert(node('rumbleStatus').textContent.includes('진동 API가 없음'));
+  assert(node('rumbleStatus').textContent.includes('GameSir-G8+'));
+ }finally{world.navigator.getGamepads=old}
+});
+test('Gamepad API exposes unsupported dual-rumble: do not report a false successful pulse',()=>{
+ const old=world.navigator.getGamepads,phone=world.navigator.vibrate;
+ let called=0;
+ world.navigator.getGamepads=()=>[{id:'GameSir G8+',connected:true,buttons:[],axes:[0,0],vibrationActuator:{
+  effects:[],playEffect(){called++;return Promise.resolve('not-supported')}
+ }}];
+ try{
+  const state=t.gamepadHapticDiagnostics();
+  assert.equal(state.hasActuator,true);
+  assert.equal(state.dual,false,'declared effects list determines support');
+  assert.equal(t.gamepadRumble('test'),false,'no false-success when only unsupported effects are listed');
+  assert.equal(called,0,'must not call an effect browser declares unsupported');
+  t.updateRumbleDiagnostics();
+  assert(node('rumbleStatus').textContent.includes('지원하지 않음'));
+ }finally{world.navigator.getGamepads=old;if(phone)world.navigator.vibrate=phone}
+});
+test('rumble UI only claims that browser processed a command, never claims physical feedback',()=>{
+ const file=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ assert(file.includes("result===true||output==='complete'"));
+ assert(file.includes('실제 G8+ 모터 진동은 직접 확인 필요.'));
+ assert(file.includes('void testGamepadRumble()'));
+ assert(!file.includes('진동 신호를 보냈습니다. 실제 진동 여부는 패드'));
 });
 test('pause vibration test is reachable and stops effects safely',()=>{
  const previous=world.navigator.getGamepads;
