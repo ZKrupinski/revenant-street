@@ -55,8 +55,8 @@ async function combatVoices(){
  const ctx={currentTime:0,destination:node(),
   createDynamicsCompressor:()=>node(),createGain:()=>node(),createBiquadFilter:()=>node(),
   createBufferSource:()=>{const s=node();createdSources.push(s);return s},
-  decodeAudioData:async()=>{decoded++;return{duration:.9}}};
- const w={window:{},Math,fetch:async()=>{fetches++;return{ok:true,arrayBuffer:async()=>new ArrayBuffer(12)}}};
+  decodeAudioData:async bytes=>{decoded++;return{duration:.9,clip:bytes.clip}}};
+ const w={window:{},Math,fetch:async url=>{fetches++;return{ok:true,arrayBuffer:async()=>({clip:url})}}};
  vm.createContext(w);vm.runInContext(voiceScript,w);
  const voices=w.window.__zCombatVoice;
  assert.equal(voices.state().ready,false);
@@ -75,6 +75,17 @@ async function combatVoices(){
  assert.equal(voices.play('enemyHurt',foe,hero),false,'injury voice is rate limited');
  ctx.currentTime=1.3;
  assert.equal(voices.play('bossShout',boss,hero),true,'boss warning has a dedicated roar');
+ ctx.currentTime=1.9;
+ assert.equal(voices.play('heroPower',hero,hero),true,'heavy attack emits a hero effort grunt');
+ const powerClip=createdSources.at(-1).buffer.clip;
+ assert(powerClip.endsWith('hero-grunt-b.wav'),'heavy attack MUST NOT use enemy scream file');
+ assert(!powerClip.includes('voice-yell'),'hero power must not play the death wail');
+ ctx.currentTime=2.5;
+ assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy gets its own wounded vocal');
+ assert(createdSources.at(-1).buffer.clip.endsWith('voice-yell.wav'),'enemy pain bank must remain separate from protagonist attacks');
+ ctx.currentTime=3.0;
+ assert.equal(voices.play('heroStrike',hero,hero),true,'normal hero strikes use short grunts');
+ assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'hero normal hits never use enemy scream clips');
  assert(createdSources.length>=3,'all voice families use genuine recorded buffers');
  assert(!voiceScript.includes('duckImpact'),'vocals do not change BGM volume');
  for(const file of ['hero-grunt-a.wav','hero-grunt-b.wav','voice-yell.wav','voice-roar.wav']){
