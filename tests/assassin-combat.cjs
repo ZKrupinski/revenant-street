@@ -617,11 +617,11 @@ test('separately posed original-Z v2 walk/run atlases retain 8 frames each',()=>
   assert.equal(art[key].source_bounds.length,8);
  }
 });
-test('original hero defaults to v3 alternating-foot full-body gait with previous atlas rollback',()=>{
+test('original hero defaults to v4 shuffle and dash with previous atlas rollback',()=>{
  const game=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
  const lab=fs.readFileSync(path.join(__dirname,'../z-frame-lab.html'),'utf8');
- assert(game.includes("||'v3'"),'full-body alternating-leg gait v3 should be the default');
- assert(game.includes("walk-v3.webp")&&game.includes("run-v3.webp"),'game must reference both v3 atlases');
+ assert(game.includes("||'v4'"),'shuffle/dash v4 should be the default');
+ assert(game.includes("walk-'+zGaitChoice+'.webp")&&game.includes("run-'+zGaitChoice+'.webp"),'game must reference both v3 atlases');
  assert(game.includes('preparePremattedGaitCells(im)'),'game must avoid re-keying pre-matted v3 art');
  assert(game.includes("const suffix=zGaitChoice==='v1'?'':'-v2'"),'v1 full-body art rollback required');
  assert(game.includes("const zUsePreviousGait=zGaitChoice==='previous'"),'historical gait rollback required');
