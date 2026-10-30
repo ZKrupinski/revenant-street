@@ -786,19 +786,40 @@ function preparePremattedGaitCells(im){
 }
 function loadZMove(key){
  if(!Z_REMOTE_ATLAS[key])key='idle';
- if(!zArtState[key]){
-  // Duplicate action keys reuse one prepared eight-frame atlas.
-  const url=Z_REMOTE_ATLAS[key],shared=zArtFrameShared.get(url);
-  if(shared){zArtState[key]=shared;return shared}
-  const obj={ready:false,failed:false,loading:true,url,frames:[]};
-  zArtState[key]=obj;zArtFrameShared.set(url,obj);
-  const im=new Image();im.crossOrigin='anonymous';
-  im.onload=()=>{try{obj.frames=Z_HOODIE_HERO?prepareTransparentHeroCells(im):(Z_HF_ART&&(zGaitChoice==='v3'||zGaitChoice==='v4')&&(key==='walk'||key==='run'||key==='backwalk')?preparePremattedGaitCells(im):prepareZCells(im));obj.ready=obj.frames.length===8;obj.failed=false}
-   catch(err){obj.ready=false;obj.failed=true;obj.error=String(err);console.warn('Z atlas rejected:',key,err)}obj.loading=false;obj.image=null;im.onload=null;im.onerror=null;};
-  im.onerror=()=>{obj.failed=true;obj.ready=false;obj.loading=false;obj.image=null;im.onload=null;im.onerror=null};im.src=obj.url;obj.image=im;
+ const url=Z_REMOTE_ATLAS[key];
+ let obj=zArtState[key]||zArtFrameShared.get(url);
+ if(!obj){
+  obj={ready:false,failed:false,loading:false,url,frames:[],attempts:0,retryAt:0};
+  zArtFrameShared.set(url,obj);
  }
- return zArtState[key];
+ zArtState[key]=obj;
+ if(obj.ready||obj.loading||obj.failed||Date.now()<obj.retryAt)return obj;
+ obj.loading=true;obj.attempts++;
+ const im=new Image();im.crossOrigin='anonymous';obj.image=im;
+ const cleanup=()=>{clearTimeout(timer);obj.loading=false;obj.image=null;im.onload=null;im.onerror=null};
+ const fail=error=>{
+  cleanup();obj.ready=false;obj.error=String(error);
+  obj.failed=obj.attempts>=3;obj.retryAt=Date.now()+obj.attempts*400;
+ };
+ const timer=setTimeout(()=>{fail('Image request timed out');im.src=''},15000);
+ im.onload=()=>{
+  try{
+   const frames=Z_HOODIE_HERO?prepareTransparentHeroCells(im):(Z_HF_ART&&(zGaitChoice==='v3'||zGaitChoice==='v4')&&(key==='walk'||key==='run'||key==='backwalk')?preparePremattedGaitCells(im):prepareZCells(im));
+   if(frames.length!==8)throw Error('Expected eight frames');
+   obj.frames=frames;obj.ready=true;obj.failed=false;obj.error=null;cleanup();
+  }catch(err){fail(err)}
+ };
+ im.onerror=()=>fail('Image download failed: '+key);
+ // A new request after failure must not reuse a cached network error.
+ im.src=url+(obj.attempts>1?(url.includes('?')?'&':'?')+'retry='+obj.attempts+'-'+Date.now():'');
+ return obj;
 }
+function resetFailedSceneArt(){
+ for(const art of zArtFrameShared.values())if(art.failed){art.failed=false;art.attempts=0;art.retryAt=0;}
+ for(const cache of [maskedArt,riotGuardImages])for(const key of Object.keys(cache))
+  if(cache[key].failed)delete cache[key];
+}
+
 function currentZFrameIndex(key){
  const oneshot=zOneShotFrame;
  if(key==='knockdown')return oneshot(1-p.downTimer/.83);
@@ -1362,7 +1383,8 @@ function requiredSceneArt(preview=false){
   ['패링 이펙트',()=>({ready:parryShieldImage.complete&&parryShieldImage.naturalWidth>0,failed:false})],
   ['적 방향 아이콘',()=>({ready:offscreenArrow.complete&&offscreenArrow.naturalWidth>0,failed:false})],
   ['이펙트',()=>({ready:['burst_red','burst_blue','burst_gold'].every(k=>img[k]?.complete&&img[k].naturalWidth>0),failed:false})],
-  ...Object.keys(Z_REMOTE_ATLAS).map(k=>['Z '+k,()=>loadZMove(k)]),
+  ...Object.keys(Z_REMOTE_ATLAS).map(k=>['Z '+k,()=>loadZMove(k),
+   Z_ALL_ATTACKS.includes(k)&&!['jab','frontkick','cross','superman_punch','axe_kick','diagonal_airkick'].includes(k)]),
   ...Object.keys(MASKED_GRUNT_ATLAS).map(k=>['잡몹 '+k,()=>loadMaskedMove(k)]),
   ...RZAssassinArt.keys.map(k=>['암살자 '+k,()=>RZAssassinArt.load(k)]),
   ...RIOT_GUARD_KEYS.map(k=>['방패 '+k,()=>loadRiotGuard(k)])
@@ -1375,7 +1397,7 @@ function waitSceneArt(preview,onProgress){
  let cursor=0;
  return new Promise((resolve,reject)=>{
   const timer=setInterval(()=>{
-   const pending=checks.slice(0,cursor).filter(([,fetch])=>!fetch().ready).length;
+   const pending=checks.slice(0,cursor).filter(([,fetch,optional])=>{const a=fetch();return !a.ready&&!(optional&&a.failed)}).length;
    if(cursor<checks.length&&pending<3){
     for(let i=pending;i<3&&cursor<checks.length;i++,cursor++){
      try{checks[cursor][1]()}catch(err){clearInterval(timer);reject(err);return}
@@ -1383,8 +1405,8 @@ function waitSceneArt(preview,onProgress){
    }
    let completed=0,failed=[];
    for(let i=0;i<cursor;i++){
-    const [name,fetch]=checks[i],a=fetch();
-    if(a.ready)completed++;else if(a.failed)failed.push(name);
+    const [name,fetch,optional]=checks[i],a=fetch();
+    if(a.ready||(optional&&a.failed))completed++;else if(a.failed)failed.push(name);
    }
    onProgress?.(completed,checks.length,cursor<checks.length?checks[cursor][0]:'마지막 리소스 확인');
    if(completed===checks.length){clearInterval(timer);resolve(true)}
@@ -1396,7 +1418,7 @@ function waitSceneArt(preview,onProgress){
 }
 async function requestRunStart(){
  if(loadingRun)return;
- loadingRun=true;gameState='loading';
+ loadingRun=true;gameState='loading';resetFailedSceneArt();
  const preview=/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'');
  showMenu(`<div class="eyebrow">PROJECT Z / RESOURCE PREPARATION</div><h2>게임 리소스 준비 중</h2><p id="loadStatus">음악 전체와 전투 애니메이션을 준비합니다. 준비가 끝나면 시작됩니다.</p><div class="bar hp"><div class="bar-fill" id="loadBar" style="width:0%"></div></div><p class="micro">고해상도 비트맵 압축 해제 · 프레임 8장 정렬 중</p>`);
  try{
@@ -2929,7 +2951,7 @@ $('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activ
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();if(gameState!=='playing')return;b.setPointerCapture(e.pointerId);keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release)}
 for(let i=0;i<(window.matchMedia?.('(pointer: coarse)').matches?65:110);i++)rain.push({x:rnd(0,1280),y:rnd(0,720),s:rnd(220,590),len:rnd(5,18)});
-window.__revenant={getMusicState:()=>gameState,getPerformance:()=>({...runtimePerf,liveEnemies:enemies.filter(e=>!e.dead).length,activeEffects:fx.length+attributeFx.length+floating.length,heroAfterimages:heroAfterimages.length,heroAfterimageLimit:MAX_HERO_GHOSTS,uniqueHeroAtlases:zArtFrameShared.size}),getState:()=>({gameState,wave,player:{x:p.x,y:p.y,z:p.z,hp:p.hp,stamina:p.stamina,weapon:p.weapon,mod:p.mod,mods:[...p.mods]},enemies:enemies.map(e=>({type:e.type,x:e.x,y:e.y,hp:e.hp,poise:e.poise,groggy:e.groggy})),perma}),startRun,attack:startAttack,parry,execute,selectMod,buyUpgrade,forceClear:()=>{enemies=[];updateEnemies(0)},getWorld:()=>({x:p.x,cameraX,wave,stageWidth:STAGE_WIDTH,enemyPositions:enemies.filter(e=>!e.dead).map(e=>e.x)}),getAnalog:()=>({...analog}),getAssassinArtStatus:()=>RZAssassinArt.status(),getArtStatus:(key)=>{const v=loadZMove(key||'idle');return{ready:v.ready,failed:v.failed,loading:v.loading,frames:v.frames?.length,error:v.error}}};
+window.__revenant={getMusicState:()=>gameState,getPerformance:()=>({...runtimePerf,liveEnemies:enemies.filter(e=>!e.dead).length,activeEffects:fx.length+attributeFx.length+floating.length,heroAfterimages:heroAfterimages.length,heroAfterimageLimit:MAX_HERO_GHOSTS,uniqueHeroAtlases:zArtFrameShared.size}),getState:()=>({gameState,wave,player:{x:p.x,y:p.y,z:p.z,hp:p.hp,stamina:p.stamina,weapon:p.weapon,mod:p.mod,mods:[...p.mods]},enemies:enemies.map(e=>({type:e.type,x:e.x,y:e.y,hp:e.hp,poise:e.poise,groggy:e.groggy})),perma}),startRun,attack:startAttack,parry,execute,selectMod,buyUpgrade,forceClear:()=>{enemies=[];updateEnemies(0)},getWorld:()=>({x:p.x,cameraX,wave,stageWidth:STAGE_WIDTH,enemyPositions:enemies.filter(e=>!e.dead).map(e=>e.x)}),getAnalog:()=>({...analog}),getAssassinArtStatus:()=>RZAssassinArt.status(),getArtStatus:(key)=>{const v=loadZMove(key||'idle');return{ready:v.ready,failed:v.failed,loading:v.loading,frames:v.frames?.length,error:v.error,attempts:v.attempts}}};
 canvas.style.visibility='hidden';titleMenu();requestAnimationFrame(loop);
 })();
 

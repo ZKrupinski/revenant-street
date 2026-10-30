@@ -7,7 +7,7 @@ async function startup(fail=false){
  const music=deferred(),art=deferred();let starts=0,prepared=0,menu='';
  const nodes=new Map();const world={loadingRun:false,gameState:'title',setTimeout,Error,Promise,
  $:id=>{if(!nodes.has(id))nodes.set(id,{style:{}});return nodes.get(id)},
- showMenu:s=>menu=s,waitSceneArt:()=>art.promise,depthBackdrop:()=>prepared++,img:{street_pano:{}},startRun:()=>starts++,
+ resetFailedSceneArt(){},showMenu:s=>menu=s,waitSceneArt:()=>art.promise,depthBackdrop:()=>prepared++,img:{street_pano:{}},startRun:()=>starts++,
  window:{location:{search:''},__revenantBgm:{prepare:()=>music.promise,beginPlayback:()=>Promise.resolve()}}};
  vm.createContext(world);vm.runInContext(code,world);
  const run=world.requestRunStart();await world.requestRunStart();
@@ -38,4 +38,30 @@ async function audio(){
  assert(Math.abs(bgm.getState().volume-.21)<.001);assert.equal(plays,1,'upgrade must preserve playback');
  await bgm.prepare();assert.equal(fetches,1,'restart reuses full audio');
 }
-(async()=>{await startup();await startup(true);await audio();console.log('PASS: start waits for art + full BGM; failures block start; repeated starts deduplicate; upgrades keep music playing and duck volume');})().catch(e=>{console.error(e);process.exitCode=1});
+function spriteRetry(){
+ const images=[];let now=1000;
+ const w={Z_REMOTE_ATLAS:{sidekick:'kick.webp',alias:'kick.webp'},zArtState:{},zArtFrameShared:new Map(),
+ Image:class{constructor(){images.push(this)}},Date:{now:()=>now},setTimeout:()=>1,clearTimeout(){},
+ Z_HOODIE_HERO:false,Z_HF_ART:false,prepareZCells:()=>Array(8).fill({}),maskedArt:{},riotGuardImages:{}};
+ vm.createContext(w);vm.runInContext(html.slice(html.indexOf('function loadZMove('),html.indexOf('function currentZFrameIndex(')),w);
+ let art=w.loadZMove('sidekick');images[0].onerror();assert.equal(art.failed,false);
+ w.loadZMove('sidekick');assert.equal(images.length,1,'retry obeys backoff');now+=500;
+ w.loadZMove('alias');assert.equal(images.length,2);assert(images[1].src.includes('retry=2'));
+ images[1].onload();assert.equal(art.ready,true);assert.equal(w.loadZMove('sidekick'),w.loadZMove('alias'));
+ // Permanent failure is bounded, and manual retry actually issues another request.
+ art.ready=false;art.attempts=2;art.retryAt=0;w.loadZMove('sidekick');images[2].onerror();
+ assert.equal(art.failed,true);now+=5000;w.loadZMove('sidekick');assert.equal(images.length,3);
+ w.resetFailedSceneArt();w.loadZMove('sidekick');assert.equal(images.length,4);assert.equal(art.failed,false);
+ console.log('PASS: transient sprite failures retry; shared aliases recover; retries bounded; manual retry resets failed cache');
+}
+function optionalArt(){
+ for(const optional of [true,false]){
+ let tick,resolved=false,rejected=false;
+ const w={requiredSceneArt:()=>[['sidekick',()=>({failed:true,ready:false}),optional]],performance:{now:()=>0},
+ setInterval:fn=>{tick=fn;return 1},clearInterval(){},Promise:class{constructor(fn){fn(()=>resolved=true,()=>rejected=true)}},Error};
+ vm.createContext(w);vm.runInContext(html.slice(html.indexOf('function waitSceneArt('),html.indexOf('async function requestRunStart(')),w);
+ w.waitSceneArt(false);tick();assert.equal(resolved,optional);assert.equal(rejected,!optional);
+ }
+ console.log('PASS: unavailable extra combo does not block start; required artwork still blocks');
+}
+(async()=>{spriteRetry();optionalArt();await startup();await startup(true);await audio();console.log('PASS: start waits for art + full BGM; failures block start; repeated starts deduplicate; upgrades keep music playing and duck volume');})().catch(e=>{console.error(e);process.exitCode=1});
