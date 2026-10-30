@@ -687,10 +687,10 @@ const STAGE_WIDTH=12800;let cameraX=0;const MOD_META={
  rush:{icon:'➤',short:'돌진',title:'STRIKE BOOST',color:'#9deaff',desc:'공격 전진 거리 +20%/중첩'},
  impact:{icon:'💢',short:'충격',title:'IMPACT RAM',color:'#ffa96c',desc:'넉백·경직 +22%/중첩'},
  vital:{icon:'♥',short:'생명',title:'VITAL CORE',color:'#8cfdac',desc:'최대 HP +25·즉시 회복'},
- regen:{icon:'✚',short:'재생',title:'REPAIR NANITES',color:'#92edb1',desc:'초당 HP 재생 +0.8/중첩'},
+ regen:{icon:'✚',short:'재생',title:'REPAIR NANITES',color:'#92edb1',desc:'초당 HP 재생 +1.6/중첩'},
  leech:{icon:'◈',short:'흡수',title:'LIFE DRAIN',color:'#ff9fbd',desc:'가한 피해의 4% 체력 흡수/중첩'},
  guard:{icon:'▣',short:'방호',title:'ARMOR SHELL',color:'#cbd5e1',desc:'받는 피해 -9%/중첩'},
- haste:{icon:'⚙',short:'가속',title:'SERVO BOOST',color:'#c4b5fd',desc:'공격 속도·기력 회복 증가'},
+ haste:{icon:'⚙',short:'가속',title:'SERVO BOOST',color:'#c4b5fd',desc:'공격 속도 +10%·기력 회복 +4/초, 중첩'},
  chain:{icon:'⚡',short:'연쇄',title:'CHAIN VOLT',color:'#83e9ff',source:'burst_blue',filter:'brightness(1.4)',desc:'25% 확률로 주변 적 연쇄 충격'},
  nova:{icon:'✹',short:'폭발',title:'SHOCK NOVA',color:'#ffb681',source:'burst_gold',filter:'brightness(1.3)',desc:'타격 시 주변 적 충격파·광역 피해'},
  momentum:{icon:'»',short:'연격',title:'COMBO FURY',color:'#ffda84',desc:'연속타격 피해 점진적으로 증가'}
@@ -712,6 +712,22 @@ function spawnModBitmap(color,x,y,scale=1,filter='',life=.28){
 function spawnModLink(color,x1,y1,x2,y2,scale=1,filter='',life=.22){
  if(fx.length>=90)fx.splice(0,fx.length-75);
  fx.push({kind:'modLink',color,x:(x1+x2)/2,y:(y1+y2)/2,x1,y1,x2,y2,scale,filter,life,maxLife:life});
+}
+function combatStrengthFx(e,critical){
+ const power=modRank('power'),impact=modRank('impact'),momentum=modRank('momentum');
+ if(power)spawnModBitmap('gold',e.x,e.y-124,.87+power*.11,'brightness(1.18)',.21);
+ if(impact){
+  spawnModBitmap('red',e.x+p.facing*23,e.y-112,1.02+impact*.09,'saturate(1.45)',.25);
+  screenShake=Math.max(screenShake,Math.min(22,12+impact*1.3));
+ }
+ if(momentum&&p.hits>=3){
+  const intensity=Math.min(1.6,.70+p.hits*.065+momentum*.07);
+  spawnModBitmap('gold',e.x,e.y-111,intensity,'saturate(1.1)',.19);
+ }
+ if(critical){
+  spawnModBitmap('gold',e.x,e.y-137,1.55+modRank('crit')*.13,'brightness(1.5)',.35);
+  screenShake=Math.max(screenShake,19);
+ }
 }
 function createModImpact(e){
  // Attribute sheets fire only for equipped elements, not for unrelated
@@ -912,7 +928,7 @@ function showMenu(html){
 function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;$('bottomTip').style.display='flex';showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1><p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p><div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div><div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button><button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div><p class="micro">가로 10화면 · 마스크 잡몹 A + 쌍단검 암살자 B + 철가면 엘리트 / 키보드·게임패드·드래그 조이스틱</p>`)}
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>공격 · 연속타격 · 공중 차기</div><div><kbd>↑ / K / Y / △</kbd>점프 (지상 횡베기 회피)</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
-function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
+function resetPlayer(){cameraX=0;p.regenPulseClock=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
@@ -1106,6 +1122,8 @@ function startAttack(){
  const impactStep=isKick?1.20:move==='superman_punch'?1.14:1;
  p.attackDriveTotal=Math.min(275,Math.round((advance[move]||32)*(hasInput?2.68:2.42)*impactStep*(1+modRank('rush')*.2)));
  p.attackDriveRemaining=p.attackDriveTotal;
+ if(modRank('rush'))spawnModLink('blue',p.x-p.facing*56,p.y-118,p.x+p.facing*75,p.y-118,.75+modRank('rush')*.06,'brightness(1.2)',.19);
+ if(modRank('haste'))spawnModBitmap('blue',p.x-p.facing*24,p.y-94,.44+modRank('haste')*.06,'brightness(1.3)',.17);
  p.attack=p.attackDuration;p.animAge=0;p.hitDone=false;p.glow=.18;p.comboWindow=.95;
  sound('attack');
 }
@@ -1229,24 +1247,38 @@ function attackCheck(){
  for(const e of enemies){if(e.dead||e.inv>0)continue;const dx=e.x-p.x,dy=Math.abs(e.y-p.y);const contactReach=Math.max(reach,bodyHalfX(p)+bodyHalfX(e)+20);if((dx*p.facing)>-25&&(dx*p.facing)<contactReach&&dy<(p.airAttack?78:56)&&(p.airAttack?p.z<225:Math.abs(e.z-p.z)<82)){let dmg=damage;
  const critChance=Math.min(.65,modRank('crit')*.10);
  const critical=Math.random()<critChance;
- if(critical){dmg*=1.8;floatText('CRITICAL!',e.x,e.y-236,'#ffe982');fxBurst(e.x,e.y-118,'gold',1.55)}
+ if(critical){dmg*=1.8;floatText('CRITICAL!',e.x,e.y-236,'#ffe982')}
  if(p.mods.includes('fire')){dmg*=1+.15*modRank('fire');e.burn=Math.max(e.burn||0,2.7+.65*modRank('fire'));e.burnPower=modRank('fire')}
  if(p.mods.includes('ice')){dmg*=.94;e.freeze=Math.max(e.freeze,1.2+modRank('ice')*.55);e.freezePower=modRank('ice')}
  if(p.mods.includes('bleed')){dmg*=.95;e.bleed=Math.max(e.bleed,3.7+modRank('bleed')*.7);e.bleedPower=modRank('bleed')}
- if(p.mods.includes('shock')){dmg*=1+.06*modRank('shock');e.shock=Math.max(e.shock,1.1+.28*modRank('shock'))}
- if(p.mod==='neuro') {dmg*=1.35;e.shock=2;e.bleed=4.5;enemies.filter(o=>o!==e&&!o.dead&&Math.abs(o.x-e.x)<180).forEach(o=>{o.stun=.8;o.hp-=18;fxBurst(o.x,o.y-90,'blue',.8)})}
- hurtEnemy(e,dmg,p.counterBoost?100:armed?([28,31,47][p.comboIdx]||28):(poise[p.moveName]||28));createModImpact(e);hits++;
+ if(p.mods.includes('shock')){dmg*=1+.06*modRank('shock');e.shock=Math.max(e.shock,1.1+.28*modRank('shock'));e.shockPower=modRank('shock')}
+ if(p.mod==='neuro') {dmg*=1.35;e.shock=2;e.bleed=4.5;
+  e.shockPower=Math.max(e.shockPower||1,modRank('shock'));e.bleedPower=Math.max(e.bleedPower||1,modRank('bleed'));
+  enemies.filter(o=>o!==e&&!o.dead&&Math.abs(o.x-e.x)<180).forEach(o=>{
+   o.stun=Math.max(o.stun,.8);o.hp-=18;
+   spawnModBitmap('blue',o.x,o.y-110,.92,'hue-rotate(59deg)',.23);
+   spawnModLink('blue',e.x,e.y-125,o.x,o.y-118,.75,'hue-rotate(59deg)',.22);
+  });
+ }
+ hurtEnemy(e,dmg,p.counterBoost?100:armed?([28,31,47][p.comboIdx]||28):(poise[p.moveName]||28));createModImpact(e);combatStrengthFx(e,critical);hits++;
  if(p.airKickPhase==='dive'){
   // Drive victims down rather than launch them away from the heel.
   if(e.type!=='boss'){e.vz=-240;e.z=Math.max(0,e.z);e.pendingFall=true}
   hitStop=Math.max(hitStop,.085);screenShake=Math.max(screenShake,13);
   fxBurst(e.x,e.y-40,'gold',1.45);
  }
+ const priorHealHp=p.hp;
  p.hp=clamp(p.hp+dmg*modRank('leech')*.04,0,p.maxHp);
+ if(p.hp>priorHealHp+.05){
+  spawnModLink('red',e.x,e.y-133,p.x,p.y-119,.98,'hue-rotate(326deg) brightness(1.4)',.25);
+  spawnModBitmap('red',p.x,p.y-120,.55+modRank('leech')*.07,'hue-rotate(320deg)',.25);
+ }
  if(modRank('chain')&&Math.random()<Math.min(.85,modRank('chain')*.25)){
   for(const nearby of enemies.filter(o=>o!==e&&!o.dead&&Math.abs(o.x-e.x)<195&&Math.abs(o.y-e.y)<80).slice(0,2+modRank('chain'))){
    nearby.hp-=8+modRank('chain')*7;nearby.shock=Math.max(nearby.shock,.65);
-   fxBurst(nearby.x,nearby.y-110,'blue',1.3);
+   nearby.shockPower=Math.max(nearby.shockPower||1,modRank('chain'));
+   spawnModLink('blue',e.x,e.y-135,nearby.x,nearby.y-125,1.05,'brightness(1.45)',.24);
+   spawnModBitmap('blue',nearby.x,nearby.y-118,1.02+modRank('chain')*.07,'brightness(1.35)',.28);
   }
  }
  if(modRank('nova')&&p.novaCooldown<=0){
@@ -1256,7 +1288,8 @@ function attackCheck(){
    nearby.knockVX+=(nearby.x>=e.x?1:-1)*(170+modRank('nova')*40);
    fxBurst(nearby.x,nearby.y-100,'gold',1.25);
   }
-  fxBurst(e.x,e.y-120,'gold',1.9);
+  spawnModBitmap('gold',e.x,e.y-112,1.75+modRank('nova')*.17,'brightness(1.25)',.35);
+  screenShake=Math.max(screenShake,Math.min(21,10+modRank('nova')*1.3));
  }}}
  if(armed){p.weapon--;if(p.weapon<=0){flash('OVERLOAD SHATTER!',1.7);screenShake=27;screenTint=.9;sound('break');fxBurst(p.x+75*p.facing,p.y-120,'red',3);for(const e of enemies)if(!e.dead&&Math.hypot(e.x-p.x,(e.y-p.y)*1.4)<310){hurtEnemy(e,85,105)}}}
  if(hits>0&&p.attackDriveRemaining>0&&p.attackDriveTotal>0){
@@ -1303,7 +1336,13 @@ function enemyAttack(e){
   if(e.poise>=e.maxPoise){e.groggy=3.4;e.stun=3.4;floatText('GROGGY',e.x,e.y-185,'#8fe6ff')}
   return;
  }
- if(p.inv>0||p.dodge>0)return;const dmg=e.damage*(eliteCleave?1.42:1)*(e.bossDamageMult||1);p.hp=Math.max(0,p.hp-dmg*clamp(1-modRank('guard')*.09,.49,1));p.receivedHits=(p.receivedHits||0)+1;
+ if(p.inv>0||p.dodge>0)return;const dmg=e.damage*(eliteCleave?1.42:1)*(e.bossDamageMult||1);
+ const damageTaken=dmg*clamp(1-modRank('guard')*.09,.49,1);
+ p.hp=Math.max(0,p.hp-damageTaken);
+ if(modRank('guard')){
+  spawnModBitmap('blue',p.x,p.y-132,1.06+modRank('guard')*.08,'saturate(.26) brightness(1.5)',.26);
+ }
+ p.receivedHits=(p.receivedHits||0)+1;
  const heavy=e.type==='boss'||eliteCleave||e.type==='guard'&&p.receivedHits%3===0;
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.counterBoost=false;
  if(heavy&&p.hp>0&&p.z<70&&p.receivedHits%2===0){
@@ -1312,7 +1351,7 @@ function enemyAttack(e){
  }else{
   p.stun=heavy?.49:.28;p.hitDuration=p.stun;p.hitHeavyTimer=heavy?p.stun:0;p.inv=.75;
  }
- p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(dmg),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)deadMenu()}
+ p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)deadMenu()}
 function fxBurst(x,y,color='red',scale=1){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8)})}
 function spawnParryShieldFx(x,y,face=1,scale=1){fx.push({kind:'parryShield',x,y,face,scale,life:.36,maxLife:.36})}
 function floatText(text,x,y,color){if(floating.length>=45)floating.splice(0,floating.length-36);floating.push({text,x,y,color,life:1.05})}
@@ -1451,7 +1490,14 @@ function control(dt,pad){
  p.riposteWindow=Math.max(0,p.riposteWindow-dt);
  if(p.riposteWindow===0)p.riposteTarget=null;
  p.stamina=clamp(p.stamina+(17+modRank('haste')*4)*dt,0,100);
- p.hp=clamp(p.hp+modRank('regen')*.8*dt,0,p.maxHp);
+ const regen=modRank('regen'),wasHp=p.hp;
+ p.hp=clamp(p.hp+regen*1.6*dt,0,p.maxHp);
+ if(regen&&p.hp>wasHp){
+  p.regenPulseClock=(p.regenPulseClock||0)+dt;
+  if(p.regenPulseClock>=.9){p.regenPulseClock=0;
+   spawnModBitmap('blue',p.x,p.y-137,.70+regen*.08,'hue-rotate(245deg) saturate(.8)',.30);
+  }
+ }else p.regenPulseClock=0;
  p.novaCooldown=Math.max(0,(p.novaCooldown||0)-dt);
  p.comboWindow=Math.max(0,p.comboWindow-dt);
  p.hitTimeout=Math.max(0,p.hitTimeout-dt);if(p.hitTimeout===0)p.hits=0;
@@ -2023,7 +2069,9 @@ function selectMod(m){
  p.mods.push(m);
  p.mod=(p.mods.includes('shock')&&p.mods.includes('bleed'))?'neuro':
   [...new Set(p.mods.filter(k=>['fire','shock','bleed','ice'].includes(k)))].join('+')||'none';
- if(m==='vital'){p.maxHp+=25;p.hp+=25}
+ if(m==='vital'){p.maxHp+=25;p.hp+=25;
+  spawnModBitmap('gold',p.x,p.y-131,1.38+modRank('vital')*.05,'hue-rotate(87deg)',.50);
+ }
  p.hp=clamp(p.hp+(intermediate?12:20),0,p.maxHp);
  p.weapon=0;p.maxWeapon=18;p.stamina=100;level++;
  gameState='playing';hideMenu();
