@@ -112,8 +112,9 @@ function frame(e,key){
  if(key==='death')return Math.min(7,Math.floor((e.deathAge||0)/.82*8));
  if(key==='hit')return Math.min(7,Math.floor((1-(e.reactionTime||0)/Math.max(.05,e.reactionDuration||.46))*8));
  if(e.bossMode===key)return Math.min(7,Math.floor((e.bossAge/Math.max(.01,e.bossDuration))*8));
- if(key==='walk')return Math.floor((e.spriteDistance||0)/30)%8;
- return Math.floor((e.spriteTime||0)*6.2)%8;
+ // Preserve boss speed/attack timings; slow only walk and idle pose cycling.
+ if(key==='walk')return Math.floor((e.spriteDistance||0)/51)%8;
+ return Math.floor((e.spriteTime||0)*6.2*.67)%8;
 }
 function draw(e,x,y,z,api){
  if(!useNewBoss)return false;
@@ -127,10 +128,15 @@ function draw(e,x,y,z,api){
  const i=frame(e,chosen===item?key:'idle');
  ctx.save();ctx.translate(x,y-z+19);ctx.scale(e.face>0?-1:1,1);
  ctx.globalAlpha=alpha;
- // Full-body bitmap silhouette flash, including the boss's arm and helmet.
- if(e.hitFlash>0)ctx.filter=e.hitFlash>.12?
-  'brightness(0) invert(1)':'brightness(2.3) saturate(.3)';
- ctx.drawImage(chosen.img,(i%4)*CELL_W,Math.floor(i/4)*CELL_H,CELL_W,CELL_H,-w/2,-h,w,h);
+ // Two passes: original full-body sprite + <=75% alpha-preserving white.
+ const sx=(i%4)*CELL_W,sy=Math.floor(i/4)*CELL_H;
+ ctx.drawImage(chosen.img,sx,sy,CELL_W,CELL_H,-w/2,-h,w,h);
+ if(e.hitFlash>0){
+  ctx.save();ctx.filter='brightness(0) invert(1)';
+  ctx.globalAlpha=alpha*.75*Math.min(1,e.hitFlash/.33);
+  ctx.drawImage(chosen.img,sx,sy,CELL_W,CELL_H,-w/2,-h,w,h);
+  ctx.restore();
+ }
  ctx.restore();
  if(!e.dead){
   const top=y-z-405,bw=165;
