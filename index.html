@@ -155,9 +155,11 @@ const W=1280,H=720;
 const Z_ANIM_RATE=.72,Z_ANIM_ONESHOT_CURVE=1.16;
 const zOneShotFrame=t=>Math.min(7,Math.max(0,Math.floor(Math.pow(Math.min(1,Math.max(0,t)),Z_ANIM_ONESHOT_CURVE)*8)));
 const zStride=key=>(key==='run'?32:key==='backwalk'?23:key==='walk'?24:24);
-const assetNames=['street','assassin','guard','boss','pipe_metal','pipe_charged','burst_red','burst_blue','burst_gold','street_pano'];
+const assetNames=['street','assassin','guard','boss','pipe_metal','pipe_charged','burst_red','burst_blue','burst_gold'];
 const img={};
 assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
+// Both keys reference exactly the same embedded panorama; decode only once.
+img.street_pano=img.street;
 const offscreenArrow=new Image();offscreenArrow.src='./assets/ui/target-arrow.png';
 // 4x2 real transparent PNG sprite sheet: spark-filled metal shield impact.
 const parryShieldImage=new Image();parryShieldImage.src='./assets/fx/parry-shield.png';
