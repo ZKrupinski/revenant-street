@@ -1958,6 +1958,41 @@ function control(dt,pad){
  const gamepadMag=Math.hypot(pad.dx,pad.dy);
  p.running=(stickMag>.84||gamepadMag>.92)&&p.z<=2&&p.attack<=0&&p.dodge<=0&&p.parry<=0;
  const movementStartX=p.x,movementStartY=p.y;
+ // Tag-chase responds to the one attack press after a successful parry.
+ // Travel is real per-frame movement, never a teleport to the offscreen foe.
+ if(p.riposteChasing){
+  const target=p.riposteChaseTarget;
+  p.riposteChaseTime=Math.max(0,p.riposteChaseTime-dt);
+  if(!target||target.dead||!enemies.includes(target)||p.riposteChaseTime<=0){
+   p.riposteChasing=false;p.riposteChaseTarget=null;
+  }else{
+   const gap=Math.max(92,bodyHalfX(p)+bodyHalfX(target)+8);
+   const vx=target.x-p.x,dir=vx>=0?1:-1;
+   p.facing=dir;p.running=true;
+   const speed=clamp(Math.abs(vx)*2.9,1900,3300);
+   const step=Math.min(60,speed*dt,Math.max(0,Math.abs(vx)-gap));
+   p.x=clamp(p.x+dir*step,64,STAGE_WIDTH-64);
+   const lane=target.y-p.y;
+   p.y=groundY(p.y+Math.sign(lane)*Math.min(Math.abs(lane),1150*dt));
+   strikeCameraTime=Math.max(strikeCameraTime,.22);strikeCameraTarget=1.35;
+   if(Math.abs(target.x-p.x)<=gap+15&&Math.abs(target.y-p.y)<=58){
+    p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;
+    target.knockVX=0;target.knockVY=0;target.stun=Math.max(target.stun,.58);
+    p.riposteStrikeTarget=target;p.running=false;p.counterBoost=true;
+    p.moveName='superman_punch';loadZMove('superman_punch');
+    p.attackDuration=.47;p.attack=.47;p.hitDone=false;p.attackQueued=false;
+    p.attackDriveRemaining=0;p.attackDriveTotal=0;
+    p.inv=Math.max(p.inv,.53);p.animAge=0;p.comboWindow=0;
+    strikeCameraTime=.68;strikeCameraTarget=1.36;
+    fxBurst(p.x+p.facing*70,p.y-125,'gold',1.35);
+    sound('attack');
+   }
+  }
+  if(p.riposteChasing){
+   p.moveDX=0;p.moveDY=0; // dedicated pursuit owns locomotion this tick
+   return;
+  }
+ }
  // Post-impact brace briefly suppresses movement input while taking a low step back.
  if(p.parryRecoilTime>0){dx=0;dy=0}
  if(p.stun<=0&&p.downTimer<=0&&p.getupTimer<=0){
@@ -2002,8 +2037,8 @@ function control(dt,pad){
     p.attackDriveRemaining=Math.max(0,p.attackDriveRemaining-Math.abs(p.x-before));
    }
   }
-  if(!p.jumpActive&&!p.airAttack&&p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx>.1)p.facing=1;
-  else if(!p.jumpActive&&!p.airAttack&&p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx<-.1)p.facing=-1;
+  if(!p.jumpActive&&!p.airAttack&&!p.riposteStrikeTarget&&p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx>.1)p.facing=1;
+  else if(!p.jumpActive&&!p.airAttack&&!p.riposteStrikeTarget&&p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx<-.1)p.facing=-1;
  }
  if(p.parryRecoilTime>0){
   const step=Math.min(p.parryRecoilRemaining,110*dt);
@@ -2059,6 +2094,7 @@ function control(dt,pad){
  p.dashFollowWindow=Math.max(0,(p.dashFollowWindow||0)-dt);
  p.riposteWindow=Math.max(0,p.riposteWindow-dt);
  if(p.riposteWindow===0)p.riposteTarget=null;
+ if(!p.riposteChasing&&p.riposteChaseTarget?.dead)p.riposteChaseTarget=null;
  p.stamina=clamp(p.stamina+(17+modRank('haste')*4)*dt,0,100);
  const regen=modRank('regen'),wasHp=p.hp;
  p.hp=clamp(p.hp+regen*1.6*dt,0,p.maxHp);
