@@ -330,6 +330,9 @@ function getZMove(){
  if(p.dodge>0)return p.evadeBackstep?'dodge':'dash';
  if(p.parry>0)return 'guard';
  if(p.attack>0)return p.airAttack?(p.moveName||'airkick'):(p.moveName||'jab');
+ // Both stationary and directional jumps use the actual eight-frame heel-kick art.
+ if(p.jumpHeel&&(p.z>1||p.jumpLandingVisual>0))
+  return p.jumpLeap?'diagonal_airkick':'axe_kick';
  if(p.jumpStartTimer>0&&(p.z>0||p.vz>0))return 'jumpstart';
  if(p.z>3)return 'airborne';
  if(p.landingTimer>0)return 'landing';
@@ -713,6 +716,12 @@ function currentZFrameIndex(key){
  if(key==='hit'||key==='heavyhit')return oneshot(1-p.stun/Math.max(.001,p.hitDuration||.4));
  if(key==='dash'||key==='dodge')return oneshot(1-p.dodge/.30);
  if(key==='guard')return oneshot(1-p.parry/Math.max(.001,p.parryDuration||.34));
+ if(p.jumpHeel&&!p.airAttack&&(key==='axe_kick'||key==='diagonal_airkick')){
+  if(p.jumpLandingVisual>0)return p.jumpLandingVisual>.125?6:7;
+  if(p.vz>90)return p.jumpTime<.13?0:p.jumpTime<.28?1:2;
+  if(p.vz>=-85)return 3; // Raised leg clearly gathers at the apex.
+  return p.z>110?4:5; // Hold the extended heel through the fast fall.
+ }
  if(key==='jumpstart')return oneshot(1-p.jumpStartTimer/.23);
  if(key==='landing')return oneshot(1-p.landingTimer/.24);
  if(p.airKickPhase&&p.attack>0&&(key==='axe_kick'||key==='diagonal_airkick')){
@@ -1050,14 +1059,16 @@ function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=t
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>공격 · 연속타격 · 공중 차기</div><div><kbd>↑ / K / Y / △</kbd>점프 (지상 횡베기 회피)</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
 function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
  comboCameraFocusX=0;comboCameraPulse=0;comboCameraLastSnap=-99;
- resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
+ resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
+ p.jumpHeel=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
+ p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
   ['배경',()=>({ready:img.street_pano?.complete&&img.street_pano.naturalWidth>0,failed:false})],
   ['적 방향 아이콘',()=>({ready:offscreenArrow.complete&&offscreenArrow.naturalWidth>0,failed:false})],
   ['이펙트',()=>({ready:['burst_red','burst_blue','burst_gold'].every(k=>img[k]?.complete&&img[k].naturalWidth>0),failed:false})],
-  ...['idle','walk','run','jab','frontkick','axe_kick','hit'].map(k=>['Z '+k,()=>loadZMove(k)]),
+  ...['idle','walk','run','jab','frontkick','axe_kick','diagonal_airkick','hit'].map(k=>['Z '+k,()=>loadZMove(k)]),
   ...['idle','walk','attack'].map(k=>['잡몹 '+k,()=>loadMaskedMove(k)]),
   ...['idle','walk','attack'].map(k=>['암살자 '+k,()=>RZAssassinArt.load(k)]),
   ...['idle','walk'].map(k=>['방패 '+k,()=>loadRiotGuard(k)])
@@ -1220,7 +1231,7 @@ function startAttack(){
   p.attackDuration=.76;p.attack=.76;
   // Air attacks are no longer one repeated pose: directional dive or
   // vertical heel slam, both still charge and descend with the same physics.
-  const diagonal=Math.abs(p.moveDX||0)>.55&&p.z>55;
+  const diagonal=!!p.jumpLeap||(Math.abs(p.moveDX||0)>.55&&p.z>55);
   p.moveName=diagonal?'diagonal_airkick':'axe_kick';
   p.airKickPhase='charge';p.airKickLaunched=false;p.attackDriveRemaining=0;
   p.hitDone=false;p.attackQueued=false;p.comboWindow=0;
@@ -1289,7 +1300,25 @@ function dodge(){
  p.evadeBackstep=backInput;p.dodge=.30;p.inv=.34;p.dodgeX=backInput?-p.facing:p.facing;p.stamina-=19;
  fxBurst(p.x-p.facing*22,p.y-24,'blue',.42);sound('attack');
 }
-function jump(){if(gameState!=='playing'||p.attack>0||p.parry>0||p.dodge>0||p.z>1||p.stun>0||p.downTimer>0||p.getupTimer>0)return;p.vz=760;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;p.airKickUsed=false;sound('attack')}
+function jump(){
+ if(gameState!=='playing'||p.attack>0||p.parry>0||p.dodge>0||
+  p.z>1||p.stun>0||p.downTimer>0||p.getupTimer>0)return;
+ // Read CURRENT held WASD, mobile stick and gamepad directions; input can
+ // arrive in the very same event as jump before the next control tick.
+ const ix=clamp((keys.has('d')?1:0)-(keys.has('a')?1:0)+
+  analog.dx+(p.jumpPadDX||0),-1,1);
+ const iy=clamp((keys.has('s')?1:0)-(keys.has('w')?1:0)+
+  analog.dy+(p.jumpPadDY||0),-1,1);
+ const mag=Math.hypot(ix,iy);
+ p.jumpLeap=mag>.23;
+ if(p.jumpLeap&&Math.abs(ix)>.20)p.facing=ix>0?1:-1;
+ p.jumpLaunchX=p.jumpLeap?(Math.abs(ix)>.20?ix:p.facing*.78):0;
+ p.jumpLaunchY=p.jumpLeap?iy:0;
+ p.jumpHeel=true;p.jumpLandingTriggered=false;p.jumpLandingVisual=0;
+ p.jumpTime=0;p.moveName=p.jumpLeap?'diagonal_airkick':'axe_kick';
+ p.vz=760;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;
+ p.airKickUsed=false;sound('attack');
+}
 function execute(target){
  if(gameState!=='playing'||p.stun>0||!target||target.dead||target.groggy<=0)return false;
  p.facing=target.x>=p.x?1:-1;p.inv=.9;p.z=0;p.vz=0;
@@ -1498,7 +1527,7 @@ function floatText(text,x,y,color){if(floating.length>=45)floating.splice(0,floa
 function messageUpdate(dt){if(messageTime>0){messageTime-=dt;if(messageTime<=0)$('gameMessage').classList.remove('active')}}
 function pollPad(){
  const g=navigator.getGamepads?.()?.find(Boolean);
- if(!g){for(const k of Object.keys(padPrev))padPrev[k]=false;lastGamepad=false;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;return{dx:0,dy:0}}
+ if(!g){p.jumpPadDX=0;p.jumpPadDY=0;for(const k of Object.keys(padPrev))padPrev[k]=false;lastGamepad=false;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;return{dx:0,dy:0}}
  lastGamepad=true;
  let dx=Math.abs(g.axes[0])>.19?g.axes[0]:0,dy=Math.abs(g.axes[1])>.19?g.axes[1]:0;
  dx+=(g.buttons[15]?.pressed?1:0)-(g.buttons[14]?.pressed?1:0);
@@ -1523,6 +1552,8 @@ function pollPad(){
   return{dx:0,dy:0};
  }
  menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
+ // Capture stick BEFORE the jump face-button edge is dispatched.
+ p.jumpPadDX=clamp(dx,-1,1);p.jumpPadDY=clamp(dy,-1,1);
  // Face buttons: Y/triangle top jump, X/square left attack,
  // B/circle right parry, A/cross bottom dash. LB/RB are aliases.
  const a={attack:g.buttons[2]?.pressed||g.buttons[5]?.pressed,jump:g.buttons[3]?.pressed,parry:g.buttons[1]?.pressed||g.buttons[4]?.pressed,dodge:g.buttons[0]?.pressed,pause:g.buttons[9]?.pressed};
@@ -1553,7 +1584,16 @@ function control(dt,pad){
   if(p.dodge>0){dx=p.dodgeX;dy=0;speed=880}
   if(p.counterRush>0){dx=p.facing;dy=0;speed=980;p.counterRush=Math.max(0,p.counterRush-dt)}
   if(p.attack>0&&!p.airAttack&&p.counterRush<=0)speed*=.28;
-  if(p.airAttack){dx=p.facing;dy=0;speed=p.airKickPhase==='charge'?28:330}
+  if(p.jumpHeel&&p.z>0&&p.stun<=0){
+   // Momentum is committed when jumping; release of the stick does not
+   // abruptly stop the leap. No auto-travel for a neutral standing jump.
+   const glide=p.vz>0?1.06:p.z>105?.90:.70;
+   dx=p.jumpLaunchX;dy=p.jumpLaunchY;
+   speed=p.jumpLeap?(p.airAttack&&p.airKickPhase==='dive'?790:655)*glide:0;
+  }else if(p.airAttack){
+   dx=p.airKickPhase==='charge'?0:p.facing;dy=0;
+   speed=p.airKickPhase==='charge'?0:330;
+  }
   p.x=clamp(p.x+dx*speed*dt,64,STAGE_WIDTH-64);
   p.y=groundY(p.y+dy*speed*.52*dt);
   if(p.attack>0&&p.attackDriveRemaining>0&&!p.airAttack&&p.counterRush<=0){
@@ -1581,8 +1621,8 @@ function control(dt,pad){
     p.attackDriveRemaining=Math.max(0,p.attackDriveRemaining-Math.abs(p.x-before));
    }
   }
-  if(!p.airAttack&&p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx>.1)p.facing=1;
-  else if(!p.airAttack&&p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx<-.1)p.facing=-1;
+  if(!p.jumpHeel&&!p.airAttack&&p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx>.1)p.facing=1;
+  else if(!p.jumpHeel&&!p.airAttack&&p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx<-.1)p.facing=-1;
  }
  if(p.parryRecoilTime>0){
   const step=Math.min(p.parryRecoilRemaining,110*dt);
@@ -1602,6 +1642,7 @@ function control(dt,pad){
   }
  }else if(p.stun>0){p.airKickPhase='';p.airAttack=false}
  if(p.z>0||p.vz>0){
+  if(p.jumpHeel)p.jumpTime+=dt;
   const charging=p.airAttack&&p.airKickPhase==='charge';
   if(!charging){p.z+=p.vz*dt;p.vz-=(p.airKickPhase==='dive'?1950:1440)*dt}
   if(p.airAttack&&p.airKickPhase==='dive'&&!p.hitDone&&p.z<=90){
@@ -1610,17 +1651,23 @@ function control(dt,pad){
   if(p.z<=0){
    const landed=p.z<0||p.vz<0;
    p.z=0;p.vz=0;
-   if(p.airAttack&&p.airKickPhase==='dive'){
-    if(!p.hitDone){p.hitDone=true;attackCheck()}
-    p.airKickPhase='recover';p.attack=.19;p.landingTimer=.30;
+   const powered=p.airAttack&&p.airKickPhase==='dive';
+   if(powered&&!p.hitDone){p.hitDone=true;attackCheck()}
+   if(p.jumpHeel&&!p.jumpLandingTriggered){
+    p.jumpLandingTriggered=true;p.jumpLandingVisual=.28;
+    heelLandingShockwave(powered);
+   }else if(powered){
     screenShake=Math.max(screenShake,16);hitStop=Math.max(hitStop,.078);
-    fxBurst(p.x+p.facing*35,p.y-8,'gold',1.15);
-    playImpactSound('heavy',.90);
-   }else if(landed)p.landingTimer=.24;
+   }
+   if(powered){p.airKickPhase='recover';p.attack=.19;p.landingTimer=.30}
+   else if(landed)p.landingTimer=.28;
    p.airKickUsed=false;p.airAttack=false;
   }
  }
  p.jumpStartTimer=Math.max(0,p.jumpStartTimer-dt);
+ p.jumpLandingVisual=Math.max(0,(p.jumpLandingVisual||0)-dt);
+ if(p.jumpLandingVisual===0&&p.z<=0)p.jumpHeel=false;
+ if(p.stun>0){p.jumpHeel=false;p.jumpLandingVisual=0}
  p.landingTimer=Math.max(0,p.landingTimer-dt);
  p.hitHeavyTimer=Math.max(0,p.hitHeavyTimer-dt);
  if(p.downTimer>0){p.downTimer=Math.max(0,p.downTimer-dt);
