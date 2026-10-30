@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('opening battle spawns one small squad just beyond the screen',()=>{
@@ -991,10 +991,31 @@ test('enemy that has engaged Z continues pursuing after exiting camera range',()
  assert.equal(e.encountered,true,'aggro never resets');
  assert(e.x<t.p.x,'follower should not teleport through player');
 });
-test('upgrade HUD exposes more than two icon rows with overflow scrolling',()=>{
- assert(html.includes('max-height:160px;overflow-x:hidden;overflow-y:auto'));
- assert(html.includes('grid-auto-flow:row;grid-template-columns:repeat(3'));
- assert(!html.includes('max-height:68px;overflow:hidden'));
- assert(html.includes('pointer-events:auto;touch-action:pan-y'));
+test('stage-relative HUD reserves separate left, centre and right layout areas',()=>{
+ const css=html.slice(html.indexOf('<style id="compact-combat-ui">'),html.indexOf('</style>',html.indexOf('<style id="compact-combat-ui">')));
+ assert(css.includes('.stage-wrap{container-type:inline-size}'),'responsive by stage width');
+ assert(css.includes('#hud .hud-left{left:0;top:0;'),'player bars dock left');
+ assert(css.includes('#hud .hud-right{right:0;top:0;'),'pause and credits dock right');
+ assert(css.includes('#hud .hud-center{left:29%;width:42%;'),'centre has its own lane');
+ assert(css.includes('@container (max-width:610px)'),'compact landscape or fold devices');
+ assert(css.includes('#stageWrap .touch-actions{--face-btn:clamp(43px,5.2cqw,61px)'));
+ assert(css.includes('#stageWrap #touchControls:not([hidden]) ~ .bottom-tip{display:none}'));
+ assert(!css.includes('display:none!important} #stageWrap .touch-controls'),'touch control must remain visible');
+});
+test('upgrades stay in two rows by default and expand only when selected',()=>{
+ g.startRun();
+ const items=['fire','shock','bleed','ice','power','crit','rush','impact'];
+ t.p.mods=items;
+ t.updateHud();
+ const toggle=node('modToggle');
+ assert.equal(toggle.hidden,false,'surplus effects should have a visible toggle');
+ assert(toggle.textContent.includes('+2'),'button must reveal how many effects are hidden');
+ assert.equal((node('modStrip').innerHTML.match(/mod-chip compact/g)||[]).length,8);
+ t.setModsExpanded(true);t.updateModToggle(8);
+ assert(toggle.textContent.includes('접기'),'expanded tray has visible collapse action');
+ t.setModsExpanded(false);t.updateModToggle(8);
+ assert(toggle.textContent.includes('+2'),'collapse returns to two-row default');
+ t.p.mods=items.slice(0,3);t.updateHud();
+ assert.equal(toggle.hidden,true,'toggle disappears when all icons fit');
 });
 console.log(`${checks} combat regression checks passed`);
