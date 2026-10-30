@@ -1879,7 +1879,7 @@ function enemyAttack(e){
   fxBurst(p.x+p.facing*66,p.y-134,'gold',1.15);
   floatText('JUST PARRY!',p.x,p.y-220,'#7df7ff');
   flash('패링 성공! 공격으로 추격!',1.35);
-  screenShake=Math.max(screenShake,27);hitStop=Math.max(hitStop,.14);slowMotion=Math.max(slowMotion,.55);playImpactSound('parry',1.50);vibrateImpact('parry',true);
+  screenShake=Math.max(screenShake,27);hitStop=Math.max(hitStop,.14);slowMotion=Math.max(slowMotion,.12);playImpactSound('parry',1.50);vibrateImpact('parry',true);
   p.stamina=clamp(p.stamina+25,0,100);sound('parry');
   if(e.poise>=e.maxPoise){e.groggy=3.4;e.stun=3.4;floatText('GROGGY',e.x,e.y-185,'#8fe6ff')}
   return;
