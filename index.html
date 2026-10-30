@@ -99,7 +99,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 <style id="mod-compact-ui">
 /* Minimal combat HUD: bitmap-like icons plus legible stack counters. */
 #modStrip.mod-strip{display:flex;flex-wrap:wrap;align-items:center;gap:4px;
- max-width:340px;max-height:68px;overflow:hidden;margin-top:4px}
+ max-width:340px;max-height:160px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;margin-top:4px;pointer-events:auto;align-content:flex-start}
 #modStrip .mod-chip.compact{min-width:43px;min-height:27px;padding:3px 5px;
  display:inline-flex;align-items:center;justify-content:center;gap:3px;
  color:#f8faff;border:1px solid #8996ae7a;border-radius:5px;
@@ -110,15 +110,15 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  font-variant-numeric:tabular-nums;white-space:nowrap}
 #modStrip .mod-chip.compact.neuro{border-color:#c6a0fb}
 #hud .mod-hud-caption{display:none}
-@media(max-width:790px){#modStrip.mod-strip{max-width:240px;max-height:63px;gap:2px}
+@media(max-width:790px){#modStrip.mod-strip{max-width:240px;max-height:145px;gap:3px}
  #modStrip .mod-chip.compact{min-width:37px;min-height:25px;padding:2px 3px;gap:2px}
  #modStrip .mod-chip.compact .icon{font-size:14px}
  #modStrip .mod-chip.compact b{font-size:12px}}
 @media(max-width:590px){#modStrip.mod-strip{
- display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,25px);
- grid-auto-columns:39px;column-gap:2px;row-gap:2px;
- max-width:178px;max-height:56px;overflow-x:auto;overflow-y:hidden;
- pointer-events:auto;touch-action:pan-x;overscroll-behavior:contain;
+ display:grid;grid-auto-flow:row;grid-template-columns:repeat(3,minmax(0,1fr));
+ grid-auto-rows:27px;column-gap:3px;row-gap:3px;
+ max-width:178px;max-height:156px;overflow-x:hidden;overflow-y:auto;
+ pointer-events:auto;touch-action:pan-y;overscroll-behavior:contain;
  scrollbar-width:none;
  }
  #modStrip.mod-strip::-webkit-scrollbar{display:none}
