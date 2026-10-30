@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('opening battle spawns one small squad just beyond the screen',()=>{
@@ -894,27 +894,66 @@ test('heel landing launches mob but damping prevents screen-edge travel',()=>{
  assert(originL-left.x<195,'left target should not fly offscreen');
  assert(right.x-originR<195,'right target should not fly offscreen');
 });
-test('forward dodge plus immediate attack is a single powerful sidekick shove',()=>{
+test('forward dodge plus immediate attack is a strong cross punch with a long second lunge',()=>{
  g.startRun();t.setEnemies([]);t.p.x=2000;t.p.y=570;t.p.facing=1;t.p.moveDX=0;t.p.stamina=100;
  const e=t.makeEnemy('raider',t.p.x+130,t.p.y,0);e.hp=500;e.maxHp=500;e.stun=3;
  t.setEnemies([e]);
  t.dodge();assert(t.p.dodge>.25&&t.p.dashFollowWindow>.5);
  t.startAttack();
  assert.equal(t.p.dodge,0,'attack press must cancel forward dash into the strike');
- assert.equal(t.p.moveName,'sidekick');
+ assert.equal(t.p.moveName,'cross','dash follow-up MUST use a punch, not a side kick');
  assert.equal(t.p.dashSmash,true);
+ assert.equal(t.p.attackDriveTotal,280,'the attack itself advances substantially further');
+ assert(t.getStrikeCameraTime()>.4,'attack button must activate hero camera instantly');
+ assert(t.getCameraZoom()>=1.15,'input starts the zoom before hit detection');
  let strike=false;
  for(let i=0;i<36;i++){
   t.control(1/60,{dx:0,dy:0});
   if(e.hp<500)strike=true;
  }
  assert(strike,'dedicated dash counter must reach enemy and connect');
- assert(e.knockVX>700,'dash kick pushes more than normal jab');
+ assert(e.knockVX>700,'power cross punch pushes more than a normal jab');
  assert.equal(e.knockDrag,4.7,'dash heavy shove should still have friction');
  const afterHit=e.hp;
  for(let i=0;i<24;i++)t.control(1/60,{dx:0,dy:0});
- assert.equal(e.hp,afterHit,'one dash kick must not hit same enemy repeatedly');
+ assert.equal(e.hp,afterHit,'one dash punch must not hit same enemy repeatedly');
  assert.equal(t.p.dashSmash,false,'dash finisher must clear');
+});
+test('dash cross covers more distance than old 140px kick, without frame teleport',()=>{
+ g.startRun();t.p.x=2600;t.p.y=570;t.p.facing=1;t.p.moveDX=0;t.p.stamina=100;t.setEnemies([]);
+ t.dodge();t.startAttack();const origin=t.p.x;
+ assert.equal(t.p.moveName,'cross');
+ let farthest=origin,maxFrame=0;
+ for(let i=0;i<40;i++){
+  const before=t.p.x;t.control(1/60,{dx:0,dy:0});
+  farthest=Math.max(farthest,t.p.x);
+  maxFrame=Math.max(maxFrame,Math.abs(t.p.x-before));
+ }
+ assert(farthest-origin>220,'attack should add a whole extra long punch lunge');
+ assert(maxFrame<45,'forward motion must be frame-smoothed, not instant teleport');
+});
+test('camera snaps into hero focus on dash-punch PRESS and eases back',()=>{
+ g.startRun();t.setEnemies([]);t.p.x=2200;t.p.y=570;t.p.facing=1;t.p.moveDX=0;
+ t.dodge();t.startAttack();
+ assert(t.getCameraZoom()>=1.15,'instant press zoom even before update');
+ assert(t.getStrikeCameraTime()>.4,'special camera armed immediately');
+ const firstX=t.getCameraX();
+ for(let i=0;i<8;i++){t.updateComboCamera(1/60);t.followComboCamera(1/60)}
+ assert(t.getCameraZoom()>1.29,'strong ~1.32 camera closeup');
+ assert(t.getCameraX()>firstX+400,'quickly reacquire hero after attack input');
+ for(let i=0;i<90;i++){t.updateComboCamera(1/60);t.followComboCamera(1/60)}
+ assert(t.getCameraZoom()<1.08,'camera returns after special attack');
+ assert.equal(t.getStrikeCameraTime(),0);
+});
+test('explicit aerial attack immediately zooms tighter than dash punch',()=>{
+ g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2300;
+ t.jump();assert.equal(t.getStrikeCameraTime(),0,'jump by itself never zooms as an attack');
+ for(let i=0;i<8;i++)t.control(1/60,{dx:0,dy:0});
+ t.startAttack();assert.equal(t.p.moveName,'axe_kick');
+ assert(t.getStrikeCameraTime()>.50,'aerial ATTACK button sets zoom immediately');
+ assert(t.getCameraZoom()>=1.15);
+ for(let i=0;i<8;i++){t.updateComboCamera(1/60);t.followComboCamera(1/60)}
+ assert(t.getCameraZoom()>1.33,'air chop closes in ~1.34x');
 });
 test('backstep is not a forward dash finisher',()=>{
  g.startRun();t.setEnemies([]);t.p.facing=1;t.p.moveDX=-1;
