@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,gamepadRumble,activeRumbleActuator,stopGamepadRumble,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('opening battle spawns one small squad just beyond the screen',()=>{
@@ -270,6 +270,88 @@ test('Android or gamepad rumble is optional and rapid-hit bursts are rate-limite
  assert.equal(t.playImpactSound('heavy'),false,'missing Web Audio API should not crash combat');
 });
 
+test('connected PC gamepad uses first controller dual-rumble, not a second gamepad',()=>{
+ const previous=world.navigator.getGamepads,phone=world.navigator.vibrate;
+ const padCalls=[],otherCalls=[],phoneCalls=[];
+ world.navigator.getGamepads=()=>[
+  {connected:true,vibrationActuator:{playEffect:(type,options)=>{
+   padCalls.push({type,options});return Promise.resolve('complete');
+  }}},
+  {connected:true,vibrationActuator:{playEffect:(type,options)=>{
+   otherCalls.push({type,options});return Promise.resolve('complete');
+  }}}
+ ];
+ world.navigator.vibrate=pattern=>{phoneCalls.push(pattern);return true};
+ try{
+  assert(t.activeRumbleActuator(),'first active controller has an actuator');
+  assert.equal(t.vibrateImpact('punch',true),true);
+  assert.equal(t.vibrateImpact('heavy',true),true);
+  assert.equal(t.vibrateImpact('parry',true),true);
+  assert.equal(t.vibrateImpact('hurt',true),true);
+  assert.equal(t.vibrateImpact('execution',true),true);
+  assert.equal(padCalls.length,5);
+  assert.equal(otherCalls.length,0,'never vibrate spectator controllers');
+  assert.equal(phoneCalls.length,0,'mobile phone should not buzz when pad rumble succeeded');
+  assert(padCalls.every(x=>x.type==='dual-rumble'));
+  const light=padCalls[0].options,heavy=padCalls[1].options;
+  assert(heavy.duration>light.duration);
+  assert(heavy.strongMagnitude>light.strongMagnitude);
+  assert.equal(heavy.startDelay,0);
+  assert(padCalls[2].options.weakMagnitude>light.weakMagnitude);
+  assert(padCalls[4].options.duration>heavy.duration);
+ }finally{world.navigator.getGamepads=previous;if(phone)world.navigator.vibrate=phone;else delete world.navigator.vibrate}
+});
+test('mobile/legacy gamepad pulse fallback works without phone vibration',()=>{
+ const previous=world.navigator.getGamepads,phone=world.navigator.vibrate;
+ const calls=[],phoneCalls=[];
+ world.navigator.getGamepads=()=>[{connected:true,hapticActuators:[{
+  pulse:(intensity,duration)=>{calls.push({intensity,duration});return Promise.resolve(true)}
+ }]}];
+ world.navigator.vibrate=pattern=>{phoneCalls.push(pattern);return true};
+ try{
+  assert.equal(t.gamepadRumble('dash'),true);
+  assert.equal(t.gamepadRumble('air'),true);
+  assert.equal(calls.length,2);
+  assert(calls.every(c=>c.intensity>0&&c.intensity<=1));
+  assert(calls[1].duration>calls[0].duration);
+  assert.equal(t.vibrateImpact('heavy',true),true);
+  assert.equal(phoneCalls.length,0);
+ }finally{world.navigator.getGamepads=previous;if(phone)world.navigator.vibrate=phone;else delete world.navigator.vibrate}
+});
+test('unsupported gamepads never break combat and fall back to phone haptics',()=>{
+ const previous=world.navigator.getGamepads,phone=world.navigator.vibrate;
+ const calls=[];
+ try{
+  world.navigator.getGamepads=()=>[{connected:true,vibrationActuator:{playEffect(){throw Error('not supported')}}}];
+  world.navigator.vibrate=pattern=>{calls.push(pattern);return true};
+  assert.equal(t.gamepadRumble('heavy'),false);
+  assert.equal(t.vibrateImpact('heavy',true),true,'phone can still vibrate');
+  assert.equal(calls.length,1);
+  assert(Array.isArray(calls[0]));
+  world.navigator.getGamepads=()=>{throw Error('permission denied')};
+  assert.equal(t.activeRumbleActuator(),null,'Gamepad API errors must not crash combat');
+  world.navigator.getGamepads=()=>[];
+  delete world.navigator.vibrate;
+  assert.equal(t.vibrateImpact('heavy',true),false,'unsupported devices run without any rumble');
+ }finally{world.navigator.getGamepads=previous;if(phone)world.navigator.vibrate=phone;else delete world.navigator.vibrate}
+});
+test('pause vibration test is reachable and stops effects safely',()=>{
+ const previous=world.navigator.getGamepads;
+ const calls=[],resets=[];
+ world.navigator.getGamepads=()=>[{connected:true,vibrationActuator:{
+  playEffect:(kind,data)=>{calls.push({kind,data});return Promise.resolve('complete')},
+  reset:()=>{resets.push(true);return Promise.resolve('complete')}
+ }}];
+ try{
+  assert.equal(t.vibrateImpact('test',true),true);
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].data.duration,225);
+  t.stopGamepadRumble();
+  assert.equal(resets.length,1);
+  assert(html.includes('data-action="rumbleTest"'));
+  assert(html.includes('id="rumbleStatus"'));
+ }finally{world.navigator.getGamepads=previous}
+});
 test('rear-side enemy attacks are caught by parry and hero immediately turns',()=>{
  g.startRun();
  const e=t.makeEnemy('raider',t.p.x-72,t.p.y,0);
