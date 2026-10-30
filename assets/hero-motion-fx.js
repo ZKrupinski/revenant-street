@@ -112,8 +112,11 @@
  }
  function init(img){
   images=img;
-  for(const id of ['blue','gold','red'])if(source(id)&&!source(id).complete)
-   source(id).addEventListener('load',queueBuild,{once:true});
+  for(const id of ['blue','gold','red']){
+   const bitmap=source(id);
+   if(bitmap&&!bitmap.complete&&typeof bitmap.addEventListener==='function')
+    bitmap.addEventListener('load',queueBuild,{once:true});
+  }
   queueBuild();
  }
  function kindOf(key,p){
