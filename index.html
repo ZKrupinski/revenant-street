@@ -264,6 +264,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 <script src="./assets/elite-ironmask.js?v=914e0e7a"></script>
 <script src="./assets/boss-hunter.js?v=fe00bed9"></script>
 <script src="./assets/attacks-20.js?v=923cd5b7"></script>
+<script src="./assets/voice/voice-engine.js?v=20261030-voice1"></script>
 <script>const EMBEDDED_ASSETS=window.RZ_ASSETS;</script>
 <script>
 (()=>{'use strict';
@@ -1129,6 +1130,17 @@ try{const stored=JSON.parse(localStorage.getItem('revenant-perma-v1')||'null');i
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),near=(a,b,d)=>Math.abs(a-b)<=d;
 function save(){try{localStorage.setItem('revenant-perma-v1',JSON.stringify(perma))}catch(_){}}
 function sound(type='hit'){if(mute)return;try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!audio)audio=new AC();if(audio.state==='suspended')audio.resume();const t=audio.currentTime;const o=audio.createOscillator(),g=audio.createGain();o.type=type==='execution'?'sawtooth':'triangle';let f=type==='parry'?1050:type==='hurt'?90:type==='break'?60:type==='execution'?270:type==='attack'?160:230;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(Math.max(35,f*.25),t+.14);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(type==='break'?.19:.07,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+(type==='execution'?.43:.18));o.connect(g).connect(audio.destination);o.start(t);o.stop(t+(type==='execution'?.44:.19));if(['hit','break','execution','parry'].includes(type)){const len=Math.floor(audio.sampleRate*.15);const buf=audio.createBuffer(1,len,audio.sampleRate);const dat=buf.getChannelData(0);for(let i=0;i<len;i++)dat[i]=(Math.random()*2-1)*Math.exp(-i/len*5);const n=audio.createBufferSource(),fl=audio.createBiquadFilter(),gn=audio.createGain();n.buffer=buf;fl.type='lowpass';fl.frequency.value=type==='parry'?2200:980;gn.gain.value=type==='break'?.22:.11;n.connect(fl).connect(gn).connect(audio.destination);n.start(t)}}catch(e){}}
+// Decode all four human recordings during the START gesture, before gameplay.
+function prepareCombatVoices(){
+ const AC=window.AudioContext||window.webkitAudioContext;
+ if(!AC||!window.__zCombatVoice)return Promise.resolve(false);
+ if(!audio)audio=new AC();
+ if(audio.state==='suspended')void audio.resume?.().catch?.(()=>{});
+ return window.__zCombatVoice.prepare(audio);
+}
+function playCombatVoice(kind,actor=p){
+ return !mute&&gameState==='playing'&&!!window.__zCombatVoice?.play(kind,actor,p);
+}
 // HEAVY IMPACT ENGINE: filtered percussion, deep sub-hit, crack transients,
 // and real device rumble. Audio is unlocked by the normal combat user gesture.
 let impactBus=null,impactNoiseBuf=null,lastImpactAudio=-99,lastImpactHaptic=-999999;
@@ -1421,7 +1433,7 @@ function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
  comboCameraFocusX=0;comboCameraPulse=0;comboCameraLastSnap=-99;
  strikeCameraTime=0;strikeCameraTarget=1;
  cameraRecenterClock=0;cameraRecenterHold=0;cameraRecenterBlend=0;
- resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
+ resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p._voiceAt=-99;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
  p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
  p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.comboMoveCycle=[];p.comboMoveCursor=0;p.comboMoveCount=0;p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
@@ -1468,11 +1480,12 @@ async function requestRunStart(){
  if(loadingRun)return;
  loadingRun=true;gameState='loading';resetFailedSceneArt();
  const preview=/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'');
- showMenu(`<div class="eyebrow">PROJECT Z / RESOURCE PREPARATION</div><h2>게임 리소스 준비 중</h2><p id="loadStatus">음악 전체와 전투 애니메이션을 준비합니다. 준비가 끝나면 시작됩니다.</p><div class="bar hp"><div class="bar-fill" id="loadBar" style="width:0%"></div></div><p class="micro">고해상도 비트맵 압축 해제 · 프레임 8장 정렬 중</p>`);
+ showMenu(`<div class="eyebrow">PROJECT Z / RESOURCE PREPARATION</div><h2>게임 리소스 준비 중</h2><p id="loadStatus">음악·실제 기합·비명·애니메이션을 모두 준비한 뒤 시작합니다.</p><div class="bar hp"><div class="bar-fill" id="loadBar" style="width:0%"></div></div><p class="micro">고해상도 비트맵 압축 해제 · 프레임 8장 정렬 중</p>`);
  try{
   const music=window.__revenantBgm;
   if(!music)throw Error('음악 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');
   void music.beginPlayback(); // Preserve the initiating user gesture on mobile.
+  const voicesReady=(typeof prepareCombatVoices==='function'?prepareCombatVoices():Promise.resolve()).then(()=>null,error=>error);
   const musicReady=music.prepare();
   // Attach a rejection handler immediately while artwork is prepared.
   const musicResult=musicReady.then(()=>null,error=>error);
@@ -1484,8 +1497,9 @@ async function requestRunStart(){
   $('loadStatus').textContent='배경 효과 준비 중';
   await new Promise(resolve=>setTimeout(resolve,0));
   depthBackdrop(img.street_pano);
-  $('loadStatus').textContent='음악 전체 다운로드 및 재생 준비 중';
+  $('loadStatus').textContent='음악과 전투 음성 전체 재생 준비 중';
   const musicError=await musicResult;if(musicError)throw musicError;
+  const voiceError=await voicesReady;if(voiceError)throw voiceError;
   await music.beginPlayback();
   loadingRun=false;startRun();
  }catch(err){
@@ -1663,7 +1677,7 @@ function startAttack(){
   p.attackDriveTotal=280;p.attackDriveRemaining=280;
   p.comboWindow=.95;p.comboIdx=2;p.stamina-=16;p.animAge=0;
   p.recentMoves.push('cross');if(p.recentMoves.length>5)p.recentMoves.shift();
-  p.inv=Math.max(p.inv,.14);triggerStrikeCamera('dash');vibrateImpact('dash');sound('attack');
+  p.inv=Math.max(p.inv,.14);triggerStrikeCamera('dash');vibrateImpact('dash');sound('attack');playCombatVoice('heroPower');
   return;
  }
  p.dashSmash=false;
@@ -1677,7 +1691,7 @@ function startAttack(){
   p.airKickPhase='charge';p.airKickLaunched=false;p.attackDriveRemaining=0;
   p.hitDone=false;p.attackQueued=false;p.comboWindow=0;
   p.vz=0;p.inv=Math.max(p.inv,.14);
-  triggerStrikeCamera('air');vibrateImpact('air');sound('attack');return;
+  triggerStrikeCamera('air');vibrateImpact('air');sound('attack');playCombatVoice('heroPower');return;
  }
  p.airKickPhase='';
  const finisher=p.riposteWindow>0?null:findExecutionTarget();
@@ -1695,7 +1709,7 @@ function startAttack(){
   loadZMove('run');
   triggerStrikeCamera('dash');strikeCameraTime=.74;strikeCameraTarget=1.35;
   fxBurst(p.x-p.facing*34,p.y-55,'blue',1.25);
-  flash('JUST PARRY → CHASE FINISH!',.95);sound('attack');return;
+  flash('JUST PARRY → CHASE FINISH!',.95);sound('attack');playCombatVoice('heroPower');return;
  }
  const step=p.comboWindow>0?(p.comboIdx+1)%4:0;
  const move=pickComboMove(step,p.moveName,p.weapon>0);
@@ -1724,6 +1738,7 @@ function startAttack(){
  if(modRank('haste'))spawnModBitmap('blue',p.x-p.facing*24,p.y-94,.44+modRank('haste')*.06,'brightness(1.3)',.17);
  p.attack=p.attackDuration;p.animAge=0;p.hitDone=false;p.glow=.18;p.comboWindow=.95;
  sound('attack');
+ if(p.comboMoveCount%3!==0)playCombatVoice('heroStrike');
 }
 function parry(){
  if(gameState!=='playing'||p.stun>0||p.parry>0||p.downTimer>0||p.getupTimer>0||p.stamina<7)return;
@@ -1779,7 +1794,7 @@ function execute(target){
  hurtEnemy(target,target.type==='boss'?260:999,100);
  screenShake=25;screenTint=.6;hitStop=.15;
  fxBurst(target.x,target.y-130,target.type==='boss'?'red':'gold',2.4);
- flash('EXECUTION!',1.1);vibrateImpact('execution',true);sound('execution');return true
+ flash('EXECUTION!',1.1);vibrateImpact('execution',true);sound('execution');playCombatVoice('heroPower');return true
 }
 function awardEnemyKill(e){
  if(e.killAwarded)return;
@@ -1798,7 +1813,10 @@ function hurtEnemy(e,dmg,poise){
  // viewport restraint; regular heavy launches keep their original physics.
  e.parryScreenDir=0;e.parryScreenEdge=null;
  e.encountered=true; // A hit counts as detection even through long stun / knockback.
- e.hp-=dmg;e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:e.type==='elite'?.80:1),0,e.maxPoise);
+ e.hp-=dmg;
+ if(e.hp<=0){if(e.type==='boss'||e.type==='elite'||Math.random()<.48)playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e)}
+ else if(Math.random()<.75)playCombatVoice('enemyHurt',e);
+ e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:e.type==='elite'?.80:1),0,e.maxPoise);
  // Twelve distinct impacts: head snaps, gut folds, ankle buckles, spins,
  // side stumbles and aerial knockdowns. Keep the existing enemy bitmap.
  const smash=Z_KICK_MOVES.has(p.moveName)||Z_HEAD_MOVES.has(p.moveName)||p.moveName==='uppercut'||dmg>=60;
@@ -2071,7 +2089,7 @@ function enemyAttack(e){
  }
  p.dashSmash=false;p.dashFollowWindow=0;
  p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteWindow=0;p.riposteTarget=null;
- p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)deadMenu()}
+ playCombatVoice(p.hp<=0?'heroDeath':'heroHurt');p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)deadMenu()}
 function fxBurst(x,y,color='red',scale=1){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8)})}
 function spawnParryShieldFx(x,y,face=1,scale=1){fx.push({kind:'parryShield',x,y,face,scale,life:.36,maxLife:.36})}
 function floatText(text,x,y,color){if(floating.length>=45)floating.splice(0,floating.length-36);floating.push({text,x,y,color,life:1.05})}
@@ -2375,7 +2393,7 @@ function updateEliteAI(e,dt,dx,dy,dist){
   const moved=Math.hypot(e.x-startX,(e.y-startY)*1.7);
   e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
   if((Math.abs(e.x-p.x)<e.reach+80&&Math.abs(e.y-p.y)<63)||e.eliteRush===0){
-   e.eliteRush=0;e.eliteAttack=true;e.windup=.27;e.windupDuration=.27;
+   e.eliteRush=0;e.eliteAttack=true;e.windup=.27;e.windupDuration=.27;playCombatVoice('enemyShout',e);
    e.cooldown=1.0;
    fxBurst(e.x+e.face*40,e.y-125,'blue',1.2);
   }
@@ -2441,7 +2459,7 @@ function updateEnemies(dt){
   e.bleed=Math.max(0,e.bleed-dt);e.burn=Math.max(0,(e.burn||0)-dt);
   if(e.groggy>0){e.groggy-=dt;if(e.groggy<=0){e.poise=0;e.stun=0}}
   if(e.bleed>0)e.hp-=dt*(4+2.5*(e.bleedPower||1));if(e.burn>0)e.hp-=dt*(5+3*(e.burnPower||1));
-  if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);continue}
+  if(e.hp<=0){if(e.type==='boss'||e.type==='elite'||Math.random()<.4)playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e);e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);continue}
   if(e.stun>0||e.shock>.35||e.groggy>0||e.proneTime>0||e.riseTime>0)continue;
   let dx=p.x-e.x,dy=p.y-e.y,dist=Math.abs(dx);
   // Aggro sticks once Z was detected: leaving the screen never resets pursuit.
@@ -2464,7 +2482,7 @@ function updateEnemies(dt){
   if(e.type==='boss'&&window.RZBossHunter?.update(e,p,dt,{
     stageWidth:STAGE_WIDTH,
     attack:enemyAttack,
-    warning:(b,tag,color)=>{floatText(tag,b.x,b.y-360,color==='red'?'#ff7187':'#ffdca0');fxBurst(b.x,b.y-172,color,1.4)},
+    warning:(b,tag,color)=>{floatText(tag,b.x,b.y-360,color==='red'?'#ff7187':'#ffdca0');fxBurst(b.x,b.y-172,color,1.4);playCombatVoice('bossShout',b)},
     impact:(b,kind)=>{
      fxBurst(b.x+b.face*63,b.y-116,kind==='slam'?'red':'gold',kind==='slam'?3.0:1.75);
      screenShake=Math.max(screenShake,kind==='slam'?24:12);
@@ -2495,7 +2513,7 @@ function updateEnemies(dt){
    e.x=clamp(e.x+side*Math.min(Math.max(0,Math.abs(dx)-stopGap),rush*dt),45,STAGE_WIDTH-45);
    e.y=groundY(e.y+Math.sign(dy)*Math.min(Math.abs(dy),rush*.35*dt));
    if(Math.abs(e.x-p.x)<Math.max(e.reach+62,bodyHalfX(p)+bodyHalfX(e)+27)&&Math.abs(e.y-p.y)<55){
-    e.chargeTime=0;e.windup=.16;e.windupDuration=.16;e.chargeReady=false;
+    e.chargeTime=0;e.windup=.16;e.windupDuration=.16;e.chargeReady=false;if(e.slot%3===0)playCombatVoice('enemyShout',e);
    }
    const moved=Math.hypot(e.x-lastX,(e.y-lastY)*1.7);
    e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
@@ -2517,6 +2535,7 @@ function updateEnemies(dt){
   const activeWindups=nearbyEnemies.filter(o=>o!==e&&(o.windup>0||o.chargeTime>0)&&Math.abs(o.x-p.x)<200).length;
   if(e.type!=='boss'&&readyToHit&&e.cooldown<=0&&activeWindups<3){
    e.windup=e.type==='boss'?.75:.42+(e.slot%3)*.065;e.windupDuration=e.windup;
+    if(e.slot%3===0||Math.random()<.22)playCombatVoice('enemyShout',e);
    e.attackDone=false;continue;
   }
   const lastX=e.x,lastY=e.y;
