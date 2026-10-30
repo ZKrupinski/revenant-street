@@ -5,10 +5,17 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
-test('existing wave composition preserves assassin slots',()=>{g.startRun();assert.equal(t.getEnemies().filter(e=>e.type==='assassin').length,6)});
+test('opening battle spawns one small squad just beyond the screen',()=>{
+ g.startRun();
+ const live=t.getEnemies().filter(e=>!e.dead);
+ assert(live.length>=3&&live.length<=6,'no initial crowd of 18+');
+ assert(live.some(e=>e.type==='assassin'),'diverse enemy classes');
+ assert(live.every(e=>e.x>1280),'enemies must walk in from outside screen');
+ assert.equal(t.getSquad(),1);
+});
 test('all assassin AI roles reach and damage the player',()=>{for(let i=0;i<6;i++){g.startRun();const e=t.makeEnemy('assassin',t.p.x+180,t.p.y,i);t.setEnemies([e]);for(let n=0;n<900&&t.p.hp===t.p.maxHp;n++)t.updateEnemies(1/60);assert(t.p.hp<t.p.maxHp,`slot ${i}`)}});
 test('all twelve artwork states are reachable',()=>{const e=t.makeEnemy('assassin',0,0,0);const cases={idle:{},walk:{visualMoving:true,visualSpeed:100},run:{visualMoving:true,visualSpeed:240,locomotionMode:'run'},charge:{chargePrep:.3},attack:{windup:.4},hitHead:{reactionTime:.3,hitAnimation:'hitHead'},hitBody:{reactionTime:.3,hitAnimation:'hitBody'},hitSpin:{reactionTime:.3,hitAnimation:'hitSpin'},hitLaunch:{reactionTime:.3,hitAnimation:'hitLaunch'},hitFly:{reactionTime:.3,hitAnimation:'hitFly'},fall:{proneTime:.5},getup:{riseTime:.5}};for(const [key,state]of Object.entries(cases)){const actor={...e,...state};assert.equal(t.getAssassinMove(actor),key);assert(t.maskedFrame(actor,key)>=0&&t.maskedFrame(actor,key)<8)}});
 test('assassin uses grounded fall and recovery timers',()=>{g.startRun();const e=t.makeEnemy('assassin',t.p.x+120,t.p.y,0);e.pendingFall=true;t.setEnemies([e]);t.updateEnemies(.01);assert.equal(t.getAssassinMove(e),'fall');t.updateEnemies(.62);assert.equal(t.getAssassinMove(e),'getup');t.updateEnemies(.67);assert.equal(e.riseTime,0)});
@@ -49,13 +56,18 @@ test('raider airborne death and landing follow an uninterrupted animation',()=>{
  assert(e.collapseAge>0);
 });
 
-test('elite appears once in the first wave and uses a separate combat type',()=>{
+test('elite enters in a later encounter, not in the opening troop',()=>{
  g.startRun();
- const elite=t.getEnemies().filter(e=>e.type==='elite');
- assert.equal(elite.length,1);
- assert.equal(elite[0].maxHp,530);
- assert.equal(elite[0].maxPoise,260);
- assert(elite[0].x>2000&&elite[0].x<2500);
+ assert.equal(t.getEnemies().filter(e=>e.type==='elite').length,0);
+ for(let i=1;i<5;i++){
+  t.setEnemies([]);t.p.x=t.SQUAD_SPOTS[1][i];
+  t.setCameraX(t.p.x-465);
+  assert.equal(t.spawnNextEncounter(),true);
+ }
+ const elites=t.getEnemies().filter(e=>e.type==='elite');
+ assert.equal(elites.length,1);
+ assert(elites[0].maxHp>530,'later elite has squad durability scaling');
+ assert.equal(elites[0].maxPoise,260);
 });
 test('elite battle telegraphs and rushes before a strong attack',()=>{
  g.startRun();
@@ -194,7 +206,7 @@ test('ground combos now lunge decisively even with a neutral joystick',()=>{
  for(let i=0;i<17;i++)t.control(1/60,{dx:0,dy:0});
  assert(t.p.x-atStart>=34,'first punch must visibly advance without joystick input');
  assert(t.p.attackDriveRemaining<total,'distance budget should be used on forward movement');
- assert(t.p.x<=12800-64,'world bounds remain enforced');
+ assert(t.p.x<=t.STAGE_WIDTH-64,'world bounds remain enforced');
 });
 test('combo lunge respects facing and does not teleport on one frame',()=>{
  g.startRun();t.setEnemies([]);
@@ -408,13 +420,15 @@ test('gamepad D-pad/left stick can choose and confirm upgrade options without au
 });
 
 
-test('final hunter fight is boss only, without a performance-heavy entourage',()=>{
- g.startRun();
- t.setEnemies([]);const code=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
- const wave3=code.match(/  3:\[([\s\S]*?)\n  \]/);
- assert(wave3,'wave 3 should be found');
- assert(wave3[1].includes("['boss',11880,561]"));
- assert(!/\['(?:raider|guard|assassin|elite)'/.test(wave3[1]));
+test('boss chapter is isolated at the end of the 32k street',()=>{
+ g.startRun();t.setWave(2);
+ t.spawnWave();
+ const live=t.getEnemies().filter(e=>!e.dead);
+ assert.equal(live.length,1);
+ assert.equal(live[0].type,'boss');
+ assert.equal(live[0].x,30900);
+ assert.equal(t.STAGE_WIDTH,32000);
+ assert.equal(t.WAVE_GATES[3],31850);
 });
 test('real combat currency and shards are paid exactly once, including DOT kills',()=>{
  g.startRun();
@@ -852,5 +866,42 @@ test('backstep is not a forward dash finisher',()=>{
  g.startRun();t.setEnemies([]);t.p.facing=1;t.p.moveDX=-1;
  t.dodge();assert.equal(t.p.dashFollowWindow,0);
  t.startAttack();assert.equal(t.p.attack,0,'backstep cannot cancel to free rush');
+});
+test('later encounters appear only after previous squad cleared and forward progress',()=>{
+ g.startRun();
+ assert.equal(t.getSquad(),1);
+ const opening=t.getEnemies().filter(e=>!e.dead);
+ t.p.x=900;t.setCameraX(t.p.x-465);
+ assert.equal(t.spawnNextEncounter(),false,'cannot stack next crowd on a living group');
+ t.setEnemies([]);
+ assert.equal(t.spawnNextEncounter(),false,'must advance past next troop trigger');
+ t.p.x=1600;t.setCameraX(1135);
+ assert.equal(t.spawnNextEncounter(),true);
+ const troop=t.getEnemies().filter(e=>!e.dead);
+ assert(troop.length>=4&&troop.length<=6);
+ assert(troop.some(e=>e.x<1135),'some enemies emerge from the left outside viewport');
+ assert(troop.some(e=>e.x>1135+1280),'others emerge from right outside viewport');
+ assert(troop.every(e=>!e.encountered),'not instantly visible or aggro-teleported');
+ const laterHP=troop.find(e=>e.type==='raider')?.maxHp;
+ assert(laterHP>70,'each new wave segment should gain HP');
+});
+test('enemy that has engaged Z continues pursuing after exiting camera range',()=>{
+ g.startRun();t.setEnemies([]);
+ const e=t.makeEnemy('raider',t.p.x+500,t.p.y,0);e.stun=0;
+ t.setEnemies([e]);
+ t.updateEnemies(.016);
+ assert.equal(e.encountered,true);
+ t.p.x=3500;
+ const oldX=e.x;
+ for(let i=0;i<70;i++)t.updateEnemies(1/60);
+ assert(e.x>oldX+100,'detected enemy must chase even beyond 920px');
+ assert.equal(e.encountered,true,'aggro never resets');
+ assert(e.x<t.p.x,'follower should not teleport through player');
+});
+test('upgrade HUD exposes more than two icon rows with overflow scrolling',()=>{
+ assert(html.includes('max-height:160px;overflow-x:hidden;overflow-y:auto'));
+ assert(html.includes('grid-auto-flow:row;grid-template-columns:repeat(3'));
+ assert(!html.includes('max-height:68px;overflow:hidden'));
+ assert(html.includes('pointer-events:auto;touch-action:pan-y'));
 });
 console.log(`${checks} combat regression checks passed`);
