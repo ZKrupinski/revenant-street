@@ -4,10 +4,16 @@
 (() => {
  'use strict';
  const CLIPS={
-  a:'./assets/voice/hero-grunt-a.wav',
-  b:'./assets/voice/hero-grunt-b.wav',
+  // Former protagonist cries are now exclusively the enemy pain voices.
+  enemyA:'./assets/voice/hero-grunt-a.wav',
+  enemyB:'./assets/voice/hero-grunt-b.wav',
   yell:'./assets/voice/voice-yell.wav',
-  roar:'./assets/voice/voice-roar.wav'
+  roar:'./assets/voice/voice-roar.wav',
+  // Distinct original generated high-pitched martial arts kiai, not an
+  // actor's recording or a voice clone.
+  heroA:'./assets/voice/hero-kiai-a.mp3',
+  heroB:'./assets/voice/hero-kiai-b.mp3',
+  heroPower:'./assets/voice/hero-kiai-power.mp3'
  };
  const buffers=Object.create(null),active=new Set();
  let context=null,loading=null,master=null,lastCrowd=-99;
@@ -47,12 +53,14 @@
    // Hero offense never borrows the enemies' sustained death shrieks.
    // The hero uses short actual male grunts; enemy wounds/yells use the
    // separate screams/roars. Only the hero's own death may scream.
-   // Ordinary pain should be a short 'ugh', not a death scream;
-   // hero attacks only borrow the two grunt takes, NEVER yell/roar.
-   const file=kind==='heroDeath'||kind==='enemyDeath'||kind==='enemyShout'?'yell':
+   // The hero NEVER plays enemy groans, death screams or boss roars.
+   // Old hero recordings (enemyA/B) are now the enemy hit reaction pool.
+   const file=kind==='heroPower'||kind==='heroDeath'?'heroPower':
+    kind==='heroStrike'||kind==='heroHurt'?(Math.random()<.5?'heroA':'heroB'):
     kind==='bossDeath'||kind==='bossShout'?'roar':
-    kind==='heroPower'?'b':
-    Math.random()<.5?'a':'b';
+    kind==='enemyDeath'?(Math.random()<.65?'yell':'enemyB'):
+    kind==='enemyShout'?(Math.random()<.6?'enemyB':'yell'):
+    (Math.random()<.5?'enemyA':'enemyB');
    const buffer=buffers[file];
    if(!buffer)return false;
    if(!master) {
@@ -65,7 +73,7 @@
    }
    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
    source.buffer=buffer;
-   const characterPitch=isHero?(kind==='heroPower'?.91:1.08):boss?.77:actor.type==='elite'?.84:
+   const characterPitch=isHero?(kind==='heroPower'?1.08:kind==='heroHurt'?.92:1.13):boss?.77:actor.type==='elite'?.84:
     actor.type==='guard'?.90:actor.type==='assassin'?1.035:.97;
    const rate=Math.max(.68,Math.min(1.21,characterPitch*(.95+Math.random()*.10)));
    source.playbackRate.value=rate;
@@ -74,7 +82,8 @@
    const position=isHero?1:Math.max(.3,1-Math.abs(actor.x-hero.x)/1600);
    const volume=(strengths[kind]||.7)*position;
    filter.type='lowpass';filter.frequency.value=boss?3500:isHero?6300:4500;
-   const maxDuration=kind==='heroStrike'?.36:kind==='heroPower'?.43:
+   const maxDuration=kind==='heroStrike'?.42:kind==='heroPower'?.72:
+    kind==='heroHurt'?.28:kind==='heroDeath'?1.0:
     kind==='enemyHurt'?.34:kind==='enemyShout'?.74:kind==='bossShout'?1.20:
     kind==='enemyDeath'?1.25:2.2;
    const duration=Math.min(maxDuration,buffer.duration/rate);
@@ -99,6 +108,6 @@
  }
  window.__zCombatVoice={
   prepare,play,
-  state:()=>({ready:Object.keys(buffers).length===4,loaded:Object.keys(buffers).length,playing:active.size})
+  state:()=>({ready:Object.keys(buffers).length===Object.keys(CLIPS).length,loaded:Object.keys(buffers).length,playing:active.size})
  };
 })();
