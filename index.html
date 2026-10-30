@@ -1611,7 +1611,10 @@ function hurtEnemy(e,dmg,poise){
  const [vx,vz,vy,life]=reactions[e.reactionVariant];
  e.reactionTime=e.reactionDuration=life;
  e.reactionDir=p.facing;
- e.stun=e.type==='boss'?.19:e.type==='elite'?life*.82:life;
+ // Normal combos must not permanently stun-lock the boss out of using
+ // its original dash/slam art. Explicit poise breaks still trigger GROGGY.
+ e.stun=e.type==='boss'?(e.bossMode==='dash'||e.bossMode==='slam'?0:.085):
+  e.type==='elite'?life*.82:life;
  e.hitFlash=e.type==='boss'?.33:e.type==='elite'?.30:.22;e.windup=0;e.chargePrep=0;e.chargeTime=0;e.attackPoseTime=0;
  if(e.type==='elite'){e.eliteTell=0;e.eliteRush=0;e.eliteAttack=false;e.eliteCooldown=Math.max(e.eliteCooldown,1.8)}
  // Couple enemy displacement to the attacker's actual forward drive.
@@ -1758,7 +1761,8 @@ function enemyAttack(e){
  e.eliteAttack=false;
  if(gameState!=='playing'||e.dead||e.groggy>0||p.downTimer>0||p.getupTimer>0)return;
  const dx=Math.abs(e.x-p.x),dy=Math.abs(e.y-p.y);
- if(dx>Math.max(e.reach+(eliteCleave?105:64)+(e.bossBonusReach||0),bodyHalfX(p)+bodyHalfX(e)+30)||dy>(eliteCleave?68:57)||p.z>76)return;
+ if(dx>Math.max(e.reach+(eliteCleave?105:64)+(e.bossBonusReach||0),bodyHalfX(p)+bodyHalfX(e)+30)||
+   dy>(e.type==='boss'?80:eliteCleave?68:57)||p.z>76)return;
  // During an active parry, redirect the guard toward the real attacker
  // even if the blow comes from behind. Reaction occurs at impact time.
  const parryWindow=p.parry>0;
@@ -2133,7 +2137,9 @@ function updateEnemies(dt){
   // Aggro sticks once Z was detected: leaving the screen never resets pursuit.
   if(dist<=1060)e.encountered=true;
   if(!e.encountered)continue;
-  e.face=dx>=0?1:-1;
+  // During a committed dash, keep the sprite facing the direction it
+  // actually charges; avoid mid-dash left/right art snapping.
+  if(e.type!=='boss'||!e.bossMode)e.face=dx>=0?1:-1;
   if(dist>910){
    const boost=clamp(e.speed*1.55+(dist-910)*.25,245,510);
    const before=e.x,beforeY=e.y;
@@ -2146,6 +2152,7 @@ function updateEnemies(dt){
   e.cooldown=Math.max(0,e.cooldown-dt);
   e.chargeCooldown=Math.max(0,e.chargeCooldown-dt);
   if(e.type==='boss'&&window.RZBossHunter?.update(e,p,dt,{
+    stageWidth:STAGE_WIDTH,
     attack:enemyAttack,
     warning:(b,tag,color)=>{floatText(tag,b.x,b.y-360,color==='red'?'#ff7187':'#ffdca0');fxBurst(b.x,b.y-172,color,1.4)},
     impact:(b,kind)=>{
