@@ -81,6 +81,9 @@ async function combatVoices(){
  assert(powerClip.endsWith('hero-grunt-b.wav'),'heavy attack MUST NOT use enemy scream file');
  assert(!powerClip.includes('voice-yell'),'hero power must not play the death wail');
  ctx.currentTime=2.5;
+ // In a real browser voice sources have ended by 2.5s; advance mocked
+ // onended callbacks to release the three-slot voice cap.
+ for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
  assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy gets its own wounded vocal');
  assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'ordinary pain must grunt instead of death-screaming');
  assert(createdSources.at(-1).startedAt>=ctx.currentTime+.075,'the crack of impact should precede the groan');
