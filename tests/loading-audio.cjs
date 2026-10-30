@@ -4,16 +4,17 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const code=html.slice(html.indexOf('async function requestRunStart(){'),html.indexOf('\nfunction startRun(){'));
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return {promise,resolve,reject}};
 async function startup(fail=false){
- const music=deferred(),art=deferred();let starts=0,prepared=0,menu='';
+ const music=deferred(),art=deferred(),voices=deferred();let starts=0,prepared=0,menu='';
  const nodes=new Map();const world={loadingRun:false,gameState:'title',setTimeout,Error,Promise,
  $:id=>{if(!nodes.has(id))nodes.set(id,{style:{}});return nodes.get(id)},
- resetFailedSceneArt(){},showMenu:s=>menu=s,waitSceneArt:()=>art.promise,depthBackdrop:()=>prepared++,img:{street_pano:{}},startRun:()=>starts++,
+ resetFailedSceneArt(){},showMenu:s=>menu=s,waitSceneArt:()=>art.promise,depthBackdrop:()=>prepared++,img:{street_pano:{}},startRun:()=>starts++,prepareCombatVoices:()=>voices.promise,
  window:{location:{search:''},__revenantBgm:{prepare:()=>music.promise,beginPlayback:()=>Promise.resolve()}}};
  vm.createContext(world);vm.runInContext(code,world);
  const run=world.requestRunStart();await world.requestRunStart();
  assert.equal(starts,0);art.resolve();await new Promise(r=>setTimeout(r,10));
  assert.equal(prepared,1);assert.equal(starts,0,'must wait for music after art');
- if(fail)music.reject(Error('music unavailable'));else music.resolve();
+ if(fail){music.reject(Error('music unavailable'));voices.resolve()}
+ else {music.resolve();await new Promise(r=>setTimeout(r,10));assert.equal(starts,0,'must wait for four decoded voice recordings');voices.resolve()}
  await run;assert.equal(starts,fail?0:1);assert.equal(world.loadingRun,false);
  if(fail)assert(menu.includes('music unavailable'));
 }
@@ -44,6 +45,43 @@ async function audio(){
  assert(Math.abs(bgm.getState().volume-.21)<.001);assert.equal(plays,1,'upgrade must preserve playback');
  await bgm.prepare();assert.equal(fetches,1,'restart reuses full audio');
 }
+async function combatVoices(){
+ const voiceScript=fs.readFileSync(path.join(root,'assets/voice/voice-engine.js'),'utf8');
+ let fetches=0,decoded=0;
+ const createdSources=[];
+ const param=()=>({value:0,setValueAtTime(v){this.value=v},linearRampToValueAtTime(v){this.value=v}});
+ const node=()=>({gain:param(),frequency:param(),threshold:param(),knee:param(),ratio:param(),attack:param(),release:param(),playbackRate:{value:1},
+  connect(x){return x},disconnect(){},start(){this.started=true},stop(){this.stopped=true}});
+ const ctx={currentTime:0,destination:node(),
+  createDynamicsCompressor:()=>node(),createGain:()=>node(),createBiquadFilter:()=>node(),
+  createBufferSource:()=>{const s=node();createdSources.push(s);return s},
+  decodeAudioData:async()=>{decoded++;return{duration:.9}}};
+ const w={window:{},Math,fetch:async()=>{fetches++;return{ok:true,arrayBuffer:async()=>new ArrayBuffer(12)}}};
+ vm.createContext(w);vm.runInContext(voiceScript,w);
+ const voices=w.window.__zCombatVoice;
+ assert.equal(voices.state().ready,false);
+ await voices.prepare(ctx);
+ assert.equal(fetches,4,'all four actual voice clips are fetched before combat');
+ assert.equal(decoded,4);
+ assert.equal(voices.state().ready,true);
+ await voices.prepare(ctx);assert.equal(fetches,4,'voice bank decodes only once');
+ const hero={x:300,y:560},foe={x:420,y:560,type:'raider'},boss={x:560,y:560,type:'boss'};
+ assert.equal(voices.play('heroStrike',hero,hero),true);
+ assert.equal(voices.play('heroStrike',hero,hero),false,'one hero cannot stack grunts');
+ ctx.currentTime=.6;
+ assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy pain follows the real damage event');
+ assert.equal(voices.play('enemyHurt',foe,hero),false,'injury voice is rate limited');
+ ctx.currentTime=1.3;
+ assert.equal(voices.play('bossShout',boss,hero),true,'boss warning has a dedicated roar');
+ assert(createdSources.length>=3,'all voice families use genuine recorded buffers');
+ assert(!voiceScript.includes('duckImpact'),'vocals do not change BGM volume');
+ for(const file of ['hero-grunt-a.wav','hero-grunt-b.wav','voice-yell.wav','voice-roar.wav']){
+  const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
+  assert(bytes.length>10000,'real recording is present: '+file);
+  assert.equal(bytes.subarray(0,4).toString(),'RIFF');
+ }
+ console.log('PASS: 4 CC0 human voices decoded before start; battle cries, pain and boss calls rate-limited; no BGM duck');
+}
 function spriteRetry(){
  const images=[];let now=1000;
  const w={Z_REMOTE_ATLAS:{sidekick:'kick.webp',alias:'kick.webp'},zArtState:{},zArtFrameShared:new Map(),
@@ -70,4 +108,4 @@ function optionalArt(){
  }
  console.log('PASS: unavailable extra combo does not block start; required artwork still blocks');
 }
-(async()=>{spriteRetry();optionalArt();await startup();await startup(true);await audio();console.log('PASS: start waits for art + full BGM; failures block start; repeated starts deduplicate; upgrades soften music but combat impact never ducks music');})().catch(e=>{console.error(e);process.exitCode=1});
+(async()=>{spriteRetry();optionalArt();await startup();await startup(true);await audio();await combatVoices();console.log('PASS: start waits for art + full BGM; failures block start; repeated starts deduplicate; upgrades soften music but combat impact never ducks music');})().catch(e=>{console.error(e);process.exitCode=1});
