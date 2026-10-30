@@ -173,7 +173,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 <script src="./assets/assassin-b.js"></script>
 <script src="./assets/elite-ironmask.js"></script>
 <script src="./assets/boss-hunter.js"></script>
-<script src="./assets/hero-motion-fx.js?v=b3a5abf"></script>
+<script src="./assets/hero-motion-fx.js?v=abae15c"></script>
 <script>const EMBEDDED_ASSETS=window.RZ_ASSETS;</script>
 <script>
 (()=>{'use strict';
@@ -2054,6 +2054,7 @@ function draw(){
  ctx.save();ctx.translate(-Math.round(cameraX),0);
  const actors=[p,...enemies.filter(e=>!e.dead||e.fade>0)].filter(e=>e.x>cameraX-300&&e.x<cameraX+W+300).sort((a,b)=>a.y-b.y);
  actors.forEach(drawActor);
+ window.RZHeroFx?.drawImpacts(ctx); // Contact appears above the victim, not behind the hero.
  drawEffects();for(const e of actors)if(e!==p&&!e.dead)drawEnemyStatusIcons(e);
  ctx.restore();syncZSprite();
  if(screenTint>0){ctx.globalAlpha=screenTint*.32;ctx.fillStyle='#ff335d';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}
