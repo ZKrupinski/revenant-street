@@ -31,7 +31,9 @@
    const cooldown=kind==='enemyHurt'?.40:
     kind==='enemyShout'||kind==='bossShout'?2.2:
     kind==='heroStrike'?.32:kind==='heroPower'?.46:.24;
-   if(now-(actor._voiceAt??-99)<cooldown)return false;
+   // A lethal scream must never be lost because a grunt just played.
+   const fatal=kind==='heroDeath'||kind==='enemyDeath'||kind==='bossDeath';
+   if(!fatal&&now-(actor._voiceAt??-99)<(kind==='heroPower'?.14:cooldown))return false;
    if(kind==='enemyHurt'&&now-lastCrowd<.14)return false;
    const important=isHero||boss||kind==='enemyDeath';
    if(active.size>=3) {
