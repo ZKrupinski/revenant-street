@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,jump,heelLandingShockwave,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('existing wave composition preserves assassin slots',()=>{g.startRun();assert.equal(t.getEnemies().filter(e=>e.type==='assassin').length,6)});
@@ -53,7 +53,7 @@ test('elite appears once in the first wave and uses a separate combat type',()=>
  g.startRun();
  const elite=t.getEnemies().filter(e=>e.type==='elite');
  assert.equal(elite.length,1);
- assert.equal(elite[0].maxHp,430);
+ assert.equal(elite[0].maxHp,530);
  assert.equal(elite[0].maxPoise,260);
  assert(elite[0].x>2000&&elite[0].x<2500);
 });
@@ -325,7 +325,7 @@ test('guard action state tracks motion, bracing, attacks, injury and falling',()
 test('guard keeps its own original combat stats and previous actor systems intact',()=>{
  g.startRun();
  const e=t.makeEnemy('guard',t.p.x+110,t.p.y,0);
- assert.equal(e.maxHp,100);
+ assert.equal(e.maxHp,145);
  assert.equal(e.maxPoise,132);
  assert.equal(e.speed,99);
  assert.equal(e.reach,41);
@@ -799,5 +799,58 @@ test('directional jump travels much farther but uses the same heel-slam pose and
   assert.equal(t.p.jumpLandingTriggered,true,'moving leap also lands with heel impact');
   t.keys.delete(key);
  }
+});
+test('rebalanced mobs need more hits but remain easy to knock airborne',()=>{
+ g.startRun();
+ for(const [kind,hp] of [['raider',70],['assassin',64],['guard',145],['elite',530],['boss',3900]]){
+  const enemy=t.makeEnemy(kind,t.p.x+170,t.p.y,0);
+  assert.equal(enemy.maxHp,hp,'HP of '+kind+' should reflect crowd durability');
+ }
+ const e=t.makeEnemy('raider',t.p.x+100,t.p.y,1);
+ t.setEnemies([e]);t.p.moveName='roundkick';
+ t.hurtEnemy(e,23,45);
+ assert(e.hp>0,'common enemy can take more than one hit');
+ assert(e.vz>0,'strikes still launch enemy in an arc');
+});
+test('heel landing launches mob but damping prevents screen-edge travel',()=>{
+ g.startRun();t.p.x=1750;t.p.y=570;t.p.moveName='axe_kick';
+ const left=t.makeEnemy('raider',t.p.x-115,t.p.y,0);
+ const right=t.makeEnemy('assassin',t.p.x+115,t.p.y,1);
+ t.setEnemies([left,right]);
+ const originL=left.x,originR=right.x;
+ t.heelLandingShockwave(false);
+ assert(left.knockVX<0&&right.knockVX>0);
+ assert.equal(left.knockDrag,5.6);
+ assert(right.vz>=400,'enemies must still visibly pop off the floor');
+ for(let i=0;i<150;i++)t.updateEnemies(1/60);
+ assert(originL-left.x<195,'left target should not fly offscreen');
+ assert(right.x-originR<195,'right target should not fly offscreen');
+});
+test('forward dodge plus immediate attack is a single powerful sidekick shove',()=>{
+ g.startRun();t.setEnemies([]);t.p.x=2000;t.p.y=570;t.p.facing=1;t.p.moveDX=0;t.p.stamina=100;
+ const e=t.makeEnemy('raider',t.p.x+130,t.p.y,0);e.hp=500;e.maxHp=500;e.stun=3;
+ t.setEnemies([e]);
+ t.dodge();assert(t.p.dodge>.25&&t.p.dashFollowWindow>.5);
+ t.startAttack();
+ assert.equal(t.p.dodge,0,'attack press must cancel forward dash into the strike');
+ assert.equal(t.p.moveName,'sidekick');
+ assert.equal(t.p.dashSmash,true);
+ let strike=false;
+ for(let i=0;i<36;i++){
+  t.control(1/60,{dx:0,dy:0});
+  if(e.hp<500)strike=true;
+ }
+ assert(strike,'dedicated dash counter must reach enemy and connect');
+ assert(e.knockVX>700,'dash kick pushes more than normal jab');
+ assert.equal(e.knockDrag,4.7,'dash heavy shove should still have friction');
+ const afterHit=e.hp;
+ for(let i=0;i<24;i++)t.control(1/60,{dx:0,dy:0});
+ assert.equal(e.hp,afterHit,'one dash kick must not hit same enemy repeatedly');
+ assert.equal(t.p.dashSmash,false,'dash finisher must clear');
+});
+test('backstep is not a forward dash finisher',()=>{
+ g.startRun();t.setEnemies([]);t.p.facing=1;t.p.moveDX=-1;
+ t.dodge();assert.equal(t.p.dashFollowWindow,0);
+ t.startAttack();assert.equal(t.p.attack,0,'backstep cannot cancel to free rush');
 });
 console.log(`${checks} combat regression checks passed`);
