@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,pollPad,attackCheck,control,jump,heelLandingShockwave,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('existing wave composition preserves assassin slots',()=>{g.startRun();assert.equal(t.getEnemies().filter(e=>e.type==='assassin').length,6)});
@@ -754,5 +754,50 @@ test('elite and boss use pure white bitmap flash and jump has longer vertical tr
  assert(html.includes("p.vz=760;p.z=2"),'higher jump impulse');
  assert(html.includes("p.vz=-1150"),'fast downward kick');
  assert(html.includes("p.airKickPhase==='dive'?1950:1440"),'dive gravity exceeds jump gravity');
+});
+test('stationary jump shows real descending heel-kick sheet and triggers one AoE slam',()=>{
+ g.startRun();t.keys.clear();t.p.x=1600;t.p.y=575;
+ const eL=t.makeEnemy('raider',t.p.x-125,t.p.y,0);
+ const eR=t.makeEnemy('raider',t.p.x+125,t.p.y,1);
+ for(const e of [eL,eR]){e.hp=1200;e.maxHp=1200;e.stun=4}
+ t.setEnemies([eL,eR]);
+ const x=t.p.x;
+ t.jump();
+ assert.equal(t.getZMove(),'axe_kick');
+ assert.equal(t.p.jumpLeap,false);
+ let maxHeight=0,apex=false,descending=false;
+ for(let i=0;i<90;i++){
+  t.control(1/60,{dx:0,dy:0});
+  maxHeight=Math.max(maxHeight,t.p.z);
+  if(t.p.z>110&&t.p.vz<=65&&t.p.vz>=-65){
+   apex=true;assert.equal(t.currentZFrameIndex('axe_kick'),3);
+  }
+  if(t.p.z>30&&t.p.vz<0)descending=true;
+ }
+ assert(maxHeight>185,'stationary heel kick should reach the high jump apex');
+ assert(apex&&descending,'whole kick motion must show gathered heel before a descent');
+ assert(Math.abs(t.p.x-x)<2,'neutral jump should not slide sideways');
+ assert.equal(t.p.jumpLandingTriggered,true);
+ assert(eL.hp<1200&&eR.hp<1200,'the landing must hit enemies on both sides');
+ assert(eL.knockVX<0&&eR.knockVX>0,'enemies must scatter away from the impact centre');
+ assert(eL.vz>0&&eR.vz>0,'the slam must launch surrounding mobs into the air');
+ const hpL=eL.hp,hpR=eR.hp;
+ for(let i=0;i<40;i++)t.control(1/60,{dx:0,dy:0});
+ assert.equal(eL.hp,hpL,'cannot repeat a landing splash without jumping again');
+ assert.equal(eR.hp,hpR,'cannot repeat AoE hits after touchdown');
+});
+test('directional jump travels much farther but uses the same heel-slam pose and landing',()=>{
+ for(const [key,sign] of [['d',1],['a',-1]]){
+  g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=1900;
+  t.keys.add(key);
+  const origin=t.p.x;
+  t.jump();
+  assert.equal(t.p.jumpLeap,true);
+  assert.equal(t.getZMove(),'diagonal_airkick');
+  for(let i=0;i<85;i++)t.control(1/60,{dx:sign,dy:0});
+  assert((t.p.x-origin)*sign>345,'held direction must create a long ballistic arc');
+  assert.equal(t.p.jumpLandingTriggered,true,'moving leap also lands with heel impact');
+  t.keys.delete(key);
+ }
 });
 console.log(`${checks} combat regression checks passed`);
