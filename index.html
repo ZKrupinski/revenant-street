@@ -1165,6 +1165,11 @@ function activeRumbleActuator(){
 function gamepadRumble(kind='punch'){
  const actuator=activeRumbleActuator();
  if(!actuator)return false;
+ // Mobile browsers may expose a method but advertise zero supported
+ // rumble effects for this particular Bluetooth controller.
+ if(actuator.effects&&typeof actuator.effects.includes==='function'&&
+    !actuator.effects.includes('dual-rumble')&&typeof actuator.pulse!=='function')
+  return false;
  const [duration,weak,strong]=RUMBLE_PROFILES[kind]||RUMBLE_PROFILES.punch;
  try{
   const result=typeof actuator.playEffect==='function'?
@@ -1181,6 +1186,55 @@ function gamepadRumble(kind='punch'){
     return true;
    }
   }catch(_){}
+  return false;
+ }
+}
+function gamepadHapticDiagnostics(){
+ let pad=null;
+ try{pad=Array.from(navigator.getGamepads?.()||[])
+   .find(g=>g&&g.connected!==false)||null}catch(_){}
+ const actuator=activeRumbleActuator();
+ const effects=actuator?.effects;
+ const names=effects&&typeof effects.includes==='function'?Array.from(effects):null;
+ return {
+  connected:!!pad,name:String(pad?.id||'이름 없는 게임패드').slice(0,90),
+  hasActuator:!!actuator,dual:names?names.includes('dual-rumble'):null,
+  pulse:typeof actuator?.pulse==='function'
+ };
+}
+function updateRumbleDiagnostics(){
+ const el=$('rumbleStatus');if(!el)return;
+ const i=gamepadHapticDiagnostics();
+ if(!i.connected){el.textContent='브라우저에서 게임패드가 감지되지 않습니다. 패드 버튼을 누른 뒤 다시 시도하세요.';return}
+ if(!i.hasActuator){el.textContent=i.name+' · 버튼 입력만 감지됨 / 브라우저에 게임패드 진동 API가 없음';return}
+ if(i.dual===false&&!i.pulse){el.textContent=i.name+' · 연결됨 / 이 브라우저에서 dual-rumble 지원하지 않음';return}
+ el.textContent=i.name+' · 진동 API 감지됨'+
+  (i.dual===true?' (dual-rumble 지원 표시)':i.pulse?' (pulse 지원 표시)':' (실제 구동 미확인)')+
+  ' · 테스트 버튼으로 결과를 확인하세요.';
+}
+async function testGamepadRumble(){
+ const el=$('rumbleStatus'),i=gamepadHapticDiagnostics();
+ if(!el)return false;
+ if(!i.connected||!i.hasActuator||(i.dual===false&&!i.pulse)){
+  updateRumbleDiagnostics();return false;
+ }
+ const actuator=activeRumbleActuator();
+ try{
+  el.textContent=i.name+' · 모터 진동 테스트 중…';
+  let result;
+  if(i.dual!==false&&typeof actuator?.playEffect==='function')
+   result=await actuator.playEffect('dual-rumble',{
+    duration:650,startDelay:0,weakMagnitude:1,strongMagnitude:1});
+  else if(typeof actuator?.pulse==='function')result=await actuator.pulse(1,650);
+  else{updateRumbleDiagnostics();return false}
+  const output=String(result),ok=result===true||output==='complete';
+  el.textContent=i.name+' · 브라우저 응답: '+output+
+   (ok?' / 요청 처리됨. 실제 G8+ 모터 진동은 직접 확인 필요.':
+    ' / 진동 지원 불가 또는 요청 중단. 모드와 브라우저 확인 필요.');
+  return ok;
+ }catch(error){
+  el.textContent=i.name+' · 진동 API 오류: '+String(error?.name||'실패')+
+   ' / 연결 모드 또는 브라우저의 진동 제한 가능성.';
   return false;
  }
 }
@@ -2663,7 +2717,7 @@ function completeMenu(){gameState='complete';setStatus('RUN COMPLETE');perma.sha
 function deadMenu(){if(gameState==='dead')return;gameState='dead';setStatus('SIGNAL LOST');perma.shards+=1;save();$('hint').hidden=true;showMenu(`<div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1><p>기계 신체가 파괴됐습니다. 영구 자원 <b class="key">+1</b>을 회수했습니다.</p><div class="hub-stat"><span>이번 런의 처치 ${runKills}명</span><strong>SHARDS +1</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB</button><button class="secondary-btn" data-action="start">즉시 재시작</button></div>`)}
 function hubMenu(){gameState='hub';$('bossHud').hidden=true;setStatus('REBEL HUB');const opts=[['core','외골격 증설','최대 체력 +20','20 HP'],['servo','동력 관절 보정','모든 공격 피해 +2','ATK +2'],['reflex','인공 반사신경','패링 유효시간 +0.035초','PARRY +']];const html=opts.map(([id,title,txt,short])=>`<button class="upgrade-btn" data-perma="${id}" ${perma.shards<2?'disabled':''}><span class="sym">${short}</span><strong>${title} <small>Lv.${perma[id]}</small></strong><small>${txt} / 비용 2 파편</small></button>`).join('');showMenu(`<div class="eyebrow">SAFE ZONE / CYBERNETIC UNDERGROUND</div><h2>REBEL HUB</h2><p>전투에서 획득한 <b class='key'>◆ 파편</b>으로 영구 강화합니다. 일반 적 4명 처치마다 1개, 방패병 1개, 엘리트 2개, 보스 4개. <b>₩ 크레딧은 전투 점수</b>이며 구매 재화가 아닙니다.</p><div class="hub-stat"><span>영구 강화 자원</span><strong>${perma.shards} SHARDS</strong></div><div class="choice-grid">${html}</div><div class="buttons"><button class="main-btn" data-action="start">다시 거리로</button><button class="secondary-btn" data-action="title">타이틀로</button></div>`)}
 function buyUpgrade(k){if(perma.shards<2)return;perma.shards-=2;perma[k]++;save();hubMenu();sound('parry')}
-function pauseToggle(){if(gameState==='playing'){gameState='paused';stopGamepadRumble();setStatus('PAUSED');showMenu(`<div class="eyebrow">SYSTEM SUSPENDED</div><h2>일시 정지</h2><p>전투가 일시 정지되었습니다.</p><div class="buttons"><button class="main-btn" data-action="resume">▶ 계속 플레이</button><button class="secondary-btn" data-action="rumbleTest">🎮 패드 진동 테스트</button><button class="secondary-btn" data-action="guideResume">조작 안내</button><button class="secondary-btn" data-action="title">타이틀로</button></div><p class="micro" id="rumbleStatus">컨트롤러 진동 지원은 브라우저 및 기기마다 다릅니다.</p>`)}else if(gameState==='paused'){gameState='playing';setStatus('COMBAT LIVE');hideMenu()}}
+function pauseToggle(){if(gameState==='playing'){gameState='paused';stopGamepadRumble();setStatus('PAUSED');showMenu(`<div class="eyebrow">SYSTEM SUSPENDED</div><h2>일시 정지</h2><p>전투가 일시 정지되었습니다.</p><div class="buttons"><button class="main-btn" data-action="resume">▶ 계속 플레이</button><button class="secondary-btn" data-action="rumbleTest">🎮 패드 진동 테스트</button><button class="secondary-btn" data-action="guideResume">조작 안내</button><button class="secondary-btn" data-action="title">타이틀로</button></div><p class="micro" id="rumbleStatus">연결된 패드의 진동 API를 확인 중입니다.</p>`);updateRumbleDiagnostics()}else if(gameState==='paused'){gameState='playing';setStatus('COMBAT LIVE');hideMenu()}}
 function keyDown(ev){
  const k=ev.key.toLowerCase();
  const held=heldKeyboard.has(k);heldKeyboard.add(k);
@@ -2714,14 +2768,7 @@ window.addEventListener('blur',suspendGame);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame()});
 
 $('menu').addEventListener('focusin',e=>{const items=menuButtons(),i=items.indexOf(e.target);if(i<0)return;menuPad.index=i;items.forEach((b,n)=>b.classList.toggle('pad-selected',n===i))});
-$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){
- const supported=!!activeRumbleActuator();
- const sent=supported&&vibrateImpact('test',true);
- const el=$('rumbleStatus');
- if(el)el.textContent=!supported?'연결한 패드 또는 브라우저가 진동 API를 제공하지 않습니다.':
-  sent?'진동 신호를 보냈습니다. 실제 진동 여부는 패드의 브라우저 지원에 따라 달라집니다.':
-  '진동 신호를 보낼 수 없습니다.';
-}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')hubMenu();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)buyUpgrade(b.dataset.perma)});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')hubMenu();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)buyUpgrade(b.dataset.perma)});
 $('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activeModStacks().length+(p.mod==='neuro'?1:0))};
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();if(gameState!=='playing')return;b.setPointerCapture(e.pointerId);keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release)}
