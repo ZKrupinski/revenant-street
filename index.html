@@ -1403,6 +1403,39 @@ function hurtEnemy(e,dmg,poise){
  if(e.type==='elite'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.14;e.eliteCooldown=Math.min(e.eliteCooldown,1.6);fxBurst(e.x,e.y-150,'gold',1.8);floatText('OVERDRIVE',e.x,e.y-255,'#f9c26a')}
  if(e.type==='boss'&&e.hp<e.maxHp*.55&&e.phase===1){e.phase=2;e.bossPhasePending=true;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
  if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);fxBurst(e.x,e.y-70,'gold',1.1);}}
+// Neutral jump and long leap share the same heel-slam landing.
+// One radial splash per touchdown: hits launch enemies AWAY on both sides.
+// Bitmap-only explosion art: no vector shockwave rings or geometry.
+function heelLandingShockwave(powered=false){
+ const rx=powered?395:325,ry=powered?123:100;
+ const impacted=enemies.filter(e=>!e.dead&&
+  Math.abs(e.x-p.x)<=rx&&Math.abs(e.y-p.y)<=ry&&e.z<155&&
+  Math.pow((e.x-p.x)/rx,2)+Math.pow((e.y-p.y)/ry,2)<=1.10);
+ screenShake=Math.max(screenShake,powered?25:20);
+ hitStop=Math.max(hitStop,powered?.115:.080);
+ fxBurst(p.x,p.y-30,'gold',powered?3.25:2.75);
+ spawnModBitmap('gold',p.x,p.y-36,powered?2.5:2.15,
+  'brightness(1.45) saturate(1.2)',.30);
+ playImpactSound('heavy',powered?1.4:1.1);
+ vibrateImpact('heavy');
+ for(const enemy of impacted){
+  const fromX=enemy.x,fromY=enemy.y;
+  const push=fromX===p.x?p.facing:Math.sign(fromX-p.x);
+  hurtEnemy(enemy,powered?64:40,powered?105:75);
+  const resist=enemy.type==='boss'?.33:enemy.type==='elite'?.78:
+   enemy.type==='guard'?.88:1;
+  enemy.knockVX=push*(powered?1560:1370)*resist;
+  enemy.knockVY=clamp((fromY-p.y)*4,-330,330);
+  if(enemy.type!=='boss'){
+   enemy.z=Math.max(enemy.z,5);
+   enemy.vz=Math.max(enemy.vz,(powered?700:570)*
+     (enemy.type==='elite'?.83:1));
+   if(!enemy.dead)enemy.pendingFall=true;
+  }
+  enemy.reactionDir=push;
+  fxBurst(enemy.x,enemy.y-96,'red',powered?1.55:1.25);
+ }
+}
 function attackCheck(){
  const armed=p.weapon>0&&!Z_KICK_MOVES.has(p.moveName)&&!Z_HEAD_MOVES.has(p.moveName)&&!p.airAttack;
  const baseDamage={jab:15,cross:19,hook:22,uppercut:26,backfist:20,hammerfist:30,spinning_elbow:28,rising_elbow:26,superman_punch:32,shovel_hook:23,frontkick:20,lowkick:18,roundkick:29,axe_kick:32,sidekick:27,spinning_heel:34,crescent_kick:28,diagonal_airkick:35,rising_headbutt:27,forward_headbutt:25,airkick:37};
