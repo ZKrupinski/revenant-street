@@ -113,8 +113,9 @@ test('animation loops advance slower than Alpha 1.13 at the same travel distance
  assert.equal(t.currentZFrameIndex('idle'),4,'idle cycle should advance at 78% original cadence');
  const e=t.makeEnemy('raider',400,570,0);
  e.spriteDistance=25;e.spriteTime=1;
- assert.equal(t.maskedFrame(e,'walk'),1);
- assert.equal(t.maskedFrame(e,'idle'),4);
+ assert.equal(t.maskedFrame(e,'walk'),0,'enemy walk animations now use a much longer visual stride');
+ assert.equal(t.maskedFrame(e,'idle'),2,'enemy idle frame cycling is slower without changing actual AI timing');
+ assert.equal(t.currentZFrameIndex('walk'),0,'the enemy-only speed change must not touch the hero gait');
 });
 test('one-shot animations preserve the last pose without altering hit timers',()=>{
  assert.equal(t.zOneShotFrame(0),0);
