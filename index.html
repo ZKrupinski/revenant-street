@@ -418,6 +418,7 @@ function getZMove(){
  if(p.getupTimer>0)return 'getup';
  if(p.stun>0)return p.hitHeavyTimer>0?'heavyhit':'hit';
  if(p.dodge>0)return p.evadeBackstep?'dodge':'dash';
+ if(p.riposteChasing)return 'dash';
  if(p.parry>0)return 'guard';
  if(p.attack>0)return p.airAttack?(p.moveName||'airkick'):(p.moveName||'jab');
  // Kick art appears only after a deliberate airborne attack press.
@@ -1316,7 +1317,7 @@ function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
  strikeCameraTime=0;strikeCameraTarget=1;
  resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
  p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
- p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
+ p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
@@ -1489,7 +1490,7 @@ function findExecutionTarget(){
  .sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0]||null;
 }
 function startAttack(){
- if(gameState!=='playing'||p.stun>0||(p.dodge>0&&p.dashFollowWindow<=0)||
+ if(gameState!=='playing'||p.stun>0||p.riposteChasing||(p.dodge>0&&p.dashFollowWindow<=0)||
   p.downTimer>0||p.getupTimer>0)return;
  if(p.attack>0){p.attackQueued=true;return}
  // Forward dash + attack is a deliberate single-frame-window strong shove.
@@ -1527,12 +1528,17 @@ function startAttack(){
  if(finisher){execute(finisher);return}
  if(p.riposteWindow>0&&p.riposteTarget&&!p.riposteTarget.dead){
   const target=p.riposteTarget;p.facing=target.x>=p.x?1:-1;
-  p.riposteWindow=0;p.riposteTarget=null;p.counterRush=.29;p.counterBoost=true;
+  p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=true;
+  p.riposteChaseTarget=target;p.riposteChaseTime=1.35;
+  p.riposteStrikeTarget=null;p.parry=0;p.parryRecoilTime=0;
+  p.parryRecoilRemaining=0;p.counterRush=0;p.counterBoost=false;
   p.attackDriveTotal=0;p.attackDriveRemaining=0;
-  p.airAttack=false;p.dashSmash=false;p.dashFollowWindow=0;p.attackQueued=false;p.moveName='cross';p.attackDuration=.44;p.attack=.44;
-  p.hitDone=false;p.comboWindow=0;p.stamina=Math.max(0,p.stamina-8);
-  screenShake=Math.max(screenShake,9);fxBurst(p.x+p.facing*70,p.y-115,'blue',1.3);
-  flash('PARRY COUNTER!',.7);sound('attack');return;
+  p.airAttack=false;p.dashSmash=false;p.dashFollowWindow=0;p.attackQueued=false;
+  p.attack=0;p.comboWindow=0;p.stamina=Math.max(0,p.stamina-8);
+  p.inv=Math.max(p.inv,1.5);p.moveName='dash';
+  triggerStrikeCamera('dash');strikeCameraTime=.74;strikeCameraTarget=1.35;
+  fxBurst(p.x-p.facing*34,p.y-55,'blue',1.25);
+  flash('JUST PARRY → CHASE FINISH!',.95);sound('attack');return;
  }
  const step=p.comboWindow>0?(p.comboIdx+1)%4:0;
  const move=pickComboMove(step,p.moveName,p.weapon>0);
@@ -1744,6 +1750,32 @@ function heelLandingShockwave(powered=false){
  }
 }
 function attackCheck(){
+ if(p.riposteStrikeTarget){
+  const e=p.riposteStrikeTarget;p.riposteStrikeTarget=null;
+  if(e.dead||!enemies.includes(e))return;
+  const reserve=e.type==='boss'?.16:e.type==='elite'?.075:.045;
+  const almostDead=Math.max(1,Math.ceil(e.maxHp*reserve));
+  const dmg=Math.max(1,Math.ceil(e.hp-almostDead));
+  hurtEnemy(e,dmg,215);
+  if(!e.dead){
+   // Second huge launch, still integrated over successive physics frames.
+   const resist=e.type==='boss'?.72:1;
+   e.knockVX=p.facing*3150*resist;e.knockDrag=2.15;
+   e.knockVY=clamp((e.y-p.y)*.65,-95,95);
+   e.z=Math.max(e.z,18);e.vz=e.type==='boss'?310:620;
+   e.stun=Math.max(e.stun,1.12);e.reactionTime=e.reactionDuration=.85;
+   e.hitAnimation='hitFly';e.pendingFall=e.type!=='boss';
+  }
+  e.reactionDir=p.facing;
+  hitStop=Math.max(hitStop,.18);screenShake=Math.max(screenShake,30);
+  screenTint=Math.max(screenTint,.55);
+  fxBurst(e.x,e.y-125,'gold',3.2);
+  spawnModBitmap('gold',e.x,e.y-133,2.3,'brightness(1.6) saturate(1.4)',.35);
+  floatText('CRUSH COUNTER!',e.x,e.y-220,'#ffe098');
+  playImpactSound('heavy',1.65);vibrateImpact('dashImpact',true);
+  p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
+  return;
+ }
  const armed=p.weapon>0&&!Z_KICK_MOVES.has(p.moveName)&&!Z_HEAD_MOVES.has(p.moveName)&&!p.airAttack;
  const baseDamage={jab:15,cross:19,hook:22,uppercut:26,backfist:20,hammerfist:30,spinning_elbow:28,rising_elbow:26,superman_punch:32,shovel_hook:23,frontkick:20,lowkick:18,roundkick:29,axe_kick:32,sidekick:27,spinning_heel:34,crescent_kick:28,diagonal_airkick:35,rising_headbutt:27,forward_headbutt:25,airkick:37};
  const baseReach={jab:94,cross:112,hook:105,uppercut:100,backfist:105,hammerfist:110,spinning_elbow:108,rising_elbow:95,superman_punch:166,shovel_hook:96,frontkick:133,lowkick:132,roundkick:151,axe_kick:128,sidekick:154,spinning_heel:165,crescent_kick:151,diagonal_airkick:160,rising_headbutt:88,forward_headbutt:89,airkick:174};
@@ -1829,19 +1861,25 @@ function enemyAttack(e){
   e.stun=e.type==='boss'?.88:eliteCleave?2.25:1.65;
   e.windup=0;e.cooldown=1.2;e.poise=clamp(e.poise+(e.type==='boss'?48:eliteCleave?e.maxPoise:95),0,e.maxPoise);
   // Apply a strong impulse to existing damped knockback, not a position teleport.
-  e.knockVX=p.facing*(e.type==='boss'?430:e.type==='elite'?1020:1120);
-  e.knockVY=rnd(-38,38);e.vz=e.type==='boss'?95:235;
+  // Fast parry blast covers almost one viewport, rather than teleporting.
+  e.knockVX=p.facing*(e.type==='boss'?1650:2350);
+  e.knockDrag=e.type==='boss'?2.15:1.92;
+  e.knockVY=rnd(-70,70);e.z=Math.max(e.z,8);
+  e.vz=e.type==='boss'?245:420;
+  e.stun=Math.max(e.stun,1.50);e.reactionTime=e.reactionDuration=.84;
+  if(e.type!=='boss'){e.pendingFall=true;e.hitAnimation='hitFly'}
   e.eliteRush=0;
   p.parry=Math.max(p.parry,.30);p.parryDuration=Math.max(p.parryDuration,.34);
-  p.riposteWindow=1.25;p.riposteTarget=e;p.inv=Math.max(p.inv,.35);
+  p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteChaseTime=0;
+  p.riposteWindow=1.85;p.riposteTarget=e;p.inv=Math.max(p.inv,.35);
   p.parryRecoilDuration=.24;p.parryRecoilTime=.24;
   p.parryRecoilRemaining=e.type==='boss'?25:19;
   // Show the bitmap shield collision ONLY when enemyAttack is really parried.
   spawnParryShieldFx(p.x+p.facing*58,p.y-136,p.facing,e.type==='boss'?1.18:1);
   fxBurst(p.x+p.facing*66,p.y-134,'gold',1.15);
   floatText('JUST PARRY!',p.x,p.y-220,'#7df7ff');
-  flash('패링 성공! 지금 공격!',1.2);
-  screenShake=Math.max(screenShake,22);hitStop=Math.max(hitStop,.12);slowMotion=Math.max(slowMotion,.86);playImpactSound('parry',1.35);vibrateImpact('parry');
+  flash('패링 성공! 공격으로 추격!',1.35);
+  screenShake=Math.max(screenShake,27);hitStop=Math.max(hitStop,.14);slowMotion=Math.max(slowMotion,.55);playImpactSound('parry',1.50);vibrateImpact('parry',true);
   p.stamina=clamp(p.stamina+25,0,100);sound('parry');
   if(e.poise>=e.maxPoise){e.groggy=3.4;e.stun=3.4;floatText('GROGGY',e.x,e.y-185,'#8fe6ff')}
   return;
@@ -1862,6 +1900,7 @@ function enemyAttack(e){
   p.stun=heavy?.49:.28;p.hitDuration=p.stun;p.hitHeavyTimer=heavy?p.stun:0;p.inv=.75;
  }
  p.dashSmash=false;p.dashFollowWindow=0;
+ p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteWindow=0;p.riposteTarget=null;
  p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)deadMenu()}
 function fxBurst(x,y,color='red',scale=1){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8)})}
 function spawnParryShieldFx(x,y,face=1,scale=1){fx.push({kind:'parryShield',x,y,face,scale,life:.36,maxLife:.36})}
