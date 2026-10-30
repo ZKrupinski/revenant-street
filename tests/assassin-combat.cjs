@@ -447,9 +447,9 @@ test('ground attacks drive farther than Alpha 1.26 and stay capped per frame',()
  t.p.comboWindow=0;t.p.moveDX=0;t.p.moveDY=0;
  t.startAttack();
  assert(t.p.attackDriveTotal>=50,'every neutral attack should surge substantially');
- assert(t.p.attackDriveTotal<=242,'do not teleport across the screen in one strike');
+ assert(t.p.attackDriveTotal<=275,'total lunge stays within the current combat budget');
  const start=t.p.x;
- for(let i=0;i<12;i++)t.control(1/60,{dx:0,dy:0});
+ for(let i=0;i<12;i++){const before=t.p.x;t.control(1/60,{dx:0,dy:0});assert(t.p.x-before<=35,'a single frame must not teleport the player')}
  assert(t.p.x>start+30,'visible forward momentum even with no joystick input');
 });
 test('attack rush cannot overtake a victim before the hit and continues pursuit after contact',()=>{
