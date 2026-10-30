@@ -1172,7 +1172,10 @@ function gamepadRumble(kind='punch'){
   return false;
  const [duration,weak,strong]=RUMBLE_PROFILES[kind]||RUMBLE_PROFILES.punch;
  try{
-  const result=typeof actuator.playEffect==='function'?
+  const dualSupported=!actuator.effects||
+    typeof actuator.effects.includes!=='function'||
+    actuator.effects.includes('dual-rumble');
+  const result=dualSupported&&typeof actuator.playEffect==='function'?
     actuator.playEffect('dual-rumble',{
      duration,startDelay:0,weakMagnitude:weak,strongMagnitude:strong
     }):actuator.pulse(Math.max(weak,strong),duration);
