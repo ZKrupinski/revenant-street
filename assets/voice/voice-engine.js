@@ -43,9 +43,12 @@
     try{quiet.source.stop()}catch(_){}
     active.delete(quiet);
    }
-   const file=kind==='heroDeath'||kind==='enemyDeath'?'yell':
+   // Hero offense never borrows the enemies' sustained death shrieks.
+   // The hero uses short actual male grunts; enemy wounds/yells use the
+   // separate screams/roars. Only the hero's own death may scream.
+   const file=kind==='heroDeath'||kind==='enemyDeath'||kind==='enemyHurt'||kind==='enemyShout'?'yell':
     kind==='bossDeath'||kind==='bossShout'?'roar':
-    kind==='enemyShout'||kind==='heroPower'?'yell':
+    kind==='heroPower'?'b':
     Math.random()<.5?'a':'b';
    const buffer=buffers[file];
    if(!buffer)return false;
@@ -58,7 +61,7 @@
    }
    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
    source.buffer=buffer;
-   const characterPitch=isHero?1.055:boss?.77:actor.type==='elite'?.84:
+   const characterPitch=isHero?(kind==='heroPower'?.91:1.08):boss?.77:actor.type==='elite'?.84:
     actor.type==='guard'?.90:actor.type==='assassin'?1.035:.97;
    const rate=Math.max(.68,Math.min(1.21,characterPitch*(.95+Math.random()*.10)));
    source.playbackRate.value=rate;
@@ -67,8 +70,8 @@
    const position=isHero?1:Math.max(.3,1-Math.abs(actor.x-hero.x)/1600);
    const volume=(strengths[kind]||.7)*position;
    filter.type='lowpass';filter.frequency.value=boss?3500:isHero?6300:4500;
-   const maxDuration=kind==='heroStrike'?.44:kind==='heroPower'?.88:
-    kind==='enemyShout'?.72:kind==='bossShout'?1.20:
+   const maxDuration=kind==='heroStrike'?.36:kind==='heroPower'?.43:
+    kind==='enemyHurt'?.34:kind==='enemyShout'?.74:kind==='bossShout'?1.20:
     kind==='enemyDeath'?1.25:2.2;
    const duration=Math.min(maxDuration,buffer.duration/rate);
    if(!(duration>.02))return false;
