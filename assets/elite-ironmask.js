@@ -44,10 +44,15 @@ function draw(e,x,y,z,api){
  if(fr){
   if(tell){ctx.shadowColor='#f7a44b';ctx.shadowBlur=19}
   else if(e.eliteRush>0){ctx.shadowColor='#75e1f5';ctx.shadowBlur=14}
-  // Bright, complete original bitmap silhouette, not any rectangular overlay.
-  if(e.hitFlash>0)ctx.filter=e.hitFlash>.12?
-   'brightness(0) invert(1)':'brightness(2.4) saturate(.28)';
-  ctx.drawImage(colored(fr),-art.anchorX*1.13,-art.anchorY*1.13,fr.canvas.width*1.13,fr.canvas.height*1.13);
+  // Keep 25%+ original illustration visible beneath white sprite overlay.
+  const painted=colored(fr),px=-art.anchorX*1.13,py=-art.anchorY*1.13;
+  const width=fr.canvas.width*1.13,height=fr.canvas.height*1.13;
+  ctx.drawImage(painted,px,py,width,height);
+  if(e.hitFlash>0){
+   ctx.save();ctx.shadowBlur=0;ctx.filter='brightness(0) invert(1)';
+   ctx.globalAlpha=alpha*.75*Math.min(1,e.hitFlash/.30);
+   ctx.drawImage(painted,px,py,width,height);ctx.restore();
+  }
  }else{
   ctx.fillStyle='#254154';ctx.fillRect(-24,-210,48,190);
   ctx.fillStyle='#bb8b4c';ctx.fillRect(-18,-229,36,26);
