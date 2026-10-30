@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,specialStats,upgradeDescription,MOD_META,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,COMBO_ROTATION,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('opening battle spawns one small squad just beyond the screen',()=>{
@@ -1464,5 +1464,25 @@ test('dash upgrades expand actual hit range, damage and push',()=>{
  }
  assert.equal(results[0][1],0);assert(results[2][1]>0);
  for(let i=1;i<3;i++){assert(results[i][0]>results[i-1][0]);assert(results[i][2]>results[i-1][2]);}
+});
+test('normal attacks exhaust the ready repertoire without repeats across pauses',()=>{
+ g.startRun();t.setEnemies([]);
+ for(const move of t.COMBO_ROTATION)t.zArtState[move]={ready:true};
+ const moves=[];
+ for(let i=0;i<57;i++){
+  t.p.attack=0;t.p.stamina=100;t.p.comboWindow=i%5===0?0:1;
+  t.startAttack();moves.push(t.p.moveName);
+ }
+ for(let cycle=0;cycle<3;cycle++)assert.equal(new Set(moves.slice(cycle*19,cycle*19+19)).size,19);
+ for(let i=8;i<moves.length;i++)assert(!moves.slice(i-8,i).includes(moves[i]));
+});
+test('unavailable attacks are skipped and failed inputs do not consume moves',()=>{
+ g.startRun();t.setEnemies([]);
+ for(const move of t.COMBO_ROTATION)t.zArtState[move]={ready:['jab','frontkick','hook'].includes(move)};
+ const next=t.pickComboMove(0,'idle',false);t.p.stamina=0;t.startAttack();
+ assert.equal(t.p.comboMoveCycle.length,0);assert.equal(t.pickComboMove(0,'idle',false),next);
+ const moves=[];
+ for(let i=0;i<9;i++){t.p.stamina=100;t.p.attack=0;t.startAttack();moves.push(t.p.moveName)}
+ for(let i=0;i<9;i+=3)assert.equal(new Set(moves.slice(i,i+3)).size,3);
 });
 console.log(`${checks} combat regression checks passed`);

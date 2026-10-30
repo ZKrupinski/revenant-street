@@ -1145,16 +1145,17 @@ function playImpactSound(kind='punch',intensity=1){
   lastImpactAudio=t;
   if(!impactBus){
    const compressor=audio.createDynamicsCompressor();
-   compressor.threshold.value=-17;compressor.knee.value=10;compressor.ratio.value=8;
+   compressor.threshold.value=-12;compressor.knee.value=10;compressor.ratio.value=5;
    compressor.attack.value=.002;compressor.release.value=.13;
-   const output=audio.createGain();output.gain.value=.72;
+   const output=audio.createGain();output.gain.value=1.0;
    compressor.connect(output).connect(audio.destination);
    impactBus=compressor;
   }
   const heavy=kind==='heavy'||kind==='execution';
   const parrySound=kind==='parry';
   const strength=Math.max(.65,Math.min(1.6,intensity));
-  const duration=heavy?.24:.17;
+  const duration=heavy?.34:.23;
+  window.__revenantBgm?.duckImpact?.(heavy||parrySound);
   if(!impactNoiseBuf||impactNoiseBuf.sampleRate!==audio.sampleRate){
    const len=Math.ceil(audio.sampleRate*.29);
    impactNoiseBuf=audio.createBuffer(1,len,audio.sampleRate);
@@ -1171,11 +1172,20 @@ function playImpactSound(kind='punch',intensity=1){
   bass.frequency.setValueAtTime(parrySound?176:heavy?115:148,t);
   bass.frequency.exponentialRampToValueAtTime(parrySound?58:heavy?37:51,t+duration);
   low.gain.setValueAtTime(.0001,t);
-  low.gain.linearRampToValueAtTime((heavy?.58:.40)*strength,t+.006);
+  low.gain.linearRampToValueAtTime((heavy?.88:.62)*strength,t+.006);
   low.gain.exponentialRampToValueAtTime(.0001,t+duration);
   bass.connect(low).connect(impactBus);bass.start(t);bass.stop(t+duration+.01);
+  bass.onended=()=>{bass.disconnect();low.disconnect()};
+  // Audible low-mid body on phone speakers as well as the deep sub layer.
+  const body=audio.createOscillator(),bodyGain=audio.createGain();
+  body.type='triangle';body.frequency.setValueAtTime(heavy?225:285,t);
+  body.frequency.exponentialRampToValueAtTime(heavy?85:115,t+duration*.8);
+  bodyGain.gain.setValueAtTime(.0001,t);bodyGain.gain.linearRampToValueAtTime((heavy?.42:.28)*strength,t+.004);
+  bodyGain.gain.exponentialRampToValueAtTime(.0001,t+duration*.85);
+  body.connect(bodyGain).connect(impactBus);body.start(t);body.stop(t+duration);
+  body.onended=()=>{body.disconnect();bodyGain.disconnect()};
   // Midrange crack / armor slam: two fast decaying noise bands.
-  for(const [freq,vol,end] of [[heavy?470:690,heavy?.47:.31,.135],[parrySound?1900:1350,parrySound?.42:.21,.058]]){
+  for(const [freq,vol,end] of [[heavy?390:590,heavy?.72:.49,.19],[parrySound?2100:1650,parrySound?.58:.42,.075],[heavy?2700:2400,heavy?.28:.16,.11]]){
    const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();
    source.buffer=impactNoiseBuf;
    filter.type='bandpass';filter.frequency.value=freq;filter.Q.value=.75;
@@ -1184,6 +1194,7 @@ function playImpactSound(kind='punch',intensity=1){
    gain.gain.exponentialRampToValueAtTime(.0001,t+end);
    source.connect(filter).connect(gain).connect(impactBus);
    source.start(t);source.stop(t+end+.015);
+   source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect()};
   }
   // Metallic click over parries; bass and filtered crunch dominate regular hits.
   if(parrySound){
@@ -1192,6 +1203,7 @@ function playImpactSound(kind='punch',intensity=1){
    metal.frequency.exponentialRampToValueAtTime(470,t+.085);
    mg.gain.setValueAtTime(.18,t);mg.gain.exponentialRampToValueAtTime(.0001,t+.10);
    metal.connect(mg).connect(impactBus);metal.start(t);metal.stop(t+.11);
+   metal.onended=()=>{metal.disconnect();mg.disconnect()};
   }
   return true;
  }catch(_){return false}
@@ -1390,7 +1402,7 @@ function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
  cameraRecenterClock=0;cameraRecenterHold=0;cameraRecenterBlend=0;
  resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
  p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
- p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
+ p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.comboMoveCycle=[];p.comboMoveCursor=0;p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
@@ -1560,17 +1572,32 @@ function warmZSprites(dt){
   loadZMove(Z_WARM_QUEUE[zWarmIndex++]);zWarmDelay=.44;
  }
 }
+// Deliberate full-body sequence: change silhouette every strike, exhaust the
+// ready repertoire before repeating, and carry history across short pauses.
+const COMBO_ROTATION=['jab','frontkick','hook','lowkick','spinning_elbow',
+ 'sidekick','uppercut','rising_headbutt','roundkick','backfist','axe_kick',
+ 'hammerfist','crescent_kick','rising_elbow','forward_headbutt',
+ 'spinning_heel','cross','superman_punch','shovel_hook'];
 function pickComboMove(step,last,armed){
- let pool=step===2?Z_GROUND_KICKS:step===3?Z_GROUND_MOVES:(Math.random()<.28?Z_GROUND_KICKS:Z_FIST_NAMES);
- if(step===3&&Math.random()<.24)pool=Z_HEAD_NAMES;
- const ready=pool.filter(k=>zArtState[k]?.ready);
- const anyReady=Z_GROUND_MOVES.filter(k=>zArtState[k]?.ready);
- pool=(ready.length?ready:anyReady.length?anyReady:pool).filter(k=>k!==last);
- const recent=new Set((p.recentMoves||[]).slice(-5));
- const fresh=pool.filter(k=>!recent.has(k));
+ const ready=COMBO_ROTATION.filter(k=>zArtState[k]?.ready);
+ const available=ready.length?ready:['jab'];
+ const used=new Set(p.comboMoveCycle||[]);
+ let pool=available.filter(k=>!used.has(k));
+ if(!pool.length){p.comboMoveCycle=[];pool=available;}
+ const recent=new Set((p.recentMoves||[]).slice(-Math.min(8,available.length-1)));
+ const fresh=pool.filter(k=>k!==last&&!recent.has(k));
  if(fresh.length)pool=fresh;
- if(!pool.length)pool=Z_GROUND_MOVES;
- return pool[Math.floor(Math.random()*pool.length)];
+ const cursor=p.comboMoveCursor||0;
+ for(let i=0;i<COMBO_ROTATION.length;i++){
+  const move=COMBO_ROTATION[(cursor+i)%COMBO_ROTATION.length];
+  if(pool.includes(move))return move;
+ }
+ return available[0];
+}
+function recordComboMove(move){
+ (p.comboMoveCycle||(p.comboMoveCycle=[])).push(move);
+ p.comboMoveCursor=(COMBO_ROTATION.indexOf(move)+1)%COMBO_ROTATION.length;
+ p.recentMoves.push(move);if(p.recentMoves.length>8)p.recentMoves.shift();
 }
 function findExecutionTarget(){
  return enemies.filter(e=>!e.dead&&e.groggy>0&&(e.x-p.x)*p.facing>=-16&&
@@ -1633,7 +1660,7 @@ function startAttack(){
  const move=pickComboMove(step,p.moveName,p.weapon>0);
  const isKick=Z_KICK_MOVES.has(move),cost=isKick?16:Z_HEAD_MOVES.has(move)?15:12;
  if(p.stamina<cost)return;
- p.stamina-=cost;p.comboIdx=step;p.moveName=move;p.attackQueued=false;p.airAttack=false;p.counterBoost=false;p.recentMoves.push(move);if(p.recentMoves.length>5)p.recentMoves.shift();
+ p.stamina-=cost;p.comboIdx=step;p.moveName=move;p.attackQueued=false;p.airAttack=false;p.counterBoost=false;recordComboMove(move);
  const durations={jab:.31,cross:.37,hook:.41,uppercut:.44,backfist:.39,hammerfist:.50,spinning_elbow:.52,rising_elbow:.42,superman_punch:.56,shovel_hook:.41,frontkick:.48,lowkick:.40,roundkick:.54,axe_kick:.59,sidekick:.48,spinning_heel:.57,crescent_kick:.53,diagonal_airkick:.58,rising_headbutt:.45,forward_headbutt:.40};
  p.attackDuration=(durations[move]||.36)/(1+modRank('haste')*.10);
  const advance={jab:23,cross:43,hook:31,uppercut:22,backfist:29,hammerfist:46,
@@ -2979,6 +3006,6 @@ canvas.style.visibility='hidden';titleMenu();requestAnimationFrame(loop);
 })();
 
 </script>
-<script src="./assets/industrial-combat-bgm.js?v=20261030-preload2"></script>
+<script src="./assets/industrial-combat-bgm.js?v=20261030-impact3"></script>
 </body>
 </html>

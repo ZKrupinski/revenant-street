@@ -34,6 +34,10 @@ async function audio(){
  assert.equal(bgm.getState().ready,true);assert.equal(bgm.getState().source,'blob:complete');
  await bgm.beginPlayback();for(let i=0;i<8;i++){now+=180;tick()}
  assert(Math.abs(bgm.getState().volume-.29)<.001);
+ bgm.duckImpact(true);assert(bgm.getState().volume<.15,'heavy impact must cut music immediately');
+ assert.equal(bgm.getState().playing,true,'duck never pauses music');
+ for(let i=0;i<10;i++){now+=50;tick()}
+ assert(Math.abs(bgm.getState().volume-.29)<.001,'music recovers after hit');
  state='reward';for(let i=0;i<8;i++){now+=180;tick()}
  assert(Math.abs(bgm.getState().volume-.21)<.001);assert.equal(plays,1,'upgrade must preserve playback');
  await bgm.prepare();assert.equal(fetches,1,'restart reuses full audio');

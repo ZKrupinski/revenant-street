@@ -78,6 +78,15 @@
     } catch (_) {}
     return 0;
   }
+  let impactDuckUntil=0,impactDuckLevel=1;
+  function duckImpact(heavy=false){
+    if(!bgmEnabled||!globalSoundOn()||document.hidden||window.__revenant?.getMusicState?.()!=='playing')return;
+    const now=performance.now(),level=heavy?.46:.65;
+    impactDuckLevel=now<impactDuckUntil?Math.min(impactDuckLevel,level):level;
+    impactDuckUntil=Math.max(impactDuckUntil,now+(heavy?150:90));
+    // Lower only the mix level, never pause or reset the audio stream.
+    bgm.volume=Math.min(bgm.volume,gameMusicVolume()*impactDuckLevel);
+  }
   function beginPlayback() {
     if (!bgmEnabled || !globalSoundOn() || document.hidden) return Promise.resolve();
     if (playPending) return playPending;
@@ -113,14 +122,14 @@
     const now = performance.now();
     const delta = Math.min((now - lastTime) / 1000, .4);
     lastTime = now;
-    const target = bgmEnabled && globalSoundOn() && !document.hidden ? gameMusicVolume() : 0;
-    const step = delta * .3;
+    const target = bgmEnabled && globalSoundOn() && !document.hidden ? gameMusicVolume()*(now<impactDuckUntil?impactDuckLevel:1) : 0;
+    const step = delta * (target<bgm.volume?2.5:.55);
     const v = Math.max(0, Math.min(1, bgm.volume + Math.max(-step, Math.min(step, target - bgm.volume))));
     if (Math.abs(bgm.volume-v)>.0001) bgm.volume = v;
     if (target>0 && unlocked && (!started || bgm.paused)) void beginPlayback();
-  }, 180);
+  }, 50);
   window.__revenantBgm = {
-    prepare, beginPlayback,
+    prepare, beginPlayback, duckImpact,
     getState: () => ({ ready, loading: !!preparing, enabled: bgmEnabled, playing: !bgm.paused, volume: bgm.volume, source: bgm.currentSrc || bgm.src, fallbackTried }),
     toggle: () => button.click()
   };
