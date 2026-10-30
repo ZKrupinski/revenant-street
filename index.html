@@ -1677,13 +1677,16 @@ function control(dt,pad){
  if(p.z>0||p.vz>0){
   if(p.jumpHeel)p.jumpTime+=dt;
   const charging=p.airAttack&&p.airKickPhase==='charge';
-  if(!charging){p.z+=p.vz*dt;p.vz-=(p.airKickPhase==='dive'?1950:1440)*dt}
+  if(!charging){p.z+=p.vz*dt;
+   p.vz-=(p.airKickPhase==='dive'?1950:p.jumpHeel&&p.vz<0?1780:1440)*dt}
   if(p.airAttack&&p.airKickPhase==='dive'&&!p.hitDone&&p.z<=90){
    p.hitDone=true;attackCheck();
   }
   if(p.z<=0){
    const landed=p.z<0||p.vz<0;
    p.z=0;p.vz=0;
+   // Getting hit out of the air must not spawn a free heel-slam blast.
+   if(p.stun>0){p.jumpHeel=false;p.jumpLandingTriggered=true}
    const powered=p.airAttack&&p.airKickPhase==='dive';
    if(powered&&!p.hitDone){p.hitDone=true;attackCheck()}
    if(p.jumpHeel&&!p.jumpLandingTriggered){
@@ -1741,7 +1744,9 @@ const bodyFootprint=a=>BODY_CLEARANCE[a===p?'player':a.type]||BODY_CLEARANCE.rai
 const bodyHalfX=a=>bodyFootprint(a)[0],bodyHalfY=a=>bodyFootprint(a)[1];
 function resolveBodyCollisions(dt){
  // Sort by world X and test only nearby pairs; preserve generous X/Y spaces.
- const bodies=[p,...enemies.filter(e=>!e.dead&&e.z<37)];
+ // Leaping feet are above combat footprints; do not block a real long jump
+ // against a standing crowd in the street below.
+ const bodies=[...(p.z<44?[p]:[]),...enemies.filter(e=>!e.dead&&e.z<37)];
  if(bodies.length<2)return;
  for(const a of bodies)if(a!==p){a._preSolveX=a.x;a._preSolveY=a.y}
  const limit=Math.min(22,Math.max(6,dt*920));
