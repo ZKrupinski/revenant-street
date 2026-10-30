@@ -758,8 +758,10 @@ test('all twenty distinct bitmap attack atlases are archived locally and playabl
  }
  assert(html.includes('Object.assign(Z_REMOTE_ATLAS,window.RZ_LOCAL_20_ATTACKS||{})'));
  assert(html.includes('warmZSprites(dt);'),'progressive combat art loader must run');
- assert(html.includes("p.moveName=diagonal?'diagonal_airkick':'axe_kick'"),
-   'both unique aerial attacks need live selection paths');
+ assert(html.includes("p.moveName='axe_kick';loadZMove('axe_kick');"),
+   'aerial attack must select the dedicated vertical axe-kick, not a sideways kick');
+ assert(html.includes("p.moveName='jumpstart';"),
+   'ordinary jumps must not select an attack atlas');
 });
 test('elite and boss use pure white bitmap flash and jump has longer vertical travel',()=>{
  const elite=fs.readFileSync(path.join(__dirname,'../assets/elite-ironmask.js'),'utf8');
@@ -768,9 +770,10 @@ test('elite and boss use pure white bitmap flash and jump has longer vertical tr
  assert(boss.includes("'brightness(0) invert(1)'"),'boss flash should whiten actual sprite');
  assert(html.includes("p.vz=760;p.z=2"),'higher jump impulse');
  assert(html.includes("p.vz=-1150"),'fast downward kick');
- assert(html.includes("p.airKickPhase==='dive'?1950:p.jumpHeel&&p.vz<0?1780:1440"),'both ordinary heel-slam descent and powered dive exceed jumping ascent gravity');
+ assert(html.includes("p.airKickPhase==='dive'?1950:1440"),'only attack-button dive has heavier downward gravity');
+ assert(!html.includes("p.jumpHeel"),'original auto-attack jump flag must be removed');
 });
-test('stationary jump shows real descending heel-kick sheet and triggers one AoE slam',()=>{
+test('stationary JUMP without ATTACK keeps ordinary airborne poses and cannot hit anyone',()=>{
  g.startRun();t.keys.clear();t.p.x=1600;t.p.y=575;
  const eL=t.makeEnemy('raider',t.p.x-125,t.p.y,0);
  const eR=t.makeEnemy('raider',t.p.x+125,t.p.y,1);
@@ -778,42 +781,92 @@ test('stationary jump shows real descending heel-kick sheet and triggers one AoE
  t.setEnemies([eL,eR]);
  const x=t.p.x;
  t.jump();
- assert.equal(t.getZMove(),'axe_kick');
+ assert.equal(t.getZMove(),'jumpstart');
  assert.equal(t.p.jumpLeap,false);
- let maxHeight=0,apex=false,descending=false;
+ let maxHeight=0,airborne=false;
  for(let i=0;i<90;i++){
   t.control(1/60,{dx:0,dy:0});
   maxHeight=Math.max(maxHeight,t.p.z);
-  if(t.p.z>110&&t.p.vz<=65&&t.p.vz>=-65){
-   apex=true;assert.equal(t.currentZFrameIndex('axe_kick'),3);
-  }
-  if(t.p.z>30&&t.p.vz<0)descending=true;
+  if(t.getZMove()==='airborne')airborne=true;
+  assert.notEqual(t.getZMove(),'axe_kick','a plain jump must never display the attack pose');
+  assert.notEqual(t.getZMove(),'diagonal_airkick','a plain jump must never show sideways kick');
  }
- assert(maxHeight>185,'stationary heel kick should reach the high jump apex');
- assert(apex&&descending,'whole kick motion must show gathered heel before a descent');
- assert(Math.abs(t.p.x-x)<2,'neutral jump should not slide sideways');
- assert.equal(t.p.jumpLandingTriggered,true);
- assert(eL.hp<1200&&eR.hp<1200,'the landing must hit enemies on both sides');
- assert(eL.knockVX<0&&eR.knockVX>0,'enemies must scatter away from the impact centre');
- assert(eL.vz>0&&eR.vz>0,'the slam must launch surrounding mobs into the air');
- const hpL=eL.hp,hpR=eR.hp;
- for(let i=0;i<40;i++)t.control(1/60,{dx:0,dy:0});
- assert.equal(eL.hp,hpL,'cannot repeat a landing splash without jumping again');
- assert.equal(eR.hp,hpR,'cannot repeat AoE hits after touchdown');
+ assert(maxHeight>175,'stationary jump should still be tall');
+ assert(airborne,'ordinary airborne pose should display');
+ assert(Math.abs(t.p.x-x)<2,'neutral jump should not drift');
+ assert.equal(t.p.jumpLandingTriggered,false,'no unrequested landing blast');
+ assert.equal(eL.hp,1200);assert.equal(eR.hp,1200);
+ assert.equal(eL.knockVX,0);assert.equal(eR.knockVX,0);
 });
-test('directional jump travels much farther but uses the same heel-slam pose and landing',()=>{
+test('directional JUMP travels farther without automatically kicking on landing',()=>{
  for(const [key,sign] of [['d',1],['a',-1]]){
   g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=1900;
-  t.keys.add(key);
-  const origin=t.p.x;
-  t.jump();
+  t.keys.add(key);const origin=t.p.x;t.jump();
   assert.equal(t.p.jumpLeap,true);
-  assert.equal(t.getZMove(),'diagonal_airkick');
-  for(let i=0;i<85;i++)t.control(1/60,{dx:sign,dy:0});
-  assert((t.p.x-origin)*sign>345,'held direction must create a long ballistic arc');
-  assert.equal(t.p.jumpLandingTriggered,true,'moving leap also lands with heel impact');
+  assert.equal(t.getZMove(),'jumpstart');
+  for(let i=0;i<85;i++){
+   t.control(1/60,{dx:sign,dy:0});
+   assert.notEqual(t.getZMove(),'diagonal_airkick');
+  }
+  assert((t.p.x-origin)*sign>345,'keep existing long directional leap');
+  assert.equal(t.p.jumpLandingTriggered,false,'no automatic shockwave');
   t.keys.delete(key);
  }
+});
+test('explicit aerial ATTACK launches true vertical heel-chop with a single landing blast',()=>{
+ g.startRun();t.keys.clear();t.p.x=1600;t.p.y=575;
+ const eL=t.makeEnemy('raider',t.p.x-125,t.p.y,0);
+ const eR=t.makeEnemy('raider',t.p.x+125,t.p.y,1);
+ for(const e of [eL,eR]){e.hp=1200;e.maxHp=1200;e.stun=5}
+ t.setEnemies([eL,eR]);
+ t.jump();
+ for(let i=0;i<10;i++)t.control(1/60,{dx:0,dy:0});
+ assert(t.p.z>16);
+ assert.equal(eL.hp,1200);
+ t.startAttack(); // actual new press AFTER jumping
+ assert.equal(t.p.moveName,'axe_kick');
+ assert.equal(t.getZMove(),'axe_kick');
+ assert.equal(t.p.airKickPhase,'charge');
+ assert.equal(t.currentZFrameIndex('axe_kick'),0);
+ for(let i=0;i<8;i++)t.control(1/60,{dx:0,dy:0});
+ assert.equal(t.p.airKickPhase,'charge','heel must visibly gather before descent');
+ assert.equal(eL.hp,1200,'charge must never damage');
+ let descending=false;
+ for(let i=0;i<70;i++){
+  t.control(1/60,{dx:0,dy:0});
+  if(t.p.airKickPhase==='dive')descending=true;
+ }
+ assert(descending,'explicit attack must descend quickly');
+ assert.equal(t.p.jumpLandingTriggered,true);
+ assert(eL.hp<1200&&eR.hp<1200,'one powered landing shockwave hits both sides');
+ assert(eL.knockVX<0&&eR.knockVX>0);
+ const hpL=eL.hp,hpR=eR.hp;
+ for(let i=0;i<40;i++)t.control(1/60,{dx:0,dy:0});
+ assert.equal(eL.hp,hpL,'no duplicate landing AoE');
+ assert.equal(eR.hp,hpR);
+});
+test('moving aerial ATTACK uses vertical kick artwork, never sideways diagonal kick',()=>{
+ for(const [key,sign] of [['d',1],['a',-1]]){
+  g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=1900;
+  t.keys.add(key);const start=t.p.x;t.jump();
+  for(let i=0;i<9;i++)t.control(1/60,{dx:sign,dy:0});
+  assert(t.p.z>16);
+  t.startAttack();
+  assert.equal(t.p.moveName,'axe_kick');
+  assert.equal(t.getZMove(),'axe_kick');
+  for(let i=0;i<70;i++)t.control(1/60,{dx:sign,dy:0});
+  assert.equal(t.p.jumpLandingTriggered,true);
+  assert((t.p.x-start)*sign>200,'directional momentum stays intact during heel drop');
+  t.keys.delete(key);
+ }
+});
+test('holding ATTACK across JUMP does not trigger an automatic aerial attack',()=>{
+ g.startRun();t.keys.clear();t.p.x=1700;t.p.y=570;
+ t.keys.add('j');t.jump();
+ for(let i=0;i<85;i++)t.control(1/60,{dx:0,dy:0});
+ assert.equal(t.p.jumpLandingTriggered,false,'held attack must not cause auto impact');
+ assert.equal(t.p.airKickUsed,false,'a new press is required to arm air attack');
+ t.keys.delete('j');
 });
 test('rebalanced mobs need more hits but remain easy to knock airborne',()=>{
  g.startRun();
