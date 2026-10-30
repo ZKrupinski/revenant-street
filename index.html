@@ -221,7 +221,7 @@ if(Z_HOODIE_HERO){
   Z_REMOTE_ATLAS[key]='./assets/new-hero/'+motion+'.png';
  }
 }
-const zArtState={},zArtNode=$('z-art-sprite'), zStage=$('stageWrap');
+const zArtState={},zArtFrameShared=new Map(),zArtNode=$('z-art-sprite'), zStage=$('stageWrap');
 let zArtLastKey='',zArtFrame=-1,zLastGoodFrame=null;
 function getZMove(){
  if(p.downTimer>0)return 'knockdown';
@@ -581,7 +581,11 @@ function preparePremattedGaitCells(im){
 function loadZMove(key){
  if(!Z_REMOTE_ATLAS[key])key='idle';
  if(!zArtState[key]){
-  const obj={ready:false,failed:false,loading:true,url:Z_REMOTE_ATLAS[key],frames:[]};zArtState[key]=obj;
+  // Duplicate action keys reuse one prepared eight-frame atlas.
+  const url=Z_REMOTE_ATLAS[key],shared=zArtFrameShared.get(url);
+  if(shared){zArtState[key]=shared;return shared}
+  const obj={ready:false,failed:false,loading:true,url,frames:[]};
+  zArtState[key]=obj;zArtFrameShared.set(url,obj);
   const im=new Image();im.crossOrigin='anonymous';
   im.onload=()=>{try{obj.frames=Z_HOODIE_HERO?prepareTransparentHeroCells(im):(Z_HF_ART&&(zGaitChoice==='v3'||zGaitChoice==='v4')&&(key==='walk'||key==='run'||key==='backwalk')?preparePremattedGaitCells(im):prepareZCells(im));obj.ready=obj.frames.length===8;obj.failed=false}
    catch(err){obj.ready=false;obj.failed=true;obj.error=String(err);console.warn('Z atlas rejected:',key,err)}obj.loading=false;obj.image=null;im.onload=null;im.onerror=null;};
@@ -1419,37 +1423,38 @@ const BODY_CLEARANCE={
 const bodyFootprint=a=>BODY_CLEARANCE[a===p?'player':a.type]||BODY_CLEARANCE.raider;
 const bodyHalfX=a=>bodyFootprint(a)[0],bodyHalfY=a=>bodyFootprint(a)[1];
 function resolveBodyCollisions(dt){
+ // Sort by world X and test only nearby pairs; preserve generous X/Y spaces.
  const bodies=[p,...enemies.filter(e=>!e.dead&&e.z<37)];
- // Prevent interpolation from drawing a visible overlap after physics separates.
- const oldPositions=new Map(bodies.filter(a=>a!==p).map(a=>[a,[a.x,a.y]]));
- const limit=Math.min(18,Math.max(5,dt*840));
+ if(bodies.length<2)return;
+ for(const a of bodies)if(a!==p){a._preSolveX=a.x;a._preSolveY=a.y}
+ const limit=Math.min(22,Math.max(6,dt*920));
  const move=(a,axis,amount)=>{
   const before=a[axis],margin=a===p?64:55;
   a[axis]=axis==='x'?clamp(before+amount,margin,STAGE_WIDTH-margin):groundY(before+amount);
   return a[axis]-before;
  };
- for(let pass=0;pass<6;pass++){
+ for(let pass=0;pass<5;pass++){
+  bodies.sort((a,b)=>a.x-b.x);
   let changed=false;
   for(let i=0;i<bodies.length;i++)for(let j=i+1;j<bodies.length;j++){
    const a=bodies[i],b=bodies[j];
-   if(a.z>37||b.z>37)continue;
+   // Even two bosses require less than this broadphase limit.
+   if(b.x-a.x>236)break;
    const dx=a.x-b.x,dy=a.y-b.y;
-   const needX=bodyHalfX(a)+bodyHalfX(b)+8;
-   const needY=bodyHalfY(a)+bodyHalfY(b)+4;
-   const overlapX=needX-Math.abs(dx),overlapY=needY-Math.abs(dy);
-   if(overlapX<=0||overlapY<=0)continue;
+   const overlapX=bodyHalfX(a)+bodyHalfX(b)+8-Math.abs(dx);
+   if(overlapX<=0)continue;
+   const overlapY=bodyHalfY(a)+bodyHalfY(b)+4-Math.abs(dy);
+   if(overlapY<=0)continue;
    const dirX=Math.abs(dx)>.01?Math.sign(dx):a===p?-1:b===p?1:a.slot<b.slot?-1:1;
    const dirY=Math.abs(dy)>.01?Math.sign(dy):((i+j)%2?-1:1);
    const bossPair=(a===p||b===p)&&(a.type==='boss'||b.type==='boss');
    const weightA=a===p?(bossPair?.25:.12):b===p?(bossPair?.75:.88):.5;
    const yCapacity=Math.abs(groundY(a.y+dirY*overlapY*weightA)-a.y)+
     Math.abs(groundY(b.y-dirY*overlapY*(1-weightA))-b.y);
-   // Only choose a depth lane if there is room; otherwise spread along X.
    const useY=overlapY*1.28<overlapX&&yCapacity>=overlapY*.75;
    const axis=useY?'y':'x',dir=useY?dirY:dirX;
-   const needed=useY?overlapY:overlapX,amount=Math.min(needed+1.5,limit);
+   const amount=Math.min((useY?overlapY:overlapX)+1.5,limit);
    let moved=dir*(move(a,axis,dir*amount*weightA)-move(b,axis,-dir*amount*(1-weightA)));
-   // Wall-pinned actors give unused push to their free partner.
    if(moved<amount-.01){
     let rest=amount-moved;
     moved+=dir*move(a,axis,dir*rest);
@@ -1460,9 +1465,10 @@ function resolveBodyCollisions(dt){
   }
   if(!changed)break;
  }
- for(const [actor,[oldX,oldY]] of oldPositions){
-  if(Number.isFinite(actor.renderX))actor.renderX+=actor.x-oldX;
-  if(Number.isFinite(actor.renderY))actor.renderY+=actor.y-oldY;
+ // Correct smooth visual positions as well as physics.
+ for(const actor of bodies)if(actor!==p){
+  if(Number.isFinite(actor.renderX))actor.renderX+=actor.x-actor._preSolveX;
+  if(Number.isFinite(actor.renderY))actor.renderY+=actor.y-actor._preSolveY;
  }
 }
 // IRON MASK ELITE: long readable tell -> fast rush -> parryable heavy cleave.
