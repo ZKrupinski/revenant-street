@@ -436,7 +436,9 @@ test('loading gate is present, checks mandatory sprites and disables live animat
  assert(code.includes('async function requestRunStart()'));
  assert(code.includes('function waitSceneArt(preview,onProgress)'));
  assert(code.includes("canvas.style.visibility='hidden'"));
- assert(code.includes("if(gameState==='loading'||gameState==='menu'||gameState==='hub')return"));
+ assert(code.includes("if(gameState!=='playing')return")||
+   code.includes("if(gameState==='loading'||gameState==='menu'||gameState==='hub')return"),
+   'loading, menu and paused modes must not render live gameplay');
  assert(!code.includes('function update(dt){RZAssassinArt.warm(dt)'));
  assert(code.includes("if(a==='start')requestRunStart()"));
 });
