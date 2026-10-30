@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,specialStats,upgradeDescription,MOD_META,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('opening battle spawns one small squad just beyond the screen',()=>{
@@ -524,7 +524,7 @@ test('a successful parry rapidly launches the target to the current visible scre
 });
 test('one follow-up attack tracks the parried target, kills ordinary foes, and keeps the launch',()=>{
  for(const sign of [-1,1]){
-  g.startRun();t.setEnemies([]);
+  g.startRun();t.p.mods=Array(6).fill('counter');t.setEnemies([]);
   t.p.x=2650;t.p.y=565;t.p.facing=sign;t.p.stamina=100;
   t.setCameraX(t.p.x-465);
   const enemy=t.makeEnemy('raider',t.p.x+sign*88,t.p.y,0);
@@ -562,7 +562,7 @@ test('one follow-up attack tracks the parried target, kills ordinary foes, and k
 });
 test('finisher damage scales by enemy type without a forced survival threshold',()=>{
  for(const [type,expectedRemaining] of [['guard',0],['assassin',0],['elite',.22],['boss',.76]]){
-  g.startRun();t.setEnemies([]);t.p.x=3000;t.p.facing=1;t.p.stamina=100;
+  g.startRun();t.p.mods=Array(6).fill('counter');t.setEnemies([]);t.p.x=3000;t.p.facing=1;t.p.stamina=100;
   const e=t.makeEnemy(type,t.p.x+130,t.p.y,0);
   t.setEnemies([e]);t.p.riposteStrikeTarget=e;
   t.attackCheck();
@@ -572,7 +572,7 @@ test('finisher damage scales by enemy type without a forced survival threshold',
   }else{
    assert.equal(e.dead,false,type+' should retain boss/elite durability');
    const ratio=e.hp/e.maxHp;
-   assert(Math.abs(ratio-expectedRemaining)<.02,type+' should take real fixed damage instead of ending at a forced HP floor');
+   assert.equal(e.maxHp-e.hp,225,'upgraded counter deals finite damage, not a max-HP percentage');
   }
   assert(e.knockVX>1200,type+' must still receive the dramatic second launch');
   assert.equal(t.p.riposteStrikeTarget,null,'special counter consumed exactly once');
@@ -580,8 +580,8 @@ test('finisher damage scales by enemy type without a forced survival threshold',
 });
 test('weakened elites and bosses can die to a finisher instead of being saved',()=>{
  for(const type of ['elite','boss']){
-  g.startRun();t.setEnemies([]);t.p.x=3000;t.p.facing=1;
-  const e=t.makeEnemy(type,t.p.x+130,t.p.y,0);e.hp=e.maxHp*.10;
+  g.startRun();t.p.mods=Array(6).fill('counter');t.setEnemies([]);t.p.x=3000;t.p.facing=1;
+  const e=t.makeEnemy(type,t.p.x+130,t.p.y,0);e.hp=150;
   t.setEnemies([e]);t.p.riposteStrikeTarget=e;t.attackCheck();
   assert(e.dead,type+' must be killable without special HP protection');
   assert.equal(e.hp,0,'finisher should deal remaining HP and kill');
@@ -660,11 +660,11 @@ test('guard action state tracks motion, bracing, attacks, injury and falling',()
 test('guard keeps its own original combat stats and previous actor systems intact',()=>{
  g.startRun();
  const e=t.makeEnemy('guard',t.p.x+110,t.p.y,0);
- assert.equal(e.maxHp,145);
+ assert.equal(e.maxHp,165);
  assert.equal(e.maxPoise,132);
- assert.equal(e.speed,99);
- assert.equal(e.reach,41);
- assert.equal(e.damage,13);
+ assert.equal(e.speed,112);
+ assert.equal(e.reach,48);
+ assert.equal(e.damage,20);
 });
 
 test('eight new boss animation atlases exist and are genuinely used by boss drawing',()=>{
@@ -932,7 +932,7 @@ test('ground perspective limits player and enemy feet without restricting jump a
 test('stage difficulty scales upgraded enemy health without making normal foes bullet sponges',()=>{
  g.startRun();
  const first=t.makeEnemy('raider',1000,560,0),elite1=t.makeEnemy('elite',1200,560,1);
- assert(first.maxHp>=65&&first.maxHp<=80,'early mobs should survive some hits but not become bosses');
+ assert(first.maxHp>=65&&first.maxHp<=90,'early mobs should survive some hits but not become bosses');
  assert(elite1.maxHp>=350,'elite should be a clear combat challenge');
  t.setWave(2);
  const later=t.makeEnemy('raider',1000,560,0),elite2=t.makeEnemy('elite',1200,560,1);
@@ -1251,7 +1251,7 @@ test('holding ATTACK across JUMP does not trigger an automatic aerial attack',()
 });
 test('rebalanced mobs need more hits but remain easy to knock airborne',()=>{
  g.startRun();
- for(const [kind,hp] of [['raider',70],['assassin',64],['guard',145],['elite',530],['boss',3900]]){
+ for(const [kind,hp] of [['raider',84],['assassin',76],['guard',165],['elite',530],['boss',3900]]){
   const enemy=t.makeEnemy(kind,t.p.x+170,t.p.y,0);
   assert.equal(enemy.maxHp,hp,'HP of '+kind+' should reflect crowd durability');
  }
@@ -1270,7 +1270,7 @@ test('heel landing launches mob but damping prevents screen-edge travel',()=>{
  t.heelLandingShockwave(false);
  assert(left.knockVX<0&&right.knockVX>0);
  assert.equal(left.knockDrag,5.6);
- assert(right.vz>=400,'enemies must still visibly pop off the floor');
+ assert(right.vz>=300,'enemies must still visibly pop off the floor');
  for(let i=0;i<150;i++)t.updateEnemies(1/60);
  assert(originL-left.x<195,'left target should not fly offscreen');
  assert(right.x-originR<195,'right target should not fly offscreen');
@@ -1293,7 +1293,7 @@ test('forward dodge plus immediate attack is a strong cross punch with a long se
   if(e.hp<500)strike=true;
  }
  assert(strike,'dedicated dash counter must reach enemy and connect');
- assert(e.knockVX>700,'power cross punch pushes more than a normal jab');
+ assert(e.knockVX>=520,'base dash punch retains a readable shove before upgrades');
  assert.equal(e.knockDrag,4.7,'dash heavy shove should still have friction');
  const afterHit=e.hp;
  for(let i=0;i<24;i++)t.control(1/60,{dx:0,dy:0});
@@ -1370,7 +1370,7 @@ test('later encounters appear only after previous squad cleared and forward prog
  assert(troop.length>=4&&troop.length<=6);
  assert(troop.some(e=>e.x<1135),'some enemies emerge from the left outside viewport');
  assert(troop.some(e=>e.x>1135+1280),'others emerge from right outside viewport');
- assert(troop.every(e=>!e.encountered),'not instantly visible or aggro-teleported');
+ assert(troop.every(e=>e.encountered),'spawned encounter must approach from offscreen without waiting for player detection');
  const laterHP=troop.find(e=>e.type==='raider')?.maxHp;
  assert(laterHP>70,'each new wave segment should gain HP');
 });
@@ -1413,5 +1413,56 @@ test('upgrades stay in two rows by default and expand only when selected',()=>{
  assert(toggle.textContent.includes('+2'),'collapse returns to two-row default');
  t.p.mods=items.slice(0,3);t.updateHud();
  assert.equal(toggle.hidden,true,'toggle disappears when all icons fit');
+});
+test('opening squad approaches and kills an idle player without any input',()=>{
+ g.startRun();t.p.mods=[];t.p.maxHp=t.p.hp=100;t.keys.clear();world.navigator.getGamepads=()=>[];
+ let elapsed=0;
+ while(t.p.hp>0&&elapsed<45){t.control(1/60,{dx:0,dy:0});t.updateEnemies(1/60);elapsed+=1/60;}
+ assert.equal(t.p.hp,0,'standing still must not survive the opening encounter');
+ assert(elapsed>5&&elapsed<45,'opening pressure leaves time to react: '+elapsed);
+ console.log('Idle defeat after',elapsed.toFixed(1),'seconds');
+});
+test('three special moves improve damage area and shove at every rank',()=>{
+ g.startRun();
+ for(const id of ['slam','dashpower','counter']){
+  assert(t.MOD_META[id]);
+  for(let rank=0;rank<6;rank++){
+   const a=t.specialStats(id,rank),b=t.specialStats(id,rank+1);
+   for(const key of ['damage','range','lane','push','visual'])assert(b[key]>a[key],id+' rank '+rank+' '+key);
+   assert(t.upgradeDescription(id,rank).includes('→'));
+  }
+ }
+});
+test('slam upgrade expands actual landing damage and radius',()=>{
+ const result=[];
+ for(const rank of [0,3,6]){
+  g.startRun();t.p.x=2500;t.p.mods=Array(rank).fill('slam');
+  const near=t.makeEnemy('raider',t.p.x+80,t.p.y,0),far=t.makeEnemy('raider',t.p.x+300,t.p.y,1);
+  near.hp=far.hp=1000;near.maxHp=far.maxHp=1000;t.setEnemies([near,far]);
+  t.heelLandingShockwave(true);result.push([1000-near.hp,1000-far.hp,Math.abs(near.knockVX)]);
+ }
+ assert.equal(result[0][1],0);assert(result[2][1]>0);
+ for(let i=1;i<3;i++){assert(result[i][0]>result[i-1][0]);assert(result[i][2]>result[i-1][2]);}
+});
+test('counter upgrade expands actual splash and never grants a free max-HP kill',()=>{
+ for(const rank of [0,6]){
+  g.startRun();t.p.x=2500;t.p.mods=Array(rank).fill('counter');
+  const target=t.makeEnemy('elite',t.p.x+130,t.p.y,0),neighbor=t.makeEnemy('guard',t.p.x+350,t.p.y,1);
+  target.hp=target.maxHp=1000;neighbor.hp=neighbor.maxHp=1000;t.setEnemies([target,neighbor]);
+  t.p.riposteStrikeTarget=target;t.attackCheck();assert.equal(1000-target.hp,45+30*rank);
+  assert.equal(neighbor.hp<1000,rank===6,'splash radius grows around struck target');
+ }
+});
+test('dash upgrades expand actual hit range, damage and push',()=>{
+ const results=[];
+ for(const rank of [0,3,6]){
+  g.startRun();t.p.x=2500;t.p.facing=1;t.p.mods=Array(rank).fill('dashpower');
+  t.p.dashSmash=true;t.p.attack=.3;t.p.moveName='cross';t.p.comboIdx=0;
+  const near=t.makeEnemy('raider',t.p.x+100,t.p.y,0),far=t.makeEnemy('raider',t.p.x+265,t.p.y,1);
+  near.hp=far.hp=1000;near.maxHp=far.maxHp=1000;t.setEnemies([near,far]);
+  t.attackCheck();results.push([1000-near.hp,1000-far.hp,near.knockVX]);
+ }
+ assert.equal(results[0][1],0);assert(results[2][1]>0);
+ for(let i=1;i<3;i++){assert(results[i][0]>results[i-1][0]);assert(results[i][2]>results[i-1][2]);}
 });
 console.log(`${checks} combat regression checks passed`);
