@@ -68,7 +68,7 @@
     limiter.threshold.value=-14;limiter.knee.value=6;limiter.ratio.value=4;
     limiter.attack.value=.003;limiter.release.value=.14;
     // Impact compressor stays on a completely separate audio bus and loudest.
-    output.gain.value=.68;limiter.connect(output).connect(context.destination);
+    output.gain.value=.58;limiter.connect(output).connect(context.destination);
     master=limiter;
    }
    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
