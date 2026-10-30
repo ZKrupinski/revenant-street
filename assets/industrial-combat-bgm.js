@@ -123,7 +123,7 @@
     const delta = Math.min((now - lastTime) / 1000, .4);
     lastTime = now;
     const target = bgmEnabled && globalSoundOn() && !document.hidden ? gameMusicVolume()*(now<impactDuckUntil?impactDuckLevel:1) : 0;
-    const step = delta * (target<bgm.volume?4.0:.55);
+    const step = delta * (target<bgm.volume?4.0:2.4);
     const v = Math.max(0, Math.min(1, bgm.volume + Math.max(-step, Math.min(step, target - bgm.volume))));
     if (Math.abs(bgm.volume-v)>.0001) bgm.volume = v;
     if (target>0 && unlocked && (!started || bgm.paused)) void beginPlayback();
