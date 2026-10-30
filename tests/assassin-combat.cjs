@@ -562,7 +562,7 @@ test('upgrades may stack repeatedly and have genuine attack damage benefit',()=>
  const powered=hit();
  assert(powered>basic*1.3,'two power stacks must be visibly stronger');
  t.updateHud();
- assert(node('modStrip').innerHTML.includes('×2'),'the HUD must display real stack ranks');
+ assert(node('modStrip').innerHTML.includes('x2'),'the icon-only HUD must display visible xN stack ranks');
 });
 test('five kills trigger optional mid-combat reward without losing surviving mobs',()=>{
  g.startRun();
