@@ -171,8 +171,9 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 <script src="./assets/alpha10/sprites7.js"></script>
 <script>window.RZ_ASSETS.street=window.RZ_BG;window.RZ_ASSETS.street_pano=window.RZ_BG;delete window.RZ_BG;</script>
 <script src="./assets/assassin-b.js"></script>
-<script src="./assets/elite-ironmask.js"></script>
-<script src="./assets/boss-hunter.js"></script>
+<script src="./assets/elite-ironmask.js?v=8989e886"></script>
+<script src="./assets/boss-hunter.js?v=4f7461cc"></script>
+<script src="./assets/attacks-20.js?v=oct30-b"></script>
 <script>const EMBEDDED_ASSETS=window.RZ_ASSETS;</script>
 <script>
 (()=>{'use strict';
@@ -239,6 +240,10 @@ if(Z_HF_ART){
   }))Z_REMOTE_ATLAS[key]='./assets/original-z-hf/'+art+'.webp';
  }
 }
+// The importer publishes these paths only after checking all 20 4x2 sheets.
+// Keep original 20 distinct remote source URLs as a safe loading fallback.
+if(!/(?:[?&])combatArt=compact(?:&|$)/.test(zGaitParam))
+ Object.assign(Z_REMOTE_ATLAS,window.RZ_LOCAL_20_ATTACKS||{});
 // Restore the original protagonist as the default. Keep the alternative outfit
 // explicitly selectable with ?hero=hoodie (no loss of art or combat progress).
 const Z_HOODIE_HERO=/(?:[?&])hero=hoodie(?:&|$)/.test(zGaitParam);
@@ -1306,7 +1311,7 @@ function hurtEnemy(e,dmg,poise){
  e.reactionTime=e.reactionDuration=life;
  e.reactionDir=p.facing;
  e.stun=e.type==='boss'?.19:e.type==='elite'?life*.82:life;
- e.hitFlash=.22;e.windup=0;e.chargePrep=0;e.chargeTime=0;e.attackPoseTime=0;
+ e.hitFlash=e.type==='boss'?.33:e.type==='elite'?.30:.22;e.windup=0;e.chargePrep=0;e.chargeTime=0;e.attackPoseTime=0;
  if(e.type==='elite'){e.eliteTell=0;e.eliteRush=0;e.eliteAttack=false;e.eliteCooldown=Math.max(e.eliteCooldown,1.8)}
  // Couple enemy displacement to the attacker's actual forward drive.
  // At the same 4/s drag coefficient, the enemy travels at least as far as
