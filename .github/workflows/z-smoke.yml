@@ -5,6 +5,7 @@ on:
     paths:
       - index.html
       - assets/industrial-combat-bgm.js
+      - assets/voice/**
       - tests/**
       - .github/workflows/z-smoke.yml
   workflow_dispatch:
