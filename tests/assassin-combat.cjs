@@ -543,6 +543,63 @@ test('boss introduction, charge, phase 2 and death select real animations',()=>{
  e.dead=true;e.deathAge=1.5;assert.equal(boss.state(e),'death');
  assert.equal(boss.frame(e,'death'),7);
 });
+test('boss dash stays inside 32k stage without teleporting to old 12.7k boundary',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../assets/boss-hunter.js'),'utf8');
+ const context={location:{search:''},Image:class{},console};context.window=context;
+ vm.runInNewContext(source,context);
+ const hunter=context.RZBossHunter;
+ const boss=t.makeEnemy('boss',30900,560,0),hero={x:30470,y:560};
+ const events={dash:0,slam:0,strike:0};
+ const api={stageWidth:32000,attack:()=>events.strike++,
+  warning:()=>{},impact:(e,kind)=>{if(kind==='slam')events.slam++}};
+ let maxDisplacement=0,seenDash=false,seenSlam=false;
+ for(let n=0;n<420;n++){
+  const before=boss.x;
+  hunter.update(boss,hero,1/60,api);
+  maxDisplacement=Math.max(maxDisplacement,Math.abs(boss.x-before));
+  if(boss.bossMode==='dash'){seenDash=true;events.dash++}
+  if(boss.bossMode==='slam')seenSlam=true;
+  assert(boss.x>29700&&boss.x<=31945,'boss must never vanish outside the late-stage arena');
+  assert(Number.isFinite(boss.x),'boss position remains finite');
+ }
+ assert(maxDisplacement<22,'charge per-frame movement must be physical, not world teleport');
+ assert(seenDash,'boss rushes toward the player');
+ assert(seenSlam,'boss follows up with readable heavy slam patterns');
+ assert(events.strike>0,'boss performs actual attacks, not only animations');
+ assert(events.slam>0,'boss impacts occur');
+ assert.equal(boss.dead,false,'alive boss remains visible');
+});
+test('actual boss AI hits the player and continues after several normal hits',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../assets/boss-hunter.js'),'utf8');
+ const previous=world.RZBossHunter,previousLocation=world.location;
+ world.location={search:''};
+ vm.runInContext(source,world);
+ try{
+  g.startRun();t.setWave(3);
+  t.p.x=30480;t.p.y=560;t.p.hp=t.p.maxHp=800;t.p.inv=0;
+  const boss=t.makeEnemy('boss',30900,560,0);t.setEnemies([boss]);
+  let seenDash=false,seenSlam=false,attacks=0;
+  let priorHP=t.p.hp;
+  for(let frame=0;frame<480;frame++){
+   if(frame%12===0&&frame<180){
+    t.p.moveName='jab';
+    t.hurtEnemy(boss,8,0);
+    boss.knockVX=0; // keep controlled test target in the duel.
+   }
+   const x=boss.x;
+   t.updateEnemies(1/60);
+   assert(Math.abs(boss.x-x)<25,'boss must never leave the screen in one tick');
+   assert(boss.x>29500&&boss.x<32000,'boss stays in current end-of-stage combat zone');
+   if(boss.bossMode==='dash')seenDash=true;
+   if(boss.bossMode==='slam')seenSlam=true;
+   if(t.p.hp<priorHP){attacks++;priorHP=t.p.hp}
+  }
+  assert(seenDash,'boss must charge despite repeated small punches');
+  assert(seenSlam,'boss must follow up with slam despite repeated punches');
+  assert(attacks>0,'boss offensive move must actually damage hero');
+  assert.equal(boss.dead,false,'boss must stay alive after modest chip damage');
+ }finally{world.RZBossHunter=previous;world.location=previousLocation}
+});
 test('fire, bleed, shock and ice apply distinct combat statuses and visible bitmap impacts',()=>{
  g.startRun();
  const e=t.makeEnemy('raider',t.p.x+73,t.p.y,2);
