@@ -1765,7 +1765,7 @@ function updateHud(){
   (p.mod==='neuro'?'<span class="mod-chip compact neuro" title="NEURO · 전격과 출혈의 복합 효과" aria-label="NEURO 발동"><span class="icon">🟣</span><b>x1</b></span>':'');
  const markup=badges||'<span class="empty-mod">효과 없음</span>';
  if(modStripCache!==markup){$('modStrip').innerHTML=markup;modStripCache=markup}
- $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'BARE FISTS';$('modName').textContent=p.mod==='neuro'?'NEURO':p.mod==='none'?'NONE':p.mods.map(n=>({fire:'FIRE',shock:'VOLT',bleed:'BLEED',ice:'ICE'})[n]).join('+');$('credits').textContent=String(p.credits).padStart(4,'0');$('shardCount').textContent=String(perma.shards);if(p.hits!==lastHudCombo){$('combo').innerHTML=`${p.hits} <small>HITS</small>`;lastHudCombo=p.hits}$('enemyCount').textContent=`REMAINING ${String(enemies.filter(e=>!e.dead).length).padStart(2,'0')}`;$('level').textContent=String(level).padStart(2,'0');const eliteOrBoss=enemies.find(e=>!e.dead&&e.type==='boss'&&Math.abs(e.x-p.x)<1050)||enemies.find(e=>!e.dead&&e.type==='elite'&&Math.abs(e.x-p.x)<850);$('bossHud').hidden=gameState!=='playing'||!eliteOrBoss;if(eliteOrBoss){$('bossName').textContent=eliteOrBoss.type==='elite'?'IRON MASK / 철가면 추적자':'HUNTER / 붉은 집행자';$('bossFill').style.width=`${clamp(100*eliteOrBoss.hp/eliteOrBoss.maxHp,0,100)}%`;$('bossPhase').textContent=String(eliteOrBoss.phase).padStart(2,'0')} }
+ $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'BARE FISTS';$('modName').textContent='EFFECTS';$('credits').textContent=String(p.credits).padStart(4,'0');$('shardCount').textContent=String(perma.shards);if(p.hits!==lastHudCombo){$('combo').innerHTML=`${p.hits} <small>HITS</small>`;lastHudCombo=p.hits}$('enemyCount').textContent=`REMAINING ${String(enemies.filter(e=>!e.dead).length).padStart(2,'0')}`;$('level').textContent=String(level).padStart(2,'0');const eliteOrBoss=enemies.find(e=>!e.dead&&e.type==='boss'&&Math.abs(e.x-p.x)<1050)||enemies.find(e=>!e.dead&&e.type==='elite'&&Math.abs(e.x-p.x)<850);$('bossHud').hidden=gameState!=='playing'||!eliteOrBoss;if(eliteOrBoss){$('bossName').textContent=eliteOrBoss.type==='elite'?'IRON MASK / 철가면 추적자':'HUNTER / 붉은 집행자';$('bossFill').style.width=`${clamp(100*eliteOrBoss.hp/eliteOrBoss.maxHp,0,100)}%`;$('bossPhase').textContent=String(eliteOrBoss.phase).padStart(2,'0')} }
 function update(dt){
  // Don't decode a full library of 2K sprite sheets while the user fights.
  // Required combat animations are prepared behind the loading screen.
@@ -1939,6 +1939,35 @@ function drawRiotGuard(e,x,y,z){
 }
 // This warm-up runs only after the shield module has initialized.
 if(USE_HF_SHIELD)loadRiotGuard('idle');
+// Compact enemy ailment chips share the world-space HP-bar anchor.
+function enemyStatusIcons(e){
+ const states=[];
+ if(e.freeze>0)states.push(['❄',e.freezePower||1,'#bdefff']);
+ if(e.shock>0)states.push(['⚡',e.shockPower||1,'#83ebff']);
+ if(e.burn>0)states.push(['🔥',e.burnPower||1,'#ffbd81']);
+ if(e.bleed>0)states.push(['🩸',e.bleedPower||1,'#ff8ba5']);
+ return states;
+}
+function drawEnemyStatusIcons(e){
+ if(e.dead)return;
+ const states=enemyStatusIcons(e);
+ if(!states.length)return;
+ const x=(e.renderX??e.x),y=(e.renderY??e.y)-(e.z||0);
+ const top=y-(e.type==='boss'?382:e.type==='guard'?309:e.type==='elite'?315:294);
+ const width=37,total=states.length*width,first=x-total/2;
+ ctx.save();
+ ctx.textBaseline='middle';ctx.textAlign='center';
+ for(let i=0;i<states.length;i++){
+  const [icon,count,color]=states[i],left=first+i*width;
+  // This is a UI chip; combat graphics remain painted PNG effects.
+  ctx.fillStyle='#07121de3';ctx.fillRect(left,top,35,22);
+  ctx.strokeStyle=color;ctx.lineWidth=1;ctx.strokeRect(left+.5,top+.5,34,21);
+  ctx.font='15px Arial';ctx.fillText(icon,left+10,top+11);
+  ctx.fillStyle='#ffe99f';ctx.font='900 12px Arial';
+  ctx.fillText('x'+Math.min(6,Math.max(1,count)),left+26,top+11);
+ }
+ ctx.restore();
+}
 function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=actorShakeOffset(a);const x=Math.round((isP?a.x:(a.renderX??a.x))+sx),y=Math.round((isP?a.y:(a.renderY??a.y))+sy),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?getZMove():'';
  if(isP){ellipseShadow(x,y,1.06,.45);drawHeroModAura(x,y,z);paintZ(x,y,z);return;}
  if(a.type==='raider'){drawMaskedGrunt(a,x,y,z);return;}
@@ -2011,7 +2040,8 @@ function draw(){
  ctx.save();ctx.translate(-Math.round(cameraX),0);
  const actors=[p,...enemies.filter(e=>!e.dead||e.fade>0)].filter(e=>e.x>cameraX-300&&e.x<cameraX+W+300).sort((a,b)=>a.y-b.y);
  actors.forEach(drawActor);
- drawEffects();ctx.restore();syncZSprite();
+ drawEffects();for(const e of actors)if(e!==p&&!e.dead)drawEnemyStatusIcons(e);
+ ctx.restore();syncZSprite();
  if(screenTint>0){ctx.globalAlpha=screenTint*.32;ctx.fillStyle='#ff335d';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}
  drawTravelMeter();ctx.restore();drawOffscreenEnemyIndicator();
 }
