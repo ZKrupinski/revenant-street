@@ -1500,4 +1500,40 @@ test('unavailable attacks are skipped and failed inputs do not consume moves',()
  for(let i=0;i<9;i++){t.p.stamina=100;t.p.attack=0;t.startAttack();moves.push(t.p.moveName)}
  for(let i=0;i<9;i+=3)assert.equal(new Set(moves.slice(i,i+3)).size,3);
 });
+test('new PA-K punch is a loud transient on its own audio bus and never ducks music',()=>{
+ const previousAC=world.AudioContext,previousBgm=world.__revenantBgm;
+ const filters=[],gains=[],compressors=[];let ctx,ducked=false;
+ const param=()=>({value:0,max:0,
+  setValueAtTime(v){this.value=v;this.max=Math.max(this.max,v)},
+  linearRampToValueAtTime(v){this.value=v;this.max=Math.max(this.max,v)},
+  exponentialRampToValueAtTime(v){this.value=v;this.max=Math.max(this.max,v)}});
+ const node=()=>({gain:param(),frequency:param(),Q:param(),threshold:param(),knee:param(),ratio:param(),attack:param(),release:param(),
+  connect(other){return other},disconnect(){},start(){},stop(){}});
+ class FakeAudioContext{
+  constructor(){ctx=this;this.currentTime=12;this.sampleRate=44100;this.destination=node();this.state='running'}
+  createDynamicsCompressor(){const n=node();compressors.push(n);return n}
+  createGain(){const n=node();gains.push(n);return n}
+  createOscillator(){return node()}
+  createBufferSource(){return node()}
+  createBiquadFilter(){const n=node();filters.push(n);return n}
+  createBuffer(_,length,rate){return{sampleRate:rate,getChannelData:()=>new Float32Array(length)}}
+ }
+ world.AudioContext=FakeAudioContext;
+ world.__revenantBgm={duckImpact(){ducked=true}};
+ try{
+  assert.equal(t.playImpactSound('punch',1),true);
+  const firstSnap=filters.find(f=>f.type==='highpass');
+  assert(firstSnap&&firstSnap.frequency.value>=1800,'ordinary punch needs instant audible snap');
+  assert(gains.some(g=>g.gain.max>=.9),'foreground punch snap must be powerful');
+  ctx.currentTime+=.14;
+  assert.equal(t.playImpactSound('heavy',1.35),true);
+  assert(filters.filter(f=>f.type==='highpass').length>=2,'heavy punch needs a second hard transient');
+  assert(gains.some(g=>g.gain.max>1.3),'heavy attack transient must exceed normal strike');
+  assert.equal(compressors.length,1,'reuse master limiter and prevent stacking clipping');
+  assert.equal(ducked,false,'impact must not adjust music volume');
+ }finally{
+  if(previousAC)world.AudioContext=previousAC;else delete world.AudioContext;
+  if(previousBgm)world.__revenantBgm=previousBgm;else delete world.__revenantBgm;
+ }
+});
 console.log(`${checks} combat regression checks passed`);
