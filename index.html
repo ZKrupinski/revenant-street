@@ -596,6 +596,12 @@ function currentZFrameIndex(key){
  if(key==='guard')return oneshot(1-p.parry/Math.max(.001,p.parryDuration||.34));
  if(key==='jumpstart')return oneshot(1-p.jumpStartTimer/.23);
  if(key==='landing')return oneshot(1-p.landingTimer/.24);
+ if(p.airKickPhase&&p.attack>0&&key==='axe_kick'){
+  const age=p.attackDuration-p.attack;
+  if(p.airKickPhase==='charge')return age<.06?1:age<.12?2:3;
+  if(p.airKickPhase==='dive')return p.hitDone?6:5;
+  return p.attack>.08?6:7;
+ }
  if(Z_ALL_ATTACKS.includes(key)||key==='airkick')return oneshot(1-p.attack/Math.max(.001,p.attackDuration||.4));
  // The legs only advance in proportion to actual world travel.
  // This prevents the rapid 'shaking in place' caused by a slow joystick tilt.
@@ -637,7 +643,7 @@ function paintZ(x,y,z){
  ctx.restore();return true;
 }
 function syncZSprite(){if(zArtNode)zArtNode.style.display='none'}
-RZAssassinArt.load('idle');loadMaskedMove('idle');loadZMove('idle');loadZMove('walk');loadZMove('run');loadZMove('dash');loadZMove('guard');loadZMove('airkick');loadZMove('jab');loadZMove('frontkick');loadZMove('lowkick');loadZMove('roundkick');
+RZAssassinArt.load('idle');loadMaskedMove('idle');loadZMove('idle');loadZMove('walk');loadZMove('run');loadZMove('dash');loadZMove('guard');loadZMove('airkick');loadZMove('axe_kick');loadZMove('jab');loadZMove('frontkick');loadZMove('lowkick');loadZMove('roundkick');
 
 const STAGE_WIDTH=12800;let cameraX=0;const MOD_META={
  fire:{icon:'🔥',short:'화염',title:'IGNITION',color:'#ffa852',source:'burst_gold',filter:'hue-rotate(-24deg) saturate(1.7)'},
@@ -839,14 +845,14 @@ function showMenu(html){canvas.style.visibility='hidden';resetInputs();$('hint')
 function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;$('bottomTip').style.display='flex';showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1><p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p><div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div><div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button><button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div><p class="micro">가로 10화면 · 마스크 잡몹 A + 쌍단검 암살자 B + 철가면 엘리트 / 키보드·게임패드·드래그 조이스틱</p>`)}
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>공격 · 연속타격 · 공중 차기</div><div><kbd>↑ / K / Y / △</kbd>점프 (지상 횡베기 회피)</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링하면 체간을 크게 무너뜨립니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
-function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0}
+function resetPlayer(){cameraX=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0}
 let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
   ['배경',()=>({ready:img.street_pano?.complete&&img.street_pano.naturalWidth>0,failed:false})],
   ['적 방향 아이콘',()=>({ready:offscreenArrow.complete&&offscreenArrow.naturalWidth>0,failed:false})],
   ['이펙트',()=>({ready:['burst_red','burst_blue','burst_gold'].every(k=>img[k]?.complete&&img[k].naturalWidth>0),failed:false})],
-  ...['idle','walk','run','jab','frontkick','hit'].map(k=>['Z '+k,()=>loadZMove(k)]),
+  ...['idle','walk','run','jab','frontkick','axe_kick','hit'].map(k=>['Z '+k,()=>loadZMove(k)]),
   ...['idle','walk','attack'].map(k=>['잡몹 '+k,()=>loadMaskedMove(k)]),
   ...['idle','walk','attack'].map(k=>['암살자 '+k,()=>RZAssassinArt.load(k)]),
   ...['idle','walk'].map(k=>['방패 '+k,()=>loadRiotGuard(k)])
@@ -992,11 +998,13 @@ function startAttack(){
  if(p.z>16){
   if(p.airKickUsed||p.stamina<15)return;
   p.airAttack=true;p.airKickUsed=true;p.counterBoost=false;p.stamina-=15;
-  p.attackDuration=.55;p.attack=.55;p.moveName=Math.random()<.5?'airkick':'diagonal_airkick';
+  p.attackDuration=.64;p.attack=.64;p.moveName='axe_kick';
+  p.airKickPhase='charge';p.airKickLaunched=false;p.attackDriveRemaining=0;
   p.hitDone=false;p.attackQueued=false;p.comboWindow=0;
-  p.vz=Math.max(p.vz,115);p.inv=Math.max(p.inv,.14);
+  p.vz=0;p.inv=Math.max(p.inv,.14);
   sound('attack');return;
  }
+ p.airKickPhase='';
  const finisher=p.riposteWindow>0?null:findExecutionTarget();
  if(finisher){execute(finisher);return}
  if(p.riposteWindow>0&&p.riposteTarget&&!p.riposteTarget.dead){
@@ -1145,7 +1153,7 @@ function attackCheck(){
  const baseDamage={jab:15,cross:19,hook:22,uppercut:26,backfist:20,hammerfist:30,spinning_elbow:28,rising_elbow:26,superman_punch:32,shovel_hook:23,frontkick:20,lowkick:18,roundkick:29,axe_kick:32,sidekick:27,spinning_heel:34,crescent_kick:28,diagonal_airkick:35,rising_headbutt:27,forward_headbutt:25,airkick:37};
  const baseReach={jab:94,cross:112,hook:105,uppercut:100,backfist:105,hammerfist:110,spinning_elbow:108,rising_elbow:95,superman_punch:166,shovel_hook:96,frontkick:133,lowkick:132,roundkick:151,axe_kick:128,sidekick:154,spinning_heel:165,crescent_kick:151,diagonal_airkick:160,rising_headbutt:88,forward_headbutt:89,airkick:174};
  const damage=((armed?([22,27,38][p.comboIdx]||22):baseDamage[p.moveName]||15)+p.damageBoost)
-  *(p.counterBoost?2.05:1)*(1+modRank('power')*.16)
+  *(p.counterBoost?2.05:1)*(p.airKickPhase==='dive'?1.25:1)*(1+modRank('power')*.16)
   *(1+Math.min(9,p.hits)*modRank('momentum')*.055);
  const reach=p.counterBoost?220:armed?([134,145,170][p.comboIdx]||135):(baseReach[p.moveName]||100);
  const poise={jab:21,cross:29,hook:38,uppercut:53,backfist:32,hammerfist:62,spinning_elbow:58,rising_elbow:49,superman_punch:68,shovel_hook:41,frontkick:43,lowkick:34,roundkick:57,axe_kick:65,sidekick:58,spinning_heel:72,crescent_kick:56,diagonal_airkick:74,rising_headbutt:62,forward_headbutt:54,airkick:78};
@@ -1160,6 +1168,12 @@ function attackCheck(){
  if(p.mods.includes('shock')){dmg*=1+.06*modRank('shock');e.shock=Math.max(e.shock,1.1+.28*modRank('shock'))}
  if(p.mod==='neuro') {dmg*=1.35;e.shock=2;e.bleed=4.5;enemies.filter(o=>o!==e&&!o.dead&&Math.abs(o.x-e.x)<180).forEach(o=>{o.stun=.8;o.hp-=18;fxBurst(o.x,o.y-90,'blue',.8)})}
  hurtEnemy(e,dmg,p.counterBoost?100:armed?([28,31,47][p.comboIdx]||28):(poise[p.moveName]||28));createModImpact(e);hits++;
+ if(p.airKickPhase==='dive'){
+  // Drive victims down rather than launch them away from the heel.
+  if(e.type!=='boss'){e.vz=-240;e.z=Math.max(0,e.z);e.pendingFall=true}
+  hitStop=Math.max(hitStop,.085);screenShake=Math.max(screenShake,13);
+  fxBurst(e.x,e.y-40,'gold',1.45);
+ }
  p.hp=clamp(p.hp+dmg*modRank('leech')*.04,0,p.maxHp);
  if(modRank('chain')&&Math.random()<Math.min(.85,modRank('chain')*.25)){
   for(const nearby of enemies.filter(o=>o!==e&&!o.dead&&Math.abs(o.x-e.x)<195&&Math.abs(o.y-e.y)<80).slice(0,2+modRank('chain'))){
@@ -1281,7 +1295,7 @@ function control(dt,pad){
   if(p.dodge>0){dx=p.dodgeX;dy=0;speed=880}
   if(p.counterRush>0){dx=p.facing;dy=0;speed=980;p.counterRush=Math.max(0,p.counterRush-dt)}
   if(p.attack>0&&!p.airAttack&&p.counterRush<=0)speed*=.28;
-  if(p.airAttack){dx=p.facing;dy=0;speed=470}
+  if(p.airAttack){dx=p.facing;dy=0;speed=p.airKickPhase==='charge'?28:330}
   p.x=clamp(p.x+dx*speed*dt,64,STAGE_WIDTH-64);
   p.y=groundY(p.y+dy*speed*.52*dt);
   if(p.attack>0&&p.attackDriveRemaining>0&&!p.airAttack&&p.counterRush<=0){
@@ -1309,16 +1323,37 @@ function control(dt,pad){
     p.attackDriveRemaining=Math.max(0,p.attackDriveRemaining-Math.abs(p.x-before));
    }
   }
-  if(p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx>.1)p.facing=1;
-  else if(p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx<-.1)p.facing=-1;
+  if(!p.airAttack&&p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx>.1)p.facing=1;
+  else if(!p.airAttack&&p.parry<=0&&p.dodge<=0&&p.counterRush<=0&&!p.backstepping&&dx<-.1)p.facing=-1;
  }
  const distanceTraveled=Math.hypot(p.x-movementStartX,(p.y-movementStartY)*1.9);
  if(distanceTraveled>.001&&p.attack<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){
   p.gaitDistance=(p.gaitDistance||0)+distanceTraveled;
  }
+ // Hold the raised heel briefly, then commit to a fast downward strike.
+ if(p.airAttack&&p.attack>0&&p.stun<=0){
+  const age=p.attackDuration-p.attack;
+  if(age>=.18&&!p.airKickLaunched){
+   p.airKickLaunched=true;p.airKickPhase='dive';p.vz=-760;sound('attack');
+  }
+ }else if(p.stun>0){p.airKickPhase='';p.airAttack=false}
  if(p.z>0||p.vz>0){
-  p.z+=p.vz*dt;p.vz-=1320*dt;
-  if(p.z<=0){const landed=p.z<0||p.vz<0;p.z=0;p.vz=0;p.airKickUsed=false;p.airAttack=false;if(landed)p.landingTimer=.24}
+  const charging=p.airAttack&&p.airKickPhase==='charge';
+  if(!charging){p.z+=p.vz*dt;p.vz-=1320*dt}
+  if(p.airAttack&&p.airKickPhase==='dive'&&!p.hitDone&&p.z<=90){
+   p.hitDone=true;attackCheck();
+  }
+  if(p.z<=0){
+   const landed=p.z<0||p.vz<0;
+   p.z=0;p.vz=0;
+   if(p.airAttack&&p.airKickPhase==='dive'){
+    if(!p.hitDone){p.hitDone=true;attackCheck()}
+    p.airKickPhase='recover';p.attack=.19;p.landingTimer=.30;
+    screenShake=Math.max(screenShake,9);fxBurst(p.x+p.facing*35,p.y-8,'gold',.85);
+    playImpactSound('heavy',.65);
+   }else if(landed)p.landingTimer=.24;
+   p.airKickUsed=false;p.airAttack=false;
+  }
  }
  p.jumpStartTimer=Math.max(0,p.jumpStartTimer-dt);
  p.landingTimer=Math.max(0,p.landingTimer-dt);
@@ -1338,9 +1373,9 @@ function control(dt,pad){
  p.motionTime=(p.motionTime||0)+dt;
  if(p.attack>0){
   p.attack-=dt;
-  if(!p.hitDone&&p.attack<p.attackDuration*(p.airAttack?.47:.58)){p.hitDone=true;attackCheck()}
+  if(!p.airKickPhase&&!p.hitDone&&p.attack<p.attackDuration*.58){p.hitDone=true;attackCheck()}
   p.attack=Math.max(0,p.attack);
-  if(p.attack===0){p.counterBoost=false;if(!p.z)p.airAttack=false}
+  if(p.attack===0){p.airKickPhase='';p.counterBoost=false;if(!p.z)p.airAttack=false}
  }
  if((p.attackQueued||keys.has('j')||padPrev.attack)&&p.attack===0&&p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){p.attackQueued=false;startAttack()}
 }
@@ -1569,6 +1604,26 @@ function update(dt){
  // Don't decode a full library of 2K sprite sheets while the user fights.
  // Required combat animations are prepared behind the loading screen.
 time+=dt;messageUpdate(dt);const pad=pollPad();updateEffects(dt);if(gameState!=='playing')return;if(hitStop>0){hitStop-=dt;updateHud();return}control(dt,pad);cameraX+=(clamp(p.x-465,0,STAGE_WIDTH-W)-cameraX)*Math.min(1,dt*6.5);updateEnemies(dt*(slowMotion>0?.19:1));slowMotion=Math.max(0,slowMotion-dt);updateHud();const cleared=gameState==='playing'&&waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
+// Cache photographic depth treatment once per loaded panorama. Ground stays original.
+const backdropDepthCache=new WeakMap();
+function depthBackdrop(bg){
+ if(backdropDepthCache.has(bg))return backdropDepthCache.get(bg);
+ const w=Math.round(bg.naturalWidth*H/bg.naturalHeight),h=H;
+ const output=document.createElement('canvas');output.width=w;output.height=h;
+ const c=output.getContext('2d');c.drawImage(bg,0,0,w,h);
+ for(const layer of [{blur:1.3,contrast:.84,saturation:.9,start:.43,end:.68},
+                     {blur:3.6,contrast:.67,saturation:.8,start:.22,end:.51}]){
+  const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  const lc=cv.getContext('2d');
+  lc.filter=`blur(${layer.blur}px) contrast(${layer.contrast}) saturate(${layer.saturation})`;
+  lc.drawImage(bg,-4,-4,w+8,h+8);lc.filter='none';
+  lc.globalCompositeOperation='destination-in';
+  const fade=lc.createLinearGradient(0,h*layer.start,0,h*layer.end);
+  fade.addColorStop(0,'rgba(0,0,0,1)');fade.addColorStop(1,'rgba(0,0,0,0)');
+  lc.fillStyle=fade;lc.fillRect(0,0,w,h);c.drawImage(cv,0,0);
+ }
+ backdropDepthCache.set(bg,output);return output;
+}
 function drawBackdrop(){
  const bg=img.street_pano;
  if(bg&&bg.complete&&bg.naturalWidth&&bg.naturalHeight){
@@ -1579,9 +1634,9 @@ function drawBackdrop(){
   for(let i=-1;i<=2;i++){
    const destX=Math.floor(i*tileW-offset);
    if(destX>W||destX+tileW<0)continue;
-   ctx.drawImage(bg,destX,0,tileW+1,H);
+   ctx.drawImage(depthBackdrop(bg),destX,0,tileW+1,H);
   }
- }else if(img.street&&img.street.complete&&img.street.naturalWidth)ctx.drawImage(img.street,0,0,W,H);
+ }else if(img.street&&img.street.complete&&img.street.naturalWidth)ctx.drawImage(depthBackdrop(img.street),0,0,W,H);
  else{ctx.fillStyle='#0a101b';ctx.fillRect(0,0,W,H)}
  const progress=clamp((cameraX+W*.5)/STAGE_WIDTH,0,1);
  ctx.fillStyle='rgba(4,8,15,'+(.06+progress*.09)+')';ctx.fillRect(0,0,W,H);

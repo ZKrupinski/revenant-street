@@ -648,4 +648,21 @@ test('original Z new V3 walking and running atlas packs have 16 complete transpa
   }
  }
 });
+test('air heel kick holds its charge then dives, hits once and recovers at ground',()=>{
+ for(const height of [20,105]){
+  g.startRun();t.setEnemies([]);Object.assign(t.p,{z:height,vz:120});t.startAttack();
+  assert.equal(t.p.moveName,'axe_kick');assert.equal(t.p.airKickPhase,'charge');
+  const x=t.p.x;
+  for(let i=0;i<8;i++)t.control(1/60,{dx:0,dy:0});
+  assert.equal(t.p.z,height,'charge must hold altitude');assert(t.p.x-x<6);
+  assert.equal(t.p.hitDone,false,'charge cannot damage');
+  const e=t.makeEnemy('guard',t.p.x+65,t.p.y,0);e.hp=500;e.maxHp=500;t.setEnemies([e]);
+  for(let i=0;i<20;i++)t.control(1/60,{dx:0,dy:0});
+  assert.equal(t.p.z,0);assert.equal(t.p.airAttack,false);assert.equal(t.p.hitDone,true);
+  assert(e.hp<500,'descending heel must connect');
+  const hp=e.hp;
+  for(let i=0;i<30;i++)t.control(1/60,{dx:0,dy:0});
+  assert.equal(e.hp,hp,'landing cannot duplicate the hit');assert.equal(t.p.airKickPhase,'');
+ }
+});
 console.log(`${checks} combat regression checks passed`);
