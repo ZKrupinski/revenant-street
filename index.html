@@ -1145,8 +1145,8 @@ function playImpactSound(kind='punch',intensity=1){
   lastImpactAudio=t;
   if(!impactBus){
    const compressor=audio.createDynamicsCompressor();
-   compressor.threshold.value=-14;compressor.knee.value=8;compressor.ratio.value=6;
-   compressor.attack.value=.0015;compressor.release.value=.19;
+   compressor.threshold.value=-13;compressor.knee.value=6;compressor.ratio.value=7;
+   compressor.attack.value=.004;compressor.release.value=.16;
    const output=audio.createGain();output.gain.value=.98;
    compressor.connect(output).connect(audio.destination);
    impactBus=compressor;
@@ -1155,7 +1155,6 @@ function playImpactSound(kind='punch',intensity=1){
   const parrySound=kind==='parry';
   const strength=Math.max(.65,Math.min(1.6,intensity));
   const duration=heavy?.39:.27;
-  window.__revenantBgm?.duckImpact?.(heavy||parrySound);
   if(!impactNoiseBuf||impactNoiseBuf.sampleRate!==audio.sampleRate){
    const len=Math.ceil(audio.sampleRate*.29);
    impactNoiseBuf=audio.createBuffer(1,len,audio.sampleRate);
@@ -1172,7 +1171,7 @@ function playImpactSound(kind='punch',intensity=1){
   bass.frequency.setValueAtTime(parrySound?176:heavy?115:148,t);
   bass.frequency.exponentialRampToValueAtTime(parrySound?58:heavy?37:51,t+duration);
   low.gain.setValueAtTime(.0001,t);
-  low.gain.linearRampToValueAtTime((heavy?.94:.70)*strength,t+.006);
+  low.gain.linearRampToValueAtTime((heavy?1.0:.82)*strength,t+.004);
   low.gain.exponentialRampToValueAtTime(.0001,t+duration);
   bass.connect(low).connect(impactBus);bass.start(t);bass.stop(t+duration+.01);
   bass.onended=()=>{bass.disconnect();low.disconnect()};
@@ -1180,7 +1179,7 @@ function playImpactSound(kind='punch',intensity=1){
   const body=audio.createOscillator(),bodyGain=audio.createGain();
   body.type='triangle';body.frequency.setValueAtTime(heavy?245:320,t);
   body.frequency.exponentialRampToValueAtTime(heavy?96:130,t+duration*.8);
-  bodyGain.gain.setValueAtTime(.0001,t);bodyGain.gain.linearRampToValueAtTime((heavy?.57:.42)*strength,t+.004);
+  bodyGain.gain.setValueAtTime(.0001,t);bodyGain.gain.linearRampToValueAtTime((heavy?.76:.60)*strength,t+.002);
   bodyGain.gain.exponentialRampToValueAtTime(.0001,t+duration*.85);
   body.connect(bodyGain).connect(impactBus);body.start(t);body.stop(t+duration);
   body.onended=()=>{body.disconnect();bodyGain.disconnect()};
@@ -1190,13 +1189,24 @@ function playImpactSound(kind='punch',intensity=1){
   crunch.frequency.exponentialRampToValueAtTime(heavy?78:105,t+duration*.83);
   cf.type='lowpass';cf.frequency.value=heavy?750:920;
   cg.gain.setValueAtTime(.0001,t);
-  cg.gain.linearRampToValueAtTime((heavy?.27:.19)*strength,t+.005);
+  cg.gain.linearRampToValueAtTime((heavy?.40:.29)*strength,t+.003);
   cg.gain.exponentialRampToValueAtTime(.0001,t+duration*.65);
   crunch.connect(cf).connect(cg).connect(impactBus);
   crunch.start(t);crunch.stop(t+duration);
   crunch.onended=()=>{crunch.disconnect();cf.disconnect();cg.disconnect()};
-  // Crisp armor-crack noise layers above the new low-mid impact.
-  for(const [freq,vol,end] of [[heavy?480:660,heavy?.83:.64,.21],[parrySound?2200:1900,parrySound?.66:.53,.085],[heavy?3200:2700,heavy?.34:.22,.12]]){
+  // Near-instant high-frequency 'PAK!' attack, in front of the low-body thud.
+  // Percussion is foregrounded directly; the soundtrack gain never changes.
+  const snap=audio.createBufferSource(),snapFilter=audio.createBiquadFilter(),snapGain=audio.createGain();
+  snap.buffer=impactNoiseBuf;snapFilter.type='highpass';
+  snapFilter.frequency.value=parrySound?2400:heavy?1550:1900;
+  snapGain.gain.setValueAtTime(.0001,t);
+  snapGain.gain.linearRampToValueAtTime((parrySound?.85:heavy?1.12:.95)*strength,t+.0018);
+  snapGain.gain.exponentialRampToValueAtTime(.0001,t+(heavy?.067:.048));
+  snap.connect(snapFilter).connect(snapGain).connect(impactBus);
+  snap.start(t);snap.stop(t+(heavy?.075:.055));
+  snap.onended=()=>{snap.disconnect();snapFilter.disconnect();snapGain.disconnect()};
+  // A short armor-crack and gritty debris after the initial pop.
+  for(const [freq,vol,end] of [[heavy?480:660,heavy?.94:.76,.19],[parrySound?2200:1900,parrySound?.75:.65,.072],[heavy?3200:2700,heavy?.42:.30,.10]]){
    const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();
    source.buffer=impactNoiseBuf;
    filter.type='bandpass';filter.frequency.value=freq;filter.Q.value=.75;
@@ -3037,6 +3047,6 @@ canvas.style.visibility='hidden';titleMenu();requestAnimationFrame(loop);
 })();
 
 </script>
-<script src="./assets/industrial-combat-bgm.js?v=20261030-combo-impact4"></script>
+<script src="./assets/industrial-combat-bgm.js?v=20261030-steady-bgm-pop5"></script>
 </body>
 </html>
