@@ -38,7 +38,8 @@
    const important=isHero||boss||kind==='enemyDeath';
    if(active.size>=3) {
     if(!important)return false;
-    const quiet=[...active].find(v=>!v.important);
+    // Hard caps must not silence the hero's next strong attack or a kill scream.
+    const quiet=[...active].find(v=>!v.important)||[...active][0];
     if(!quiet)return false;
     try{quiet.source.stop()}catch(_){}
     active.delete(quiet);
@@ -46,7 +47,9 @@
    // Hero offense never borrows the enemies' sustained death shrieks.
    // The hero uses short actual male grunts; enemy wounds/yells use the
    // separate screams/roars. Only the hero's own death may scream.
-   const file=kind==='heroDeath'||kind==='enemyDeath'||kind==='enemyHurt'||kind==='enemyShout'?'yell':
+   // Ordinary pain should be a short 'ugh', not a death scream;
+   // hero attacks only borrow the two grunt takes, NEVER yell/roar.
+   const file=kind==='heroDeath'||kind==='enemyDeath'||kind==='enemyShout'?'yell':
     kind==='bossDeath'||kind==='bossShout'?'roar':
     kind==='heroPower'?'b':
     Math.random()<.5?'a':'b';
@@ -56,7 +59,8 @@
     const limiter=context.createDynamicsCompressor(),output=context.createGain();
     limiter.threshold.value=-14;limiter.knee.value=6;limiter.ratio.value=4;
     limiter.attack.value=.003;limiter.release.value=.14;
-    output.gain.value=.92;limiter.connect(output).connect(context.destination);
+    // Impact compressor stays on a completely separate audio bus and loudest.
+    output.gain.value=.68;limiter.connect(output).connect(context.destination);
     master=limiter;
    }
    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
@@ -65,8 +69,8 @@
     actor.type==='guard'?.90:actor.type==='assassin'?1.035:.97;
    const rate=Math.max(.68,Math.min(1.21,characterPitch*(.95+Math.random()*.10)));
    source.playbackRate.value=rate;
-   const strengths={heroStrike:.92,heroPower:1.11,heroHurt:1.02,heroDeath:1.20,
-    enemyHurt:.76,enemyShout:.84,enemyDeath:.92,bossShout:1.17,bossDeath:1.25};
+   const strengths={heroStrike:.82,heroPower:1.06,heroHurt:.84,heroDeath:1.08,
+    enemyHurt:.59,enemyShout:.73,enemyDeath:.87,bossShout:1.02,bossDeath:1.11};
    const position=isHero?1:Math.max(.3,1-Math.abs(actor.x-hero.x)/1600);
    const volume=(strengths[kind]||.7)*position;
    filter.type='lowpass';filter.frequency.value=boss?3500:isHero?6300:4500;
@@ -75,16 +79,19 @@
     kind==='enemyDeath'?1.25:2.2;
    const duration=Math.min(maxDuration,buffer.duration/rate);
    if(!(duration>.02))return false;
+   // Let the independent punch crack play first; groans follow ~75ms later.
+   const delay=kind==='enemyHurt'||kind==='enemyDeath'||kind==='bossDeath'||kind==='heroHurt'?.085:0;
+   const at=now+delay;
    const attack=Math.min(.007,duration*.12),release=Math.min(.09,duration*.28);
-   gain.gain.setValueAtTime(.0001,now);
-   gain.gain.linearRampToValueAtTime(volume,now+attack);
-   gain.gain.setValueAtTime(volume,Math.max(now+attack,now+duration-release));
-   gain.gain.linearRampToValueAtTime(.0001,now+duration);
+   gain.gain.setValueAtTime(.0001,at);
+   gain.gain.linearRampToValueAtTime(volume,at+attack);
+   gain.gain.setValueAtTime(volume,Math.max(at+attack,at+duration-release));
+   gain.gain.linearRampToValueAtTime(.0001,at+duration);
    source.connect(filter).connect(gain).connect(master);
    const entry={source,important};active.add(entry);
    source.onended=()=>{active.delete(entry);source.disconnect();filter.disconnect();gain.disconnect()};
-   source.start(now,0,duration*rate);
-   source.stop(now+duration+.015);
+   source.start(at,0,duration*rate);
+   source.stop(at+duration+.015);
    actor._voiceAt=now;
    if(kind==='enemyHurt')lastCrowd=now;
    return true;
