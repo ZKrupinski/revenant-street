@@ -1809,7 +1809,7 @@ function control(dt,pad){
  }
  // Holding attack before jumping never starts a free dive; in the air,
  // only a newly pressed attack event can call startAttack().
- if((p.attackQueued||(p.z<=16&&(keys.has('j')||padPrev.attack)))&&p.attack===0&&p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){p.attackQueued=false;startAttack()}
+ if((p.attackQueued||(!p.jumpActive&&p.z<=0&&(keys.has('j')||padPrev.attack)))&&p.attack===0&&p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){p.attackQueued=false;startAttack()}
 }
 // Visual-footprint spacing in world pixels (X = silhouette width, Y = lane depth).
 // Wider than damage hitboxes: ground actors, including enemy pairs, cannot stack.
