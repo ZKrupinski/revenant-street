@@ -418,7 +418,7 @@ function getZMove(){
  if(p.getupTimer>0)return 'getup';
  if(p.stun>0)return p.hitHeavyTimer>0?'heavyhit':'hit';
  if(p.dodge>0)return p.evadeBackstep?'dodge':'dash';
- if(p.riposteChasing)return 'dash';
+ if(p.riposteChasing)return 'run';
  if(p.parry>0)return 'guard';
  if(p.attack>0)return p.airAttack?(p.moveName||'airkick'):(p.moveName||'jab');
  // Kick art appears only after a deliberate airborne attack press.
@@ -820,6 +820,9 @@ function currentZFrameIndex(key){
  // The legs only advance in proportion to actual world travel.
  // This prevents the rapid 'shaking in place' caused by a slow joystick tilt.
  if(key==='walk'||key==='run'||key==='backwalk'){
+  // Pursuit is much faster than normal jogging: a dedicated loop avoids
+  // skipping most frames when world distance jumps 30-60px per update.
+  if(key==='run'&&p.riposteChasing)return Math.floor(Math.max(0,p.riposteRunCycle||0))%8;
   const step=Math.floor(Math.max(0,p.gaitDistance||0)/zStride(key))%8;
    // Reverse the eight-frame gait for deliberate backward foot placement.
    return key==='backwalk'&&Z_HF_ART&&(zGaitChoice==='v3'||zGaitChoice==='v4')?(8-step)%8:step;
@@ -1351,7 +1354,7 @@ function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
  cameraRecenterClock=0;cameraRecenterHold=0;cameraRecenterBlend=0;
  resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
  p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
- p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
+ p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
@@ -1569,7 +1572,8 @@ function startAttack(){
   p.attackDriveTotal=0;p.attackDriveRemaining=0;
   p.airAttack=false;p.dashSmash=false;p.dashFollowWindow=0;p.attackQueued=false;
   p.attack=0;p.comboWindow=0;p.stamina=Math.max(0,p.stamina-8);
-  p.inv=Math.max(p.inv,1.5);p.moveName='dash';
+  p.inv=Math.max(p.inv,1.5);p.moveName='run';p.riposteRunCycle=0;
+  loadZMove('run');
   triggerStrikeCamera('dash');strikeCameraTime=.74;strikeCameraTarget=1.35;
   fxBurst(p.x-p.facing*34,p.y-55,'blue',1.25);
   flash('JUST PARRY → CHASE FINISH!',.95);sound('attack');return;
@@ -2029,6 +2033,9 @@ function control(dt,pad){
    }
   }
   if(p.riposteChasing){
+   // Eight full-body running frames loop at a legible fast cadence while
+   // collision-safe chase travel keeps its existing independent speed.
+   p.riposteRunCycle=(p.riposteRunCycle||0)+dt*16;
    p.moveDX=0;p.moveDY=0; // dedicated pursuit owns locomotion this tick
    return;
   }

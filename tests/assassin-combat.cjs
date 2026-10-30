@@ -535,8 +535,12 @@ test('one follow-up attack tracks the actual parried target and lands near-fatal
   t.startAttack();
   assert.equal(t.p.riposteChasing,true,'attack button arms the target-tracking sprint');
   assert.equal(t.p.riposteChaseTarget,enemy,'lock onto the actual attacker, not another enemy');
-  assert.equal(t.getZMove(),'dash','dash art shows while sprinting');
+  assert.equal(t.getZMove(),'run','full-body running art shows during parry pursuit');
   assert(t.p.riposteChaseWarmup>=.30,'allow enemy to fly before contact');
+  const firstRunFrame=t.currentZFrameIndex('run');
+  for(let n=0;n<6;n++)t.control(1/60,{dx:0,dy:0});
+  assert.equal(t.getZMove(),'run','pursuit keeps running rather than swapping back to dash pose');
+  assert.notEqual(t.currentZFrameIndex('run'),firstRunFrame,'eight-frame running cycle advances even when chase closes quickly');
   let maxEnemyDisplacement=0,sawStrike=false;
   for(let n=0;n<150;n++){
    t.control(1/60,{dx:0,dy:0});
