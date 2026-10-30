@@ -1172,7 +1172,7 @@ function attackCheck(){
  const reach=p.counterBoost?220:armed?([134,145,170][p.comboIdx]||135):(baseReach[p.moveName]||100);
  const poise={jab:21,cross:29,hook:38,uppercut:53,backfist:32,hammerfist:62,spinning_elbow:58,rising_elbow:49,superman_punch:68,shovel_hook:41,frontkick:43,lowkick:34,roundkick:57,axe_kick:65,sidekick:58,spinning_heel:72,crescent_kick:56,diagonal_airkick:74,rising_headbutt:62,forward_headbutt:54,airkick:78};
  let hits=0;
- for(const e of enemies){if(e.dead||e.inv>0)continue;const dx=e.x-p.x,dy=Math.abs(e.y-p.y);if((dx*p.facing)>-25&&(dx*p.facing)<reach&&dy<(p.airAttack?78:56)&&(p.airAttack?p.z<225:Math.abs(e.z-p.z)<82)){let dmg=damage;
+ for(const e of enemies){if(e.dead||e.inv>0)continue;const dx=e.x-p.x,dy=Math.abs(e.y-p.y);const contactReach=Math.max(reach,bodyHalfX(p)+bodyHalfX(e)+20);if((dx*p.facing)>-25&&(dx*p.facing)<contactReach&&dy<(p.airAttack?78:56)&&(p.airAttack?p.z<225:Math.abs(e.z-p.z)<82)){let dmg=damage;
  const critChance=Math.min(.65,modRank('crit')*.10);
  const critical=Math.random()<critChance;
  if(critical){dmg*=1.8;floatText('CRITICAL!',e.x,e.y-236,'#ffe982');fxBurst(e.x,e.y-118,'gold',1.55)}
@@ -1213,7 +1213,7 @@ function attackCheck(){
   // Avoid passing through the victim when a follow-up step closes fast.
   const next=enemies.filter(e=>!e.dead&&e.z<80&&Math.abs(e.y-p.y)<59&&
    (e.x-p.x)*p.facing>=0).sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0];
-  if(next&&Math.abs(next.x-p.x)<45)p.x=clamp(next.x-p.facing*45,64,STAGE_WIDTH-64);
+  if(next&&Math.abs(next.x-p.x)<bodyHalfX(p)+bodyHalfX(next)-8)p.x=clamp(next.x-p.facing*(bodyHalfX(p)+bodyHalfX(next)-8),64,STAGE_WIDTH-64);
  }
  if(!hits)fxBurst(p.x+p.facing*105,p.y-123,'red',.6)
 }
@@ -1222,7 +1222,7 @@ function enemyAttack(e){
  e.eliteAttack=false;
  if(gameState!=='playing'||e.dead||e.groggy>0||p.downTimer>0||p.getupTimer>0)return;
  const dx=Math.abs(e.x-p.x),dy=Math.abs(e.y-p.y);
- if(dx>e.reach+(eliteCleave?105:64)+(e.bossBonusReach||0)||dy>(eliteCleave?68:57)||p.z>76)return;
+ if(dx>Math.max(e.reach+(eliteCleave?105:64)+(e.bossBonusReach||0),bodyHalfX(p)+bodyHalfX(e)+30)||dy>(eliteCleave?68:57)||p.z>76)return;
  // During an active parry, redirect the guard toward the real attacker
  // even if the blow comes from behind. Reaction occurs at impact time.
  const parryWindow=p.parry>0;
@@ -1339,7 +1339,7 @@ function control(dt,pad){
       (e.x-before)*p.attackDriveX>=0)
       .sort((a,b)=>Math.abs(a.x-before)-Math.abs(b.x-before))[0];
     if(closest){
-      const gap=closest.type==='boss'?82:closest.type==='elite'?59:closest.type==='guard'?52:47;
+      const gap=bodyHalfX(p)+bodyHalfX(closest)-8;
       const limit=closest.x-p.attackDriveX*gap;
       if((nextX-limit)*p.attackDriveX>0)nextX=(limit-before)*p.attackDriveX>=0?limit:before;
     }
@@ -1410,34 +1410,59 @@ function control(dt,pad){
  }
  if((p.attackQueued||keys.has('j')||padPrev.attack)&&p.attack===0&&p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){p.attackQueued=false;startAttack()}
 }
+// Visual-footprint spacing in world pixels (X = silhouette width, Y = lane depth).
+// Wider than damage hitboxes: ground actors, including enemy pairs, cannot stack.
+const BODY_CLEARANCE={
+ player:[54,30],raider:[62,28],assassin:[59,28],
+ guard:[70,31],elite:[74,34],boss:[110,42]
+};
+const bodyFootprint=a=>BODY_CLEARANCE[a===p?'player':a.type]||BODY_CLEARANCE.raider;
+const bodyHalfX=a=>bodyFootprint(a)[0],bodyHalfY=a=>bodyFootprint(a)[1];
 function resolveBodyCollisions(dt){
- // Physics uses compact footprint ellipses at floor height, not full sprite
- // bounding rectangles. Shallow Y lanes let crowds pass without stacking.
  const bodies=[p,...enemies.filter(e=>!e.dead&&e.z<37)];
- const rx=a=>a===p?39:a.type==='boss'?82:a.type==='elite'?45:a.type==='guard'?43:a.type==='assassin'?32:35;
- const ry=a=>a===p?21:a.type==='boss'?33:a.type==='elite'?24:a.type==='guard'?23:19;
- for(let pass=0;pass<3;pass++){
+ // Prevent interpolation from drawing a visible overlap after physics separates.
+ const oldPositions=new Map(bodies.filter(a=>a!==p).map(a=>[a,[a.x,a.y]]));
+ const limit=Math.min(18,Math.max(5,dt*840));
+ const move=(a,axis,amount)=>{
+  const before=a[axis],margin=a===p?64:55;
+  a[axis]=axis==='x'?clamp(before+amount,margin,STAGE_WIDTH-margin):groundY(before+amount);
+  return a[axis]-before;
+ };
+ for(let pass=0;pass<6;pass++){
+  let changed=false;
   for(let i=0;i<bodies.length;i++)for(let j=i+1;j<bodies.length;j++){
    const a=bodies[i],b=bodies[j];
-   if((a===p&&p.z>38)||b.z>38||a.z>38)continue;
-   const wx=rx(a)+rx(b),wy=ry(a)+ry(b);
-   let dx=a.x-b.x,dy=a.y-b.y;
-   if(Math.abs(dx)>wx||Math.abs(dy)>wy)continue;
-   let dist=Math.hypot(dx/wx,dy/wy);
-   if(dist>=1)continue;
-   if(dist<.001){dx=(i+j)%2?1:-1;dy=(i%3-1)*.45;dist=Math.hypot(dx/wx,dy/wy)}
-   const gap=1-dist+.006;
-   let shiftX=(dx/wx)/dist*wx*gap,shiftY=(dy/wy)/dist*wy*gap;
-   // Spread overlap correction over multiple frames to avoid crowd snapping.
-   const amount=Math.hypot(shiftX,shiftY),maxStep=Math.min(7,Math.max(0,dt)*350);
-   if(amount>maxStep&&amount>0){shiftX*=maxStep/amount;shiftY*=maxStep/amount}
-   const playerBoss=(a===p||b===p)&&(a.type==='boss'||b.type==='boss');
-   const weightA=a===p?(playerBoss?.22:.12):b===p?(playerBoss?.78:.88):.5;
-   a.x=clamp(a.x+shiftX*weightA,55,STAGE_WIDTH-55);
-   b.x=clamp(b.x-shiftX*(1-weightA),55,STAGE_WIDTH-55);
-   a.y=groundY(a.y+shiftY*weightA);
-   b.y=groundY(b.y-shiftY*(1-weightA));
+   if(a.z>37||b.z>37)continue;
+   const dx=a.x-b.x,dy=a.y-b.y;
+   const needX=bodyHalfX(a)+bodyHalfX(b)+8;
+   const needY=bodyHalfY(a)+bodyHalfY(b)+4;
+   const overlapX=needX-Math.abs(dx),overlapY=needY-Math.abs(dy);
+   if(overlapX<=0||overlapY<=0)continue;
+   const dirX=Math.abs(dx)>.01?Math.sign(dx):a===p?-1:b===p?1:a.slot<b.slot?-1:1;
+   const dirY=Math.abs(dy)>.01?Math.sign(dy):((i+j)%2?-1:1);
+   const bossPair=(a===p||b===p)&&(a.type==='boss'||b.type==='boss');
+   const weightA=a===p?(bossPair?.25:.12):b===p?(bossPair?.75:.88):.5;
+   const yCapacity=Math.abs(groundY(a.y+dirY*overlapY*weightA)-a.y)+
+    Math.abs(groundY(b.y-dirY*overlapY*(1-weightA))-b.y);
+   // Only choose a depth lane if there is room; otherwise spread along X.
+   const useY=overlapY*1.28<overlapX&&yCapacity>=overlapY*.75;
+   const axis=useY?'y':'x',dir=useY?dirY:dirX;
+   const needed=useY?overlapY:overlapX,amount=Math.min(needed+1.5,limit);
+   let moved=dir*(move(a,axis,dir*amount*weightA)-move(b,axis,-dir*amount*(1-weightA)));
+   // Wall-pinned actors give unused push to their free partner.
+   if(moved<amount-.01){
+    let rest=amount-moved;
+    moved+=dir*move(a,axis,dir*rest);
+    rest=amount-moved;
+    if(rest>.01)moved-=dir*move(b,axis,-dir*rest);
+   }
+   if(moved>.01)changed=true;
   }
+  if(!changed)break;
+ }
+ for(const [actor,[oldX,oldY]] of oldPositions){
+  if(Number.isFinite(actor.renderX))actor.renderX+=actor.x-oldX;
+  if(Number.isFinite(actor.renderY))actor.renderY+=actor.y-oldY;
  }
 }
 // IRON MASK ELITE: long readable tell -> fast rush -> parryable heavy cleave.
@@ -1456,7 +1481,7 @@ function updateEliteAI(e,dt,dx,dy,dist){
  }
  if(e.eliteRush>0){
   e.eliteRush=Math.max(0,e.eliteRush-dt);
-  const startX=e.x,startY=e.y,targetX=p.x-e.face*56;
+  const startX=e.x,startY=e.y,targetX=p.x-e.face*(bodyHalfX(p)+bodyHalfX(e)+5);
   const rush=Math.min(Math.abs(targetX-e.x),Math.max(430,e.speed*3.6)*dt);
   e.x=clamp(e.x+Math.sign(targetX-e.x)*rush,45,STAGE_WIDTH-45);
   e.y=groundY(e.y+Math.sign(dy)*Math.min(Math.abs(dy),210*dt));
@@ -1557,9 +1582,10 @@ function updateEnemies(dt){
    e.chargeTime-=dt;
    const rush=Math.max(365,speed*3.25);
    const side=dx>=0?1:-1;
-   e.x=clamp(e.x+side*Math.min(Math.abs(dx),rush*dt),45,STAGE_WIDTH-45);
+   const stopGap=bodyHalfX(p)+bodyHalfX(e)+5;
+   e.x=clamp(e.x+side*Math.min(Math.max(0,Math.abs(dx)-stopGap),rush*dt),45,STAGE_WIDTH-45);
    e.y=groundY(e.y+Math.sign(dy)*Math.min(Math.abs(dy),rush*.35*dt));
-   if(Math.abs(e.x-p.x)<e.reach+62&&Math.abs(e.y-p.y)<55){
+   if(Math.abs(e.x-p.x)<Math.max(e.reach+62,bodyHalfX(p)+bodyHalfX(e)+27)&&Math.abs(e.y-p.y)<55){
     e.chargeTime=0;e.windup=.16;e.windupDuration=.16;e.chargeReady=false;
    }
    const moved=Math.hypot(e.x-lastX,(e.y-lastY)*1.7);
@@ -1572,13 +1598,13 @@ function updateEnemies(dt){
    continue;
   }
   const side=e.x>=p.x?1:-1;
-  const spacing=e.type==='boss'?132:Math.min(e.reach+43,77+(e.slot%3)*12); // All roles must be able to close to their real attack range.
+  const spacing=Math.max(e.type==='boss'?132:Math.min(e.reach+43,77+(e.slot%3)*12),bodyHalfX(p)+bodyHalfX(e)+12); // Aim for sprite edge, not inside another body.
   const lanes=[-47,-19,24,47,-31,10];
   const targetX=clamp(p.x+side*spacing,55,STAGE_WIDTH-55);
   const targetY=groundY(p.y+lanes[e.slot%6]);
   const friends=enemies.filter(o=>o!==e&&!o.dead&&o.type!=='boss'&&Math.abs(o.x-e.x)<180).length;
   const moveSpeed=speed*(friends?1.21:1.08);
-  const readyToHit=dist<e.reach+64&&Math.abs(dy)<55&&e.z<40;
+  const readyToHit=dist<Math.max(e.reach+64,bodyHalfX(p)+bodyHalfX(e)+28)&&Math.abs(dy)<55&&e.z<40;
   const activeWindups=enemies.filter(o=>o!==e&&!o.dead&&(o.windup>0||o.chargeTime>0)&&Math.abs(o.x-p.x)<200).length;
   if(e.type!=='boss'&&readyToHit&&e.cooldown<=0&&activeWindups<2){
    e.windup=e.type==='boss'?.75:.42+(e.slot%3)*.065;e.windupDuration=e.windup;
@@ -1604,7 +1630,7 @@ function updateEnemies(dt){
   if(e.locomotionMode==='run'){
    if(e.visualSpeedSmooth<163)e.locomotionMode='walk';
   }else if(e.visualSpeedSmooth>212)e.locomotionMode='run';
-  const k=Math.min(1,Math.max(0,dt)*(e.reactionTime>0||e.dead?28:14));
+  const k=Math.min(1,Math.max(0,dt)*(e.reactionTime>0||e.dead?30:25));
   if(!Number.isFinite(e.renderX)||Math.abs(e.x-e.renderX)>220)e.renderX=e.x;
   else e.renderX+=(e.x-e.renderX)*k;
   if(!Number.isFinite(e.renderY)||Math.abs(e.y-e.renderY)>120)e.renderY=e.y;
