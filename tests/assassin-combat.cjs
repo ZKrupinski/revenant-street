@@ -534,10 +534,10 @@ test('ground perspective limits player and enemy feet without restricting jump a
  for(let i=0;i<55;i++)t.control(1/60,{dx:0,dy:1});
  assert(t.p.y<=658,'bottom of walkable floor must be enforced');
 });
-test('stage difficulty scales enemy health while fodder stays quick to defeat',()=>{
+test('stage difficulty scales upgraded enemy health without making normal foes bullet sponges',()=>{
  g.startRun();
  const first=t.makeEnemy('raider',1000,560,0),elite1=t.makeEnemy('elite',1200,560,1);
- assert(first.maxHp<=45,'early cannon fodder should drop in a few hits');
+ assert(first.maxHp>=65&&first.maxHp<=80,'early mobs should survive some hits but not become bosses');
  assert(elite1.maxHp>=350,'elite should be a clear combat challenge');
  t.setWave(2);
  const later=t.makeEnemy('raider',1000,560,0),elite2=t.makeEnemy('elite',1200,560,1);
