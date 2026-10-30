@@ -693,7 +693,7 @@ test('WASD moves reward focus and left arrow confirms only the selected card',()
  const release=key=>t.keyUp({key});
  try{
   // Hold the combat arrow through the transition: it must not move the reward cursor.
-  press('ArrowLeft');t.p.x=4235;t.setEnemies([]);t.updateEnemies(0);
+  press('ArrowLeft');t.p.x=t.WAVE_GATES[1]+10;t.setEnemies([]);t.setSquad(t.SQUAD_SPOTS[1].length);t.updateEnemies(0);
   press('ArrowLeft',true);assert.equal(t.menuPad.index,0);release('ArrowLeft');
   press('d');release('d');assert.equal(t.menuPad.index,1);assert(fake[1].focused>0);
   press('s');release('s');assert.equal(t.menuPad.index,2);
@@ -709,7 +709,7 @@ test('held pad attack cannot auto-pick until released; X confirms and A does not
  const m=node('menu'),old=m.querySelectorAll;m.querySelectorAll=()=>fake;
  const pad={axes:[0,0],buttons:Array.from({length:18},()=>({pressed:false}))};world.navigator.getGamepads=()=>[pad];
  try{
-  pad.buttons[2].pressed=true;t.p.x=4235;t.setEnemies([]);t.updateEnemies(0);
+  pad.buttons[2].pressed=true;t.p.x=t.WAVE_GATES[1]+10;t.setEnemies([]);t.setSquad(t.SQUAD_SPOTS[1].length);t.updateEnemies(0);
   t.pollPad();t.menuPad.readyAt=0;for(let i=0;i<10;i++)t.pollPad();assert.equal(fake[0].clicked,0);
   pad.buttons[2].pressed=false;t.menuPad.neutralAt=0;t.pollPad();
   for(let i=0;i<10;i++){pad.buttons[0].pressed=true;t.pollPad();pad.buttons[0].pressed=false;t.pollPad()}
