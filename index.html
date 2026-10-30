@@ -683,7 +683,7 @@ function currentZFrameIndex(key){
  if(key==='guard')return oneshot(1-p.parry/Math.max(.001,p.parryDuration||.34));
  if(key==='jumpstart')return oneshot(1-p.jumpStartTimer/.23);
  if(key==='landing')return oneshot(1-p.landingTimer/.24);
- if(p.airKickPhase&&p.attack>0&&key==='axe_kick'){
+ if(p.airKickPhase&&p.attack>0&&(key==='axe_kick'||key==='diagonal_airkick')){
   const age=p.attackDuration-p.attack;
   if(p.airKickPhase==='charge')return age<.07?0:age<.13?1:age<.20?2:3;
   if(p.airKickPhase==='dive')return p.hitDone?6:p.z<110?5:4;
@@ -1181,7 +1181,11 @@ function startAttack(){
  if(p.z>16){
   if(p.airKickUsed||p.stamina<15)return;
   p.airAttack=true;p.airKickUsed=true;p.counterBoost=false;p.stamina-=15;
-  p.attackDuration=.76;p.attack=.76;p.moveName='axe_kick';
+  p.attackDuration=.76;p.attack=.76;
+  // Air attacks are no longer one repeated pose: directional dive or
+  // vertical heel slam, both still charge and descend with the same physics.
+  const diagonal=Math.abs(p.moveDX||0)>.55&&p.z>55;
+  p.moveName=diagonal?'diagonal_airkick':'axe_kick';
   p.airKickPhase='charge';p.airKickLaunched=false;p.attackDriveRemaining=0;
   p.hitDone=false;p.attackQueued=false;p.comboWindow=0;
   p.vz=0;p.inv=Math.max(p.inv,.14);
