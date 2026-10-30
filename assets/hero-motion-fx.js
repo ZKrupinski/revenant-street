@@ -6,6 +6,9 @@
 (function(){
  'use strict';
  const SIZE=160, COUNT=8, SHEET_COLUMNS=4;
+ // Keep visuals deliberately strong while bounding long-session mobile cost.
+ const TOUCH_DEVICE=!!window.matchMedia?.('(pointer: coarse)').matches;
+ const STAMP_BUDGET=TOUCH_DEVICE?14:22,ECHO_BUDGET=TOUCH_DEVICE?3:5;
  const SHEETS=['dust','speed','slash','leap','hurt','shield','aura','land'];
  const palettes={
   dust:['gold','red'],speed:['blue','gold'],slash:['gold','red'],
@@ -113,10 +116,10 @@
   return 'idle';
  }
  function stamp(type,x,y,facing=1,life=.46,scale=1,z=0){
-  if(stamps.length>=22)stamps.shift();
+  if(stamps.length>=STAMP_BUDGET)stamps.shift();
   stamps.push({type,x,y,facing,z,life,maxLife:life,scale});
  }
- function reset(){stamps.length=0;echoes.length=0;lastX=lastY=null;lastKind=lastMove='';stepDistance=echoClock=moveFrameClock=0;clock=0;eventFlash=null}
+ function reset(){stamps.length=0;echoes.length=0;lastX=lastY=null;lastKind=lastMove='';stepDistance=echoClock=moveFrameClock=0;clock=0;eventFlash=null;totalDrawCalls=0}
  function event(type,p){
   if(!p)return;
   const d=p.facing||1;
@@ -154,7 +157,7 @@
    if(stepDistance>=stride){
     stepDistance%=stride;
     const left=Math.floor((p.gaitDistance||0)/stride)%2===0?-1:1;
-    const facing=p.facing||1;
+    const facing=Math.abs(p.x-lastX)>.2?Math.sign(p.x-lastX):(p.facing||1);
     stamp('dust',p.x-facing*(kind==='run'?33:19)+left*18,p.y-11,facing,
       kind==='run'?.52:.46,kind==='run'?1.30:1.03,0);
     if(kind==='run'&&stamps.length<20)
@@ -171,7 +174,7 @@
   if(echoClock>0)return;
   const life=kind==='run'?.32:kind==='dash'?.4:.25;
   echoes.push({x:p.x,y:p.y,z:p.z||0,face:p.facing||1,frame,life,maxLife:life,kind});
-  if(echoes.length>5)echoes.shift();
+  if(echoes.length>ECHO_BUDGET)echoes.shift();
   echoClock=kind==='run'?.062:kind==='dash'?.050:.097;
  }
  function cell(ctx,type,frame,x,y,w,h,alpha=1,face=1){
@@ -202,7 +205,7 @@
  }
  function drawBehind(ctx,p,key){
   if(!ready)return;
-  const kind=kindOf(key,p),face=p.facing||1,x=p.x,y=p.y,z=p.z||0;
+  const kind=kindOf(key,p),face=key==='backwalk'?-(p.facing||1):(p.facing||1),x=p.x,y=p.y,z=p.z||0;
   const f=Math.floor(clock*(kind==='run'?18:kind==='walk'?14:11))%8;
   renderStamps(ctx);drawEchoes(ctx);
   if(kind==='run'){
