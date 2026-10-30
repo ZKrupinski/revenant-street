@@ -124,6 +124,96 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  #modStrip.mod-strip::-webkit-scrollbar{display:none}
 }
 </style>
+<style id="compact-combat-ui">
+/* The overlay has three non-overlapping corner/centre regions. Use the
+   stage's container width, not the browser orientation or physical pixels. */
+.stage-wrap{container-type:inline-size}
+#hud.hud{display:block;inset:clamp(5px,.65cqw,10px) clamp(6px,1cqw,16px) auto}
+#hud .hud-left,#hud .hud-center,#hud .hud-right{position:absolute;min-width:0}
+#hud .hud-left{left:0;top:0;width:clamp(138px,19cqw,230px)}
+#hud .hud-right{right:0;top:0;width:clamp(96px,17cqw,202px);gap:3px}
+#hud .hud-center{left:29%;width:42%;top:clamp(42px,5.25cqw,65px);min-width:0;line-height:1.12}
+#hud .hud-name{font-size:clamp(9px,1cqw,13px);gap:6px;margin-bottom:3px;letter-spacing:.5px}
+#hud .hud-name small{font-size:clamp(8px,.75cqw,10px)}
+#hud .player-mark{width:clamp(24px,2.5cqw,32px);height:clamp(24px,2.5cqw,32px);font-size:clamp(20px,2.3cqw,26px)}
+#hud .bar{height:clamp(11px,1.25cqw,15px);margin:2px 0}
+#hud .bar span{line-height:clamp(11px,1.25cqw,15px)}
+#hud .bar.stamina{height:clamp(6px,.65cqw,8px);width:100%}
+#hud .player-stats{padding:3px 6px;font-size:clamp(8px,.79cqw,11px);margin-top:3px;line-height:1.15}
+#hud .chapter{font-size:clamp(8px,.81cqw,11px);letter-spacing:1px}
+#hud .wave-label{font-size:clamp(11px,1.35cqw,17px);margin:2px 0}
+#hud .kill-count{font-size:clamp(8px,.8cqw,10px);letter-spacing:1px}
+#hud .currency{font-size:clamp(14px,1.7cqw,23px);white-space:nowrap;letter-spacing:.6px}
+#hud .combo{font-size:clamp(13px,1.6cqw,21px)}
+#hud .small-button{padding:2px 8px;min-width:35px;min-height:32px}
+#hud .mod-wrap{margin-top:3px;width:100%;max-width:210px;pointer-events:auto}
+#hud #modStrip.mod-strip{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-flow:row;
+ grid-auto-rows:23px;gap:3px;margin:0;max-width:100%;
+ max-height:49px;overflow:hidden;align-content:start;
+ touch-action:pan-y;scrollbar-width:none
+}
+#hud #modStrip.mod-strip::-webkit-scrollbar{display:none}
+#hud #modStrip .mod-chip.compact{
+ min-height:23px;min-width:0;padding:2px 3px;gap:2px;
+ font-size:11px;box-shadow:0 1px 3px #0007
+}
+#hud #modStrip .mod-chip.compact .icon{font-size:14px}
+#hud #modStrip .mod-chip.compact b{font-size:11px}
+#hud .mod-wrap.expanded #modStrip.mod-strip{max-height:158px;overflow-y:auto;overscroll-behavior:contain}
+#hud .mod-toggle{display:block;pointer-events:auto;padding:3px 7px 4px;margin-top:3px;
+ border:1px solid #758da799;border-radius:4px;color:#e4f6ff;background:#0a1729ec;
+ font:900 10px/1.2 Arial,'Malgun Gothic',sans-serif;text-align:left;min-height:23px}
+#hud .mod-toggle[hidden]{display:none!important}
+#stageWrap .touch-controls{bottom:clamp(5px,.9cqw,14px);padding:0 clamp(7px,1.2cqw,16px);gap:8px}
+#stageWrap .analog-pad{flex:0 0 clamp(94px,9.4cqw,114px);width:clamp(94px,9.4cqw,114px);height:clamp(104px,11cqw,136px)}
+#stageWrap .analog-ring{width:clamp(88px,8.7cqw,108px);height:clamp(88px,8.7cqw,108px)}
+#stageWrap .analog-thumb{width:clamp(37px,3.6cqw,43px);height:clamp(37px,3.6cqw,43px)}
+#stageWrap .touch-actions{--face-btn:clamp(43px,5.2cqw,61px);gap:2px}
+#stageWrap .touch-actions button{font-size:clamp(10px,1.05cqw,13px)}
+#stageWrap #touchControls:not([hidden]) ~ .bottom-tip{display:none}
+#stageWrap .boss-hud{top:clamp(112px,11cqw,142px);right:clamp(8px,1.3cqw,18px);
+ width:min(330px,32%);padding:7px}
+#stageWrap .hint{bottom:19%;max-width:50%;white-space:normal;text-align:center;font-size:11px;padding:6px 9px}
+@container (max-width:800px){
+ #hud .hud-center{top:42px}
+ #hud .chapter{display:none}
+ #hud .hud-right{gap:2px}
+ #hud .currency{font-size:14px}
+ #hud .combo{font-size:13px}
+ #stageWrap .boss-hud{top:100px;width:38%}
+}
+@container (max-width:610px){
+ #hud .hud-left{width:clamp(113px,32%,144px)}
+ #hud .hud-right{width:clamp(86px,25%,115px)}
+ #hud .hud-center{left:39%;width:22%;top:39px}
+ #hud .hud-center .kill-count{display:none}
+ #hud .wave-label{font-size:9px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+ #hud .hud-name{font-size:9px}
+ #hud .hud-name small{font-size:8px}
+ #hud .player-stats{font-size:8px}
+ #hud .currency{font-size:12px}
+ #hud .combo{font-size:12px}
+ #hud .small-button{min-width:33px;min-height:29px}
+ #hud .mod-wrap{max-width:140px}
+ #hud #modStrip.mod-strip{grid-auto-rows:22px;max-height:47px}
+ #stageWrap .touch-actions{--face-btn:clamp(42px,10.8cqw,53px);gap:1px}
+ #stageWrap .touch-actions button{font-size:10px}
+ #stageWrap .analog-pad{flex-basis:94px;width:94px;height:105px}
+ #stageWrap .analog-ring{width:88px;height:88px}
+ #stageWrap .boss-hud{top:106px;right:8px;width:45%;max-width:175px}
+}
+@container (max-width:390px){
+ #hud .hud-left{width:112px}
+ #hud .hud-right{width:87px}
+ #hud .hud-center{left:37%;width:24%}
+ #hud .hud-name .player-mark{display:none}
+ #hud .currency{letter-spacing:0}
+ #stageWrap .touch-actions{--face-btn:42px}
+ #stageWrap .analog-pad{flex-basis:87px;width:87px}
+ #stageWrap .analog-ring{width:83px;height:83px}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -139,7 +229,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
         <div class="bar hp"><div class="bar-fill" id="hpFill"></div><span id="hpText">100 / 100</span></div>
         <div class="bar stamina"><div class="bar-fill" id="staminaFill"></div><span>STAMINA</span></div>
         <div class="player-stats"><span>STYLE <b id="weaponCount">BARE FISTS</b></span><span class="mod-hud-caption" id="modName" aria-hidden="true">EFFECTS</span></div>
-        <div class="mod-strip" id="modStrip" aria-label="선택한 전투 속성"><span class="empty-mod">속성 미장착</span></div>
+        <div class="mod-wrap" id="modWrap"><div class="mod-strip" id="modStrip" aria-label="선택한 전투 속성"><span class="empty-mod">속성 미장착</span></div><button type="button" class="mod-toggle" id="modToggle" aria-expanded="false" aria-controls="modStrip" hidden>추가 효과 보기</button></div>
       </div>
       <div class="hud-center"><div class="chapter" id="chapter">01 / 침수된 거리</div><div class="wave-label" id="waveLabel">WAVE 01 — 침입자</div><div class="kill-count" id="enemyCount">REMAINING 03</div></div>
       <div class="hud-right"><div class="currency" title="전투로 획득하는 크레딧">₩ <b id="credits">0000</b> <small style="color:#ffe68f">◆ <b id="shardCount">0</b></small></div><div class="combo" id="combo">0 <small>HITS</small></div><button class="small-button" id="pauseButton" aria-label="일시정지">Ⅱ</button></div>
@@ -1157,7 +1247,7 @@ async function requestRunStart(){
   showMenu(`<div class="eyebrow">RESOURCE ERROR</div><h2>리소스 로딩 중단</h2><p>${String(err.message).replace(/[<>]/g,'')}</p><p>불완전한 캐릭터가 보이지 않도록 게임 실행을 막았습니다.</p><div class="buttons"><button class="main-btn" data-action="start">다시 불러오기</button><button class="secondary-btn" data-action="title">타이틀</button></div>`);
  }
 }
-function startRun(){resetInputs();resetPlayer();wave=0;fx=[];floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
+function startRun(){resetInputs();resetPlayer();setModsExpanded(false);wave=0;fx=[];floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
  if(/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'')){
   // Explicit QA shortcut: test the actual final encounter without traversing
   // ten screens. Normal gameplay and progression stay unchanged.
@@ -2101,16 +2191,31 @@ function updateEffects(dt){
   if(heroAfterimages[i].life<=0)heroAfterimages.splice(i,1);
  }
  for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx)f.life-=dt;fx=fx.filter(f=>f.life>0);for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
-let modStripCache='',lastHudCombo=-1,hudAccumulator=.12;
+let modStripCache='',lastHudCombo=-1,hudAccumulator=.12,modsExpanded=false;
+function setModsExpanded(open){
+ modsExpanded=!!open;
+ const wrap=$('modWrap'),button=$('modToggle');
+ if(modsExpanded)wrap.classList.add('expanded');else wrap.classList.remove('expanded');
+ button.setAttribute?.('aria-expanded',String(modsExpanded));
+}
+function updateModToggle(count){
+ const more=Math.max(0,count-6),button=$('modToggle');
+ button.hidden=more===0;
+ if(!more&&modsExpanded)setModsExpanded(false);
+ button.textContent=modsExpanded?'접기 ▲':`+${more} 효과 보기`;
+}
+
 function updateHudThrottled(dt){
  hudAccumulator+=dt;if(hudAccumulator<.085)return;
  hudAccumulator%=.085;updateHud();
 }
 function updateHud(){
- const badges=activeModStacks().map(({id,n,meta})=>'<span class="mod-chip compact '+id+'" title="'+meta.title+' : '+(meta.desc||meta.short)+'" aria-label="'+meta.short+' '+n+'중첩"><span class="icon">'+meta.icon+'</span><b>x'+n+'</b></span>').join('')+
+ const active=activeModStacks();
+ const badges=active.map(({id,n,meta})=>'<span class="mod-chip compact '+id+'" title="'+meta.title+' : '+(meta.desc||meta.short)+'" aria-label="'+meta.short+' '+n+'중첩"><span class="icon">'+meta.icon+'</span><b>x'+n+'</b></span>').join('')+
   (p.mod==='neuro'?'<span class="mod-chip compact neuro" title="NEURO · 전격과 출혈의 복합 효과" aria-label="NEURO 발동"><span class="icon">🟣</span><b>x1</b></span>':'');
  const markup=badges||'<span class="empty-mod">효과 없음</span>';
  if(modStripCache!==markup){$('modStrip').innerHTML=markup;modStripCache=markup}
+ updateModToggle(active.length+(p.mod==='neuro'?1:0));
  $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'BARE FISTS';$('modName').textContent='EFFECTS';$('credits').textContent=String(p.credits).padStart(4,'0');$('shardCount').textContent=String(perma.shards);if(p.hits!==lastHudCombo){$('combo').innerHTML=`${p.hits} <small>HITS</small>`;lastHudCombo=p.hits}$('enemyCount').textContent=`REMAINING ${String(enemies.filter(e=>!e.dead).length).padStart(2,'0')}`;$('level').textContent=String(level).padStart(2,'0');const eliteOrBoss=enemies.find(e=>!e.dead&&e.type==='boss'&&Math.abs(e.x-p.x)<1050)||enemies.find(e=>!e.dead&&e.type==='elite'&&Math.abs(e.x-p.x)<850);$('bossHud').hidden=gameState!=='playing'||!eliteOrBoss;if(eliteOrBoss){$('bossName').textContent=eliteOrBoss.type==='elite'?'IRON MASK / 철가면 추적자':'HUNTER / 붉은 집행자';$('bossFill').style.width=`${clamp(100*eliteOrBoss.hp/eliteOrBoss.maxHp,0,100)}%`;$('bossPhase').textContent=String(eliteOrBoss.phase).padStart(2,'0')} }
 function update(dt){
  // Don't decode a full library of 2K sprite sheets while the user fights.
@@ -2532,6 +2637,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame
 
 $('menu').addEventListener('focusin',e=>{const items=menuButtons(),i=items.indexOf(e.target);if(i<0)return;menuPad.index=i;items.forEach((b,n)=>b.classList.toggle('pad-selected',n===i))});
 $('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')hubMenu();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)buyUpgrade(b.dataset.perma)});
+$('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activeModStacks().length+(p.mod==='neuro'?1:0))};
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();if(gameState!=='playing')return;b.setPointerCapture(e.pointerId);keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release)}
 for(let i=0;i<(window.matchMedia?.('(pointer: coarse)').matches?65:110);i++)rain.push({x:rnd(0,1280),y:rnd(0,720),s:rnd(220,590),len:rnd(5,18)});
