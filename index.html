@@ -114,7 +114,15 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  #modStrip .mod-chip.compact{min-width:37px;min-height:25px;padding:2px 3px;gap:2px}
  #modStrip .mod-chip.compact .icon{font-size:14px}
  #modStrip .mod-chip.compact b{font-size:12px}}
-@media(max-width:590px){#modStrip.mod-strip{max-width:178px;max-height:58px}}
+@media(max-width:590px){#modStrip.mod-strip{
+ display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,25px);
+ grid-auto-columns:39px;column-gap:2px;row-gap:2px;
+ max-width:178px;max-height:56px;overflow-x:auto;overflow-y:hidden;
+ pointer-events:auto;touch-action:pan-x;overscroll-behavior:contain;
+ scrollbar-width:none;
+ }
+ #modStrip.mod-strip::-webkit-scrollbar{display:none}
+}
 </style>
 </head>
 <body>
@@ -2108,9 +2116,10 @@ function selectMod(m){
  if(!intermediate)spawnWave();
  upgradeReason='wave';
  const info=MOD_META[m],rank=modRank(m);
- floatText(info.icon+' '+info.title+' Lv.'+rank,p.x,p.y-266,info.color);
- flash(info.icon+' '+info.short+' +'+rank+' 중첩!',1.7);
- fxBurst(p.x,p.y-115,m==='shock'||m==='ice'?'blue':'gold',1.4);
+ floatText(info.icon+' x'+rank,p.x,p.y-244,info.color);
+ spawnModBitmap(m==='shock'||m==='ice'||m==='haste'||m==='guard'?'blue':
+   m==='bleed'||m==='leech'?'red':'gold',p.x,p.y-124,
+   m==='vital'?1.03:1.27,'brightness(1.17)',.39);
  sound('parry');setStatus('COMBAT LIVE');updateHud();
 }
 function completeMenu(){gameState='complete';setStatus('RUN COMPLETE');perma.shards+=4;save();$('bossHud').hidden=true;showMenu(`<div class="eyebrow">OBJECTIVE COMPLETE / REBEL SIGNAL ONLINE</div><h1>ZONE <span>CLEARED</span></h1><p>엘리트 헌터를 격파했습니다. 사이버네틱 지하 기지 <b class="key">REBEL HUB</b>로 귀환합니다.</p><div class="hub-stat"><span>처치 ${runKills}명 / 전리품 ₩${p.credits}</span><strong>영구 자원 +4</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB로 귀환</button><button class="secondary-btn" data-action="start">새로운 런 시작</button></div>`)}
