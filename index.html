@@ -230,10 +230,14 @@ if(Z_HF_ART){
    Z_REMOTE_ATLAS.run='./assets/original-z-hf/run'+suffix+'.webp';
   }
  }
- for(const [key,art] of Object.entries({
-  jab:'punch',cross:'punch',backfist:'punch',
-  frontkick:'kick',roundkick:'kick',sidekick:'kick'
- }))Z_REMOTE_ATLAS[key]='./assets/original-z-hf/'+art+'.webp';
+ // The full 20-move set is the default. A/B rollback is available with
+ // ?combatArt=compact to reuse the prior two generic local attack sheets.
+ if(/(?:[?&])combatArt=compact(?:&|$)/.test(zGaitParam)){
+  for(const [key,art] of Object.entries({
+   jab:'punch',cross:'punch',backfist:'punch',
+   frontkick:'kick',roundkick:'kick',sidekick:'kick'
+  }))Z_REMOTE_ATLAS[key]='./assets/original-z-hf/'+art+'.webp';
+ }
 }
 // Restore the original protagonist as the default. Keep the alternative outfit
 // explicitly selectable with ?hero=hoodie (no loss of art or combat progress).
@@ -1129,11 +1133,25 @@ const Z_ALL_ATTACKS=[...Z_FIST_NAMES,...Z_KICK_NAMES,...Z_HEAD_NAMES];
 const Z_GROUND_KICKS=Z_KICK_NAMES.filter(k=>k!=='diagonal_airkick');
 const Z_GROUND_MOVES=Z_ALL_ATTACKS.filter(k=>k!=='diagonal_airkick');
 let zWarmIndex=0,zWarmDelay=.15;
-const Z_WARM_QUEUE=['hit','heavyhit','knockdown','getup','jumpstart','airborne','landing','backwalk','dodge',...Z_FIST_NAMES,...Z_KICK_NAMES,...Z_HEAD_NAMES];
+const Z_WARM_QUEUE=[
+ // Priority is visual variety, not redundant locomotion reloads.
+ 'hook','lowkick','uppercut','sidekick','hammerfist','spinning_elbow',
+ 'roundkick','backfist','spinning_heel','rising_elbow','crescent_kick',
+ 'superman_punch','shovel_hook','rising_headbutt','forward_headbutt',
+ 'diagonal_airkick','axe_kick','jab','cross','frontkick',
+ 'hit','heavyhit','knockdown','getup','jumpstart','airborne','landing','backwalk','dodge'
+];
 function warmZSprites(dt){
+ if(zWarmIndex>=Z_WARM_QUEUE.length)return;
  zWarmDelay-=dt;if(zWarmDelay>0)return;
+ // Keep at most two large artwork requests/decode operations in flight.
+ if([...zArtFrameShared.values()].filter(v=>v.loading).length>=2){
+  zWarmDelay=.20;return;
+ }
  while(zWarmIndex<Z_WARM_QUEUE.length&&zArtState[Z_WARM_QUEUE[zWarmIndex]])zWarmIndex++;
- if(zWarmIndex<Z_WARM_QUEUE.length){loadZMove(Z_WARM_QUEUE[zWarmIndex++]);zWarmDelay=.23}
+ if(zWarmIndex<Z_WARM_QUEUE.length){
+  loadZMove(Z_WARM_QUEUE[zWarmIndex++]);zWarmDelay=.44;
+ }
 }
 function pickComboMove(step,last,armed){
  let pool=step===2?Z_GROUND_KICKS:step===3?Z_GROUND_MOVES:(Math.random()<.28?Z_GROUND_KICKS:Z_FIST_NAMES);
@@ -1141,7 +1159,7 @@ function pickComboMove(step,last,armed){
  const ready=pool.filter(k=>zArtState[k]?.ready);
  const anyReady=Z_GROUND_MOVES.filter(k=>zArtState[k]?.ready);
  pool=(ready.length?ready:anyReady.length?anyReady:pool).filter(k=>k!==last);
- const recent=new Set((p.recentMoves||[]).slice(-3));
+ const recent=new Set((p.recentMoves||[]).slice(-5));
  const fresh=pool.filter(k=>!recent.has(k));
  if(fresh.length)pool=fresh;
  if(!pool.length)pool=Z_GROUND_MOVES;
@@ -1852,7 +1870,7 @@ function updateHud(){
 function update(dt){
  // Don't decode a full library of 2K sprite sheets while the user fights.
  // Required combat animations are prepared behind the loading screen.
-time+=dt;messageUpdate(dt);const pad=pollPad();if(gameState!=='playing')return;updateEffects(dt);updateComboCamera(dt);if(hitStop>0){hitStop-=dt;followComboCamera(dt);updateHudThrottled(dt);return}control(dt,pad);followComboCamera(dt);updateEnemies(dt*(slowMotion>0?.19:1));slowMotion=Math.max(0,slowMotion-dt);updateHudThrottled(dt);const cleared=gameState==='playing'&&waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
+time+=dt;messageUpdate(dt);const pad=pollPad();if(gameState!=='playing')return;warmZSprites(dt);updateEffects(dt);updateComboCamera(dt);if(hitStop>0){hitStop-=dt;followComboCamera(dt);updateHudThrottled(dt);return}control(dt,pad);followComboCamera(dt);updateEnemies(dt*(slowMotion>0?.19:1));slowMotion=Math.max(0,slowMotion-dt);updateHudThrottled(dt);const cleared=gameState==='playing'&&waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
 // Cache photographic depth treatment once per loaded panorama. Ground stays original.
 const backdropDepthCache=new WeakMap();
 function depthBackdrop(bg){
