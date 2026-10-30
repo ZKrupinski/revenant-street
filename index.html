@@ -1317,7 +1317,7 @@ function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
  strikeCameraTime=0;strikeCameraTarget=1;
  resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
  p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
- p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
+ p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 function requiredSceneArt(preview=false){
  const checks=[
@@ -1529,7 +1529,7 @@ function startAttack(){
  if(p.riposteWindow>0&&p.riposteTarget&&!p.riposteTarget.dead){
   const target=p.riposteTarget;p.facing=target.x>=p.x?1:-1;
   p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=true;
-  p.riposteChaseTarget=target;p.riposteChaseTime=1.35;
+  p.riposteChaseTarget=target;p.riposteChaseTime=1.35;p.riposteChaseWarmup=.32;
   p.riposteStrikeTarget=null;p.parry=0;p.parryRecoilTime=0;
   p.parryRecoilRemaining=0;p.counterRush=0;p.counterBoost=false;
   p.attackDriveTotal=0;p.attackDriveRemaining=0;
@@ -1963,6 +1963,7 @@ function control(dt,pad){
  if(p.riposteChasing){
   const target=p.riposteChaseTarget;
   p.riposteChaseTime=Math.max(0,p.riposteChaseTime-dt);
+  p.riposteChaseWarmup=Math.max(0,(p.riposteChaseWarmup||0)-dt);
   if(!target||target.dead||!enemies.includes(target)||p.riposteChaseTime<=0){
    p.riposteChasing=false;p.riposteChaseTarget=null;
   }else{
@@ -1975,7 +1976,7 @@ function control(dt,pad){
    const lane=target.y-p.y;
    p.y=groundY(p.y+Math.sign(lane)*Math.min(Math.abs(lane),1150*dt));
    strikeCameraTime=Math.max(strikeCameraTime,.22);strikeCameraTarget=1.35;
-   if(Math.abs(target.x-p.x)<=gap+15&&Math.abs(target.y-p.y)<=58){
+   if(p.riposteChaseWarmup===0&&Math.abs(target.x-p.x)<=gap+15&&Math.abs(target.y-p.y)<=58){
     p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;
     target.knockVX=0;target.knockVY=0;target.stun=Math.max(target.stun,.58);
     p.riposteStrikeTarget=target;p.running=false;p.counterBoost=true;
