@@ -524,8 +524,8 @@ test('reaction variation avoids identical repeats and preserves boss mass and wo
  t.hurtEnemy(boss,10,0);
  assert(Math.abs(boss.knockVX)<700,'boss must retain its heavy footing');
  assert.equal(boss.vz,0,'boss should not float like a grunt');
- boss.x=12730;boss.knockVX=1500;t.updateEnemies(.4);
- assert(boss.x<=12755,'knockback should stay inside world bounds');
+ boss.x=t.STAGE_WIDTH-70;boss.knockVX=1500;t.updateEnemies(.4);
+ assert(boss.x<=t.STAGE_WIDTH-45,'knockback should stay inside the extended world bounds');
 });
 
 test('remaining off-screen enemy shows a direction; active visible enemies suppress it',()=>{
