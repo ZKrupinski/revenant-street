@@ -566,9 +566,14 @@ function drawMaskedGrunt(e,x,y,z){
  if(fr){
   const {w,h}=fr.bounds;
   ctx.globalAlpha=e.dead?clamp(e.fade,0,1):1;
-  if(e.hitFlash>0)ctx.filter='brightness(2.65) saturate(.22)';
   ctx.drawImage(fr.canvas,-(fr.anchorX??w/2),-(fr.anchorY??h),w,h);
-  ctx.filter='none';
+  if(e.hitFlash>0){
+   ctx.filter='brightness(0) invert(1)';
+   const originalOpacity=ctx.globalAlpha;
+   ctx.globalAlpha=originalOpacity*.75*clamp(e.hitFlash/.22,0,1);
+   ctx.drawImage(fr.canvas,-(fr.anchorX??w/2),-(fr.anchorY??h),w,h);
+   ctx.filter='none';ctx.globalAlpha=originalOpacity;
+  }
  }else{
   // Never flash old raider art while a sheet is loading.
   ctx.fillStyle='#1c2632';ctx.fillRect(-20,-134,40,117);
@@ -609,8 +614,13 @@ function drawAssassin(e,x,y,z){
  ellipseShadow(x,y,.96,.42*opacity/(1+z*.022));
  ctx.save();ctx.translate(x,Math.round(y-z));ctx.scale(e.face>0?-1:1,1);ctx.globalAlpha=opacity;
  if(fr){
-  if(e.hitFlash>0)ctx.filter='brightness(2.65) saturate(.22)';
   ctx.drawImage(fr.canvas,-RZAssassinArt.anchorX,-RZAssassinArt.anchorY);
+  if(e.hitFlash>0){
+   ctx.filter='brightness(0) invert(1)';
+   ctx.globalAlpha=opacity*.75*clamp(e.hitFlash/.22,0,1);
+   ctx.drawImage(fr.canvas,-RZAssassinArt.anchorX,-RZAssassinArt.anchorY);
+   ctx.filter='none';ctx.globalAlpha=opacity;
+  }
  }else{
   ctx.fillStyle='#172d37';ctx.fillRect(-21,-196,42,180);
   ctx.fillStyle='#d8d3bc';ctx.beginPath();ctx.ellipse(0,-217,19,26,0,0,Math.PI*2);ctx.fill();
@@ -738,11 +748,15 @@ function paintZ(x,y,z){
  if(fr){
   const b=fr.bounds,sc=fr.unitScale;
   ctx.globalAlpha=p.inv>0&&Math.sin(time*33)>0?.67:1;
-  // The FLASH is the actual transparent bitmap silhouette, not a vector box.
-  if(p.hitFlash>0)ctx.filter=p.hitFlash>.10?
-   'brightness(3.1) saturate(.18)':'brightness(2.2) saturate(.52)';
+  // Keep original image visible (25%+) beneath a <=75% white alpha mask.
+  const originalOpacity=ctx.globalAlpha;
   ctx.drawImage(fr.canvas,b.x,b.y,b.w,b.h,-b.w*sc/2,-b.h*sc,b.w*sc,b.h*sc);
-  ctx.filter='none';
+  if(p.hitFlash>0){
+   ctx.filter='brightness(0) invert(1)';
+   ctx.globalAlpha=originalOpacity*.75*clamp(p.hitFlash/.19,0,1);
+   ctx.drawImage(fr.canvas,b.x,b.y,b.w,b.h,-b.w*sc/2,-b.h*sc,b.w*sc,b.h*sc);
+   ctx.filter='none';ctx.globalAlpha=originalOpacity;
+  }
  } // On missing art do not draw vector body parts; the loading gate hides gameplay.
  ctx.globalAlpha=1;
  if(p.weapon>0&&!(p.attack>0&&(Z_KICK_MOVES.has(p.moveName)||Z_HEAD_MOVES.has(p.moveName)||p.airAttack))){const weapon=img.pipe_charged;
@@ -2047,11 +2061,16 @@ function drawRiotGuard(e,x,y,z){
  ellipseShadow(x,y,1.0,.45*alpha/(1+z*.025));
  ctx.save();ctx.translate(x,Math.round(y-z+5));
  ctx.scale(e.face>0?-1:1,1);ctx.globalAlpha=alpha;
- if(e.hitFlash>0)ctx.filter='brightness(2.65) saturate(.22)';
  if(current){
   // Source is pre-matted; preserve proportions and 1 common scale.
   const scale=.75;
   ctx.drawImage(current,-RIOT_CW*scale/2,-RIOT_CH*scale,RIOT_CW*scale,RIOT_CH*scale);
+  if(e.hitFlash>0){
+   ctx.filter='brightness(0) invert(1)';
+   ctx.globalAlpha=alpha*.75*clamp(e.hitFlash/.22,0,1);
+   ctx.drawImage(current,-RIOT_CW*scale/2,-RIOT_CH*scale,RIOT_CW*scale,RIOT_CH*scale);
+   ctx.filter='none';ctx.globalAlpha=alpha;
+  }
  }else{
   // Only shown while initial eight-frame art streams in.
   const old=img.guard;
@@ -2120,8 +2139,14 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  ctx.rotate(knockLean+(impacted?tilts[variant]*snap:0));
  if(impacted)ctx.scale(1+(scalesX[variant]-1)*snap,1+(scalesY[variant]-1)*snap);
  const bob=Math.sin(time*5+a.x)*1.5;
- if(a.hitFlash>0)ctx.filter='brightness(2.65) saturate(.22)';
-  ctx.drawImage(picture,-w/2,-h+bob,w,h);ctx.filter='none';
+ ctx.drawImage(picture,-w/2,-h+bob,w,h);
+ if(a.hitFlash>0){
+  const originalOpacity=ctx.globalAlpha;
+  ctx.filter='brightness(0) invert(1)';
+  ctx.globalAlpha=originalOpacity*.75*clamp(a.hitFlash/.22,0,1);
+  ctx.drawImage(picture,-w/2,-h+bob,w,h);
+  ctx.filter='none';ctx.globalAlpha=originalOpacity;
+ }
  if(isP){const swing=p.attack>0?(1-p.attack/p.attackDuration):0;const offsetX=29,offsetY=-120;ctx.save();ctx.translate(offsetX,offsetY);ctx.rotate(p.attack>0?(-.85+2.2*swing):-.88);const weapon=img['pipe_charged'];if(p.weapon>0&&weapon.complete)ctx.drawImage(weapon,-12,-18,150,38);ctx.restore();}
  // No vector rectangle on damage: only the original bitmap silhouette flashes.
  ctx.restore();
