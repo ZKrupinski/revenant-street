@@ -2228,11 +2228,11 @@ function depthBackdrop(bg){
  const w=Math.round(bg.naturalWidth*H/bg.naturalHeight),h=H;
  const output=document.createElement('canvas');output.width=w;output.height=h;
  const c=output.getContext('2d');
-// Subtle 10% desaturation is baked into the background cache only;
-// character sprites, gameplay particles, UI and sharp foreground stay untouched.
-c.filter='saturate(.90)';c.drawImage(bg,0,0,w,h);c.filter='none';
- for(const layer of [{blur:1.3,contrast:.84,saturation:.82,start:.43,end:.68},
-                     {blur:3.6,contrast:.67,saturation:.73,start:.22,end:.51}]){
+// Slightly stronger background-only desaturation, baked into cached artwork.
+// Character sprites, FX, UI and foreground detail/sharpness remain unchanged.
+c.filter='saturate(.85)';c.drawImage(bg,0,0,w,h);c.filter='none';
+ for(const layer of [{blur:1.3,contrast:.84,saturation:.78,start:.43,end:.68},
+                     {blur:3.6,contrast:.67,saturation:.69,start:.22,end:.51}]){
   const cv=document.createElement('canvas');cv.width=w;cv.height=h;
   const lc=cv.getContext('2d');
   lc.filter=`blur(${layer.blur}px) contrast(${layer.contrast}) saturate(${layer.saturation})`;
