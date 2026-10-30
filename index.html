@@ -779,7 +779,7 @@ function paintZ(x,y,z){
 function syncZSprite(){if(zArtNode)zArtNode.style.display='none'}
 RZAssassinArt.load('idle');loadMaskedMove('idle');loadZMove('idle');loadZMove('walk');loadZMove('run');loadZMove('dash');loadZMove('guard');loadZMove('airkick');loadZMove('axe_kick');loadZMove('jab');loadZMove('frontkick');loadZMove('lowkick');loadZMove('roundkick');
 
-const STAGE_WIDTH=12800;let cameraX=0;
+const STAGE_WIDTH=32000;let cameraX=0;
 // Each confirmed combo impact nudges the focus and builds up cinematic zoom.
 let cameraZoom=1,comboCameraLock=0,comboCameraFocusX=0;
 let comboCameraPulse=0,comboCameraLastSnap=-99;
@@ -919,7 +919,41 @@ function drawHeroModAura(x,y,z){
 // sidewalk/buildings in the upper half of the 720p backdrop.
 const ROAD_TOP=551,ROAD_BOTTOM=658;
 const groundY=y=>clamp(y,ROAD_TOP,ROAD_BOTTOM);
-const WAVE_GATES=[0,4230,8850,12715]; // entire ten-screen world, no per-encounter movement clamp
+const WAVE_GATES=[0,14200,28200,31850];
+const SQUAD_SPOTS={
+ 1:[740,1990,3260,4480,5760,7040,8320,9600,10880,12160,13480],
+ 2:[14800,16120,17400,18680,19960,21240,22520,23800,25080,26360,27600]
+};
+const SQUAD_ROSTERS={
+ 1:[
+  ['raider','raider','assassin','raider'],
+  ['raider','assassin','guard','raider'],
+  ['assassin','raider','raider','guard','assassin'],
+  ['raider','guard','assassin','raider','raider'],
+  ['assassin','raider','elite','raider','guard'],
+  ['raider','assassin','raider','guard','assassin'],
+  ['guard','raider','assassin','raider','raider'],
+  ['assassin','guard','raider','assassin','guard'],
+  ['raider','assassin','elite','raider','guard'],
+  ['assassin','raider','guard','assassin','raider'],
+  ['guard','elite','raider','assassin','guard']
+ ],
+ 2:[
+  ['assassin','raider','guard','raider','assassin'],
+  ['guard','raider','raider','assassin','guard'],
+  ['assassin','raider','elite','guard','assassin'],
+  ['guard','assassin','raider','raider','guard'],
+  ['assassin','guard','assassin','raider','guard'],
+  ['raider','elite','assassin','guard','raider'],
+  ['assassin','guard','raider','guard','assassin'],
+  ['guard','assassin','guard','raider','elite'],
+  ['assassin','raider','guard','assassin','raider'],
+  ['elite','guard','assassin','raider','guard'],
+  ['guard','assassin','elite','guard','raider','assassin']
+ ]
+};
+let squadIndex=0,enemySerial=0,lastEncounterCleared=-1;
+const BOSS_SPAWN_X=30900;
 let enemies=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
 let perma={core:0,servo:0,reflex:0,shards:0};
 try{const stored=JSON.parse(localStorage.getItem('revenant-perma-v1')||'null');if(stored)for(const key of Object.keys(perma)){const value=stored[key];if(Number.isSafeInteger(value)&&value>=0)perma[key]=value}}catch(_){}
@@ -1120,35 +1154,46 @@ function startRun(){resetInputs();resetPlayer();wave=0;fx=[];floating=[];attribu
  if(/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'')){
   // Explicit QA shortcut: test the actual final encounter without traversing
   // ten screens. Normal gameplay and progression stay unchanged.
-  wave=2;p.x=11520;p.y=560;cameraX=clamp(p.x-450,0,STAGE_WIDTH-W);
+  wave=2;p.x=30400;p.y=560;cameraX=clamp(p.x-450,0,STAGE_WIDTH-W);
   spawnWave();flash('HUNTER / 최종 보스 미리보기',2);
  }else flash('CHAPTER 01 : 침수된 거리',2);
  sound('attack')}
+function spawnNextEncounter(){
+ if(wave!==1&&wave!==2)return false;
+ const spots=SQUAD_SPOTS[wave]||[],i=squadIndex;
+ if(i>=spots.length||enemies.some(e=>!e.dead)||p.x<spots[i]-540)return false;
+ // Always enter from outside the visible canvas, on both sides where
+ // there is sufficient street behind the camera.
+ const types=SQUAD_ROSTERS[wave][i];
+ const leftAllowed=cameraX>290,split=leftAllowed?Math.floor(types.length/2):0;
+ const leftEdge=cameraX-155,rightEdge=cameraX+W+145;
+ types.forEach((type,j)=>{
+  const left=j<split,offset=(left?j:j-split)*65;
+  const worldX=clamp(left?leftEdge-offset:rightEdge+offset,55,STAGE_WIDTH-55);
+  const lane=groundY(p.y+[-34,28,51,-13,37,-46][j%6]);
+  const enemy=makeEnemy(type,worldX,lane,enemySerial++);
+  const growth=1+i*.085;
+  enemy.hp=enemy.maxHp=Math.round(enemy.maxHp*growth);
+  enemy.squad=i;enemy.encountered=false;enemy.renderX=worldX;enemy.renderY=lane;
+  if(left)enemy.face=1;
+  enemies.push(enemy);
+ });
+ squadIndex++;lastEncounterCleared=-1;waveClearNotified=false;
+ $('hint').hidden=true;
+ $('waveLabel').textContent=`WAVE 0${wave} · 적 무리 ${String(squadIndex).padStart(2,'0')}/${spots.length}`;
+ return true;
+}
 function spawnWave(){
- waveClearNotified=false;
- wave++;
- // Distributed encounters demand forward traversal rather than one static arena.
- const spawns={
-  1:[
-   ['raider',935,534],['assassin',1004,585],['raider',1069,628],['guard',1145,560],['assassin',1219,608],['raider',1290,544],
-   ['raider',2030,542],['assassin',2100,600],['elite',2180,621],['raider',2255,562],['assassin',2330,585],['raider',2395,526],
-   ['raider',3240,537],['assassin',3305,590],['raider',3380,619],['raider',3460,554],['assassin',3532,602],['raider',3605,530]
-  ],
-  2:[
-   ['guard',4710,545],['raider',4780,596],['assassin',4850,623],['raider',4930,559],['assassin',5000,587],['guard',5080,533],
-   ['raider',5840,544],['assassin',5910,609],['guard',5990,571],['raider',6070,629],['assassin',6150,590],['raider',6230,540],
-   ['raider',6920,612],['guard',6990,553],['assassin',7070,584],['raider',7150,622],['assassin',7230,554],['guard',7300,599],
-   ['guard',8100,550],['raider',8170,596],['elite',8240,629],['raider',8320,564],['guard',8400,603],['assassin',8470,533]
-  ],
-  3:[
-   // Isolated arena. Do not activate a crowd with the boss.
-   ['boss',11880,561]
-  ]
- };
- enemies=(spawns[wave]||[]).map(([type,x,y],i)=>makeEnemy(type,x,y,i));
- if(wave===3)for(const name of ['idle','taunt','dash','slam','death'])window.RZBossHunter?.load(name);
-  $('bossHud').hidden=true;
- $('waveLabel').textContent=['','WAVE 01 — 젖은 골목','WAVE 02 — 공사 구역','WAVE 03 — 헌터의 공장'][wave];
+ waveClearNotified=false;wave++;squadIndex=0;lastEncounterCleared=-1;enemies=[];
+ if(wave===3){
+  enemies=[makeEnemy('boss',BOSS_SPAWN_X,561,enemySerial++)];
+  squadIndex=1;
+  for(const name of ['idle','taunt','dash','slam','death'])
+   window.RZBossHunter?.load(name);
+ }else spawnNextEncounter();
+ $('bossHud').hidden=true;
+ $('waveLabel').textContent=wave===3?'WAVE 03 · 최종 헌터':
+  `WAVE 0${wave} · 적 무리 ${String(squadIndex).padStart(2,'0')}/${SQUAD_SPOTS[wave]?.length||0}`;
  $('chapter').textContent=`0${wave} / 끝없는 거리`;
 }
 function makeEnemy(type,x,y,index){
@@ -1919,8 +1964,19 @@ function updateEnemies(dt){
   if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);continue}
   if(e.stun>0||e.shock>.35||e.groggy>0||e.proneTime>0||e.riseTime>0)continue;
   let dx=p.x-e.x,dy=p.y-e.y,dist=Math.abs(dx);
-  if(dist>920)continue;
+  // Aggro sticks once Z was detected: leaving the screen never resets pursuit.
+  if(dist<=1060)e.encountered=true;
+  if(!e.encountered)continue;
   e.face=dx>=0?1:-1;
+  if(dist>910){
+   const boost=clamp(e.speed*1.55+(dist-910)*.25,245,510);
+   const before=e.x,beforeY=e.y;
+   e.x=clamp(e.x+Math.sign(dx)*Math.min(Math.abs(dx)-135,boost*dt),45,STAGE_WIDTH-45);
+   e.y=groundY(e.y+Math.sign(dy)*Math.min(Math.abs(dy),boost*.43*dt));
+   const moved=Math.hypot(e.x-before,(e.y-beforeY)*1.7);
+   e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
+   continue;
+  }
   e.cooldown=Math.max(0,e.cooldown-dt);
   e.chargeCooldown=Math.max(0,e.chargeCooldown-dt);
   if(e.type==='boss'&&window.RZBossHunter?.update(e,p,dt,{
@@ -2007,6 +2063,16 @@ function updateEnemies(dt){
   else e.renderY+=(e.y-e.renderY)*k;
  }
  enemies=enemies.filter(e=>!e.dead||e.fade>0);
+ // A troop must be defeated before the next encounter can be spawned.
+ const anyLiving=enemies.some(e=>!e.dead);
+ if(!anyLiving&&gameState==='playing'&&wave<=2){
+  if(!spawnNextEncounter()&&squadIndex<(SQUAD_SPOTS[wave]?.length||0)){
+   if(lastEncounterCleared!==squadIndex){
+    lastEncounterCleared=squadIndex;
+    flash('적 무리 격파! 전진하면 다음 무리가 몰려옵니다',1.4);
+   }
+  }
+ }
  // Additional power picks every handful of kills; no wave restart.
  // Count a milestone only once and never interrupt the boss duel.
  if(gameState==='playing'&&wave<=2&&nextUpgradeMilestone<UPGRADE_MILESTONES.length&&
@@ -2014,7 +2080,8 @@ function updateEnemies(dt){
   nextUpgradeMilestone++;
   gameState='reward';rewardMenu('mid');return;
  }
- if(gameState==='playing'&&enemies.length===0){
+ if(gameState==='playing'&&!enemies.some(e=>!e.dead)&&
+    (wave===3||squadIndex>=(SQUAD_SPOTS[wave]?.length||0))){
   if(!waveClearNotified){waveClearNotified=true;flash('구역 확보 — 오른쪽으로 전진!',2)}
   if(p.x>=WAVE_GATES[wave]){gameState='reward';if(wave<3)rewardMenu();else completeMenu()}
  }
@@ -2118,7 +2185,7 @@ function drawTravelMeter(){
  ctx.fillStyle='#343f55';ctx.fillRect(x0,y0,w,h);
  const prog=clamp(p.x/STAGE_WIDTH,0,1);ctx.fillStyle=prog<.7?'#5ac7e8':'#ff3b56';ctx.fillRect(x0,y0,Math.max(3,w*prog),h);
  for(let i=1;i<10;i++){ctx.fillStyle='#b7bdc6';ctx.fillRect(x0+w*i/10-1,y0-2,2,h+4)}
- ctx.fillStyle='#e3e8f3';ctx.textAlign='center';ctx.font='bold 12px Arial';ctx.fillText(`SEOUL 199X  /  ${Math.floor(prog*100)}%  /  ${Math.min(10,Math.floor(p.x/1280)+1)} OF 10`,x0+w/2,y0+24);
+ ctx.fillStyle='#e3e8f3';ctx.textAlign='center';ctx.font='bold 12px Arial';ctx.fillText(`SEOUL 199X / ${Math.floor(prog*100)}% / ${Math.min(25,Math.floor(p.x/1280)+1)} OF 25`,x0+w/2,y0+24);
  ctx.restore();
 }
 function ellipseShadow(x,y,s=1,alpha=.36){ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle='#01040b';ctx.beginPath();ctx.ellipse(x,y,49*s,11*s,0,0,Math.PI*2);ctx.fill();ctx.restore()}
