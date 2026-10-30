@@ -34,7 +34,7 @@ async function audio(){
  assert.equal(bgm.getState().ready,true);assert.equal(bgm.getState().source,'blob:complete');
  await bgm.beginPlayback();for(let i=0;i<8;i++){now+=180;tick()}
  assert(Math.abs(bgm.getState().volume-.29)<.001);
- bgm.duckImpact(true);assert(bgm.getState().volume<.15,'heavy impact must cut music immediately');
+ bgm.duckImpact(true);assert(bgm.getState().volume<.09,'heavy impact must strongly duck music beneath the foreground hit');
  assert.equal(bgm.getState().playing,true,'duck never pauses music');
  for(let i=0;i<10;i++){now+=50;tick()}
  assert(Math.abs(bgm.getState().volume-.29)<.001,'music recovers after hit');
