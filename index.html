@@ -374,6 +374,7 @@ function prepareZCells(im){
   for(const r of raw){
    const sprite=document.createElement('canvas');sprite.width=renderW;sprite.height=renderH;
    sprite.getContext('2d').drawImage(r.canvas,union.x,union.y,union.w,union.h,0,0,renderW,renderH);
+   r.canvas.width=0;r.canvas.height=0; // Release full-resolution intermediate.
    cells.push({canvas:sprite,bounds:{x:0,y:0,w:renderW,h:renderH},unitScale:1});
   }
  return cells;
@@ -575,6 +576,7 @@ function preparePremattedGaitCells(im){
  return frames.map(cv=>{
   const sprite=document.createElement('canvas');sprite.width=outW;sprite.height=outH;
   sprite.getContext('2d').drawImage(cv,minX,minY,rectW,rectH,0,0,outW,outH);
+  cv.width=0;cv.height=0; // Release oversized source-cell allocation.
   return {canvas:sprite,bounds:{x:0,y:0,w:outW,h:outH},unitScale:1};
  });
 }
@@ -1441,6 +1443,7 @@ function resolveBodyCollisions(dt){
   let changed=false;
   for(let i=0;i<bodies.length;i++)for(let j=i+1;j<bodies.length;j++){
    const a=bodies[i],b=bodies[j];
+   if(a.z>37||b.z>37)continue; // Jump bypasses grounded actors.
    // Even two bosses require less than this broadphase limit.
    if(b.x-a.x>236)break;
    const dx=a.x-b.x,dy=a.y-b.y;
