@@ -129,7 +129,7 @@ function draw(e,x,y,z,api){
  ctx.globalAlpha=alpha;
  // Full-body bitmap silhouette flash, including the boss's arm and helmet.
  if(e.hitFlash>0)ctx.filter=e.hitFlash>.12?
-  'brightness(3.8) saturate(0) contrast(1.28)':'brightness(2.3) saturate(.3)';
+  'brightness(0) invert(1)':'brightness(2.3) saturate(.3)';
  ctx.drawImage(chosen.img,(i%4)*CELL_W,Math.floor(i/4)*CELL_H,CELL_W,CELL_H,-w/2,-h,w,h);
  ctx.restore();
  if(!e.dead){
