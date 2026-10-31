@@ -2288,6 +2288,10 @@ function spawnIntruderSupport(){
   e.cooldown=1.15+j*.18;e.specialCooldown=2.15+j*1.35;
   enemies.push(e);
  }
+ // Keep a stable team health gauge even after a fallen member fades out.
+ const team=enemies.filter(e=>e.type==='intruder'&&e.supportGroup===wave+'-'+index);
+ const teamMaxHp=team.reduce((sum,e)=>sum+e.maxHp,0);
+ for(const e of team){e.supportTeamMaxHp=teamMaxHp;e.supportTeamSize=count}
  waveClearNotified=false;return true;
 }
 function spawnWave(){
@@ -2875,7 +2879,9 @@ function enemyAttack(e){
   spawnModBitmap('blue',p.x,p.y-132,1.06+modRank('guard')*.08,'saturate(.26) brightness(1.5)',.26);
  }
  p.receivedHits=(p.receivedHits||0)+1;
- const heavy=e.type==='boss'||eliteCleave||e.type==='guard'&&p.receivedHits%3===0;
+ const heavy=e.type==='boss'||eliteCleave||
+   (e.type==='intruder'&&e.specialPhase==='recovery')||
+   e.type==='guard'&&p.receivedHits%3===0;
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.counterBoost=false;
  if(heavy&&p.hp>0&&p.z<70&&p.receivedHits%2===0){
   p.downTimer=.83;p.getupTimer=0;p.stun=.83;p.hitDuration=.83;
@@ -3647,7 +3653,8 @@ function updateHud(){
   const group=eliteOrBoss.type==='intruder'?enemies.filter(e=>e.type==='intruder'&&
    e.supportGroup===eliteOrBoss.supportGroup):[eliteOrBoss];
   const hp=group.reduce((sum,e)=>sum+(e.dead?0:Math.max(0,e.hp)),0);
-  const maxHp=group.reduce((sum,e)=>sum+e.maxHp,0);
+  const maxHp=eliteOrBoss.type==='intruder'?eliteOrBoss.supportTeamMaxHp:
+   group.reduce((sum,e)=>sum+e.maxHp,0);
   $('bossName').textContent=eliteOrBoss.type==='boss'?'HUNTER / 붉은 집행자':
    eliteOrBoss.type==='elite'?'IRON MASK / 철가면 추적자':
    'CRIMSON SUPPORT / 붉은 후드 지원팀';
