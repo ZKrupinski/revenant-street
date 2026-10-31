@@ -1688,7 +1688,7 @@ test('PC arrows trigger their on-screen positions without controlling movement',
 });
 test('WASD are the only PC keys that control X/Y locomotion',()=>{
  g.startRun();t.setEnemies([]);
- t.p.x=550;t.p.y=594;t.p.z=0;t.p.stun=0;t.p.dodge=0;t.p.parry=0;t.p.attack=0;t.p.parryRecoilTime=0;t.p.parryRecoilRemaining=0;t.p.riposteChasing=false;t.p.downTimer=0;t.p.getupTimer=0;t.p.counterRush=0;
+ t.p.x=550;t.p.y=594;t.p.z=0;t.p.stun=0;t.p.dodge=0;t.p.parry=0;t.p.attack=0;t.p.parryRecoilTime=0;t.p.parryRecoilRemaining=0;t.p.riposteChasing=false;t.p.downTimer=0;t.p.getupTimer=0;t.p.counterRush=0;t.p.airAttack=false;t.p.jumpActive=false;t.p.airKickPhase='';t.p.riposteStrikeTarget=null;t.p.riposteChaseTarget=null;
  t.keys.add('arrowleft');t.keys.add('arrowup');
  t.control(.1,{dx:0,dy:0});
  assert.equal(t.p.x,550,'left arrow must not move player left');
