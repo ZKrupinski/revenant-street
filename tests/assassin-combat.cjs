@@ -269,13 +269,15 @@ test('elite overdrive at critical health and independent sprite module',()=>{
  enemy.eliteTell=0;enemy.dead=true;enemy.z=20;
  assert.equal(world.RZElite.move(enemy,()=> 'idle'),'hitFly');
 });
-test('Frame Lab exposes all twelve elite animations without sharing original cache keys',()=>{
+test('Frame Lab displays the eight original Iron Mask painted animations, not recolored assassin art',()=>{
  const lab=fs.readFileSync(path.join(__dirname,'../z-frame-lab.html'),'utf8');
  const script=lab.slice(lab.lastIndexOf('<script>')+8,lab.lastIndexOf('</script>'));
  assert(script,'Frame Lab inline script missing');
  new vm.Script(script);
  assert(lab.includes('variant:\'elite\''),'elite variants not registered');
- assert(lab.includes('RZElite.colored(c)'),'elite bitmap transform not in Frame Lab');
+ assert(lab.includes("RZElite.KEYS.forEach(key=>list.push"),'Frame Lab must include the eight real new Iron Mask motions');
+ assert(lab.includes("sheet_url:'./assets/ironmask-elite/'+key+'.webp'"),'Frame Lab must use same sprite art as game');
+ assert(!lab.includes('RZElite.colored(c)'),'no legacy colored assassin sprites should appear');
  assert(lab.includes("cacheKey=a.variant==='elite'"),'elite cache must be isolated');
 });
 

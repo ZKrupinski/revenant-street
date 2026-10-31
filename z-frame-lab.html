@@ -84,7 +84,8 @@ if(isBlackHoodieHero){
 }
 const assassinLabels=["대기", "걷기", "달리기", "돌진 찌르기", "단검 베기", "머리 피격", "복부 피격", "회전 피격", "공중 피격", "넉백", "다운·사망", "기상"];
 RZAssassinArt.keys.forEach((key,i)=>list.push({id:'assassin_'+key,label:assassinLabels[i],group:i<5?'새 적 B · 쌍단검':'새 적 B · 피격·다운',frames_target:8,sheet_url:RZAssassinArt.source(key),packed:true,frame_ms:90}));
-RZAssassinArt.keys.forEach((key,i)=>list.push({id:'elite_'+key,label:'철가면 엘리트 · '+assassinLabels[i],group:i<5?'철가면 엘리트 · 기본·공격':'철가면 엘리트 · 피격·다운',frames_target:8,sheet_url:RZAssassinArt.source(key),packed:true,variant:'elite',frame_ms:90}));
+const ironMaskLabels={idle:'전투 대기',run:'질주·전진',attack:'강펀치 기본공격',hit:'피격·경직',menace:'위협·도발',death:'사망·쓰러짐',charge:'진홍 에너지 충전',special:'진홍 돌진·참격'};
+RZElite.KEYS.forEach(key=>list.push({id:'elite_'+key,label:'칠흑 철가면 · '+ironMaskLabels[key],group:['charge','special'].includes(key)?'철가면 엘리트 · 특수공격':'철가면 엘리트 · 기본·피격',frames_target:8,sheet_url:'./assets/ironmask-elite/'+key+'.webp',precleared:true,variant:'elite',frame_ms:key==='charge'?125:key==='special'?66:key==='run'?82:105}));
 const riotShieldActions=[
  ['idle','방패병 대기 / 방패 경계'],
  ['walk','방패병 걷기 / 전진'],
@@ -270,7 +271,7 @@ function preloadClean(i){
  const im=new Image();im.crossOrigin='anonymous';loadingMap.set(cacheKey,im);
  im.onload=()=>{try{
   const isolated=a.precleared?preclearedHeroFrames(im):(a.packed?RZAssassinArt.split(im):prepareZCells(im));if(isolated.length!==8)throw Error('8프레임 추출 실패');
-  const frames=isolated.map(c=>(a.variant==='elite'?RZElite.colored(c):c.canvas).toDataURL('image/png'));
+  const frames=isolated.map(c=>c.canvas.toDataURL('image/png')); // Original painted Iron Mask, no palette overlay.
   cleanedCache.set(cacheKey,{frames,w:im.naturalWidth,h:im.naturalHeight});
   while(cleanedCache.size>4)cleanedCache.delete(cleanedCache.keys().next().value);
   if(index===i){assetstatus.textContent='정밀 컷팅 8프레임 완료 · '+im.naturalWidth+'×'+im.naturalHeight+'px';refreshPreview()}
