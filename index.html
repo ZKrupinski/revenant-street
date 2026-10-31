@@ -4322,7 +4322,7 @@ function update(dt){
   cameraZoom+=(1.23-cameraZoom)*Math.min(1,dt*2.3);
   screenShake=Math.max(screenShake,(1-progress)*1.8);
   updateHudThrottled(dt);
-  if(t>=DEATH_CINEMATIC_DURATION){
+  if(t>=DEATH_CINEMATIC_DURATION-0.00001){
    deathCinematic.active=false;deadMenu();
   }
   return;
@@ -4831,7 +4831,7 @@ function startDeathCinematic(){
  p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteWindow=0;
  p.downTimer=0;p.getupTimer=0;p.stun=0;p.hitHeavyTimer=0;
  p.z=0;p.vz=0;p.moveDX=0;p.moveDY=0;p.running=false;
- p.motionKey='';p.motionTime=0;p.hitFlash=.24;
+ p.motionKey='';p.motionTime=0;p.inv=0;p.hitFlash=.18;
  hitStop=0;slowMotion=0;parrySlowTarget=null;screenTint=.95;
  screenShake=Math.max(screenShake,14);
  resetHeroAfterimages();resetInputs();
