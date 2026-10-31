@@ -1189,7 +1189,7 @@ function waveEnemyTotals(){
 }
 let squadIndex=0,enemySerial=0,lastEncounterCleared=-1;
 const BOSS_SPAWN_X=30900;
-let enemies=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
+let enemies=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,parrySlowTarget=null,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
 let perma={core:0,servo:0,reflex:0,shards:0};
 try{const stored=JSON.parse(localStorage.getItem('revenant-perma-v1')||'null');if(stored)for(const key of Object.keys(perma)){const value=stored[key];if(Number.isSafeInteger(value)&&value>=0)perma[key]=value}}catch(_){}
 // All WebAudio SFX (gunfire, reloads, impacts, menu and battle tones) play
@@ -1578,7 +1578,7 @@ async function requestRunStart(){
   showMenu(`<div class="eyebrow">RESOURCE ERROR</div><h2>리소스 로딩 중단</h2><p>${String(err.message).replace(/[<>]/g,'')}</p><p>불완전한 캐릭터가 보이지 않도록 게임 실행을 막았습니다.</p><div class="buttons"><button class="main-btn" data-action="start">다시 불러오기</button><button class="secondary-btn" data-action="title">타이틀</button></div>`);
  }
 }
-function startRun(){resetInputs();resetPlayer();setModsExpanded(false);wave=0;fx=[];floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
+function startRun(){resetInputs();resetPlayer();setModsExpanded(false);wave=0;fx=[];floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;parrySlowTarget=null;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
  if(/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'')){
   // Explicit QA shortcut: test the actual final encounter without traversing
   // ten screens. Normal gameplay and progression stay unchanged.
@@ -2162,11 +2162,15 @@ function enemyAttack(e){
   p.parryRecoilDuration=.24;p.parryRecoilTime=.24;
   p.parryRecoilRemaining=e.type==='boss'?25:19;
   // Show the bitmap shield collision ONLY when enemyAttack is really parried.
-  spawnParryShieldFx(p.x+p.facing*58,p.y-136,p.facing,e.type==='boss'?1.18:1);
-  fxBurst(p.x+p.facing*66,p.y-134,'gold',1.15);
+  spawnParryShieldFx(p.x+p.facing*70,p.y-140,p.facing,e.type==='boss'?2.3:2.05);
+  // Larger painterly shield shock and a second bitmap-only bloom.
+  spawnModBitmap('blue',p.x+p.facing*72,p.y-140,2.05,'brightness(1.5) saturate(1.2)',.48);
+  fxBurst(p.x+p.facing*68,p.y-136,'gold',2.35);
   floatText('JUST PARRY!',p.x,p.y-220,'#7df7ff');
   flash('패링 성공! 공격으로 추격!',1.35);
-  screenShake=Math.max(screenShake,27);hitStop=Math.max(hitStop,.14);slowMotion=Math.max(slowMotion,.12);playImpactSound('parry',1.50);vibrateImpact('parry',true);
+  screenShake=Math.max(screenShake,31);hitStop=Math.max(hitStop,.16);
+  slowMotion=Math.max(slowMotion,1.0);parrySlowTarget=e;
+  playImpactSound('parry',1.65);vibrateImpact('parry',true);
   p.stamina=clamp(p.stamina+25,0,100);sound('parry');playCombatVoice('heroPower');
   if(e.poise>=e.maxPoise){e.groggy=3.4;e.stun=3.4;floatText('GROGGY',e.x,e.y-185,'#8fe6ff')}
   return;
@@ -2190,7 +2194,7 @@ function enemyAttack(e){
  p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteWindow=0;p.riposteTarget=null;
  playCombatVoice(p.hp<=0?'heroDeath':'heroHurt');p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)deadMenu()}
 function fxBurst(x,y,color='red',scale=1){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8)})}
-function spawnParryShieldFx(x,y,face=1,scale=1){fx.push({kind:'parryShield',x,y,face,scale,life:.36,maxLife:.36})}
+function spawnParryShieldFx(x,y,face=1,scale=1){fx.push({kind:'parryShield',x,y,face,scale,life:.52,maxLife:.52})}
 function floatText(text,x,y,color){if(floating.length>=45)floating.splice(0,floating.length-36);floating.push({text,x,y,color,life:1.05})}
 function messageUpdate(dt){if(messageTime>0){messageTime-=dt;if(messageTime<=0)$('gameMessage').classList.remove('active')}}
 function pollPad(){
@@ -2528,36 +2532,38 @@ function updateEliteAI(e,dt,dx,dy,dist){
  }
  return false;
 }
-function updateEnemies(dt){
+function updateEnemies(dt,parryVictimScale=1){
  // AI scans only nearby encounters rather than the whole 12,800 px street.
  const nearbyEnemies=enemies.filter(e=>!e.dead&&Math.abs(e.x-p.x)<1150);
  for(const e of enemies){
+  // Parried target: local clock is slower than the already slowed world.
+  const actorDt=e===parrySlowTarget?dt*parryVictimScale:dt;
   if(Math.abs(e.knockVX)>1||Math.abs(e.knockVY)>1){
-   const nextX=clamp(e.x+e.knockVX*dt,45,STAGE_WIDTH-45);
+   const nextX=clamp(e.x+e.knockVX*actorDt,45,STAGE_WIDTH-45);
    if(e.parryScreenDir&&e.knockVX*e.parryScreenDir>0){
     e.x=e.parryScreenDir>0?Math.min(nextX,e.parryScreenEdge):Math.max(nextX,e.parryScreenEdge);
     if(Math.abs(e.x-nextX)>.001)e.knockVX=0;
    }else e.x=nextX;
-   e.y=groundY(e.y+e.knockVY*dt);
-   const drag=Math.exp(-(e.knockDrag||3.55)*dt);
+   e.y=groundY(e.y+e.knockVY*actorDt);
+   const drag=Math.exp(-(e.knockDrag||3.55)*actorDt);
    e.knockVX*=drag;e.knockVY*=drag;
   }
   if(e.z>0||e.vz>0){
-   e.z=Math.max(0,e.z+e.vz*dt);
-   e.vz-=895*dt;
+   e.z=Math.max(0,e.z+e.vz*actorDt);
+   e.vz-=895*actorDt;
    if(e.z<=0){e.z=0;e.vz=0}
   }
-  e.bodyShakeTime=Math.max(0,(e.bodyShakeTime||0)-dt);
-  e.reactionTime=Math.max(0,(e.reactionTime||0)-dt);
-  e.spriteTime=(e.spriteTime||0)+dt;
-  e.attackPoseTime=Math.max(0,(e.attackPoseTime||0)-dt);
+  e.bodyShakeTime=Math.max(0,(e.bodyShakeTime||0)-actorDt);
+  e.reactionTime=Math.max(0,(e.reactionTime||0)-actorDt);
+  e.spriteTime=(e.spriteTime||0)+actorDt;
+  e.attackPoseTime=Math.max(0,(e.attackPoseTime||0)-actorDt);
   e.visualMoving=false;e.visualSpeed=0;
   if(e.dead){
-   e.deathAge=(e.deathAge||0)+dt;
-   if(e.type==='assassin'||e.type==='raider'||e.type==='elite')e.collapseAge=e.z<=4?(e.collapseAge||0)+dt:0;
-   e.hitFlash=Math.max(0,e.hitFlash-dt);
+   e.deathAge=(e.deathAge||0)+actorDt;
+   if(e.type==='assassin'||e.type==='raider'||e.type==='elite')e.collapseAge=e.z<=4?(e.collapseAge||0)+actorDt:0;
+   e.hitFlash=Math.max(0,e.hitFlash-actorDt);
    const groundAge=(e.type==='assassin'||e.type==='raider'||e.type==='elite')?(e.collapseAge||0):e.deathAge;
-   if(e.type==='boss'){if(e.deathAge>2.7)e.fade-=dt*.58}else if(groundAge>.72)e.fade-=dt*.74;
+   if(e.type==='boss'){if(e.deathAge>2.7)e.fade-=actorDt*.58}else if(groundAge>.72)e.fade-=actorDt*.74;
    continue;
   }
   if(e.type==='raider'||e.type==='assassin'||e.type==='elite'){
@@ -2566,20 +2572,20 @@ function updateEnemies(dt){
     e.stun=Math.max(e.stun,1.3);
    }
    if(e.proneTime>0){
-    e.proneTime=Math.max(0,e.proneTime-dt);
+    e.proneTime=Math.max(0,e.proneTime-actorDt);
     if(e.proneTime===0)e.riseTime=.67;
-   }else if(e.riseTime>0)e.riseTime=Math.max(0,e.riseTime-dt);
+   }else if(e.riseTime>0)e.riseTime=Math.max(0,e.riseTime-actorDt);
   }
-  e.stun=Math.max(0,e.stun-dt);
-  e.inv=Math.max(0,e.inv-dt);
-  e.hitFlash=Math.max(0,e.hitFlash-dt);
+  e.stun=Math.max(0,e.stun-actorDt);
+  e.inv=Math.max(0,e.inv-actorDt);
+  e.hitFlash=Math.max(0,e.hitFlash-actorDt);
   // Perception is permanent, including while knocked down or staggered.
   if(Math.abs(e.x-p.x)<=1060)e.encountered=true;
-  e.shock=Math.max(0,e.shock-dt);
-  e.freeze=Math.max(0,e.freeze-dt);
-  e.bleed=Math.max(0,e.bleed-dt);e.burn=Math.max(0,(e.burn||0)-dt);
-  if(e.groggy>0){e.groggy-=dt;if(e.groggy<=0){e.poise=0;e.stun=0}}
-  if(e.bleed>0)e.hp-=dt*(4+2.5*(e.bleedPower||1));if(e.burn>0)e.hp-=dt*(5+3*(e.burnPower||1));
+  e.shock=Math.max(0,e.shock-actorDt);
+  e.freeze=Math.max(0,e.freeze-actorDt);
+  e.bleed=Math.max(0,e.bleed-actorDt);e.burn=Math.max(0,(e.burn||0)-actorDt);
+  if(e.groggy>0){e.groggy-=actorDt;if(e.groggy<=0){e.poise=0;e.stun=0}}
+  if(e.bleed>0)e.hp-=actorDt*(4+2.5*(e.bleedPower||1));if(e.burn>0)e.hp-=actorDt*(5+3*(e.burnPower||1));
   if(e.hp<=0){if(e.type==='boss'||e.type==='elite'||Math.random()<.4)playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e);e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);continue}
   if(e.stun>0||e.shock>.35||e.groggy>0||e.proneTime>0||e.riseTime>0)continue;
   let dx=p.x-e.x,dy=p.y-e.y,dist=Math.abs(dx);
@@ -2592,15 +2598,15 @@ function updateEnemies(dt){
   if(dist>910){
    const boost=clamp(e.speed*1.55+(dist-910)*.25,245,510);
    const before=e.x,beforeY=e.y;
-   e.x=clamp(e.x+Math.sign(dx)*Math.min(Math.abs(dx)-135,boost*dt),45,STAGE_WIDTH-45);
-   e.y=groundY(e.y+Math.sign(dy)*Math.min(Math.abs(dy),boost*.43*dt));
+   e.x=clamp(e.x+Math.sign(dx)*Math.min(Math.abs(dx)-135,boost*actorDt),45,STAGE_WIDTH-45);
+   e.y=groundY(e.y+Math.sign(dy)*Math.min(Math.abs(dy),boost*.43*actorDt));
    const moved=Math.hypot(e.x-before,(e.y-beforeY)*1.7);
-   e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
+   e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=actorDt>0?moved/actorDt:0;
    continue;
   }
-  e.cooldown=Math.max(0,e.cooldown-dt);
-  e.chargeCooldown=Math.max(0,e.chargeCooldown-dt);
-  if(e.type==='boss'&&window.RZBossHunter?.update(e,p,dt,{
+  e.cooldown=Math.max(0,e.cooldown-actorDt);
+  e.chargeCooldown=Math.max(0,e.chargeCooldown-actorDt);
+  if(e.type==='boss'&&window.RZBossHunter?.update(e,p,actorDt,{
     stageWidth:STAGE_WIDTH,
     attack:enemyAttack,
     warning:(b,tag,color)=>{floatText(tag,b.x,b.y-360,color==='red'?'#ff7187':'#ffdca0');fxBurst(b.x,b.y-172,color,1.4);playCombatVoice('bossShout',b)},
@@ -2611,41 +2617,41 @@ function updateEnemies(dt){
      hitStop=Math.max(hitStop,kind==='slam'?.08:.04);
     }
   }))continue;
-  if(e.type==='elite'&&updateEliteAI(e,dt,dx,dy,dist))continue;
+  if(e.type==='elite'&&updateEliteAI(e,actorDt,dx,dy,dist))continue;
   if(e.windup>0){
-   e.windup-=dt;
+   e.windup-=actorDt;
    if(e.windup<=0){enemyAttack(e);e.attackPoseTime=.17;e.cooldown=e.type==='boss'?.98:.78+(e.slot%3)*.15;e.attackDone=true}
    continue;
   }
   const frozenSpeed=e.freeze>0?Math.max(.28,.65-.09*(e.freezePower||1)):1;
   const speed=e.speed*frozenSpeed*(e.phase===2?1.12:1);
   if(e.chargePrep>0){
-   e.chargePrep-=dt;
+   e.chargePrep-=actorDt;
    // Hold position for a readable tell, then suddenly accelerate.
    if(e.chargePrep<=0){e.chargePrep=0;e.chargeTime=.44;e.chargeReady=true}
    continue;
   }
   if(e.chargeTime>0){
    const lastX=e.x,lastY=e.y;
-   e.chargeTime-=dt;
+   e.chargeTime-=actorDt;
    const rush=Math.max(365,speed*3.25);
    const side=dx>=0?1:-1;
    const stopGap=bodyHalfX(p)+bodyHalfX(e)+5;
-   e.x=clamp(e.x+side*Math.min(Math.max(0,Math.abs(dx)-stopGap),rush*dt),45,STAGE_WIDTH-45);
-   e.y=groundY(e.y+Math.sign(dy)*Math.min(Math.abs(dy),rush*.35*dt));
+   e.x=clamp(e.x+side*Math.min(Math.max(0,Math.abs(dx)-stopGap),rush*actorDt),45,STAGE_WIDTH-45);
+   e.y=groundY(e.y+Math.sign(dy)*Math.min(Math.abs(dy),rush*.35*actorDt));
    if(Math.abs(e.x-p.x)<Math.max(e.reach+62,bodyHalfX(p)+bodyHalfX(e)+27)&&Math.abs(e.y-p.y)<55){
     e.chargeTime=0;e.windup=.16;e.windupDuration=.16;e.chargeReady=false;if(e.slot%3===0)playCombatVoice('enemyShout',e);
    }
    const moved=Math.hypot(e.x-lastX,(e.y-lastY)*1.7);
-   e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
+   e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=actorDt>0?moved/actorDt:0;
    continue;
   }
   // Tactical decision below committed strike / charge so enemies can't
   // cancel attacks mid-animation. Only ordinary mobs get mood changes.
   if(e.type!=='boss'&&e.type!=='elite'){
-   e.tacticTime=Math.max(0,(e.tacticTime||0)-dt);
-   e.retreatCooldown=Math.max(0,(e.retreatCooldown||0)-dt);
-   e.berserkCooldown=Math.max(0,(e.berserkCooldown||0)-dt);
+   e.tacticTime=Math.max(0,(e.tacticTime||0)-actorDt);
+   e.retreatCooldown=Math.max(0,(e.retreatCooldown||0)-actorDt);
+   e.berserkCooldown=Math.max(0,(e.berserkCooldown||0)-actorDt);
    if(e.tacticTime===0){
     const wounded=e.hp/e.maxHp<.56,roll=Math.random();
     if(e.retreatCooldown===0&&dist<340&&dist>90&&(wounded?roll<.51:roll<.09)){
@@ -2672,10 +2678,10 @@ function updateEnemies(dt){
     // A brief retreat, clamped to 390 px from Z. They always return.
     const lastX=e.x,lastY=e.y,side=e.x>=p.x?1:-1;
     const targetX=clamp(p.x+side*Math.min(390,dist+125),55,STAGE_WIDTH-55);
-    e.x+=Math.sign(targetX-e.x)*Math.min(Math.abs(targetX-e.x),speed*1.65*dt);
-    e.y=groundY(e.y+e.strafe*Math.min(38,speed*.56*dt));
+    e.x+=Math.sign(targetX-e.x)*Math.min(Math.abs(targetX-e.x),speed*1.65*actorDt);
+    e.y=groundY(e.y+e.strafe*Math.min(38,speed*.56*actorDt));
     const moved=Math.hypot(e.x-lastX,(e.y-lastY)*1.7);
-    e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
+    e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=actorDt>0?moved/actorDt:0;
     continue;
    }
   }
@@ -2700,11 +2706,11 @@ function updateEnemies(dt){
    e.attackDone=false;continue;
   }
   const lastX=e.x,lastY=e.y;
-  if(Math.abs(targetX-e.x)>4)e.x+=Math.sign(targetX-e.x)*Math.min(Math.abs(targetX-e.x),moveSpeed*dt);
-  if(Math.abs(targetY-e.y)>5)e.y+=Math.sign(targetY-e.y)*Math.min(Math.abs(targetY-e.y),moveSpeed*.78*dt);
+  if(Math.abs(targetX-e.x)>4)e.x+=Math.sign(targetX-e.x)*Math.min(Math.abs(targetX-e.x),moveSpeed*actorDt);
+  if(Math.abs(targetY-e.y)>5)e.y+=Math.sign(targetY-e.y)*Math.min(Math.abs(targetY-e.y),moveSpeed*.78*actorDt);
   e.x=clamp(e.x,45,STAGE_WIDTH-45);e.y=groundY(e.y);
   const moved=Math.hypot(e.x-lastX,(e.y-lastY)*1.7);
-  e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
+  e.visualMoving=moved>.001;e.visualSpeed=actorDt>0?moved/actorDt:0;
   e.spriteDistance+=moved;
  }
  resolveBodyCollisions(dt);
@@ -2717,16 +2723,17 @@ function updateEnemies(dt){
  }
  // Smooth render positions separately from the responsive combat hitboxes.
  for(const e of enemies){
+  const smoothDt=e===parrySlowTarget?dt*parryVictimScale:dt;
   // Smooth speed and apply hysteresis to avoid IDLE/WALK/RUN oscillation.
   const movingThisFrame=e.visualMoving,rawSpeed=movingThisFrame?e.visualSpeed:0;
-  e.visualSpeedSmooth=(e.visualSpeedSmooth||0)+(rawSpeed-(e.visualSpeedSmooth||0))*Math.min(1,dt*8);
+  e.visualSpeedSmooth=(e.visualSpeedSmooth||0)+(rawSpeed-(e.visualSpeedSmooth||0))*Math.min(1,smoothDt*8);
   if(movingThisFrame)e.visualHold=.23;
-  else e.visualHold=Math.max(0,(e.visualHold||0)-dt);
+  else e.visualHold=Math.max(0,(e.visualHold||0)-smoothDt);
   e.visualMoving=e.visualHold>0;
   if(e.locomotionMode==='run'){
    if(e.visualSpeedSmooth<163)e.locomotionMode='walk';
   }else if(e.visualSpeedSmooth>212)e.locomotionMode='run';
-  const k=Math.min(1,Math.max(0,dt)*(e.reactionTime>0||e.dead?30:25));
+  const k=Math.min(1,Math.max(0,smoothDt)*(e.reactionTime>0||e.dead?30:25));
   if(!Number.isFinite(e.renderX)||Math.abs(e.x-e.renderX)>220)e.renderX=e.x;
   else e.renderX+=(e.x-e.renderX)*k;
   if(!Number.isFinite(e.renderY)||Math.abs(e.y-e.renderY)>120)e.renderY=e.y;
@@ -2804,7 +2811,18 @@ function updateHud(){
 function update(dt){
  // Don't decode a full library of 2K sprite sheets while the user fights.
  // Required combat animations are prepared behind the loading screen.
-time+=dt;messageUpdate(dt);const pad=pollPad();if(gameState!=='playing')return;updateEffects(dt);updateComboCamera(dt);if(hitStop>0){hitStop-=dt;followComboCamera(dt);updateHudThrottled(dt);return}control(dt,pad);followComboCamera(dt);updateEnemies(dt*(slowMotion>0?.19:1));slowMotion=Math.max(0,slowMotion-dt);updateHudThrottled(dt);const cleared=gameState==='playing'&&waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
+const pad=pollPad();if(gameState!=='playing')return;
+ // Time domains: background, camera, particles and general mobs slow to 33%.
+ // Hero actions run at 20%; the parried enemy at 15%, with independent
+ // animation/physics clocks. Input polling stays real-time for the counter.
+ const cinematic=slowMotion>0;
+ const worldDt=dt*(cinematic?.33:1),heroDt=worldDt*(cinematic?.60:1);
+ const targetScale=cinematic?.45:1;
+ slowMotion=Math.max(0,slowMotion-dt);
+ if(slowMotion<=0)parrySlowTarget=null;
+ time+=worldDt;messageUpdate(worldDt);updateEffects(worldDt);updateComboCamera(worldDt);
+ if(hitStop>0){hitStop=Math.max(0,hitStop-dt);followComboCamera(worldDt);updateHudThrottled(dt);return}
+ control(heroDt,pad);followComboCamera(worldDt);updateEnemies(worldDt,targetScale);updateHudThrottled(dt);const cleared=gameState==='playing'&&waveClearNotified&&enemies.length===0;$('hint').hidden=!cleared;if(cleared)$('hint').textContent='→ 오른쪽 다음 구역 입구로 전진';}
 // Cache photographic depth treatment once per loaded panorama. Ground stays original.
 const backdropDepthCache=new WeakMap();
 function depthBackdrop(bg){
