@@ -1,0 +1,44 @@
+name: Import original Project Z firearm action Foley
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/import-z-hero-mechanisms.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Download three generated nonverbal firearm mechanism effects
+        env:
+          MECH_A: https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261031_002100_b455eea8-e575-4a94-acd3-3be2f1d142db.mp3
+          MECH_B: https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261031_002100_d0b2f9a5-65a0-4b86-89c4-4edf5af27711.mp3
+          MECH_POWER: https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261031_002100_b6436109-1ee0-4bfb-b299-fda5464d263e.mp3
+        run: |
+          set -euo pipefail
+          mkdir -p assets/voice
+          for spec in "a:$MECH_A" "b:$MECH_B" "power:$MECH_POWER"; do
+            key="${spec%%:*}"
+            url="${spec#*:}"
+            dest="assets/voice/hero-mech-${key}.mp3"
+            curl -fLsS --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 "$url" -o "$dest"
+            test "$(wc -c < "$dest")" -gt 6000
+            file "$dest"
+          done
+      - name: Commit fully local sound effects to game
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/voice/hero-mech-a.mp3 assets/voice/hero-mech-b.mp3 assets/voice/hero-mech-power.mp3
+          if ! git diff --cached --quiet; then
+            git commit -m "Audio: add three gun slide and bolt mechanical Foley clips"
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi
