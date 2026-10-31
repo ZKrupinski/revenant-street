@@ -4659,7 +4659,10 @@ const visibleActors=[];
 function draw(){
  if(gameState!=='playing'&&gameState!=='dying'&&!rewardSelection)return;
  ctx.clearRect(0,0,W,H);ctx.save();
- if(screenShake>0)ctx.translate(rnd(-screenShake,screenShake),rnd(-screenShake*.65,screenShake*.65));
+ // Only the full-screen camera offset is softened by 15%; gamepad rumble,
+ // actor hit reactions, sound, hitstop, and effect timers remain unchanged.
+ if(screenShake>0){const cameraShake=screenShake*.85;
+  ctx.translate(rnd(-cameraShake,cameraShake),rnd(-cameraShake*.65,cameraShake*.65));}
  const zoom=clamp(cameraZoom,1,1.36);
  if(zoom>1.0001){const px=W*.52,py=H*.51;
   ctx.translate(px,py);ctx.scale(zoom,zoom);ctx.translate(-px,-py);
