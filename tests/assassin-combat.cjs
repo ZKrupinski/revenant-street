@@ -904,7 +904,7 @@ test('four smaller bitmap arcade controls retain large touch surfaces and presse
 });
 test('approved arcade joystick uses bitmap disc and separately movable red ball, no guide circles',()=>{
  const root=path.join(__dirname,'../assets/ui');
- for(const name of ['z-arcade-stick-base.webp','z-arcade-stick-shaft-centered.webp','z-arcade-stick-knob.webp']){
+ for(const name of ['z-arcade-stick-base-centerhole.webp','z-arcade-stick-shaft-centered.webp','z-arcade-stick-knob.webp']){
   const bytes=fs.readFileSync(path.join(root,name));
   assert(bytes.length>4000&&bytes.subarray(0,4).toString()==='RIFF',name+' exists as a transparent bitmap');
  }
@@ -928,7 +928,7 @@ test('approved arcade joystick uses bitmap disc and separately movable red ball,
  html.includes('shaftDepth=1-clamp(ny,-1,1)*.38'),
  'live pointer lean and fore/aft shaft depth are both calculated');
  assert(html.includes('analogShaft.style.transform=')&&
- html.includes("analogShaft.style.transform='translate(-50%,-50%) rotate(0deg) scaleY(1)'"),
+ html.includes("analogShaft.style.transform='translate(-50%,-60.56%) rotate(0deg) scaleY(1)'"),
  'pointer motion tilts the shaft and release returns it upright');
  assert(part.includes('.analog-ring::after')&&part.includes('.analog-axis')&&part.includes('display:none!important'),
  'old circle guide / vector axis must be gone');
@@ -939,10 +939,18 @@ test('approved arcade joystick uses bitmap disc and separately movable red ball,
  'compact screens maintain a smaller proportional offset and larger cap');
  assert(part.includes('transition:translate .045s ease-out'),
  'ball tilts responsively within its collar');
- assert(html.includes('cy=r.top+r.height*.35'),
- 'pointer neutral center uses the painted red ball, not center of lower base');
- assert(html.includes("${(x*.42).toFixed(1)}px ${(y*.42).toFixed(1)}px"),
- 'tilt travel stays visually inside the arcade stick while analog input remains full');
+ assert(html.includes('cy=r.top+r.height*.245'),
+ 'pointer neutral center follows the repositioned red ball over the painted center hole');
+ assert(part.includes('z-arcade-stick-base-centerhole.webp')&&
+ html.includes("joystickBaseImage.src='./assets/ui/z-arcade-stick-base-centerhole.webp'"),
+ 'approved new bitmap replaces the old lower-socket base graphic');
+ assert(part.includes('translate(-50%,-60.56%) rotate(0deg)')&&
+ part.includes('translate:0 -10.56%'),
+ 'original shaft and ball move together to the center of the new base socket');
+ assert(html.includes("analogThumb.style.translate='0 -10.56%'"),
+ 'release returns the ball directly over the new center socket');
+ assert(html.includes("${(x*.42).toFixed(1)}px ${(y*.42-r.height*(38/360)).toFixed(1)}px"),
+ 'tilt travel preserves full input sensitivity with the new optical neutral center');
  const compact=html.slice(html.indexOf('<style id="compact-arcade-face-buttons">'),
  html.indexOf('</style>',html.indexOf('<style id="compact-arcade-face-buttons">')));
  assert(compact.includes('position:absolute;inset:6%'),'visible caps shrink without reducing tap targets');

@@ -366,7 +366,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  position:relative;
  width:clamp(112px,11.2cqw,132px)!important;
  height:clamp(112px,11.2cqw,132px)!important;
- background:var(--joystick-base-url,url('./assets/ui/z-arcade-stick-base.webp')) center / 100% 100% no-repeat!important;
+ background:var(--joystick-base-url,url('./assets/ui/z-arcade-stick-base-centerhole.webp')) center / 100% 100% no-repeat!important;
  border:0!important;border-radius:0!important;
  box-shadow:none!important;overflow:visible!important;
 }
@@ -375,10 +375,10 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 #stageWrap .analog-pad .analog-caption{display:none!important}
 #stageWrap .analog-pad .analog-shaft{
  position:absolute;left:50%;top:50%;width:100%;height:100%;
- /* The actual metal tube and base socket now share the exact 50% X axis.
-    The pivot is the socket at 75% Y, not the center of the red ball. */
+ /* The original tube pivot is at 75% inside the shaft bitmap. Shift the
+    whole bitmap up 38/360 so the pivot meets the NEW centered hole (Y=232). */
  transform-origin:50% 75%;
- transform:translate(-50%,-50%) rotate(0deg) scaleY(1);
+ transform:translate(-50%,-60.56%) rotate(0deg) scaleY(1);
  background:var(--joystick-shaft-url,url('./assets/ui/z-arcade-stick-shaft-centered.webp')) center / 100% 100% no-repeat;
  border:0;border-radius:0;box-shadow:none;
  pointer-events:none;z-index:1;
@@ -393,6 +393,8 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  background:var(--joystick-knob-url,url('./assets/ui/z-arcade-stick-knob.webp')) center / 100% 100% no-repeat!important;
  border:0!important;border-radius:0!important;box-shadow:none!important;
  pointer-events:none!important;filter:drop-shadow(0 2px 2px #0008);
+ /* Keep this layer aligned with the shaft; the cap art itself is unchanged. */
+ translate:0 -10.56%;
  /* Remove the old painted nub; the chrome shaft now owns that portion. */
  clip-path:inset(0 0 31% 0);
  transition:translate .045s ease-out;
@@ -629,7 +631,7 @@ let upgradeIconsImage=new Image();upgradeIconsImage.src='./assets/ui/upgrade-ico
 // Predecode the full four-button raised/pressed bitmap atlas before gameplay.
 let arcadeButtonsImage=new Image();arcadeButtonsImage.src='./assets/ui/arcade-action-buttons-v1.webp';
 // Predecode both transparent bitmap pieces of the arcade joystick.
-let joystickBaseImage=new Image();joystickBaseImage.src='./assets/ui/z-arcade-stick-base.webp';
+let joystickBaseImage=new Image();joystickBaseImage.src='./assets/ui/z-arcade-stick-base-centerhole.webp';
 // Artwork shaft axis was +10/360px to the right. The centered bitmap fixes
 // the original painted metal tube without adding a separate CSS offset.
 let joystickShaftImage=new Image();joystickShaftImage.src='./assets/ui/z-arcade-stick-shaft-centered.webp';
@@ -1918,7 +1920,7 @@ function resetFailedUiBitmaps(){
   {get:()=>parryShieldImage,set:im=>{parryShieldImage=im},url:'./assets/fx/parry-shield.png'},
   {get:()=>upgradeIconsImage,set:im=>{upgradeIconsImage=im},url:'./assets/ui/upgrade-icons-v2.webp',css:true},
   {get:()=>arcadeButtonsImage,set:im=>{arcadeButtonsImage=im},url:'./assets/ui/arcade-action-buttons-v1.webp',css:'arcade'},
-  {get:()=>joystickBaseImage,set:im=>{joystickBaseImage=im},url:'./assets/ui/z-arcade-stick-base.webp',css:'joystickBase'},
+  {get:()=>joystickBaseImage,set:im=>{joystickBaseImage=im},url:'./assets/ui/z-arcade-stick-base-centerhole.webp',css:'joystickBase'},
   {get:()=>joystickShaftImage,set:im=>{joystickShaftImage=im},url:'./assets/ui/z-arcade-stick-shaft-centered.webp',css:'joystickShaft'},
   {get:()=>joystickKnobImage,set:im=>{joystickKnobImage=im},url:'./assets/ui/z-arcade-stick-knob.webp',css:'joystickKnob'}
  ];
@@ -3779,14 +3781,14 @@ window.addEventListener('keydown',keyDown);window.addEventListener('keyup',keyUp
 const analogPad=$('analogPad'),analogThumb=$('analogThumb'),analogShaft=$('analogShaft');
 function resetAnalog(){
  analog.dx=0;analog.dy=0;analog.pointerId=null;
- analogThumb.style.translate='0px 0px';
- analogShaft.style.transform='translate(-50%,-50%) rotate(0deg) scaleY(1)';
+ analogThumb.style.translate='0 -10.56%';
+ analogShaft.style.transform='translate(-50%,-60.56%) rotate(0deg) scaleY(1)';
  analogPad.classList.remove('engaged');
 }
 function trackAnalog(e){
  const ring=analogPad.querySelector('.analog-ring'),r=ring.getBoundingClientRect();
- // Painted red ball rests above the disc center (35% of sprite height).
- const cx=r.left+r.width/2,cy=r.top+r.height*.35,rad=r.width*.35;
+ // The painted ball is moved up 38/360 so its input center must follow.
+ const cx=r.left+r.width/2,cy=r.top+r.height*.245,rad=r.width*.35;
  let x=e.clientX-cx,y=e.clientY-cy;const length=Math.hypot(x,y);
  if(length>rad){const u=rad/length;x*=u;y*=u}
  const nx=x/rad,ny=y/rad,mag=Math.hypot(nx,ny),dead=.12;
@@ -3797,9 +3799,9 @@ function trackAnalog(e){
  // travel, and Y scale tracks fore/aft travel without detaching the base.
  const shaftAngle=clamp(nx,-1,1)*28;
  const shaftDepth=1-clamp(ny,-1,1)*.38;
- analogShaft.style.transform=`translate(-50%,-50%) rotate(${shaftAngle.toFixed(1)}deg) scaleY(${shaftDepth.toFixed(3)})`;
+ analogShaft.style.transform=`translate(-50%,-60.56%) rotate(${shaftAngle.toFixed(1)}deg) scaleY(${shaftDepth.toFixed(3)})`;
  // Sphere inclines within the metal collar; actual movement retains full range.
- analogThumb.style.translate=`${(x*.42).toFixed(1)}px ${(y*.42).toFixed(1)}px`;
+ analogThumb.style.translate=`${(x*.42).toFixed(1)}px ${(y*.42-r.height*(38/360)).toFixed(1)}px`;
 }
 analogPad.addEventListener('pointerdown',e=>{
  if(analog.pointerId!==null)return;e.preventDefault();analog.pointerId=e.pointerId;
