@@ -1133,6 +1133,23 @@ const SQUAD_ROSTERS={
   ['guard','assassin','elite','guard','raider','assassin']
  ]
 };
+// Later squads grow with travel progress; the first encounter remains small.
+function encounterRoster(waveNumber,index){
+ const base=SQUAD_ROSTERS[waveNumber]?.[index]||[];
+ if(!base.length)return [];
+ const more=waveNumber===1?Math.floor(index/2):2+Math.floor(index/2);
+ const types=['raider','assassin','raider','guard','assassin','raider','guard'];
+ return base.concat(Array.from({length:more},(_,j)=>types[(index*2+j)%types.length]));
+}
+function waveEnemyTotals(){
+ const current=enemies.filter(e=>!e.dead).length;
+ if(wave===3)return {current,future:0,total:1,remaining:current,defeated:1-current};
+ const spots=SQUAD_SPOTS[wave]||[];
+ const total=spots.reduce((sum,_,j)=>sum+encounterRoster(wave,j).length,0);
+ const future=spots.slice(squadIndex).reduce((sum,_,j)=>sum+encounterRoster(wave,squadIndex+j).length,0);
+ const remaining=current+future;
+ return {current,future,total,remaining,defeated:Math.max(0,total-remaining)};
+}
 let squadIndex=0,enemySerial=0,lastEncounterCleared=-1;
 const BOSS_SPAWN_X=30900;
 let enemies=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
@@ -1538,15 +1555,16 @@ function spawnNextEncounter(){
  if(i>=spots.length||enemies.some(e=>!e.dead)||p.x<spots[i]-540)return false;
  // Always enter from outside the visible canvas, on both sides where
  // there is sufficient street behind the camera.
- const types=SQUAD_ROSTERS[wave][i];
+ const types=encounterRoster(wave,i);
  const leftAllowed=cameraX>290,split=leftAllowed?Math.floor(types.length/2):0;
- const leftEdge=cameraX-155,rightEdge=cameraX+W+145;
+ const leftEdge=cameraX-165,rightEdge=cameraX+W+155;
+ const spacing=92+Math.min(52,i*5)+(wave-1)*22;
  types.forEach((type,j)=>{
-  const left=j<split,offset=(left?j:j-split)*65;
+  const left=j<split,onSide=left?j:j-split,offset=onSide*spacing+(onSide%3)*14;
   const worldX=clamp(left?leftEdge-offset:rightEdge+offset,55,STAGE_WIDTH-55);
-  const lane=groundY(p.y+[-34,28,51,-13,37,-46][j%6]);
+  const lane=groundY(p.y+[-50,29,53,-22,46,-43,12,-9,36,-33][j%10]);
   const enemy=makeEnemy(type,worldX,lane,enemySerial++);
-  const growth=1+i*.085;
+  const growth=1+i*.075;
   enemy.hp=enemy.maxHp=Math.round(enemy.maxHp*growth);
   enemy.squad=i;enemy.encountered=true;enemy.renderX=worldX;enemy.renderY=lane;
   if(left)enemy.face=1;
@@ -1554,7 +1572,7 @@ function spawnNextEncounter(){
  });
  squadIndex++;lastEncounterCleared=-1;waveClearNotified=false;
  $('hint').hidden=true;
- $('waveLabel').textContent=`WAVE 0${wave} · 적 무리 ${String(squadIndex).padStart(2,'0')}/${spots.length}`;
+ $('waveLabel').textContent=`WAVE 0${wave} · 무리 ${String(squadIndex).padStart(2,'0')}/${spots.length}`;
  return true;
 }
 function spawnWave(){
@@ -1567,7 +1585,7 @@ function spawnWave(){
  }else spawnNextEncounter();
  $('bossHud').hidden=true;
  $('waveLabel').textContent=wave===3?'WAVE 03 · 최종 헌터':
-  `WAVE 0${wave} · 적 무리 ${String(squadIndex).padStart(2,'0')}/${SQUAD_SPOTS[wave]?.length||0}`;
+  `WAVE 0${wave} · 무리 ${String(squadIndex).padStart(2,'0')}/${SQUAD_SPOTS[wave]?.length||0}`;
  $('chapter').textContent=`0${wave} / 끝없는 거리`;
 }
 function makeEnemy(type,x,y,index){
