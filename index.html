@@ -3132,7 +3132,7 @@ async function requestRunStart(){
    if(status)status.textContent=`준비 ${done}/${total} — ${name}`;
    if(bar)bar.style.width=`${Math.floor(100*done/total)}%`;
   });
-  $('loadStatus').textContent='업그레이드 아이콘 정사각 프레임 24개 재정렬 중';
+  $('loadStatus').textContent='업그레이드 아이콘 정사각 프레임 25개 재정렬 중';
   await new Promise(resolve=>setTimeout(resolve,0));
   if(!buildSquareUpgradeIconAtlas())throw Error('업그레이드 아이콘 원본을 읽지 못했습니다');
   $('loadStatus').textContent='빨간 후드 7개 시트 정밀 커팅 및 발 정렬 확인 중';
