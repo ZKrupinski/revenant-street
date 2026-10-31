@@ -4047,7 +4047,15 @@ function startRun(){resetInputs();resetPlayer();
  setModsExpanded(false);wave=0;fx=[];floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;parrySlowTarget=null;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
  // A previous menu button cannot be treated as a fresh combat press.
  menuPad.armed=false;menuPad.confirm=false;
- if(/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'')){
+ if(/(?:[?&])elite=preview(?:&|$)/.test(window.location?.search||'')){
+  // Real combat QA: show the real Iron Mask sprite/AI immediately, at full scale.
+  // Normal gameplay is unchanged when this explicit preview URL is absent.
+  wave=1;p.x=700;p.y=560;cameraX=clamp(p.x-420,0,STAGE_WIDTH-W);
+  enemies=[makeEnemy('elite',p.x+365,p.y,enemySerial++)];
+  enemies[0].encountered=true;enemies[0].eliteCooldown=0;
+  enemies[0].eliteAnnounced=true;enemies[0].renderX=enemies[0].x;enemies[0].renderY=enemies[0].y;
+  squadIndex=1;flash('IRON MASK / 특수공격 8프레임 검수',2);
+ }else if(/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'')){
   // Explicit QA shortcut: test the actual final encounter without traversing
   // ten screens. Normal gameplay and progression stay unchanged.
   wave=2;p.x=30400;p.y=560;cameraX=clamp(p.x-450,0,STAGE_WIDTH-W);
@@ -4152,7 +4160,7 @@ function makeEnemy(type,x,y,index){
   attackPoseTime:0,windupDuration:.45,hitAnimation:'hitHead',proneTime:0,riseTime:0,pendingFall:false,deathAge:0,
   brain:type==='boss'?'boss':type==='elite'?'elite':type==='intruder'?'support_elite':['swarm','feint','charger','swarm','feint','charger'][index%6],
   chargeCooldown:1.6+(index%5)*.48,chargePrep:0,chargeTime:0,
-   eliteCooldown:2.6,eliteTell:0,eliteTellDuration:1,eliteRush:0,eliteRushFace:-1,eliteAttack:false,eliteAnnounced:false,eliteMenace:0,eliteSpecialRecover:0,
+   eliteCooldown:type==='elite'?.55:2.6,eliteTell:0,eliteTellDuration:1,eliteRush:0,eliteRushFace:-1,eliteAttack:false,eliteAnnounced:false,eliteMenace:0,eliteSpecialRecover:0,
    eliteSpecialPlaying:false,eliteSpecialElapsed:0,eliteSpecialDuration:1.04,
   reactionVariant:0,reactionTime:0,reactionDuration:.48,reactionDir:1,bodyShakeTime:0,bodyShakeDuration:0,bodyShakePower:0,
   specialPhase:'',specialTime:0,specialCooldown:type==='intruder'?1.0:0,
@@ -5094,6 +5102,13 @@ function updateEliteAI(e,dt,dx,dy,dist){
   e.eliteMenace=Math.max(0,e.eliteMenace-dt);e.visualMoving=false;return true;
  }
  if(e.eliteTell>0){
+  // Create a clear launch distance even when the fighter is already in melee.
+  // Previously the <130px melee blind spot prevented the special entirely.
+  const launchGap=260,away=e.eliteRushFace||e.face||-1;
+  const xGoal=clamp(p.x-away*launchGap,64,STAGE_WIDTH-64);
+  const step=clamp(xGoal-e.x,-315*dt,315*dt);
+  e.x=clamp(e.x+step,45,STAGE_WIDTH-45);
+  e.spriteDistance+=(Math.abs(step)||0);
   e.eliteTell=Math.max(0,e.eliteTell-dt);e.visualMoving=false;
   if(e.eliteTell===0){
    e.eliteRush=.58;e.eliteRushFace=e.face;
@@ -5125,9 +5140,12 @@ function updateEliteAI(e,dt,dx,dy,dist){
   }
   return true;
  }
- if(e.eliteCooldown===0&&dist>130&&dist<460&&Math.abs(dy)<95&&e.z<10){
+ if(e.eliteCooldown===0&&dist<580&&Math.abs(dy)<125&&e.z<10){
   e.eliteTell=e.phase===2?.78:1.02;
   e.eliteTellDuration=e.eliteTell;
+  // Lock the initial facing for the entire telegraph and strike.
+  e.eliteRushFace=p.x>=e.x?1:-1;
+  e.face=e.eliteRushFace;
   e.eliteCooldown=e.phase===2?4.25:5.5;
   e.cooldown=Math.max(e.cooldown,1.0);
   e.spriteKey='';e.spriteTime=0;
