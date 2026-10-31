@@ -3265,7 +3265,7 @@ function updateIntruderAI(e,dt,dx,dy,dist,nearby){
  }
  // The third fighter circles wider as a dive specialist; the front two
  // pressure Z from opposite directions. Never teleport to new lanes.
- const offset=threatened?270:145+(slot===2?63:0);
+ const offset=threatened?270:132+(slot===2?56:0);
  const targetX=clamp(p.x+flank*offset,55,STAGE_WIDTH-55);
  const targetY=groundY(p.y+lane+(threatened?e.strafe*13:0));
  const moveSpeed=e.speed*(dist>440?1.75:threatened?1.45:1.26);
