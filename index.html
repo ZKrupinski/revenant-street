@@ -3391,47 +3391,60 @@ function drawBackdrop(){
  }
  ctx.fillStyle='rgba(13,19,33,.05)';ctx.fillRect(0,500,W,190);
 }
+// Each side tracks actual living enemies already SPAWNED in the world,
+// including enemies not yet encountered. Current visible combat never hides
+// offscreen enemies. Never advertise future squads that have not spawned.
+function offscreenEnemyTargets(){
+ const margin=45,left=[],right=[];
+ for(const e of enemies){
+  if(e.dead)continue;
+  const x=Number.isFinite(e.x)?e.x:e.renderX;
+  if(!Number.isFinite(x))continue;
+  if(x<cameraX+margin)left.push(e);
+  else if(x>cameraX+W-margin)right.push(e);
+ }
+ return [['left',left],['right',right]].filter(([,group])=>group.length).map(([side,group])=>{
+  const nearest=group.reduce((a,b)=>Math.abs(a.x-p.x)<=Math.abs(b.x-p.x)?a:b);
+  return {side,distance:Math.round(Math.abs(nearest.x-p.x)),remaining:group.length,worldX:nearest.x};
+ });
+}
+// Compatibility helper for other game systems that request one target.
 function offscreenEnemyTarget(){
- const live=enemies.filter(e=>!e.dead);
- if(!live.length)return null;
- // Don't distract from active combat if any target is currently visible.
- if(live.some(e=>e.x>=cameraX+45&&e.x<=cameraX+W-45))return null;
- const nearest=live.reduce((a,b)=>Math.abs(a.x-p.x)<=Math.abs(b.x-p.x)?a:b);
- return {side:nearest.x<cameraX?'left':'right',distance:Math.round(Math.abs(nearest.x-p.x)),
-  remaining:live.length,worldX:nearest.x};
+ const targets=offscreenEnemyTargets();
+ return targets.length?targets.reduce((a,b)=>a.distance<=b.distance?a:b):null;
 }
 function drawOffscreenEnemyIndicator(){
  if(gameState!=='playing')return;
- const target=offscreenEnemyTarget();if(!target)return;
- // No vector or box: the hand-painted atlas is four columns by two rows.
- // Row 0 points right and row 1 left, with four distinct frame drawings each.
+ const targets=offscreenEnemyTargets();if(!targets.length)return;
+ // Real hand-painted 8fps bitmap animation, no vectors or rectangular UI.
  if(!offscreenArrow.complete||offscreenArrow.naturalWidth<4||offscreenArrow.naturalHeight<2)return;
- const left=target.side==='left',x=left?12:W-154,y=238;
- // Crisp warning pulse plus a small forward lean; bitmap gets brighter
- // on each peak, never disappears completely or obstructs combat.
+ const frame=offscreenArrowFrameAt(time);
+ const cellW=offscreenArrow.naturalWidth/4,cellH=offscreenArrow.naturalHeight/2;
+ // Shrink only when an enemy is visible, so arrows stay useful during a fight
+ // without masking the protagonist, parry timing or melee enemies.
+ const anyVisible=enemies.some(e=>!e.dead&&e.x>=cameraX+45&&e.x<=cameraX+W-45);
+ const width=anyVisible?98:130,height=anyVisible?76:100;
  const wave=(1+Math.sin(time*11.5))/2;
  const blink=.44+.56*wave*wave;
- const sway=Math.sin(time*6.2)*4*(left?-1:1);
- ctx.save();
- ctx.globalAlpha=blink;
- ctx.filter='brightness('+(0.76+wave*.92).toFixed(2)+') drop-shadow(0px 0px 9px rgba(255,38,36,0.9))';
- const cellW=offscreenArrow.naturalWidth/4,cellH=offscreenArrow.naturalHeight/2;
- const frame=offscreenArrowFrameAt(time);
- ctx.drawImage(offscreenArrow,frame*cellW,left?cellH:0,cellW,cellH,x+sway,y-5,130,100);
- ctx.filter='none';
- // The only supplemental information is compact, shadowed type; no boxes,
- // borders, gradients or vector polygons around the direction marker.
- ctx.globalAlpha=.70+.30*wave;
- ctx.textAlign='center';ctx.textBaseline='alphabetic';
- ctx.font='900 13px Arial,"Malgun Gothic",sans-serif';
- ctx.lineWidth=4;ctx.strokeStyle='#09080c';
- const note='남은 적 '+target.remaining+'명';
- ctx.strokeText(note,x+65,y+107);ctx.fillStyle='#ffe8db';ctx.fillText(note,x+65,y+107);
- ctx.font='900 11px Arial,sans-serif';
- const distance=target.distance+' px';
- ctx.strokeText(distance,x+65,y+123);ctx.fillStyle='#ff8583';
- ctx.fillText(distance,x+65,y+123);
- ctx.restore();
+ for(const target of targets){
+  const left=target.side==='left',x=left?12:W-width-12,y=238;
+  const sway=Math.sin(time*6.2)*4*(left?-1:1);
+  ctx.save();ctx.globalAlpha=blink;
+  ctx.filter='brightness('+(0.76+wave*.92).toFixed(2)+') drop-shadow(0px 0px 9px rgba(255,38,36,0.9))';
+  ctx.drawImage(offscreenArrow,frame*cellW,left?cellH:0,cellW,cellH,x+sway,y-5,width,height);
+  ctx.filter='none';
+  ctx.globalAlpha=.70+.30*wave;
+  ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  ctx.font='900 13px Arial,"Malgun Gothic",sans-serif';
+  ctx.lineWidth=4;ctx.strokeStyle='#09080c';
+  const note='화면 밖 '+target.remaining+'명';
+  ctx.strokeText(note,x+width/2,y+height+7);ctx.fillStyle='#ffe8db';ctx.fillText(note,x+width/2,y+height+7);
+  ctx.font='900 11px Arial,sans-serif';
+  const distance=target.distance+' px';
+  ctx.strokeText(distance,x+width/2,y+height+23);ctx.fillStyle='#ff8583';
+  ctx.fillText(distance,x+width/2,y+height+23);
+  ctx.restore();
+ }
 }
 function drawTravelMeter(){
  const x0=407,y0=30,w=466,h=6;

@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={zCellSamplingSpec,hubMenu,selectHubModule,permanentBaseStats,renderTitleBaseStats,prepareHubReset,cancelHubReset,resetHubUpgrades,buyUpgrade,HUB_COST,HUB_MODULES,offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={zCellSamplingSpec,hubMenu,selectHubModule,permanentBaseStats,renderTitleBaseStats,prepareHubReset,cancelHubReset,resetHubUpgrades,buyUpgrade,HUB_COST,HUB_MODULES,offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,offscreenEnemyTargets,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('Rebel Hub shows entire actual base stat roster and requires a separate apply',()=>{
@@ -1455,15 +1455,46 @@ test('reaction variation avoids identical repeats and preserves boss mass and wo
  assert(boss.x<=t.STAGE_WIDTH-45,'knockback should stay inside the extended world bounds');
 });
 
-test('remaining off-screen enemy shows a direction; active visible enemies suppress it',()=>{
+test('every spawned offscreen enemy is indicated even before detection and while visible foes fight',()=>{
  g.startRun();t.setCameraX(0);t.p.x=450;
- const far=t.makeEnemy('raider',3000,560,0);t.setEnemies([far]);
+ const far=t.makeEnemy('raider',3000,560,0);
+ far.encountered=false;t.setEnemies([far]);
  const right=t.offscreenEnemyTarget();
  assert(right&&right.side==='right'&&right.remaining===1);
- const shown=t.makeEnemy('raider',650,560,1);t.setEnemies([far,shown]);
- assert.equal(t.offscreenEnemyTarget(),null,'never cover visible combat with a directional icon');
+ assert.equal(t.offscreenEnemyTargets().length,1);
+ const shown=t.makeEnemy('raider',650,560,1);
+ t.setEnemies([far,shown]);
+ assert.equal(t.offscreenEnemyTarget().side,'right',
+  'visible combat must never suppress a previously unknown faraway foe');
+ assert.equal(t.offscreenEnemyTargets()[0].remaining,1,
+  'on-screen enemies do not count toward offscreen warning');
  t.setEnemies([far]);t.setCameraX(3500);
- assert.equal(t.offscreenEnemyTarget().side,'left','arrow must flip behind the camera');
+ assert.equal(t.offscreenEnemyTarget().side,'left','arrow must flip behind camera');
+ assert.equal(t.offscreenEnemyTargets().length,1);
+});
+test('simultaneous left and right offscreen spawns create both directional indicators',()=>{
+ g.startRun();t.setCameraX(2000);t.p.x=2450;
+ const left=t.makeEnemy('raider',1600,550,0);
+ const right1=t.makeEnemy('raider',3600,560,1);
+ const right2=t.makeEnemy('elite',3900,560,2);
+ const shown=t.makeEnemy('raider',2350,560,3);
+ left.encountered=false;right1.encountered=false;right2.encountered=false;
+ t.setEnemies([left,right1,right2,shown]);
+ const targets=t.offscreenEnemyTargets();
+ assert.equal(targets.length,2,'both sides must show when enemies exist on each edge');
+ assert.equal(targets[0].side,'left');assert.equal(targets[0].remaining,1);
+ assert.equal(targets[1].side,'right');assert.equal(targets[1].remaining,2);
+ assert.equal(targets[1].worldX,3600,'closest spawned enemy supplies the distance for its side');
+ right1.dead=true;
+ assert.equal(t.offscreenEnemyTargets()[1].remaining,1,'dead enemies immediately disappear from warning counts');
+ t.setEnemies([shown]);assert.equal(t.offscreenEnemyTargets().length,0,
+  'only enemies that actually exist outside camera get arrows; never unspawned squads');
+ const section=html.slice(html.indexOf('function offscreenEnemyTargets(){'),html.indexOf('function drawTravelMeter(){'));
+ assert(!section.includes("if(live.some("),'visible enemies no longer suppress direction markers');
+ assert(section.includes('const targets=offscreenEnemyTargets()')&&section.includes('for(const target of targets)'),
+  'renderer draws one bitmap marker for each side with offscreen enemies');
+ assert(section.includes('anyVisible?98:130')&&section.includes('anyVisible?76:100'),
+  'smaller warnings preserve visibility when combat is happening');
 });
 test('ground perspective limits player and enemy feet without restricting jump altitude',()=>{
  g.startRun();assert.equal(t.groundY(320),551);assert.equal(t.groundY(720),658);
