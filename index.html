@@ -971,6 +971,28 @@ let joystickKnobImage=new Image();joystickKnobImage.src='./assets/ui/z-arcade-st
 // so its obsolete lower shaft piece cannot flash during asset loading.
 let joystickBallMaskImage=new Image();joystickBallMaskImage.src='./assets/ui/z-arcade-stick-ball-only-mask.webp';
 const keys=new Set(), padPrev={}, touchKey={};
+const padFaceHeld={attack:false,jump:false,parry:false,dash:false};
+const touchFaceHeld=new Set();
+// One painted 4x2 bitmap atlas (top row released, bottom row depressed)
+// responds identically to pad face-buttons, arrow keys and touch.
+function syncFaceButtonVisuals(){
+ const held={
+  attack:keys.has('arrowleft')||padFaceHeld.attack||touchFaceHeld.has('attack'),
+  jump:keys.has('arrowup')||padFaceHeld.jump||touchFaceHeld.has('jump'),
+  parry:keys.has('arrowright')||padFaceHeld.parry||touchFaceHeld.has('parry'),
+  dash:keys.has('arrowdown')||padFaceHeld.dash||touchFaceHeld.has('dash')
+ };
+ for(const button of document.querySelectorAll('#stageWrap .touch-actions button[data-art]')){
+  const pressed=!!held[button.dataset.art];
+  button.classList.toggle('pressed',pressed);
+  button.setAttribute('aria-pressed',String(pressed));
+ }
+ return held;
+}
+function resetPadFaceVisuals(){
+ for(const name of Object.keys(padFaceHeld))padFaceHeld[name]=false;
+ syncFaceButtonVisuals();
+}
 const p={x:270,y:570,z:0,vz:0,facing:1,hp:100,maxHp:100,stamina:100,stagger:0,inv:0,stun:0,attack:0,attackDuration:0,hitDone:false,comboIdx:0,comboWindow:0,parry:0,dodge:0,dodgeX:0,weapon:0,maxWeapon:18,moveDX:0,moveDY:0,moveName:'idle',kickIdx:-1,punchIdx:-1,animAge:0,mod:'none',mods:[],credits:0,hits:0,hitTimeout:0,damageBoost:0,glow:0};
 
 // ==================================================
@@ -3183,13 +3205,14 @@ function floatText(text,x,y,color){if(floating.length>=45)floating.splice(0,floa
 function messageUpdate(dt){if(messageTime>0){messageTime-=dt;if(messageTime<=0)$('gameMessage').classList.remove('active')}}
 function pollPad(){
  const g=navigator.getGamepads?.()?.find(Boolean);
- if(!g){p.jumpPadDX=0;p.jumpPadDY=0;for(const k of Object.keys(padPrev))padPrev[k]=false;lastGamepad=false;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;return{dx:0,dy:0}}
+ if(!g){p.jumpPadDX=0;p.jumpPadDY=0;for(const k of Object.keys(padPrev))padPrev[k]=false;lastGamepad=false;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;resetPadFaceVisuals();return{dx:0,dy:0}}
  lastGamepad=true;
  let dx=Math.abs(g.axes[0])>.19?g.axes[0]:0,dy=Math.abs(g.axes[1])>.19?g.axes[1]:0;
  dx+=(g.buttons[15]?.pressed?1:0)-(g.buttons[14]?.pressed?1:0);
  dy+=(g.buttons[13]?.pressed?1:0)-(g.buttons[12]?.pressed?1:0);
  // X/square (attack) confirms only after the opening guard and input release.
  if(gameState!=='playing'){
+  resetPadFaceVisuals();
   if(rewardSelection){menuPad.nav=0;menuPad.confirm=!!g.buttons[2]?.pressed;return{dx:0,dy:0}}
   const direction=Math.abs(dx)>.52?Math.sign(dx):Math.abs(dy)>.52?Math.sign(dy):0;
   if(direction&&direction!==menuPad.nav)selectMenuItem(direction);
@@ -3214,7 +3237,10 @@ function pollPad(){
  // Face buttons: Y/triangle top jump, X/square left attack,
  // B/circle right parry, A/cross bottom dash. LB/RB are aliases.
  const a={attack:g.buttons[2]?.pressed||g.buttons[5]?.pressed,jump:g.buttons[3]?.pressed,parry:g.buttons[1]?.pressed||g.buttons[4]?.pressed,dodge:g.buttons[0]?.pressed,pause:g.buttons[9]?.pressed};
+ padFaceHeld.attack=!!a.attack;padFaceHeld.jump=!!a.jump;
+ padFaceHeld.parry=!!a.parry;padFaceHeld.dash=!!a.dodge;
  for(const [k,v] of Object.entries(a)){if(v&&!padPrev[k])action(k);padPrev[k]=!!v}
+ syncFaceButtonVisuals();
  return{dx:clamp(dx,-1,1),dy:clamp(dy,-1,1)};
 }
 function action(a){if(a==='start')requestRunStart();else if(a==='attack')startAttack();else if(a==='parry')parry();else if(a==='jump')jump();else if(a==='dodge')dodge();else if(a==='pause')pauseToggle()}
@@ -3417,7 +3443,7 @@ function control(dt,pad){
  }
  // Holding attack before jumping never starts a free dive; in the air,
  // only a newly pressed attack event can call startAttack().
- const wantsCombo=p.attackQueued||(!p.jumpActive&&p.z<=0&&(keys.has('j')||padPrev.attack));
+ const wantsCombo=p.attackQueued||(!p.jumpActive&&p.z<=0&&(keys.has('arrowleft')||keys.has('j')||padPrev.attack));
  const canCombo=p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0;
  // A held ATTACK loops early, without a dead beat at the end of each pose.
  // A new press already transitions immediately inside startAttack().
@@ -4537,12 +4563,14 @@ function keyDown(ev){
   return;
  }
  if(keys.has(k)||ev.repeat)return;keys.add(k);
- if(k==='arrowleft'||k==='j')startAttack();
- else if(k==='arrowup'||k==='k'||k===' ')jump();
- else if(k==='arrowright'||k==='l')parry();
- else if(k==='arrowdown'||k==='shift')dodge();else if(k==='escape'||k==='p')pauseToggle();
+ if(k==='arrowleft')startAttack();
+ else if(k==='arrowup')jump();
+ else if(k==='arrowright')parry();
+ else if(k==='arrowdown')dodge();
+ else if(k==='escape'||k==='p')pauseToggle();
+ syncFaceButtonVisuals();
 }
-function keyUp(ev){const k=ev.key.toLowerCase();keys.delete(k);heldKeyboard.delete(k);menuBlockedKeys.delete(k)}
+function keyUp(ev){const k=ev.key.toLowerCase();keys.delete(k);heldKeyboard.delete(k);menuBlockedKeys.delete(k);syncFaceButtonVisuals()}
 window.addEventListener('keydown',keyDown);window.addEventListener('keyup',keyUp);
 const analogPad=$('analogPad'),analogThumb=$('analogThumb'),analogShaft=$('analogShaft');
 function resetAnalog(){
@@ -4578,8 +4606,8 @@ function releaseAnalog(e){if(e.pointerId===analog.pointerId){e.preventDefault();
 analogPad.addEventListener('pointerup',releaseAnalog);analogPad.addEventListener('pointercancel',releaseAnalog);
 analogPad.addEventListener('lostpointercapture',e=>{if(analog.pointerId===e.pointerId)resetAnalog()});
 function resetInputs(){
- keys.clear();resetAnalog();p.attackQueued=false;
- document.querySelectorAll('.touch-controls .pressed').forEach(b=>b.classList.remove('pressed'));
+ keys.clear();resetAnalog();p.attackQueued=false;touchFaceHeld.clear();
+ resetPadFaceVisuals();
 }
 function suspendGame(){heldKeyboard.clear();menuBlockedKeys.clear();resetInputs();stopGamepadRumble();if(gameState==='playing')pauseToggle()}
 window.addEventListener('blur',suspendGame);
@@ -4589,7 +4617,20 @@ $('menu').addEventListener('focusin',e=>{const items=menuButtons(),i=items.index
 $('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){hubResetArmed=false;hubMenu()}else if(a==='hubApply')buyUpgrade();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)selectHubModule(b.dataset.perma)});
 $('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activeModStacks().length+(p.mod==='neuro'?1:0))};
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
-for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();if(gameState!=='playing')return;b.setPointerCapture(e.pointerId);keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release)}
+for(const b of document.querySelectorAll('.touch-controls button')){
+ const k=b.dataset.key.toLowerCase(),art=b.dataset.art;
+ const press=e=>{
+  e.preventDefault();if(gameState!=='playing')return;
+  b.setPointerCapture(e.pointerId);keys.add(k);touchFaceHeld.add(art);
+  syncFaceButtonVisuals();
+  if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge();
+ };
+ const release=e=>{
+  e.preventDefault();keys.delete(k);touchFaceHeld.delete(art);syncFaceButtonVisuals();
+ };
+ b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);
+ b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release);
+}
 for(let i=0;i<(window.matchMedia?.('(pointer: coarse)').matches?65:110);i++)rain.push({x:rnd(0,1280),y:rnd(0,720),s:rnd(220,590),len:rnd(5,18)});
 window.__revenant={getMusicState:()=>gameState,getPerformance:()=>({...runtimePerf,liveEnemies:enemies.filter(e=>!e.dead).length,activeEffects:fx.length+attributeFx.length+floating.length,heroAfterimages:heroAfterimages.length,heroAfterimageLimit:MAX_HERO_GHOSTS,uniqueHeroAtlases:zArtFrameShared.size}),getState:()=>({gameState,wave,player:{x:p.x,y:p.y,z:p.z,hp:p.hp,stamina:p.stamina,weapon:p.weapon,mod:p.mod,mods:[...p.mods]},enemies:enemies.map(e=>({type:e.type,x:e.x,y:e.y,hp:e.hp,poise:e.poise,groggy:e.groggy})),perma}),startRun,attack:startAttack,parry,execute,selectMod,buyUpgrade,forceClear:()=>{enemies=[];updateEnemies(0)},getWorld:()=>({x:p.x,cameraX,wave,stageWidth:STAGE_WIDTH,enemyPositions:enemies.filter(e=>!e.dead).map(e=>e.x)}),getAnalog:()=>({...analog}),getAssassinArtStatus:()=>RZAssassinArt.status(),getArtStatus:(key)=>{const v=loadZMove(key||'idle');return{ready:v.ready,failed:v.failed,loading:v.loading,frames:v.frames?.length,error:v.error,attempts:v.attempts}}};
 canvas.style.visibility='hidden';syncGameViewport();titleMenu();requestAnimationFrame(loop);
