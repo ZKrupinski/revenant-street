@@ -61,10 +61,10 @@ async function combatVoices(){
  const voices=w.window.__zCombatVoice;
  assert.equal(voices.state().ready,false);
  await voices.prepare(ctx);
- assert.equal(fetches,7,'three new metallic Foley samples and four enemy human voices must load before combat');
- assert.equal(decoded,7);
+ assert.equal(fetches,11,'four gunshots, three slide actions and four enemy voices preloaded');
+ assert.equal(decoded,11);
  assert.equal(voices.state().ready,true);
- await voices.prepare(ctx);assert.equal(fetches,7,'voice bank decodes only once');
+ await voices.prepare(ctx);assert.equal(fetches,11,'gunfire and vocals decode only once');
  const hero={x:300,y:560},foe={x:420,y:560,type:'raider'},boss={x:560,y:560,type:'boss'};
  assert.equal(voices.play('heroStrike',hero,hero),true);
  assert.equal(voiceGains[0].gain.value,.58,'voice master should be only slightly quieter and separate from SFX');
@@ -111,7 +111,42 @@ async function combatVoices(){
   assert(bytes.length>6000,'mechanical Foley is shipped locally: '+file);
   assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'mechanical effect is mp3: '+file);
  }
- console.log('PASS: no hero cries, 3 gun-action mechanical cues and 4 human enemy vocal clips preloaded; independent loud impacts maintained');
+ assert(html.includes("playCombatGunfire(p.dashSmash?'heavy':'normal',p.moveName)"),'all ordinary move attacks must fire at their contact frame');
+ assert(html.includes("playCombatGunfire('counter','superman_punch')"),'parry counter fires');
+ assert(html.includes("playCombatGunfire('execution','uppercut')"),'execution fires');
+ assert(html.includes("playCombatGunfire('slam','axe_kick')"),'powered landing fires');
+ assert(html.includes("playCombatVoice('heroMove')"),'movement cycles occasional quiet metallic mechanisms');
+ const motions=['jab','roundkick','spinning_elbow','sidekick','uppercut',
+  'spinning_heel','hammerfist','rising_headbutt','cross','axe_kick',
+  'backfist','crescent_kick','rising_elbow','frontkick','superman_punch',
+  'lowkick','hook','forward_headbutt','shovel_hook'];
+ const tones=new Set(),families=new Set();
+ for(const move of motions){
+  ctx.currentTime+=.12;
+  assert.equal(voices.fire('normal',move),true,'shot for every attack: '+move);
+  const src=createdSources.at(-1);
+  assert(src.buffer.clip.includes('/shot-'),'gunshot from local file: '+move);
+  assert(src.started,'shot is triggered independently of target hit');
+  tones.add(src.buffer.clip+'@'+src.playbackRate.value);
+  families.add(src.buffer.clip);
+ }
+ assert.equal(families.size,4,'normal attacks use all four gunshot sample families');
+ assert(tones.size>=15,'all 19 attack moves have distinct timbre/pitch variation');
+ for(const kind of ['heavy','counter','slam','execution']){
+  ctx.currentTime+=.25;
+  assert.equal(voices.fire(kind,'uppercut'),true,kind+' strong fire must never be crowded out');
+ }
+ assert(voiceGains.some(x=>x.gain.value>=1.05),'gunfire bus is louder than vocal bus');
+ ctx.currentTime+=1.5;
+ for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
+ assert.equal(voices.play('heroMove',hero,hero),true,'walk and run occasionally rack a slide');
+ assert.equal(voices.play('heroMove',hero,hero),false,'movement mechanical sound cannot spam every footstep');
+ for(const name of ['shot-pistol.mp3','shot-revolver.mp3','shot-rifle.mp3','shot-heavy.mp3']){
+  const bytes=fs.readFileSync(path.join(root,'assets/voice',name));
+  assert(bytes.length>6000,'game embeds an original gun report: '+name);
+  assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'MP3 gun report must be valid: '+name);
+ }
+ console.log('PASS: all 19 move variations have gunshots, four firearm families, all 11 clips preload, independent louder gunfire and quiet slide locomotion');
 }
 function spriteRetry(){
  const images=[];let now=1000;
