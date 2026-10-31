@@ -1133,6 +1133,42 @@ function isolateIntruderFrames(image,frames,mode){
     }
   }
   for(let at=0;at<size;at++)if(owner[at]&&selected[owner[at]])keep[at]=1;
+  // Recover VERY THIN gloves and boots that have no high-alpha eroded core
+  // at all (a 1-2px wrist or bent ankle must not disappear). Scan only the
+  // still-unowned original-alpha islands, and accept lower body / arm islands
+  // by their position relative to the retained torso.
+  let recoveredPixels=0;
+  if(mode==='hit'||mode==='attack'){
+   const visited=new Uint8Array(size);
+   for(let at=0;at<size;at++){
+    if(visited[at]||owner[at]||data[at*4+3]<16)continue;
+    let h=0,t=0;queue[t++]=at;visited[at]=1;
+    let minPX=cw,maxPX=-1,minPY=ch,maxPY=-1;
+    while(h<t){
+     const n=queue[h++],x=n%cw,y=(n/cw)|0;
+     minPX=Math.min(minPX,x);maxPX=Math.max(maxPX,x);
+     minPY=Math.min(minPY,y);maxPY=Math.max(maxPY,y);
+     for(let yy=Math.max(0,y-1);yy<=Math.min(ch-1,y+1);yy++)
+      for(let xx=Math.max(0,x-1);xx<=Math.min(cw-1,x+1);xx++){
+       const k=yy*cw+xx;
+       if(!visited[k]&&!owner[k]&&data[k*4+3]>=16){
+        visited[k]=1;queue[t++]=k;
+       }
+      }
+    }
+    const xGap=Math.max(0,Math.max(minPX-best.maxX,best.minX-maxPX));
+    const yGap=Math.max(0,Math.max(minPY-best.maxY,best.minY-maxPY));
+    const upperJunk=minPY<ch*.06&&maxPY<best.minY;
+    const remoteSeam=(minPX<=cw*.025||maxPX>=cw*.975)&&xGap>cw*.09;
+    const boot=mode==='hit'&&minPY>best.minY+ch*.27&&
+     maxPY>=best.maxY-ch*.19&&xGap<cw*.24&&yGap<ch*.20;
+    const glove=mode==='attack'&&maxPY>best.minY+ch*.06&&
+     minPY<best.maxY-ch*.18&&xGap<cw*.24&&yGap<ch*.17;
+    if(t>=3&&!upperJunk&&!remoteSeam&&(boot||glove)){
+     for(let j=0;j<t;j++){keep[queue[j]]=1;recoveredPixels++}
+    }
+   }
+  }
   let minX=cw,minY=ch,maxX=-1,maxY=-1;
   let removed=0;
   for(let at=0;at<size;at++){
@@ -1157,7 +1193,7 @@ function isolateIntruderFrames(image,frames,mode){
   }
   cutCtx.putImageData(out,0,0);
   Object.assign(crop,{bitmap:cut,sx:0,sy:0,sw:width,sh:height,
-   left:minX,top:minY,removedPixels:removed});
+   left:minX,top:minY,removedPixels:removed,recoveredPixels});
   corrected++;discarded+=removed;
  }
  source.width=0;source.height=0;
