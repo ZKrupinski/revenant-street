@@ -61,28 +61,30 @@ async function combatVoices(){
  const voices=w.window.__zCombatVoice;
  assert.equal(voices.state().ready,false);
  await voices.prepare(ctx);
- assert.equal(fetches,7,'three new hero kiai and four original enemy vocals must load before combat');
+ assert.equal(fetches,7,'three new metallic Foley samples and four enemy human voices must load before combat');
  assert.equal(decoded,7);
  assert.equal(voices.state().ready,true);
  await voices.prepare(ctx);assert.equal(fetches,7,'voice bank decodes only once');
  const hero={x:300,y:560},foe={x:420,y:560,type:'raider'},boss={x:560,y:560,type:'boss'};
  assert.equal(voices.play('heroStrike',hero,hero),true);
  assert.equal(voiceGains[0].gain.value,.58,'voice master should be only slightly quieter and separate from SFX');
- assert(/hero-kiai-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero first normal strike uses new kiai, not an enemy scream');
+ assert(/hero-mech-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero first attack must use a slide/bolt sound, not any voice');
  assert.equal(voices.play('heroStrike',hero,hero),false,'one hero cannot stack grunts');
  ctx.currentTime=.06;
- assert.equal(voices.play('heroDeath',hero,hero),true,'lethal vocal must override a recent strike grunt');
- assert(createdSources.at(-1).buffer.clip.endsWith('hero-kiai-power.mp3'),'hero death must not borrow enemy yell');
+ const beforeSilent=createdSources.length;
+ assert.equal(voices.play('heroHurt',hero,hero),false,'hero pain must not play a voice or firearm mechanism');
+ assert.equal(voices.play('heroDeath',hero,hero),false,'hero death must not play a scream or gun reload');
+ assert.equal(createdSources.length,beforeSilent,'no player vocal sources should be created on hurt or death');
  ctx.currentTime=.6;
  assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy pain follows the real damage event');
  assert.equal(voices.play('enemyHurt',foe,hero),false,'injury voice is rate limited');
  ctx.currentTime=1.3;
  assert.equal(voices.play('bossShout',boss,hero),true,'boss warning has a dedicated roar');
  ctx.currentTime=1.9;
- assert.equal(voices.play('heroPower',hero,hero),true,'heavy attack emits a hero effort grunt');
+ assert.equal(voices.play('heroPower',hero,hero),true,'heavy attack emits a powerful metallic bolt action');
  const powerClip=createdSources.at(-1).buffer.clip;
- assert(powerClip.endsWith('hero-kiai-power.mp3'),'heavy attack MUST use new power kiai, not old enemy voice');
- assert(!powerClip.includes('voice-yell'),'hero power must not play the death wail');
+ assert(powerClip.endsWith('hero-mech-power.mp3'),'heavy attack MUST use a heavy metal charging mechanism');
+ assert(!powerClip.includes('voice-yell')&&!powerClip.includes('kiai'),'hero power must never play a human yell');
  ctx.currentTime=2.5;
  // In a real browser voice sources have ended by 2.5s; advance mocked
  // onended callbacks to release the three-slot voice cap.
@@ -91,10 +93,11 @@ async function combatVoices(){
  assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'ordinary pain must grunt instead of death-screaming');
  assert(createdSources.at(-1).startedAt>=ctx.currentTime+.075,'the crack of impact should precede the groan');
  ctx.currentTime=3.0;
- assert.equal(voices.play('heroStrike',hero,hero),true,'normal hero strikes use short grunts');
- assert(/hero-kiai-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero normal hits never use former protagonist/enemy scream clips');
+ assert.equal(voices.play('heroStrike',hero,hero),true,'normal hero strikes use mechanical charging clicks');
+ assert(/hero-mech-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero normal hits never play human recordings');
  assert(createdSources.length>=3,'all voice families use genuine recorded buffers');
- assert(!voiceScript.includes('duckImpact'),'vocals do not change BGM volume');
+ assert(!voiceScript.includes('duckImpact'),'metal accents and enemy vocals do not change BGM volume');
+ assert(!voiceScript.includes('hero-kiai-'),'old player shouts must be entirely disconnected from active gameplay');
  assert(html.includes("playImpactSound(kind,heavy?1.15:1)"),'character impact sound must continue alongside grunt');
  assert(html.includes("applyImpactFeedback(e,smash||p.dashSmash"),'striking an enemy must still play the physical hit sound');
  assert(!voiceScript.includes('window.__revenantBgm'),'the voice engine must never lower the music');
@@ -103,12 +106,12 @@ async function combatVoices(){
   assert(bytes.length>10000,'CC0 voice file is present: '+file);
   assert.equal(bytes.subarray(0,4).toString(),'RIFF');
  }
- for(const file of ['hero-kiai-a.mp3','hero-kiai-b.mp3','hero-kiai-power.mp3']){
+ for(const file of ['hero-mech-a.mp3','hero-mech-b.mp3','hero-mech-power.mp3']){
   const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
-  assert(bytes.length>6000,'new hero kiai is shipped locally: '+file);
-  assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'new voice is mp3: '+file);
+  assert(bytes.length>6000,'mechanical Foley is shipped locally: '+file);
+  assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'mechanical effect is mp3: '+file);
  }
- console.log('PASS: 3 distinct new high-pitched hero kiai samples and 4 CC0 enemy vocals preloaded; voice identity and physical hit preserved');
+ console.log('PASS: no hero cries, 3 gun-action mechanical cues and 4 human enemy vocal clips preloaded; independent loud impacts maintained');
 }
 function spriteRetry(){
  const images=[];let now=1000;
