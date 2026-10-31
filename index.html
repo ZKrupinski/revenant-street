@@ -612,12 +612,14 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 </style>
 
 <style id="immersive-viewport">
-html,body{margin:0!important;width:100%;height:100%;min-height:0!important;overflow:hidden!important;overscroll-behavior:none}
+html,body{margin:0!important;width:100%;height:100%;min-height:0!important;overflow:hidden!important;overscroll-behavior:none;background:#000!important}
 body{position:fixed;inset:0;touch-action:manipulation}
-#app{position:fixed!important;inset:0!important;width:100%!important;max-width:none!important;height:100%!important;height:100dvh!important;margin:0!important;padding:0!important;overflow:hidden!important}
+#app{position:fixed!important;inset:0!important;width:100%!important;max-width:none!important;height:100%!important;height:100dvh!important;margin:0!important;padding:0!important;overflow:hidden!important;background:#000!important}
+#app:fullscreen,#app:-webkit-full-screen{width:100vw!important;height:100vh!important;background:#000!important}
 #app>.masthead,#app>footer,#stageWrap>#z-art-badge{display:none!important}
-#stageWrap.stage-wrap{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important;background:#060a12;touch-action:manipulation}
-#stageWrap.stage-wrap:fullscreen,#stageWrap.stage-wrap:-webkit-full-screen{width:100vw!important;height:100vh!important;inset:0!important}
+/* Tall devices letterbox a 16:9 stage with true black top/bottom bands.
+   Wide devices fill the viewport and reveal additional world on both sides. */
+#stageWrap.stage-wrap{position:absolute!important;inset:auto 0!important;left:0!important;top:50%!important;transform:translateY(-50%)!important;width:100%!important;height:var(--game-stage-height,100%)!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important;background:#060a12;touch-action:manipulation}
 #stageWrap>canvas#game{width:100%!important;height:100%!important;object-fit:fill!important;touch-action:none!important}
 #stageWrap>.overlay{padding:clamp(4px,1.6vh,14px);overflow:hidden;overscroll-behavior:none;touch-action:pan-y}
 #stageWrap>.overlay .menu:not(.title-dialog){touch-action:pan-y;overscroll-behavior:contain}
@@ -708,31 +710,34 @@ body{position:fixed;inset:0;touch-action:manipulation}
 (()=>{'use strict';
 const $=id=>document.getElementById(id), canvas=$('game'),ctx=canvas.getContext('2d');
 let W=1280;const H=720;
-const stageWrap=$('stageWrap');
-// Device viewport and world viewport always have the same aspect ratio.
-// Paint is never stretched, cropped, or obscured by page chrome.
+const stageWrap=$('stageWrap'),viewportHost=$('app');
+const MIN_GAME_ASPECT=16/9;
+// Portrait/tall: the stage is always 16:9, centered between black bars.
+// Ultrawide: extend the horizontal world while preserving the fixed height.
 function syncGameViewport(){
- const box=stageWrap.getBoundingClientRect();
- const cw=Math.max(1,box.width||window.innerWidth||1280);
- const ch=Math.max(1,box.height||window.innerHeight||720);
- const target=Math.max(1,Math.round(H*cw/ch));
+ const host=viewportHost.getBoundingClientRect();
+ const outerW=Math.max(1,host.width||window.innerWidth||1280);
+ const outerH=Math.max(1,host.height||window.innerHeight||720);
+ const stageH=Math.min(outerH,outerW/MIN_GAME_ASPECT);
+ stageWrap.style.setProperty('--game-stage-height',stageH+'px');
+ const target=Math.max(1280,Math.round(H*outerW/stageH));
  if(W!==target||canvas.width!==target||canvas.height!==H){
   W=target;canvas.width=W;canvas.height=H;
-  // Reframe the character when the device rotates/fullscreen changes.
+  // After device rotation, keep the hero on-screen.
   if(typeof cameraX!=='undefined'&&typeof p!=='undefined'&&typeof STAGE_WIDTH!=='undefined')
    cameraX=Math.max(0,Math.min(STAGE_WIDTH-W,p.x-W*.52));
  }
- return {width:W,height:H};
+ return {width:W,height:H,stageWidth:outerW,stageHeight:stageH,
+  topBottomBlack:Math.max(0,(outerH-stageH)/2)};
 }
-// Real fullscreen requires a direct START user gesture. Browser fallback
-// remains edge-to-edge within the available viewport.
+// Fullscreen the black OUTER host, not the 16:9 inner game stage.
 function requestGameFullscreen(){
  try{
-  if(!document.fullscreenElement&&stageWrap.requestFullscreen){
-   const result=stageWrap.requestFullscreen({navigationUI:'hide'});
+  if(!document.fullscreenElement&&viewportHost.requestFullscreen){
+   const result=viewportHost.requestFullscreen({navigationUI:'hide'});
    if(result&&typeof result.catch==='function')result.catch(()=>{});
-  }else if(!document.webkitFullscreenElement&&stageWrap.webkitRequestFullscreen){
-   stageWrap.webkitRequestFullscreen();
+  }else if(!document.webkitFullscreenElement&&viewportHost.webkitRequestFullscreen){
+   viewportHost.webkitRequestFullscreen();
   }
  }catch(_){}
  syncGameViewport();
