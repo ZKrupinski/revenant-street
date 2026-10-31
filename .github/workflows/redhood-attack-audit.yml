@@ -1,0 +1,29 @@
+name: Redhood attack source crop audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/redhood-attack-audit.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --quiet Pillow
+      - name: Audit all eight original attack poses and fist edge contacts
+        run: python scripts/audit-redhood-attack.py
+      - name: Save source frame QA sheet
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/enemies/redhood-intruder/attack-raw-audit.webp
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Add redhood attack source contact sheet for cropped-fist investigation'
+          git push origin HEAD:main
