@@ -1143,10 +1143,14 @@ function maskedFrame(e,key){
  return Math.floor(Math.max(0,e.spriteTime||0)*5.7*Z_ANIM_RATE*ENEMY_IDLE_FRAME_RATE)%8;
 }
 const INTRUDER_ENTRY_FRAMES=4; // Only frames 0-3, all top row.
+// Painted frames 0/1/3 are the forward jump; painted frame 2 is the
+// low landing/crouch. Reorder to avoid shrinking then suddenly growing again.
+const INTRUDER_ENTRY_ORDER=[0,1,3,2];
 function intruderEntering(e){return e.type==='intruder'&&!e.dead&&(e.entryAge||0)<(e.entryDuration||0)}
 function intruderEntryFrame(e){
  const duration=Math.max(.1,e.entryDuration||1.12);
- return Math.min(3,Math.floor(clamp((e.entryAge||0)/duration,0,.9999)*INTRUDER_ENTRY_FRAMES));
+ const stage=Math.min(3,Math.floor(clamp((e.entryAge||0)/duration,0,.9999)*INTRUDER_ENTRY_FRAMES));
+ return INTRUDER_ENTRY_ORDER[stage];
 }
 function drawIntruderEntry(e,x,y){
  if(!intruderEntryImage.complete||!intruderEntryImage.naturalWidth)return;
@@ -3410,7 +3414,7 @@ function updateEnemies(dt,parryVictimScale=1){
   if(intruderEntering(e)){
    const prev=e.entryAge;
    e.entryAge=Math.min(e.entryDuration,e.entryAge+actorDt);
-   if(prev<e.entryDuration*.55&&e.entryAge>=e.entryDuration*.55&&!e.entryLandingPlayed){
+   if(prev<e.entryDuration*.79&&e.entryAge>=e.entryDuration*.79&&!e.entryLandingPlayed){
     e.entryLandingPlayed=true;fxBurst(e.x,e.y-15,'gold',.85);
     sound('hit');playCombatVoice('enemyShout',e);
     screenShake=Math.max(screenShake,5.5);floatText('난입!',e.x,e.y-260,'#ff8296');
