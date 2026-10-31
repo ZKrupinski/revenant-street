@@ -1,0 +1,29 @@
+name: Build original Z idle hair-safe atlas
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/z-idle-hair-rebuild.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --quiet Pillow
+      - name: Build non-destructive hair-safe eight-frame idle sprite
+        run: python scripts/rebuild-z-idle-hair.py
+      - name: Publish restored idle art and QA contact sheet
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/project-z-hero/z-idle-hair-safe.webp assets/project-z-hero/z-idle-hair-safe-qa.webp
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Restore original Z complete idle hair in all eight frames'
+          git push origin HEAD:main
