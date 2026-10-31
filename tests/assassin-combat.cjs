@@ -77,8 +77,8 @@ test('opening battle spawns one small squad just beyond the screen',()=>{
  assert(live.some(e=>e.type==='assassin'),'diverse enemy classes');
  assert(live.filter(e=>e.type!=='intruder').every(e=>e.x>1280),
  'ordinary enemies still approach from offscreen while the one intruder jumps from camera foreground');
- assert(live.some(e=>e.type==='intruder'&&e.x>0&&e.x<1280),
- 'special red-hood enters within the camera and never teleports from outside');
+ assert(live.every(e=>e.type!=='intruder'),
+ 'the special red-hood should arrive as mid-fight reinforcements instead of spawning at the beginning');
  assert.equal(t.getSquad(),1);
 });
 test('each troop grows and covers a broader offscreen area deeper into both waves',()=>{
