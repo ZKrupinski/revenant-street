@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,COMBO_ROTATION,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('opening battle spawns one small squad just beyond the screen',()=>{
@@ -306,17 +306,17 @@ test('full-tilt analog run shares walk artwork but advances substantially farthe
  t.p.gaitDistance=120;
  assert.equal(t.currentZFrameIndex('walk'),t.currentZFrameIndex('run'),'shared atlas remains synchronized per distance');
 });
-test('dash crosses almost a screen in 0.3s without skipping its eight-frame animation or leaving map',()=>{
+test('unupgraded dash is much shorter than prior near-teleport, with eight complete frames and stage safety',()=>{
  g.startRun();t.setEnemies([]);t.keys.clear();t.p.x=3000;t.p.y=570;t.p.facing=1;t.p.moveDX=0;t.p.stamina=100;
  const origin=t.p.x;t.dodge();
- assert(t.p.dodge>.29);
+ assert(t.p.dodge>.27&&t.p.dodge<.30,'basic dash duration is now 0.28 seconds');
  const seen=new Set([t.currentZFrameIndex('dash')]);
  for(let i=0;i<18;i++){
   t.control(1/60,{dx:0,dy:0});
   if(t.p.dodge>0)seen.add(t.currentZFrameIndex('dash'));
  }
  const dist=t.p.x-origin;
- assert(dist>970&&dist<1120,'dash should travel about 1080px, almost a 1280px camera; '+dist);
+ assert(dist>590&&dist<660,'unupgraded dash should travel near 616px rather than 1080px; '+dist);
  assert(seen.size>=7,'fast dash retains nearly every visible eight-frame dash pose');
  assert(t.p.x<=32000-64,'dash must remain within stage bounds');
  g.startRun();t.setEnemies([]);t.keys.clear();t.p.x=31950;t.p.facing=1;t.p.moveDX=0;t.p.stamina=100;
@@ -325,6 +325,76 @@ test('dash crosses almost a screen in 0.3s without skipping its eight-frame anim
  g.startRun();t.setEnemies([]);t.keys.clear();t.p.x=200;t.p.facing=-1;t.p.moveDX=0;t.p.stamina=100;
  t.dodge();for(let i=0;i<18;i++)t.control(1/60,{dx:0,dy:0});
  assert.equal(t.p.x,64,'leftward dash clamps at start of world');
+});
+test('dash reach and dash speed are two independent six-level upgrade items',()=>{
+ const init=t.dashMobilityStats(0,0),fast=t.dashMobilityStats(0,6),long=t.dashMobilityStats(6,0),both=t.dashMobilityStats(6,6);
+ assert.equal(init.speed,2200);assert.equal(init.duration,.28);assert.equal(init.distance,616);
+ assert.equal(fast.duration,init.duration,'speed upgrade does not lengthen animation duration');
+ assert(fast.speed>init.speed*1.8,'dash speed grows substantially across six stacks');
+ assert.equal(long.speed,init.speed,'dash reach upgrade does not modify speed');
+ assert(long.duration>init.duration+.17,'dash reach upgrade extends the active dash');
+ assert(both.distance>1800,'fully upgraded dash significantly exceeds previous 1080px');
+ for(const id of ['dashrange','dashspeed']){
+  assert(t.MOD_META[id],'mobility item appears in upgrade pool');
+  for(let level=0;level<6;level++){
+   assert(t.upgradeDescription(id,level).includes('→'),'show before/after upgrade effect');
+   const a=id==='dashrange'?t.dashMobilityStats(level,0):t.dashMobilityStats(0,level);
+   const b=id==='dashrange'?t.dashMobilityStats(level+1,0):t.dashMobilityStats(0,level+1);
+   assert(b.distance>a.distance,'dash mobility level must increase actual travel');
+  }
+ }
+ const sample=(ranks)=>{
+  g.startRun();t.setEnemies([]);t.keys.clear();t.p.x=3100;t.p.y=570;t.p.facing=1;t.p.moveDX=0;
+  t.p.mods=Array(ranks.range).fill('dashrange').concat(Array(ranks.speed).fill('dashspeed'));
+  const begin=t.p.x;t.dodge(),duration=t.p.dodge;
+  const poses=new Set([t.currentZFrameIndex('dash')]);
+  for(let i=0;i<45;i++){t.control(1/60,{dx:0,dy:0});if(t.p.dodge>0)poses.add(t.currentZFrameIndex('dash'))}
+  return {distance:t.p.x-begin,duration,poses:poses.size};
+ };
+ const zero=sample({range:0,speed:0}),extent=sample({range:4,speed:0}),velocity=sample({range:0,speed:4}),bothReal=sample({range:4,speed:4});
+ assert(extent.duration>zero.duration,'dash distance module extends real dash duration');
+ assert(extent.distance>zero.distance*1.35,'dash range increases measured travel');
+ assert(velocity.distance>zero.distance*1.45,'dash speed increases measured travel');
+ assert(bothReal.distance>extent.distance&&bothReal.distance>velocity.distance,'upgrades combine multiplicatively');
+ assert(bothReal.poses>=7,'expanded dash still displays nearly all authored eight poses');
+});
+test('jump height and airborne travel speed upgrade independently across six levels',()=>{
+ const start=t.jumpMobilityStats(0,0),high=t.jumpMobilityStats(6,0),fast=t.jumpMobilityStats(0,6);
+ assert.equal(start.impulse,670);assert.equal(start.moveSpeed,525);
+ assert(high.height>start.height*1.9,'jump height gains strong tiered vertical lift');
+ assert.equal(high.moveSpeed,start.moveSpeed,'height upgrade does not magically speed air movement');
+ assert(fast.moveSpeed>start.moveSpeed*1.8,'air speed upgrade strongly increases travel');
+ assert.equal(fast.height,start.height,'speed upgrade does not directly increase peak height');
+ for(const id of ['jumpheight','jumpspeed']){
+  assert(t.MOD_META[id]);
+  for(let level=0;level<6;level++){
+   assert(t.upgradeDescription(id,level).includes('→'));
+   const a=id==='jumpheight'?t.jumpMobilityStats(level,0):t.jumpMobilityStats(0,level);
+   const b=id==='jumpheight'?t.jumpMobilityStats(level+1,0):t.jumpMobilityStats(0,level+1);
+   assert(b[id==='jumpheight'?'height':'moveSpeed']>a[id==='jumpheight'?'height':'moveSpeed']);
+  }
+ }
+ const sample=(height,speed)=>{
+  g.startRun();t.setEnemies([]);t.keys.clear();t.p.x=2000;t.p.y=570;
+  t.p.mods=Array(height).fill('jumpheight').concat(Array(speed).fill('jumpspeed'));
+  t.keys.add('d');t.jump();t.keys.delete('d');
+  const launch=t.p.vz,x=t.p.x;let peak=0;
+  for(let i=0;i<100;i++){t.control(1/60,{dx:0,dy:0});peak=Math.max(peak,t.p.z)}
+  return {launch,peak,distance:t.p.x-x};
+ };
+ const base=sample(0,0),highReal=sample(3,0),fastReal=sample(0,3);
+ assert(base.peak>130&&base.peak<180,'base jump is intentionally shorter than former 760 impulse');
+ assert(highReal.peak>base.peak+60,'height item actually boosts world-space peak height');
+ assert(fastReal.distance>base.distance*1.35,'speed item boosts actual airborne travel');
+ assert(Math.abs(fastReal.peak-base.peak)<3,'speed item does not change jump apex');
+});
+test('mobility upgrade cards are always available among 3 random choices',()=>{
+ for(let i=0;i<12;i++){
+  g.startRun();t.rewardMenu('mid');
+  const markup=node('menu').innerHTML;
+  assert(['dashrange','dashspeed','jumpheight','jumpspeed'].some(id=>markup.includes('data-mod="'+id+'"')),'at least one mobility pick on every reward screen');
+  assert.equal((markup.match(/class="upgrade-btn" data-mod/g)||[]).length,3,'upgrade UI keeps three selectable cards');
+ }
 });
 test('original eight-frame punches run at authored speed and a buffered combo links after the eighth frame',()=>{
  g.startRun();t.setEnemies([]);
@@ -1310,7 +1380,7 @@ test('elite and boss use pure white bitmap flash and jump has longer vertical tr
  const boss=fs.readFileSync(path.join(__dirname,'../assets/boss-hunter.js'),'utf8');
  assert(elite.includes("'brightness(0) invert(1)'"),'elite flash should whiten actual sprite');
  assert(boss.includes("'brightness(0) invert(1)'"),'boss flash should whiten actual sprite');
- assert(html.includes("p.vz=760;p.z=2"),'higher jump impulse');
+ assert(html.includes("p.vz=jumpMobilityStats().impulse;p.z=2"),'jump launch impulse must grow with height upgrades');
  assert(html.includes("p.vz=-1150"),'fast downward kick');
  assert(html.includes("p.airKickPhase==='dive'?1950:1440"),'only attack-button dive has heavier downward gravity');
  assert(!html.includes("p.jumpHeel"),'original auto-attack jump flag must be removed');
@@ -1333,7 +1403,7 @@ test('stationary JUMP without ATTACK keeps ordinary airborne poses and cannot hi
   assert.notEqual(t.getZMove(),'axe_kick','a plain jump must never display the attack pose');
   assert.notEqual(t.getZMove(),'diagonal_airkick','a plain jump must never show sideways kick');
  }
- assert(maxHeight>175,'stationary jump should still be tall');
+ assert(maxHeight>138&&maxHeight<172,'unupgraded jump is lower, but still clears ordinary combat; '+maxHeight);
  assert(airborne,'ordinary airborne pose should display');
  assert(Math.abs(t.p.x-x)<2,'neutral jump should not drift');
  assert.equal(t.p.jumpLandingTriggered,false,'no unrequested landing blast');
