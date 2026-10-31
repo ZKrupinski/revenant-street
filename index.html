@@ -1957,13 +1957,13 @@ function hurtEnemy(e,dmg,poise){
  if(p.dashSmash&&p.attack>0){
   // A single 8-frame punch thrust; powerful but finite momentum.
   const resist=e.type==='boss'?.36:e.type==='elite'?.76:e.type==='guard'?.86:1;
-  e.knockVX=p.facing*specialStats('dashpower').push*resist;e.knockDrag=4.7;
+  e.knockVX=p.facing*specialStats('dashspeed').push*resist;e.knockDrag=4.7;
   if(e.type!=='boss'){
    e.vz=Math.max(e.vz,e.type==='elite'?345:400);
    if(e.hp>0)e.pendingFall=true;
   }
   hitStop=Math.max(hitStop,.12);screenShake=Math.max(screenShake,19);
-  fxBurst(e.x,e.y-118,'gold',specialStats('dashpower').visual);
+  fxBurst(e.x,e.y-118,'gold',specialStats('dashspeed').visual);
   playImpactSound('heavy',1.1);
  }
  const contactPush=e.type==='boss'?12:clamp(drive*.21+(smash?17:9),22,61);
@@ -1977,7 +1977,7 @@ function hurtEnemy(e,dmg,poise){
 // One radial splash per touchdown: hits launch enemies AWAY on both sides.
 // Bitmap-only explosion art: no vector shockwave rings or geometry.
 function heelLandingShockwave(powered=false){
- const skill=specialStats('slam');
+ const skill=specialStats('jumpspeed');
  const rx=skill.range,ry=skill.lane;
  const impacted=enemies.filter(e=>!e.dead&&
   Math.abs(e.x-p.x)<=rx&&Math.abs(e.y-p.y)<=ry&&e.z<155&&
@@ -1993,7 +1993,7 @@ function heelLandingShockwave(powered=false){
  for(const enemy of impacted){
   const fromX=enemy.x,fromY=enemy.y;
   const push=fromX===p.x?p.facing:Math.sign(fromX-p.x);
-  hurtEnemy(enemy,(skill.damage+p.damageBoost)*(1+modRank('power')*.16),45+modRank('slam')*14);
+  hurtEnemy(enemy,(skill.damage+p.damageBoost)*(1+modRank('power')*.16),45+modRank('jumpspeed')*14);
   const resist=enemy.type==='boss'?.33:enemy.type==='elite'?.78:
    enemy.type==='guard'?.88:1;
   // Rank-scaled impulse remains damped, so landing blasts do not teleport targets.
@@ -2002,7 +2002,7 @@ function heelLandingShockwave(powered=false){
   enemy.knockVY=clamp((fromY-p.y)*2.1,-125,125);
   if(enemy.type!=='boss'){
    enemy.z=Math.max(enemy.z,5);
-   enemy.vz=Math.max(enemy.vz,(300+modRank('slam')*35)*
+   enemy.vz=Math.max(enemy.vz,(300+modRank('jumpspeed')*35)*
      (enemy.type==='elite'?.86:1));
    if(!enemy.dead)enemy.pendingFall=true;
   }
@@ -2052,12 +2052,12 @@ function attackCheck(){
  const baseDamage={jab:15,cross:19,hook:22,uppercut:26,backfist:20,hammerfist:30,spinning_elbow:28,rising_elbow:26,superman_punch:32,shovel_hook:23,frontkick:20,lowkick:18,roundkick:29,axe_kick:32,sidekick:27,spinning_heel:34,crescent_kick:28,diagonal_airkick:35,rising_headbutt:27,forward_headbutt:25,airkick:37};
  const baseReach={jab:94,cross:112,hook:105,uppercut:100,backfist:105,hammerfist:110,spinning_elbow:108,rising_elbow:95,superman_punch:166,shovel_hook:96,frontkick:133,lowkick:132,roundkick:151,axe_kick:128,sidekick:154,spinning_heel:165,crescent_kick:151,diagonal_airkick:160,rising_headbutt:88,forward_headbutt:89,airkick:174};
  const damage=((armed?([22,27,38][p.comboIdx]||22):baseDamage[p.moveName]||15)+p.damageBoost)
-  *(p.counterBoost?2.05:1)*(p.dashSmash?specialStats('dashpower').damage:1)*(p.airKickPhase==='dive'?1.25:1)*(1+modRank('power')*.16)
+  *(p.counterBoost?2.05:1)*(p.dashSmash?specialStats('dashspeed').damage:1)*(p.airKickPhase==='dive'?1.25:1)*(1+modRank('power')*.16)
   *(1+Math.min(9,p.hits)*modRank('momentum')*.055);
- const reach=p.dashSmash?specialStats('dashpower').range:p.counterBoost?220:armed?([134,145,170][p.comboIdx]||135):(baseReach[p.moveName]||100);
+ const reach=p.dashSmash?specialStats('dashspeed').range:p.counterBoost?220:armed?([134,145,170][p.comboIdx]||135):(baseReach[p.moveName]||100);
  const poise={jab:21,cross:29,hook:38,uppercut:53,backfist:32,hammerfist:62,spinning_elbow:58,rising_elbow:49,superman_punch:68,shovel_hook:41,frontkick:43,lowkick:34,roundkick:57,axe_kick:65,sidekick:58,spinning_heel:72,crescent_kick:56,diagonal_airkick:74,rising_headbutt:62,forward_headbutt:54,airkick:78};
  let hits=0;
- for(const e of enemies){if(e.dead||e.inv>0)continue;const dx=e.x-p.x,dy=Math.abs(e.y-p.y);const contactReach=Math.max(reach,bodyHalfX(p)+bodyHalfX(e)+20);if((dx*p.facing)>-25&&(dx*p.facing)<contactReach&&dy<(p.dashSmash?specialStats('dashpower').lane:p.airAttack?78:56)&&(p.airAttack?p.z<225:Math.abs(e.z-p.z)<82)){let dmg=damage;
+ for(const e of enemies){if(e.dead||e.inv>0)continue;const dx=e.x-p.x,dy=Math.abs(e.y-p.y);const contactReach=Math.max(reach,bodyHalfX(p)+bodyHalfX(e)+20);if((dx*p.facing)>-25&&(dx*p.facing)<contactReach&&dy<(p.dashSmash?specialStats('dashspeed').lane:p.airAttack?78:56)&&(p.airAttack?p.z<225:Math.abs(e.z-p.z)<82)){let dmg=damage;
  const critChance=Math.min(.65,modRank('crit')*.10);
  const critical=Math.random()<critChance;
  if(critical){dmg*=1.8;floatText('CRITICAL!',e.x,e.y-236,'#ffe982')}
