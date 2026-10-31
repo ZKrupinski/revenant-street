@@ -18,7 +18,7 @@ function load(key){
    entry.loading=false;im.onload=null;im.onerror=null;
   };
   im.onerror=()=>{entry.failed=true;entry.loading=false;entry.error='Iron Mask '+key+' image missing'};
-  im.src=ROOT+key+'.webp';
+  im.src=ROOT+key+'.webp'+(key==='special'?'?rev=full-poses-20261101':'');
   DATA[key]=entry;
  }
  return DATA[key];
