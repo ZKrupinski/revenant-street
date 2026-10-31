@@ -18,7 +18,7 @@ function load(key){
    entry.loading=false;im.onload=null;im.onerror=null;
   };
   im.onerror=()=>{entry.failed=true;entry.loading=false;entry.error='Iron Mask '+key+' image missing'};
-  im.src=ROOT+key+'.webp'+(key==='special'?'?rev=full-poses-20261101':'');
+  im.src=ROOT+key+'.webp'+(key==='special'?'?rev=ironmask-full-eight-20261101':'');
   DATA[key]=entry;
  }
  return DATA[key];
@@ -28,7 +28,7 @@ function move(e){
  if(e.dead)return e.z>12?'hitFly':'death';
  if((e.reactionTime||0)>0||(e.proneTime||0)>0||(e.riseTime||0)>0)return 'hit';
  if(e.eliteTell>0)return 'charge';
- if(e.eliteRush>0||e.eliteAttack||e.eliteSpecialRecover>0)return 'special';
+ if(e.eliteSpecialPlaying||e.eliteRush>0||e.eliteAttack||e.eliteSpecialRecover>0)return 'special';
  if(e.windup>0||e.attackPoseTime>0)return 'attack';
  if(e.eliteMenace>0)return 'menace';
  return e.visualMoving?'run':'idle';
@@ -42,7 +42,13 @@ function frame(e,key){
   return Math.floor((e.spriteTime||0)*9)%8;
  }
  if(key==='charge')return clamp(Math.floor((1-e.eliteTell/Math.max(.001,e.eliteTellDuration||.9))*8),0,7);
- if(key==='special')return clamp(Math.floor((e.spriteTime||0)*16.4),0,7);
+ if(key==='special'){
+  // A dedicated 1.04s timeline: exactly 8 painted frames, including last recovery.
+  // Collision, windup and recovery do NOT restart the sprite-frame index.
+  const duration=Math.max(.1,e.eliteSpecialDuration||1.04);
+  const progress=clamp((e.eliteSpecialElapsed||0)/duration,0,.999999);
+  return clamp(Math.floor(progress*8),0,7);
+ }
  if(key==='attack'){
   if(e.windup>0)return clamp(Math.floor((1-e.windup/Math.max(.001,e.windupDuration||.42))*5),0,5);
   return clamp(6+Math.floor((1-(e.attackPoseTime||0)/.23)*2),0,7);
