@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={zCellSamplingSpec,hubMenu,selectHubModule,permanentBaseStats,renderTitleBaseStats,prepareHubReset,cancelHubReset,resetHubUpgrades,buyUpgrade,HUB_COST,HUB_MODULES,offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,offscreenEnemyTargets,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={intruderEntering,intruderEntryFrame,drawIntruderEntry,zCellSamplingSpec,hubMenu,selectHubModule,permanentBaseStats,renderTitleBaseStats,prepareHubReset,cancelHubReset,resetHubUpgrades,buyUpgrade,HUB_COST,HUB_MODULES,offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,offscreenEnemyTargets,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('Rebel Hub shows entire actual base stat roster and requires a separate apply',()=>{
@@ -1455,6 +1455,41 @@ test('reaction variation avoids identical repeats and preserves boss mass and wo
  assert(boss.x<=t.STAGE_WIDTH-45,'knockback should stay inside the extended world bounds');
 });
 
+test('Red hood grunt enters from the camera on one eight-frame bitmap sheet',()=>{
+ const atlas=fs.readFileSync(path.join(__dirname,'../assets/enemies/redhood-ambush-entry-8.webp'));
+ assert.equal(atlas.toString('ascii',0,4),'RIFF');
+ assert.equal(atlas.toString('ascii',8,12),'WEBP');
+ assert.equal(atlas.readUIntLE(24,3)+1,1536);
+ assert.equal(atlas.readUIntLE(27,3)+1,768);
+ assert(html.includes("intruderEntryImage.src='./assets/enemies/redhood-ambush-entry-8.webp'"));
+ assert(html.includes("['빨간 후드 난입 8프레임',()=>ensureBitmapDecoded(intruderEntryImage)]"));
+});
+test('Intruder spawns in the foreground, plays eight frames, lands and joins ordinary grunt AI',()=>{
+ g.startRun();const enemy=t.getEnemies().find(e=>e.type==='intruder');
+ assert(enemy,'a new red hood enemy actually enters the first encounter');
+ assert.equal(enemy.entryAge,0);assert.equal(enemy.entryDuration,1.12);
+ assert(enemy.x>0&&enemy.x<1280,'intruder enters within the camera view');
+ const health=enemy.hp;
+ t.hurtEnemy(enemy,15,12);assert.equal(enemy.hp,health,'arrival cannot be struck mid-flight');
+ for(let i=0;i<28;i++)t.updateEnemies(.02);
+ assert(t.intruderEntering(enemy));assert(t.intruderEntryFrame(enemy)>=3);
+ for(let i=0;i<31;i++)t.updateEnemies(.02);
+ assert.equal(t.intruderEntering(enemy),false,'entrance completes');
+ assert.equal(enemy.entryLandingPlayed,true,'landing effect plays once');
+ t.hurtEnemy(enemy,15,12);
+ assert.equal(enemy.hp,health-15,'after landing existing raider damage AI applies');
+ assert(['swarm','feint','charger'].includes(enemy.brain),'ordinary grunt brain inherits');
+});
+test('Intruder alternates between left/right squads and retains a basic raider combat profile',()=>{
+ for(let w=1;w<=2;w++)for(let i=0;i<11;i++){
+  const roster=t.encounterRoster(w,i);
+  assert.equal(roster.filter(x=>x==='intruder').length,i%2===0?1:0);
+ }
+ const a=t.makeEnemy('intruder',500,570,2),b=t.makeEnemy('raider',500,570,2);
+ assert.equal(a.maxHp,b.maxHp);assert.equal(a.damage,b.damage);assert.equal(a.maxPoise,b.maxPoise);
+ assert(html.includes("if(a.type==='intruder')"));
+ assert(html.includes("else drawMaskedGrunt(a,x,y,z)"));
+});
 test('every spawned offscreen enemy is indicated even before detection and while visible foes fight',()=>{
  g.startRun();t.setCameraX(0);t.p.x=450;
  const far=t.makeEnemy('raider',3000,560,0);

@@ -679,6 +679,7 @@ assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
 img.street_pano=img.street;
 // Eight hand-painted bitmap frames: top row points right, bottom row points left.
 let offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows-animated.webp';
+let intruderEntryImage=new Image();intruderEntryImage.src='./assets/enemies/redhood-ambush-entry-8.webp';
 // 8 fps ping-pong keeps the peak flash from harshly jumping back to the dim pose.
 const OFFSCREEN_ARROW_SEQUENCE=[0,1,2,3,2,1];
 function offscreenArrowFrameAt(seconds){return OFFSCREEN_ARROW_SEQUENCE[Math.floor(Math.max(0,seconds)*8)%OFFSCREEN_ARROW_SEQUENCE.length]}
@@ -1073,6 +1074,26 @@ function maskedFrame(e,key){
  if(key==='walk'||key==='run')
   return Math.floor(Math.max(0,e.spriteDistance||0)/(zStride(key)*ENEMY_WALK_FRAME_SPACING))%8;
  return Math.floor(Math.max(0,e.spriteTime||0)*5.7*Z_ANIM_RATE*ENEMY_IDLE_FRAME_RATE)%8;
+}
+const INTRUDER_ENTRY_FRAMES=8;
+function intruderEntering(e){return e.type==='intruder'&&!e.dead&&(e.entryAge||0)<(e.entryDuration||0)}
+function intruderEntryFrame(e){
+ const duration=Math.max(.1,e.entryDuration||1.12);
+ return Math.min(INTRUDER_ENTRY_FRAMES-1,Math.floor(clamp((e.entryAge||0)/duration,0,.9999)*INTRUDER_ENTRY_FRAMES));
+}
+function drawIntruderEntry(e,x,y){
+ if(!intruderEntryImage.complete||!intruderEntryImage.naturalWidth)return;
+ const u=clamp(e.entryAge/e.entryDuration,0,1);
+ const frame=intruderEntryFrame(e),cellW=intruderEntryImage.naturalWidth/4,cellH=intruderEntryImage.naturalHeight/2;
+ // Large back-view jump near the camera, moving away toward the ground.
+ const scale=1.18-.48*u,w=cellW*scale,h=cellH*scale,drift=(1-u)*(1-u);
+ const side=e.entrySide||1;
+ if(u>.46)ellipseShadow(x,y,1.03,.33*u);
+ ctx.save();ctx.translate(x+side*78*drift,y+140*drift);
+ if(side<0)ctx.scale(-1,1);
+ ctx.drawImage(intruderEntryImage,(frame%4)*cellW,Math.floor(frame/4)*cellH,
+  cellW,cellH,-w/2,-h+8,w,h);
+ ctx.restore();
 }
 function drawMaskedGrunt(e,x,y,z){
  const key=getMaskedMove(e);if(e.spriteKey!==key){
@@ -1612,7 +1633,10 @@ function encounterRoster(waveNumber,index){
  if(!base.length)return [];
  const more=waveNumber===1?Math.floor(index/2):2+Math.floor(index/2);
  const types=['raider','assassin','raider','guard','assassin','raider','guard'];
- return base.concat(Array.from({length:more},(_,j)=>types[(index*2+j)%types.length]));
+ // Every second squad swaps one ordinary red-hood raider for a foreground intruder.
+ const slot=index%2===0?base.indexOf('raider'):-1;
+ const lineup=base.map((kind,j)=>j===slot?'intruder':kind);
+ return lineup.concat(Array.from({length:more},(_,j)=>types[(index*2+j)%types.length]));
 }
 function waveEnemyTotals(){
  const current=enemies.filter(e=>!e.dead).length;
@@ -2013,6 +2037,7 @@ function requiredSceneArt(preview=false){
   ['배경 디코딩',()=>ensureBitmapDecoded(img.street_pano)],
   ['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)],
   ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
+  ['빨간 후드 난입 8프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
   ['업그레이드 아이콘 22종',()=>ensureBitmapDecoded(upgradeIconsImage)],
   ['아케이드 조작 버튼 4종·눌림 8프레임',()=>ensureBitmapDecoded(arcadeButtonsImage)],
   ['왼쪽 아케이드 스틱 베이스',()=>ensureBitmapDecoded(joystickBaseImage)],
@@ -2104,13 +2129,20 @@ function spawnNextEncounter(){
  const spacing=92+Math.min(52,i*5)+(wave-1)*22;
  types.forEach((type,j)=>{
   const left=j<split,onSide=left?j:j-split,offset=onSide*spacing+(onSide%3)*14;
-  const worldX=clamp(left?leftEdge-offset:rightEdge+offset,55,STAGE_WIDTH-55);
-  const lane=groundY(p.y+[-50,29,53,-22,46,-43,12,-9,36,-33][j%10]);
+  let worldX=clamp(left?leftEdge-offset:rightEdge+offset,55,STAGE_WIDTH-55);
+  // Jumps forward FROM the camera foreground, alternately to Z's left/right.
+  const entrySide=((Math.floor(i/2)+wave)%2===1?1:-1);
+  if(type==='intruder')worldX=clamp(p.x+entrySide*(255+i%3*28),
+   Math.max(65,cameraX+150),Math.min(STAGE_WIDTH-65,cameraX+W-150));
+  const lane=type==='intruder'?groundY(p.y+52):groundY(p.y+[-50,29,53,-22,46,-43,12,-9,36,-33][j%10]);
   const enemy=makeEnemy(type,worldX,lane,enemySerial++);
   const growth=1+i*.075;
   enemy.hp=enemy.maxHp=Math.round(enemy.maxHp*growth);
   enemy.squad=i;enemy.encountered=true;enemy.renderX=worldX;enemy.renderY=lane;
-  if(left)enemy.face=1;
+  if(type==='intruder'){
+   enemy.entryAge=0;enemy.entryDuration=1.12;enemy.entrySide=entrySide;
+   enemy.entryLandingPlayed=false;enemy.cooldown=1.4;enemy.face=entrySide>0?-1:1;
+  }else if(left)enemy.face=1;
   enemies.push(enemy);
  });
  squadIndex++;lastEncounterCleared=-1;waveClearNotified=false;
@@ -2134,7 +2166,7 @@ function spawnWave(){
 function makeEnemy(type,x,y,index){
  // Grunts stay punchy and quick to defeat. Specials gain real durability.
  // Normal enemies gain moderate health/damage each wave, unlike the boss.
- const map={raider:[84,70,128,14,40],assassin:[76,68,177,16,38],
+ const map={raider:[84,70,128,14,40],intruder:[84,70,128,14,40],assassin:[76,68,177,16,38],
   elite:[530,260,144,22,66],guard:[165,132,112,20,48],
   boss:[3900,920,87,35,92]};
  const difficulty=type==='boss'?1:type==='elite'?(wave===2?1.36:1):
@@ -2408,7 +2440,7 @@ function awardEnemyKill(e){
  fxBurst(e.x,e.y-120,'gold',.85);
 }
 function hurtEnemy(e,dmg,poise){
- if(e.dead)return;
+ if(e.dead||intruderEntering(e))return;
  // A new real hit (including the pursuit finisher) cancels the parry-only
  // viewport restraint; regular heavy launches keep their original physics.
  e.parryScreenDir=0;e.parryScreenEdge=null;
@@ -2431,7 +2463,7 @@ function hurtEnemy(e,dmg,poise){
  const fresh=options.filter(v=>v!==prior);
  e.reactionVariant=fresh[Math.floor(Math.random()*fresh.length)];
  e.previousReactionVariant=e.reactionVariant;
- if(e.type==='raider'||e.type==='assassin'||e.type==='elite'){
+ if(e.type==='raider'||e.type==='intruder'||e.type==='assassin'||e.type==='elite'){
   const r=e.reactionVariant;
   e.hitAnimation=r===2||r===8?'hitBody':r===3||r===4||r===11?'hitSpin':
     r===5||r===10?'hitLaunch':r===6||r===7?'hitFly':'hitHead';
@@ -2958,7 +2990,7 @@ function control(dt,pad){
 // Visual-footprint spacing in world pixels (X = silhouette width, Y = lane depth).
 // Wider than damage hitboxes: ground actors, including enemy pairs, cannot stack.
 const BODY_CLEARANCE={
- player:[54,30],raider:[62,28],assassin:[59,28],
+ player:[54,30],raider:[62,28],intruder:[62,28],assassin:[59,28],
  guard:[70,31],elite:[74,34],boss:[110,42]
 };
 const bodyFootprint=a=>BODY_CLEARANCE[a===p?'player':a.type]||BODY_CLEARANCE.raider;
@@ -2967,7 +2999,7 @@ function resolveBodyCollisions(dt){
  // Sort by world X and test only nearby pairs; preserve generous X/Y spaces.
  // Leaping feet are above combat footprints; do not block a real long jump
  // against a standing crowd in the street below.
- const bodies=[...(p.z<44?[p]:[]),...enemies.filter(e=>!e.dead&&e.z<37)];
+ const bodies=[...(p.z<44?[p]:[]),...enemies.filter(e=>!e.dead&&e.z<37&&!intruderEntering(e))];
  if(bodies.length<2)return;
  for(const a of bodies)if(a!==p){a._preSolveX=a.x;a._preSolveY=a.y}
  const limit=Math.min(22,Math.max(6,dt*920));
@@ -3058,6 +3090,18 @@ function updateEnemies(dt,parryVictimScale=1){
  for(const e of enemies){
   // Parried target: local clock is slower than the already slowed world.
   const actorDt=e===parrySlowTarget?dt*parryVictimScale:dt;
+  if(intruderEntering(e)){
+   const prev=e.entryAge;
+   e.entryAge=Math.min(e.entryDuration,e.entryAge+actorDt);
+   if(prev<e.entryDuration*.55&&e.entryAge>=e.entryDuration*.55&&!e.entryLandingPlayed){
+    e.entryLandingPlayed=true;fxBurst(e.x,e.y-15,'gold',.85);
+    sound('hit');playCombatVoice('enemyShout',e);
+    screenShake=Math.max(screenShake,5.5);floatText('난입!',e.x,e.y-260,'#ff8296');
+   }
+   e.renderX=e.x;e.renderY=e.y;
+   if(intruderEntering(e))continue; // Entrance cannot attack, chase or collide.
+   e.cooldown=Math.max(e.cooldown,.36);e.encountered=true;
+  }
   if(Math.abs(e.knockVX)>1||Math.abs(e.knockVY)>1){
    const nextX=clamp(e.x+e.knockVX*actorDt,45,STAGE_WIDTH-45);
    if(e.parryScreenDir&&e.knockVX*e.parryScreenDir>0){
@@ -3080,13 +3124,13 @@ function updateEnemies(dt,parryVictimScale=1){
   e.visualMoving=false;e.visualSpeed=0;
   if(e.dead){
    e.deathAge=(e.deathAge||0)+actorDt;
-   if(e.type==='assassin'||e.type==='raider'||e.type==='elite')e.collapseAge=e.z<=4?(e.collapseAge||0)+actorDt:0;
+   if(e.type==='assassin'||e.type==='raider'||e.type==='intruder'||e.type==='elite')e.collapseAge=e.z<=4?(e.collapseAge||0)+actorDt:0;
    e.hitFlash=Math.max(0,e.hitFlash-actorDt);
-   const groundAge=(e.type==='assassin'||e.type==='raider'||e.type==='elite')?(e.collapseAge||0):e.deathAge;
+   const groundAge=(e.type==='assassin'||e.type==='raider'||e.type==='intruder'||e.type==='elite')?(e.collapseAge||0):e.deathAge;
    if(e.type==='boss'){if(e.deathAge>2.7)e.fade-=actorDt*.58}else if(groundAge>.72)e.fade-=actorDt*.74;
    continue;
   }
-  if(e.type==='raider'||e.type==='assassin'||e.type==='elite'){
+  if(e.type==='raider'||e.type==='intruder'||e.type==='assassin'||e.type==='elite'){
    if(e.pendingFall&&e.reactionTime<=0&&e.z<=4){
     e.pendingFall=false;e.proneTime=.62;e.riseTime=0;
     e.stun=Math.max(e.stun,1.3);
@@ -3581,6 +3625,11 @@ function drawEnemyStatusIcons(e){
 function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=actorShakeOffset(a);const x=Math.round((isP?a.x:(a.renderX??a.x))+sx),y=Math.round((isP?a.y:(a.renderY??a.y))+sy),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?getZMove():'';
  if(isP){ellipseShadow(x,y,1.06,.45);drawHeroAfterimages();drawHeroModAura(x,y,z);paintZ(x,y,z);return;}
  if(a.type==='raider'){drawMaskedGrunt(a,x,y,z);return;}
+ if(a.type==='intruder'){
+  if(intruderEntering(a))drawIntruderEntry(a,x,y);
+  else drawMaskedGrunt(a,x,y,z); // Normal raid combat sprites and standard AI.
+  return;
+ }
  if(a.type==='assassin'){drawAssassin(a,x,y,z);return;}
  if(a.type==='elite'){window.RZElite.draw(a,x,y,z,{ctx,art:RZAssassinArt,maskedFrame,getAssassinMove,ellipseShadow,clamp,images:img,time});return;}
  if(a.type==='guard'&&USE_HF_SHIELD){drawRiotGuard(a,x,y,z);return;}
