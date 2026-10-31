@@ -220,7 +220,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 <style id="upgrade-bitmap-icons">
 /* One hand-painted bitmap sprite atlas for every upgrade: 6 columns x 4 rows.
    The player sees the same individual picture in the choice cards and HUD. */
-.upgrade-art{display:block;flex:none;width:60px;height:60px;background-image:var(--upgrade-preloaded-url,url('./assets/ui/upgrade-icons-v3.webp'));
+.upgrade-art{display:block;flex:none;width:60px;height:60px;background-image:var(--upgrade-preloaded-url,url('./assets/ui/upgrade-icons-v4.webp'));
  background-repeat:no-repeat;background-size:500% 500%;image-rendering:auto;
  filter:drop-shadow(0 2px 3px #0009)}
 .upgrade-btn .sym{display:flex;flex-direction:column;align-items:flex-start;gap:0;
@@ -1576,9 +1576,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 #stageWrap #menu.reward-dialog .upgrade-art::after,
 #stageWrap #menu.hub-dialog .hub-emblem .upgrade-art::after{
- content:'';position:absolute;inset:0;pointer-events:none;
- border:7px solid transparent;
- border-image:var(--z-neon-outer) 22 / 7px / 0 stretch;
+ content:none!important; /* The icon atlas already includes the complete identical neon frames. */
 }
 /* Solid dark high-tech controls, preserving button hitboxes, contrast and focus. */
 #stageWrap #menu button.main-btn,
@@ -2003,7 +2001,7 @@ function offscreenArrowFrameAt(seconds){return OFFSCREEN_ARROW_SEQUENCE[Math.flo
 // 4x2 real transparent PNG sprite sheet: spark-filled metal shield impact.
 let parryShieldImage=new Image();parryShieldImage.src='./assets/fx/parry-shield.png';
 // Preload the CSS-backed upgrade atlas too; its decoded pixels are reused by the cards/HUD.
-let upgradeIconsImage=new Image();upgradeIconsImage.src='./assets/ui/upgrade-icons-v3.webp';
+let upgradeIconsImage=new Image();upgradeIconsImage.src='./assets/ui/upgrade-icons-v4.webp';
 // Predecode the full four-button raised/pressed bitmap atlas before gameplay.
 let arcadeButtonsImage=new Image();arcadeButtonsImage.src='./assets/ui/arcade-action-buttons-v1.webp';
 // Predecode both transparent bitmap pieces of the arcade joystick.
@@ -2936,6 +2934,13 @@ function buildSquareUpgradeIconAtlas(){
    right=Math.round((col+1)*src.naturalWidth/columns),
    bottom=Math.round((row+1)*src.naturalHeight/rows),
    sw=Math.max(1,right-left),sh=Math.max(1,bottom-top);
+  // All 25 final icon cells already share a square format and matching
+  // painted neon frame. Do not crop or shrink them another 16%.
+  if(src.src.includes('upgrade-icons-v4.webp')){
+   outCtx.drawImage(src,left,top,sw,sh,col*iconSize,row*iconSize,iconSize,iconSize);
+   stats.frames++;
+   continue;
+  }
   cell.width=sw;cell.height=sh;
   cellCtx.clearRect(0,0,sw,sh);
   cellCtx.drawImage(src,left,top,sw,sh,0,0,sw,sh);
@@ -3554,7 +3559,7 @@ function resetFailedUiBitmaps(){
  const sources=[
   {get:()=>offscreenArrow,set:im=>{offscreenArrow=im},url:'./assets/ui/edge-arrows-animated.webp'},
   {get:()=>parryShieldImage,set:im=>{parryShieldImage=im},url:'./assets/fx/parry-shield.png'},
-  {get:()=>upgradeIconsImage,set:im=>{upgradeIconsImage=im},url:'./assets/ui/upgrade-icons-v3.webp',css:true},
+  {get:()=>upgradeIconsImage,set:im=>{upgradeIconsImage=im},url:'./assets/ui/upgrade-icons-v4.webp',css:true},
   {get:()=>arcadeButtonsImage,set:im=>{arcadeButtonsImage=im},url:'./assets/ui/arcade-action-buttons-v1.webp',css:'arcade'},
   {get:()=>joystickBaseImage,set:im=>{joystickBaseImage=im},url:'./assets/ui/z-arcade-stick-base-centerhole.webp',css:'joystickBase'},
   {get:()=>joystickShaftImage,set:im=>{joystickShaftImage=im},url:'./assets/ui/z-arcade-stick-shaft-centered.webp',css:'joystickShaft'},

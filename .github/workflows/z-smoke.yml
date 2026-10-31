@@ -5,6 +5,7 @@ on:
     paths:
       - index.html
       - assets/ui/z-*.png
+      - assets/ui/upgrade-icons-v4.webp
       - assets/industrial-combat-bgm.js
       - assets/voice/**
       - tests/**

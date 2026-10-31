@@ -338,7 +338,7 @@ test('new black-hoodie protagonist maps gameplay motions to eight local original
 
 
 test('all 21 combat upgrades, NEURO and 3 Hub modules have distinct square bitmap-icon cells',()=>{
- const bytes=fs.readFileSync(path.join(__dirname,'../assets/ui/upgrade-icons-v3.webp'));
+ const bytes=fs.readFileSync(path.join(__dirname,'../assets/ui/upgrade-icons-v4.webp'));
  assert.equal(bytes.subarray(0,4).toString('ascii'),'RIFF','sprite is real WebP bitmap');
  assert.equal(bytes.subarray(8,12).toString('ascii'),'WEBP');
  assert(bytes.length>100000&&bytes.length<500000,'complete high resolution 25-cell bitmap exists at the new atlas path');
@@ -351,7 +351,7 @@ test('all 21 combat upgrades, NEURO and 3 Hub modules have distinct square bitma
   return t.modIconMarkup(id).match(/background-position:([^"]+)/)?.[1];
  });
  assert.equal(new Set(cells).size,25,'no two upgrades may display the same atlas cell');
- assert(html.includes("background-image:var(--upgrade-preloaded-url,url('./assets/ui/upgrade-icons-v3.webp'))"),
+ assert(html.includes("background-image:var(--upgrade-preloaded-url,url('./assets/ui/upgrade-icons-v4.webp'))"),
   'HUD and power-up cards use the decoded bitmap cache, including failed-download retry');
  assert(html.includes("<span class=\"sym\">${modIconMarkup(id)}"),
   'reward cards show unique imagery instead of repeated Unicode symbols');
