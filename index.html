@@ -301,7 +301,8 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  width:var(--face-btn)!important;height:var(--face-btn)!important;
  min-width:var(--face-btn)!important;min-height:var(--face-btn)!important;
  max-width:none!important;padding:0!important;margin:0!important;
- border:0!important;border-radius:50%!important;
+ /* Square DOM hit target reaches the transparent corners of the circular bitmap. */
+ border:0!important;border-radius:0!important;
  color:transparent!important;font-size:0!important;text-shadow:none!important;
  background-color:transparent!important;
  background-image:var(--arcade-control-url,url('./assets/ui/arcade-action-buttons-v1.webp'))!important;
