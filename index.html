@@ -2317,7 +2317,7 @@ function control(dt,pad){
  // Never cancel dash finisher, dive slam or parry chase.
  const canChainTail=p.attack>0&&p.hitDone&&!p.airAttack&&!p.dashSmash&&
   !p.counterBoost&&!p.riposteStrikeTarget&&!p.airKickPhase&&p.z<=0&&
-  p.attack<=p.attackDuration*.10;
+  p.attack<=p.attackDuration*.10&&(p.attack+dt)<=p.attackDuration*.11;
  if(wantsCombo&&canCombo&&(p.attack===0||canChainTail)){
   p.attack=0;p.attackQueued=false;startAttack();
  }
