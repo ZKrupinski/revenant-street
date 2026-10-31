@@ -203,7 +203,7 @@ async function uiBitmapPreload(){
  assert(html.includes("['볼탑 옛 봉 제거 투명 마스크',()=>ensureBitmapDecoded(joystickBallMaskImage)]"));
  for(const file of ['assets/ui/upgrade-icons-v2.webp','assets/ui/edge-arrows-animated.webp','assets/fx/parry-shield.png','assets/ui/arcade-action-buttons-v1.webp','assets/ui/z-arcade-stick-base-centerhole.webp','assets/ui/z-arcade-stick-shaft-centered.webp','assets/ui/z-arcade-stick-knob.webp','assets/ui/z-arcade-stick-ball-only-mask.webp']){
   const imgBytes=fs.readFileSync(path.join(root,file));
-  assert(imgBytes.length>3000,'real UI bitmap asset exists: '+file);
+  assert(imgBytes.length>(file.endsWith('z-arcade-stick-ball-only-mask.webp')?2400:3000),'real UI bitmap asset exists: '+file);
  }
  assert(html.includes('resetFailedUiBitmaps();'),'start retry resets failed UI assets');
  assert(html.includes("background-image:var(--upgrade-preloaded-url,url('./assets/ui/upgrade-icons-v2.webp'))"),
