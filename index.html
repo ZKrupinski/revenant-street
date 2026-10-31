@@ -899,8 +899,8 @@ function currentZFrameIndex(key){
  if(key==='getup')return Z_HOODIE_HERO?7-oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64)):oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64));
  if(key==='hit'||key==='heavyhit')return oneshot(1-p.stun/Math.max(.001,p.hitDuration||.4));
  if(key==='dash'||key==='dodge')return oneshot(1-p.dodge/Math.max(.001,p.dodgeDuration||.30));
- // Full 8-frame guard snaps into pose in 0.19s; collision window remains 0.34s+reflex.
- if(key==='guard')return oneshot(Math.min(1,(p.parryAnimAge||0)/.19));
+ // Full 8-frame guard snaps into pose in 0.17s; collision window remains 0.34s+reflex.
+ if(key==='guard')return oneshot(Math.min(1,(p.parryAnimAge||0)/.17));
  if(p.jumpLandingVisual>0&&p.jumpLandingTriggered&&key==='axe_kick')
   return p.jumpLandingVisual>.125?6:7;
  if(key==='jumpstart')return oneshot(1-p.jumpStartTimer/.23);

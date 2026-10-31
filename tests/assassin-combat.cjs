@@ -806,7 +806,7 @@ test('no connected actuator means no continuous footsteps or audio loop',()=>{
   assert.equal(t.footstepRumble(1/60,80),false);
  }finally{world.navigator.getGamepads=prior}
 });
-test('guard animation braces in 0.19s without shortening the active parry window',()=>{
+test('guard animation braces in 0.17s without shortening the active parry window',()=>{
  g.startRun();t.keys.clear();t.setEnemies([]);
  t.p.parry=0;t.p.stun=0;t.p.stamina=100;t.parry();
  const activeWindow=t.p.parryDuration;
@@ -815,7 +815,7 @@ test('guard animation braces in 0.19s without shortening the active parry window
  t.control(.10,{dx:0,dy:0});
  assert(t.currentZFrameIndex('guard')>=4,'defensive sprite advances rapidly within 100ms');
  t.control(.10,{dx:0,dy:0});
- assert.equal(t.currentZFrameIndex('guard'),7,'last guard pose arrives in roughly 190ms');
+ assert.equal(t.currentZFrameIndex('guard'),7,'last guard pose arrives by 200ms after a 170ms windup');
  assert(t.p.parry>0,'parry collision is still open at 200ms');
  const last=t.currentZFrameIndex('guard');
  t.p.parry=Math.max(t.p.parry,.30);
