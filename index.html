@@ -1742,29 +1742,27 @@ const SQUAD_ROSTERS={
   ['guard','assassin','elite','guard','raider','assassin']
  ]
 };
-// Later squads grow with travel progress; the first encounter remains small.
+// Elite red-hood units join only as late 2-3 member reinforcement teams.
+function intruderSupportCount(w,i){return w>=1&&w<=2&&i>=1&&i%3===1?(i>=4?3:2):0}
 function encounterRoster(waveNumber,index){
  const base=SQUAD_ROSTERS[waveNumber]?.[index]||[];
  if(!base.length)return [];
  const more=waveNumber===1?Math.floor(index/2):2+Math.floor(index/2);
  const types=['raider','assassin','raider','guard','assassin','raider','guard'];
- // Every second squad swaps one ordinary red-hood raider for a foreground intruder.
- // A genuinely EXTRA enemy: retain every original raider and add the
- // front-of-camera intruder every other encounter as its own roster member.
- const lineup=base.slice();
- if(index%2===0)lineup.splice(Math.min(2,lineup.length),0,'intruder');
- return lineup.concat(Array.from({length:more},(_,j)=>types[(index*2+j)%types.length]));
+ return base.concat(Array.from({length:more},(_,j)=>types[(index*2+j)%types.length]));
 }
 function waveEnemyTotals(){
  const current=enemies.filter(e=>!e.dead).length;
  if(wave===3)return {current,future:0,total:1,remaining:current,defeated:1-current};
  const spots=SQUAD_SPOTS[wave]||[];
- const total=spots.reduce((sum,_,j)=>sum+encounterRoster(wave,j).length,0);
- const future=spots.slice(squadIndex).reduce((sum,_,j)=>sum+encounterRoster(wave,squadIndex+j).length,0);
- const remaining=current+future;
+ const total=spots.reduce((sum,_,j)=>sum+encounterRoster(wave,j).length+intruderSupportCount(wave,j),0);
+ const future=spots.slice(squadIndex).reduce((sum,_,j)=>sum+
+  encounterRoster(wave,squadIndex+j).length+intruderSupportCount(wave,squadIndex+j),0);
+ const pending=!supportTriggered&&squadIndex>0?intruderSupportCount(wave,squadIndex-1):0;
+ const remaining=current+future+pending;
  return {current,future,total,remaining,defeated:Math.max(0,total-remaining)};
 }
-let squadIndex=0,enemySerial=0,lastEncounterCleared=-1;
+let squadIndex=0,enemySerial=0,lastEncounterCleared=-1,supportTriggered=true;
 const BOSS_SPAWN_X=30900;
 let enemies=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,parrySlowTarget=null,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
 let perma={core:0,servo:0,reflex:0,shards:0};
@@ -2248,29 +2246,52 @@ function spawnNextEncounter(){
  types.forEach((type,j)=>{
   const left=j<split,onSide=left?j:j-split,offset=onSide*spacing+(onSide%3)*14;
   let worldX=clamp(left?leftEdge-offset:rightEdge+offset,55,STAGE_WIDTH-55);
-  // Jumps forward FROM the camera foreground, alternately to Z's left/right.
-  const entrySide=((Math.floor(i/2)+wave)%2===1?1:-1);
-  if(type==='intruder')worldX=clamp(p.x+entrySide*(255+i%3*28),
-   Math.max(65,cameraX+150),Math.min(STAGE_WIDTH-65,cameraX+W-150));
-  const lane=type==='intruder'?groundY(p.y+52):groundY(p.y+[-50,29,53,-22,46,-43,12,-9,36,-33][j%10]);
+  // Ordinary squad members always enter from offscreen.
+  const lane=groundY(p.y+[-50,29,53,-22,46,-43,12,-9,36,-33][j%10]);
   const enemy=makeEnemy(type,worldX,lane,enemySerial++);
   const growth=1+i*.075;
   enemy.hp=enemy.maxHp=Math.round(enemy.maxHp*growth);
   enemy.squad=i;enemy.encountered=true;enemy.renderX=worldX;enemy.renderY=lane;
-  if(type==='intruder'){
-   enemy.entryAge=0;enemy.entryDuration=1.12;enemy.entrySide=entrySide;
-   enemy.entryLandingPlayed=false;enemy.cooldown=1.4;enemy.face=entrySide>0?-1:1;
-   enemy.specialCooldown=1.0;
-  }else if(left)enemy.face=1;
+  if(left)enemy.face=1;
   enemies.push(enemy);
  });
- squadIndex++;lastEncounterCleared=-1;waveClearNotified=false;
+ squadIndex++;supportTriggered=intruderSupportCount(wave,i)===0;lastEncounterCleared=-1;waveClearNotified=false;
  $('hint').hidden=true;
  $('waveLabel').textContent=`WAVE 0${wave} · 무리 ${String(squadIndex).padStart(2,'0')}/${spots.length}`;
  return true;
 }
+// This one-shot event fires with 0-2 initial enemies remaining, before clear.
+// Elites leap into the foreground from alternating sides, then fight normally.
+function spawnIntruderSupport(){
+ if(gameState!=='playing'||wave>2||squadIndex<1||supportTriggered)return false;
+ const index=squadIndex-1,count=intruderSupportCount(wave,index);
+ if(!count){supportTriggered=true;return false}
+ const survivors=enemies.filter(e=>!e.dead&&e.squad===index&&!e.supportTeam).length;
+ const threshold=Math.min(2,Math.max(1,Math.ceil(encounterRoster(wave,index).length*.30)));
+ if(survivors>threshold)return false;
+ supportTriggered=true;
+ flash('적군 지원팀 난입! 붉은 후드 엘리트 '+count+'명!',2.05);
+ screenShake=Math.max(screenShake,13);screenTint=Math.max(screenTint,.23);
+ for(let j=0;j<count;j++){
+  const side=j%2===0?-1:1;
+  const minX=Math.max(75,cameraX+145),maxX=Math.min(STAGE_WIDTH-75,cameraX+W-145);
+  const x=clamp(p.x+side*(280+Math.floor(j/2)*115),minX,maxX);
+  const y=groundY(p.y+[-46,42,5][j%3]);
+  const e=makeEnemy('intruder',x,y,enemySerial++);
+  const growth=1+index*.055;
+  e.hp=e.maxHp=Math.round(e.maxHp*growth);
+  e.maxPoise=Math.round(e.maxPoise*growth);
+  e.squad=index;e.supportTeam=true;e.supportGroup=wave+'-'+index;
+  e.supportIndex=j;e.encountered=true;e.renderX=x;e.renderY=y;
+  e.entryAge=0;e.entryDuration=1.05+j*.13;e.entrySide=side;
+  e.entryLandingPlayed=false;e.face=-side;
+  e.cooldown=1.15+j*.18;e.specialCooldown=2.15+j*1.35;
+  enemies.push(e);
+ }
+ waveClearNotified=false;return true;
+}
 function spawnWave(){
- waveClearNotified=false;wave++;squadIndex=0;lastEncounterCleared=-1;enemies=[];
+ waveClearNotified=false;wave++;squadIndex=0;supportTriggered=true;lastEncounterCleared=-1;enemies=[];
  if(wave===3){
   enemies=[makeEnemy('boss',BOSS_SPAWN_X,561,enemySerial++)];
   squadIndex=1;
@@ -2285,15 +2306,15 @@ function spawnWave(){
 function makeEnemy(type,x,y,index){
  // Grunts stay punchy and quick to defeat. Specials gain real durability.
  // Normal enemies gain moderate health/damage each wave, unlike the boss.
- const map={raider:[84,70,128,14,40],intruder:[84,70,128,14,40],assassin:[76,68,177,16,38],
+ const map={raider:[84,70,128,14,40],intruder:[385,205,169,24,74],assassin:[76,68,177,16,38],
   elite:[530,260,144,22,66],guard:[165,132,112,20,48],
   boss:[3900,920,87,35,92]};
  const difficulty=type==='boss'?1:type==='elite'?(wave===2?1.36:1):
-  wave===2?1.30:1;
+  type==='intruder'?(wave===2?1.24:1):wave===2?1.30:1;
  const attackGrowth=type==='boss'?1:wave===2?1.19:1;
  let [hp,poise,speed,damage,reach]=map[type];
  hp=Math.round(hp*difficulty);
- poise=Math.round(poise*(type==='elite'?difficulty:1+Math.max(0,wave-1)*.18));
+ poise=Math.round(poise*((type==='elite'||type==='intruder')?difficulty:1+Math.max(0,wave-1)*.18));
  damage=Math.round(damage*attackGrowth);
  if(type!=='boss')speed=Math.round(speed*(wave===2?1.08:1));
  return {type,slot:index,x,y:groundY(y),z:0,vz:0,knockVX:0,knockVY:0,face:-1,hp,maxHp:hp,
@@ -2304,7 +2325,7 @@ function makeEnemy(type,x,y,index){
   berserkCooldown:1.7+(index%5)*.5,
  bleed:0,burn:0,shock:0,freeze:0,spriteKey:'',spriteTime:0,spriteDistance:0,visualMoving:false,visualSpeed:0,visualSpeedSmooth:0,locomotionMode:'walk',visualHold:0,renderX:x,renderY:groundY(y),
   attackPoseTime:0,windupDuration:.45,hitAnimation:'hitHead',proneTime:0,riseTime:0,pendingFall:false,deathAge:0,
-  brain:type==='boss'?'boss':type==='elite'?'elite':['swarm','feint','charger','swarm','feint','charger'][index%6],
+  brain:type==='boss'?'boss':type==='elite'?'elite':type==='intruder'?'support_elite':['swarm','feint','charger','swarm','feint','charger'][index%6],
   chargeCooldown:1.6+(index%5)*.48,chargePrep:0,chargeTime:0,
    eliteCooldown:2.6,eliteTell:0,eliteRush:0,eliteAttack:false,eliteAnnounced:false,
   reactionVariant:0,reactionTime:0,reactionDuration:.48,reactionDir:1,bodyShakeTime:0,bodyShakeDuration:0,bodyShakePower:0,
@@ -3504,6 +3525,8 @@ function updateEnemies(dt,parryVictimScale=1){
   else e.renderY+=(e.y-e.renderY)*k;
  }
  enemies=enemies.filter(e=>!e.dead||e.fade>0);
+ // Check delayed relief before deciding the current squad is defeated.
+ if(gameState==='playing'&&wave<=2)spawnIntruderSupport();
  // A troop must be defeated before the next encounter can be spawned.
  const anyLiving=enemies.some(e=>!e.dead);
  if(!anyLiving&&gameState==='playing'&&wave<=2){
