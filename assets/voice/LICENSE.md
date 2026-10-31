@@ -26,3 +26,15 @@ The following three samples were newly generated specifically for **Project Z** 
 | `hero-kiai-power.mp3` | Strong dive / dash / execution kiai | `6fb479bf-21b9-43cf-8f0b-f6961f4747fa` |
 
 The four HaelDB CC0 recordings above remain in the project. The original short hero grunt takes are now assigned to **enemy** hit reactions and cries. The player uses only the three newly generated hero kiai sources.
+
+## Firearm operating mechanism Foley (October 31, 2026)
+
+The following **nonverbal** sound effects were newly generated with Higgsfield Mirelo Text to Audio, intended as game attack accent sounds. These represent **steel slide, spring, cocking and bolt manipulation**, not gunshots or explosions:
+
+| Local file | Action | Generation job |
+| --- | --- | --- |
+| `hero-mech-a.mp3` | Quick firearm charging-handle metal clack, light strike | `b455eea8-e575-4a94-acd3-3be2f1d142db` |
+| `hero-mech-b.mp3` | Pistol slide and bolt-lock ratchet, alternative light strike | `d0b2f9a5-65a0-4b86-89c4-4edf5af27711` |
+| `hero-mech-power.mp3` | Strong heavy rifle-bolt mechanical cycling, power strike | `b6436109-1ee0-4bfb-b299-fda5464d263e` |
+
+The protagonist's previous `hero-kiai-*.mp3` voice assets are retained as archival game resources only; **no runtime voice mapping references them**. Protagonist hit and death vocal events are muted. Enemy human voices remain unchanged. Metal clicks use the accent bus; original impact transients and BGM each stay on their own bus.
