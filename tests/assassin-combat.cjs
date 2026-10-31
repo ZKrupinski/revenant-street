@@ -927,8 +927,8 @@ test('four smaller bitmap arcade controls retain large touch surfaces and presse
    action+' has a correctly positioned, labeled arcade bitmap');
   assert(ctl.includes('data-key="'+key+'"'),'original '+action+' input remains intact');
  }
- assert(html.includes("b.classList.add('pressed')")&&html.includes("b.classList.remove('pressed')"),
- 'all touch down/up/cancel handlers still animate both button states');
+ assert(html.includes("button.classList.toggle('pressed',pressed)")&&html.includes("touchFaceHeld.add(art)")&&html.includes("touchFaceHeld.delete(art)"),
+ 'touch and gamepad presses update bitmap depressed/released poses through the shared button state');
 });
 test('approved arcade joystick uses bitmap disc and separately movable red ball, no guide circles',()=>{
  const root=path.join(__dirname,'../assets/ui');
