@@ -1491,7 +1491,7 @@ test('Crimson intruder drops into an ongoing squad as reinforcements and joins t
  const health=enemy.hp;
  t.hurtEnemy(enemy,15,12);assert.equal(enemy.hp,health,'flying entrance is temporarily unhittable');
  for(let i=0;i<28;i++)t.updateEnemies(.02);
- assert(t.intruderEntering(enemy));assert(t.intruderEntryFrame(enemy)>=3);
+ assert(t.intruderEntering(enemy));assert.equal(t.intruderEntryFrame(enemy),2,'approved arrival storyboard plays painted cells in 0-1-3-2 order');
  for(let i=0;i<31;i++)t.updateEnemies(.02);
  assert.equal(t.intruderEntering(enemy),false,'entry concludes before normal combat behavior');
  assert.equal(enemy.entryLandingPlayed,true,'landing is signaled once');
