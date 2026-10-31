@@ -18,7 +18,7 @@ function load(key){
    entry.loading=false;im.onload=null;im.onerror=null;
   };
   im.onerror=()=>{entry.failed=true;entry.loading=false;entry.error='Iron Mask '+key+' image missing'};
-  im.src=ROOT+key+'.webp'+(key==='special'?'?rev=ironmask-full-eight-20261101':'');
+  im.src=ROOT+key+'.webp'+(key==='special'?'?rev=ironmask-unclipped-eight-1bc78ad':'');
   DATA[key]=entry;
  }
  return DATA[key];
