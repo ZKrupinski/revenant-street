@@ -74,6 +74,9 @@ test('tactical AI briefly retreats, flanks, and enters a telegraphed berserk rus
  assert(foe.x>origin+35,'short withdrawal creates visible space');
  assert(foe.x-t.p.x<440,'retreat cannot run forever offscreen');
  foe.tactic='feint';foe.tacticTime=.70;foe.cooldown=5;foe.chargeCooldown=5;
+ // Start outside the desired baiting ring: otherwise a random strafe sign
+ // may land exactly on its goal and make this a flaky no-movement test.
+ foe.x=t.p.x+355;foe.y=t.p.y;foe.strafe=1;
  const y=foe.y,x=foe.x;
  for(let n=0;n<20;n++)t.updateEnemies(1/60);
  assert(Math.abs(foe.y-y)>4||Math.abs(foe.x-x)>8,'feint visibly repositions instead of standing still');
