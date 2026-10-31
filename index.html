@@ -856,6 +856,140 @@ body{position:fixed;inset:0;touch-action:manipulation}
  #menu.hub-dialog .hub-buttons button{font-size:9px!important;padding:3px!important}
 }
 </style>
+
+<style id="rebel-hub-card-readability-v4">
+/* More legible art and labels; reserve meaningful vertical space for actions. */
+#menu.hub-dialog{
+ height:min(602px,calc(100% - 8px))!important;
+}
+#menu.hub-dialog .hub-modules{
+ padding:5px 10px!important;gap:8px!important;
+}
+#menu.hub-dialog .hub-module{
+ gap:5px!important;padding:11px 12px!important;
+}
+#menu.hub-dialog .hub-row-head{gap:11px!important}
+#menu.hub-dialog .hub-emblem{
+ width:64px!important;height:64px!important;flex:0 0 64px!important;
+ background:#0a1521;
+}
+#menu.hub-dialog .hub-emblem .upgrade-art{
+ width:59px!important;height:59px!important;
+}
+#menu.hub-dialog .hub-module-name{
+ font-size:clamp(17px,1.8cqw,21px)!important;line-height:1.16!important;
+ overflow-wrap:keep-all;
+}
+#menu.hub-dialog .hub-module-name small{
+ font-size:clamp(12px,1.2cqw,14px)!important;line-height:1.35!important;
+ margin-top:3px;
+}
+#menu.hub-dialog .hub-forecast{
+ font-size:clamp(15px,1.6cqw,18px)!important;
+ gap:6px!important;line-height:1.2!important;
+ letter-spacing:-.35px;
+}
+#menu.hub-dialog .hub-desc{font-size:11px!important;line-height:1.3!important}
+#menu.hub-dialog .hub-buy{
+ min-height:32px!important;font-size:13px!important;
+ padding:5px 8px!important;
+}
+/* Every frame has exactly one reason: available, selected, or just installed.
+   Gamepad focus must not add an unrelated cyan rectangle or outer glow. */
+#menu.hub-dialog .hub-module:focus,
+#menu.hub-dialog .hub-module:focus-visible,
+#menu.hub-dialog .hub-module.pad-selected{
+ outline:none!important;
+ outline-offset:0!important;
+ filter:none!important;
+ box-shadow:inset 0 1px #ffffff1c!important;
+}
+#menu.hub-dialog .hub-module:not(.selected):not(.installed){
+ border:2px solid #58758b!important;
+}
+#menu.hub-dialog .hub-module.selected{
+ border:2px solid #ffdc95!important;
+ box-shadow:inset 0 0 0 1px #ffdfa133!important;
+}
+#menu.hub-dialog .hub-module.installed{
+ border:2px solid #73dda7!important;
+ box-shadow:inset 0 0 0 1px #84eab74a,0 0 12px #57be8f44!important;
+}
+/* Bigger actual action controls: APPLY and DEPLOY remain prominent. */
+#menu.hub-dialog .hub-bottom{
+ padding:9px 12px 10px!important;gap:6px 10px!important;
+}
+#menu.hub-dialog .hub-feedback{
+ font-size:12px!important;line-height:1.3!important;
+}
+#menu.hub-dialog .hub-action-row,
+#menu.hub-dialog .hub-buttons{gap:8px!important}
+#menu.hub-dialog .hub-action-row button,
+#menu.hub-dialog .hub-buttons button{
+ min-height:52px!important;
+ padding:9px 14px!important;
+ font:900 15px/1.12 Arial,'Malgun Gothic',sans-serif!important;
+ white-space:nowrap;
+}
+#menu.hub-dialog .hub-saved-note{
+ font-size:10px!important;line-height:1.2!important;
+}
+#menu.hub-dialog .all-face-confirm-hint{
+ font-size:10px!important;min-height:19px!important;
+}
+@media (max-width:750px){
+ #menu.hub-dialog .hub-emblem{width:45px!important;height:45px!important;flex-basis:45px!important}
+ #menu.hub-dialog .hub-emblem .upgrade-art{width:42px!important;height:42px!important}
+ #menu.hub-dialog .hub-row-head{gap:6px!important}
+ #menu.hub-dialog .hub-module{padding:6px!important}
+ #menu.hub-dialog .hub-module-name{font-size:clamp(11px,2.1vw,16px)!important}
+ #menu.hub-dialog .hub-module-name small{font-size:11px!important}
+ #menu.hub-dialog .hub-forecast{font-size:clamp(11px,1.9vw,15px)!important}
+ #menu.hub-dialog .hub-buy{font-size:11px!important}
+ #menu.hub-dialog .hub-action-row button,
+ #menu.hub-dialog .hub-buttons button{
+  min-height:43px!important;font-size:12px!important;padding:6px 8px!important
+ }
+}
+#app.tight-hub-stage #menu.hub-dialog .hub-emblem{
+ width:44px!important;height:44px!important;flex-basis:44px!important;
+}
+#app.tight-hub-stage #menu.hub-dialog .hub-emblem .upgrade-art{
+ width:41px!important;height:41px!important;
+}
+#app.tight-hub-stage #menu.hub-dialog .hub-module{
+ padding:5px 7px!important;
+}
+#app.tight-hub-stage #menu.hub-dialog .hub-module-name{
+ font-size:clamp(11px,1.8cqw,16px)!important;
+}
+#app.tight-hub-stage #menu.hub-dialog .hub-module-name small{
+ font-size:10px!important;
+}
+#app.tight-hub-stage #menu.hub-dialog .hub-forecast{
+ font-size:clamp(11px,1.35cqw,15px)!important;
+}
+#app.tight-hub-stage #menu.hub-dialog .hub-buy{
+ min-height:26px!important;font-size:11px!important;
+}
+#app.tight-hub-stage #menu.hub-dialog .hub-action-row button,
+#app.tight-hub-stage #menu.hub-dialog .hub-buttons button{
+ min-height:38px!important;font-size:12px!important;padding:5px 8px!important;
+}
+#app.compact-game-stage #menu.hub-dialog .hub-emblem{
+ width:25px!important;height:25px!important;flex-basis:25px!important;
+}
+#app.compact-game-stage #menu.hub-dialog .hub-emblem .upgrade-art{
+ width:24px!important;height:24px!important;
+}
+#app.compact-game-stage #menu.hub-dialog .hub-module-name{
+ font-size:10px!important;
+}
+#app.compact-game-stage #menu.hub-dialog .hub-action-row button,
+#app.compact-game-stage #menu.hub-dialog .hub-buttons button{
+ min-height:29px!important;font-size:10px!important;padding:3px 5px!important;
+}
+</style>
 </head>
 <body>
 <div id="app">
