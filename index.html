@@ -4704,6 +4704,22 @@ for(const b of document.querySelectorAll('.touch-controls button')){
  b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release);
 }
 for(let i=0;i<(window.matchMedia?.('(pointer: coarse)').matches?65:110);i++)rain.push({x:rnd(0,1280),y:rnd(0,720),s:rnd(220,590),len:rnd(5,18)});
+// Opt-in visual QA API. The audit page compares original 4x2 cells with
+// the exact processed bitmap frame canvases used during combat.
+window.__redhoodFrameAudit=async()=>{
+ const atlas=[['난입',intruderEntryImage],...INTRUDER_MOTION_KEYS.map(k=>[k,intruderMotionImages[k]])];
+ await Promise.all(atlas.map(async ([name,im])=>{
+  if(typeof im.decode==='function')await im.decode();
+  else if(!im.complete||!im.naturalWidth)await new Promise((resolve,reject)=>{
+   im.addEventListener('load',resolve,{once:true});
+   im.addEventListener('error',()=>reject(Error(name+' 그림 로딩 실패')),{once:true});
+  });
+  if(!im.naturalWidth||!im.naturalHeight)throw Error(name+' 8프레임 원본 누락');
+ }));
+ prepareIntruderSpriteCrops();
+ return {atlases:atlas.map(([name,image])=>({name,image,cuts:getIntruderCrops(image)})),
+         metrics:window.__redhoodCutQA};
+};
 window.__revenant={getMusicState:()=>gameState,getPerformance:()=>({...runtimePerf,liveEnemies:enemies.filter(e=>!e.dead).length,activeEffects:fx.length+attributeFx.length+floating.length,heroAfterimages:heroAfterimages.length,heroAfterimageLimit:MAX_HERO_GHOSTS,uniqueHeroAtlases:zArtFrameShared.size}),getState:()=>({gameState,wave,player:{x:p.x,y:p.y,z:p.z,hp:p.hp,stamina:p.stamina,weapon:p.weapon,mod:p.mod,mods:[...p.mods]},enemies:enemies.map(e=>({type:e.type,x:e.x,y:e.y,hp:e.hp,poise:e.poise,groggy:e.groggy})),perma}),startRun,attack:startAttack,parry,execute,selectMod,buyUpgrade,forceClear:()=>{enemies=[];updateEnemies(0)},getWorld:()=>({x:p.x,cameraX,wave,stageWidth:STAGE_WIDTH,enemyPositions:enemies.filter(e=>!e.dead).map(e=>e.x)}),getAnalog:()=>({...analog}),getAssassinArtStatus:()=>RZAssassinArt.status(),getArtStatus:(key)=>{const v=loadZMove(key||'idle');return{ready:v.ready,failed:v.failed,loading:v.loading,frames:v.frames?.length,error:v.error,attempts:v.attempts}}};
 canvas.style.visibility='hidden';syncGameViewport();titleMenu();requestAnimationFrame(loop);
 })();
