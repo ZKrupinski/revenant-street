@@ -50,19 +50,28 @@ def isolate_subject(im):
 
 run=sheet_frames('run.webp')
 attack=sheet_frames('attack.webp')
-old_special=sheet_frames('special.webp')
-# Paint-only crimson energy, not its chopped body/legs. No vector shapes.
+# Always use the ORIGINAL artist-painted special effects; using an already
+# repaired sheet would progressively erase the vivid red sweep on every build.
+original=DIR/'source'/'special-original.webp'
+if not original.is_file():
+    raise FileNotFoundError('Original Iron Mask special effect sheet is required: '+str(original))
+original_image=Image.open(original).convert('RGBA')
+if original_image.size!=(W*4,H*2):
+    raise RuntimeError('Unexpected original special atlas dimensions')
+# Source frame 4 has the most complete crimson sweep. Remove the chopped
+# character silhouette and keep only the saturated red painted energy.
+original_arc=original_image.crop((3*W,0,4*W,H))
 effect=Image.new('RGBA',(W,H))
-src=old_special[3].getdata()
-pixels=[]
-for rr,gg,bb,aa in src:
-    if aa>14 and rr>100 and rr>gg*1.42 and rr>bb*1.16:
-        strength=min(255,int(aa*min(1.0,(rr-gg)/75)*.92))
-        pixels.append((rr,gg,bb,strength))
-    else:pixels.append((0,0,0,0))
-effect.putdata(pixels)
-effect.putalpha(effect.getchannel('A').filter(ImageFilter.GaussianBlur(.7)))
-
+pix=[]
+for rr,gg,bb,aa in original_arc.getdata():
+    vivid=(rr>115 and rr>gg*1.45 and rr>bb*1.24)
+    if aa>16 and vivid:
+        power=min(1.0,max(0.0,(rr-gg)/65))
+        pix.append((rr,gg,bb,round(aa*power)))
+    else:
+        pix.append((0,0,0,0))
+effect.putdata(pix)
+effect.putalpha(effect.getchannel('A').filter(ImageFilter.GaussianBlur(.8)))
 # Each base is a COMPLETE painted sprite, not one of the damaged strike poses.
 # 8 distinct complete stages: ready, rush, leap, impact, hard punch, recovery.
 timeline=[
@@ -85,15 +94,29 @@ for i,(which,source_idx,scale,shift_x,shift_y,flash) in enumerate(timeline):
     backing=Image.new('RGBA',(W,H))
     backing.paste(body,(bx,by))  # no mask: preserve original sprite alpha
     if flash:
-        # Fit the pixel-art crimson swoosh safely inside the target frame.
-        spark=effect.resize((round(W*.80),round(H*.80)),Image.Resampling.LANCZOS)
+        # Original BITMAP crimson arc, re-scaled inside each 512x608 cell:
+        # never rely on image data protruding into a neighbor's cell.
+        # Each impact stage has its own frame size, energy opacity and placement.
+        effect_scales={2:.60,3:.73,4:.87,5:.81,6:.63}
+        scale_fx=effect_scales.get(i,.65)
+        spark=effect.resize((round(W*scale_fx),round(H*scale_fx)),Image.Resampling.LANCZOS)
         spark_alpha=spark.getchannel('A').point(lambda v:round(v*flash))
         spark.putalpha(spark_alpha)
+        # Place the original uppercut arc ABOVE the fighter's fist, behind the body.
+        spark_x=round((W-spark.width)/2+14)
+        spark_y=round((H-spark.height)/2-56)
         eback=Image.new('RGBA',(W,H))
-        eback.paste(spark,(round(W*.20/2)+23,round(H*.20/2)-10))
+        eback.paste(spark,(spark_x,spark_y))
         stage=Image.alpha_composite(stage,eback)
     stage=Image.alpha_composite(stage,backing)
     atlas.alpha_composite(stage,((i%4)*W,(i//4)*H))
+    # Verify no missing frame or hidden, partially cropped fighter.
+    ink=stage.getchannel('A').point(lambda a:255 if a>=28 else 0)
+    bbox=ink.getbbox()
+    if not bbox:raise RuntimeError(f'Special frame {i+1} is empty')
+    if bbox[0]<4 or bbox[1]<5 or bbox[2]>W-4 or bbox[3]>H-6:
+        raise RuntimeError(f'Special frame {i+1} spills outside the safe rectangle: {bbox}')
+    print(f'SPECIAL FRAME {i+1}/8: complete, safe bounds {bbox}',flush=True)
 # Source dimensions and foot anchor are identical to the JavaScript loader.
 out=DIR/'special.webp'
 atlas.save(out,format='WEBP',quality=97,method=6)
