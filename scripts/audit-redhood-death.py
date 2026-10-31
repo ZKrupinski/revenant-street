@@ -18,3 +18,20 @@ for n in range(8):
  feet.append(bbox[3]-1)
  print(f"DEATH {n+1} cell={cw}x{ch} alpha_bbox={bbox} bottom_contact={edge} bottommost_alpha_y={bbox[3]-1}")
 print("AUDITED_DEATH_FOOT="+repr(feet))
+
+from PIL import ImageDraw
+sheet=Image.new('RGBA',(4*300,2*332),(17,24,35,255))
+draw=ImageDraw.Draw(sheet)
+for n in range(8):
+ col,row=n%4,n//4
+ left,right=round(col*w/4),round((col+1)*w/4)
+ top,bottom=round(row*h/2),round((row+1)*h/2)
+ raw=src.crop((left,top,right,bottom))
+ raw.thumbnail((284,290),Image.Resampling.LANCZOS)
+ px=col*300+(300-raw.width)//2;py=row*332+5
+ sheet.alpha_composite(raw,(px,py))
+ draw.rectangle((col*300+3,row*332+3,col*300+297,row*332+296),outline=(242,75,108,255),width=2)
+ draw.text((col*300+12,row*332+306),f'DEATH {n+1} raw cell',fill=(230,236,248,255))
+out=Path('assets/enemies/redhood-intruder/death-audit.webp')
+sheet.convert('RGB').save(out,format='WEBP',quality=80,method=6)
+print('SOURCE CONTACT SHEET='+str(out)+' bytes='+str(out.stat().st_size))

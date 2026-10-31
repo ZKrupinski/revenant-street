@@ -6,7 +6,7 @@ on:
       - .github/workflows/redhood-death-audit.yml
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   audit:
     runs-on: ubuntu-latest
@@ -19,3 +19,11 @@ jobs:
       - run: python -m pip install --quiet Pillow
       - name: Measure eight redhood death poses and feet from original PNG
         run: python scripts/audit-redhood-death.py
+      - name: Publish original 8-cell death contact sheet for visual inspection
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/enemies/redhood-intruder/death-audit.webp
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Add redhood death raw 8-frame visual QA contact sheet'
+          git push origin HEAD:main
