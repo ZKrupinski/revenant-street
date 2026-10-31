@@ -666,6 +666,9 @@ body{position:fixed;inset:0;touch-action:manipulation}
 #app.compact-game-stage #menu.title-dialog .buttons{display:flex!important;flex-direction:column!important;flex-wrap:nowrap!important;margin:0!important;gap:3px!important}
 #app.compact-game-stage #menu.title-dialog .buttons button{display:block!important;width:100%!important;min-height:27px!important;padding:3px 6px!important;font-size:clamp(9px,1.8vh,12px)!important;line-height:1.15!important}
 #app.compact-game-stage #menu.title-dialog .buttons button:not(:first-child){min-height:24px!important}
+#menu .all-face-confirm-hint{margin:6px 0 1px;color:#afcbdc;font:700 11px/1.25 Arial,'Malgun Gothic',sans-serif;text-align:center;letter-spacing:.2px}
+#menu.title-dialog .all-face-confirm-hint{font-size:clamp(8px,1.3vh,11px)}
+#app.compact-game-stage #menu .all-face-confirm-hint{display:none}
 </style>
 </head>
 <body>
@@ -2384,6 +2387,13 @@ function showMenu(html){
  menuPad.readyAt=Date.now()+(gameState==='reward'?700:180);menuPad.armed=false;menuPad.neutralAt=Date.now();
  menuBlockedKeys.clear();for(const key of heldKeyboard)menuBlockedKeys.add(key);
  canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;if(gameState==='hub')$('menu').classList.add('hub-dialog');else $('menu').classList.remove('hub-dialog');$('menu').classList.remove('title-dialog');$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
+ // Four face buttons are equivalent CONFIRM on title, REBEL HUB,
+ // pause, defeat, and upgrade panels; movement still picks the focus.
+ if(['menu','hub','dead','reward','paused'].includes(gameState)){
+  const note=document.createElement('p');note.className='all-face-confirm-hint';
+  note.textContent='패드 스틱·십자키 / WASD 이동  ·  X/Y/A/B 아무 버튼으로 선택';
+  $('menu').appendChild(note);
+ }
  // Reward cards begin visually neutral; only a real navigation/focus action
  // can light a card border. Keep the existing directional selection order.
  if(gameState!=='reward')selectMenuItem(0)}
@@ -3237,7 +3247,8 @@ function pollPad(){
   const direction=Math.abs(dx)>.52?Math.sign(dx):Math.abs(dy)>.52?Math.sign(dy):0;
   if(direction&&direction!==menuPad.nav)selectMenuItem(direction);
   menuPad.nav=direction;
-  const accept=gameState==='reward'?upgradeConfirm:!!g.buttons[2]?.pressed;
+  // All noncombat panels: four face buttons perform the same CONFIRM action.
+  const accept=upgradeConfirm;
   const neutral=!g.buttons.some(b=>b?.pressed)&&Math.abs(dx)<.2&&Math.abs(dy)<.2;
   if(!neutral)menuPad.neutralAt=Date.now();
   if(menuReady()&&neutral&&Date.now()-menuPad.neutralAt>=250)menuPad.armed=true;
@@ -3249,7 +3260,8 @@ function pollPad(){
   padPrev.attack=!!(g.buttons[2]?.pressed||g.buttons[5]?.pressed);
   padPrev.jump=!!g.buttons[3]?.pressed;
   menuPad.confirm=accept;
-  const back=!!g.buttons[1]?.pressed;
+  // B/circle is confirm, not back; View/Select (button 8) goes back.
+  const back=!!g.buttons[8]?.pressed;
   if(gameState!=='reward'&&back&&!menuPad.back&&menuPad.armed&&menuReady())menuBack();
   menuPad.back=back;
   return{dx:0,dy:0};
