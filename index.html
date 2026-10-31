@@ -1127,9 +1127,12 @@ const BOSS_SPAWN_X=30900;
 let enemies=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
 let perma={core:0,servo:0,reflex:0,shards:0};
 try{const stored=JSON.parse(localStorage.getItem('revenant-perma-v1')||'null');if(stored)for(const key of Object.keys(perma)){const value=stored[key];if(Number.isSafeInteger(value)&&value>=0)perma[key]=value}}catch(_){}
+// All WebAudio SFX (gunfire, reloads, impacts, menu and battle tones) play
+// at 70% of their previous amplitude; HTMLAudioElement BGM is untouched.
+const NON_BGM_SFX_LEVEL=.70;
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),near=(a,b,d)=>Math.abs(a-b)<=d;
 function save(){try{localStorage.setItem('revenant-perma-v1',JSON.stringify(perma))}catch(_){}}
-function sound(type='hit'){if(mute)return;try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!audio)audio=new AC();if(audio.state==='suspended')audio.resume();const t=audio.currentTime;const o=audio.createOscillator(),g=audio.createGain();o.type=type==='execution'?'sawtooth':'triangle';let f=type==='parry'?1050:type==='hurt'?90:type==='break'?60:type==='execution'?270:type==='attack'?160:230;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(Math.max(35,f*.25),t+.14);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(type==='break'?.19:.07,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+(type==='execution'?.43:.18));o.connect(g).connect(audio.destination);o.start(t);o.stop(t+(type==='execution'?.44:.19));if(['hit','break','execution','parry'].includes(type)){const len=Math.floor(audio.sampleRate*.15);const buf=audio.createBuffer(1,len,audio.sampleRate);const dat=buf.getChannelData(0);for(let i=0;i<len;i++)dat[i]=(Math.random()*2-1)*Math.exp(-i/len*5);const n=audio.createBufferSource(),fl=audio.createBiquadFilter(),gn=audio.createGain();n.buffer=buf;fl.type='lowpass';fl.frequency.value=type==='parry'?2200:980;gn.gain.value=type==='break'?.22:.11;n.connect(fl).connect(gn).connect(audio.destination);n.start(t)}}catch(e){}}
+function sound(type='hit'){if(mute)return;try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!audio)audio=new AC();if(audio.state==='suspended')audio.resume();const t=audio.currentTime;const o=audio.createOscillator(),g=audio.createGain();o.type=type==='execution'?'sawtooth':'triangle';let f=type==='parry'?1050:type==='hurt'?90:type==='break'?60:type==='execution'?270:type==='attack'?160:230;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(Math.max(35,f*.25),t+.14);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime((type==='break'?.19:.07)*NON_BGM_SFX_LEVEL,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+(type==='execution'?.43:.18));o.connect(g).connect(audio.destination);o.start(t);o.stop(t+(type==='execution'?.44:.19));if(['hit','break','execution','parry'].includes(type)){const len=Math.floor(audio.sampleRate*.15);const buf=audio.createBuffer(1,len,audio.sampleRate);const dat=buf.getChannelData(0);for(let i=0;i<len;i++)dat[i]=(Math.random()*2-1)*Math.exp(-i/len*5);const n=audio.createBufferSource(),fl=audio.createBiquadFilter(),gn=audio.createGain();n.buffer=buf;fl.type='lowpass';fl.frequency.value=type==='parry'?2200:980;gn.gain.value=(type==='break'?.22:.11)*NON_BGM_SFX_LEVEL;n.connect(fl).connect(gn).connect(audio.destination);n.start(t)}}catch(e){}}
 // Decode all enemy vocals, mechanical slides and gunshots before gameplay.
 function prepareCombatVoices(){
  const AC=window.AudioContext||window.webkitAudioContext;
@@ -1162,7 +1165,7 @@ function playImpactSound(kind='punch',intensity=1){
    const compressor=audio.createDynamicsCompressor();
    compressor.threshold.value=-13;compressor.knee.value=6;compressor.ratio.value=7;
    compressor.attack.value=.004;compressor.release.value=.16;
-   const output=audio.createGain();output.gain.value=.98;
+   const output=audio.createGain();output.gain.value=.98*NON_BGM_SFX_LEVEL;
    compressor.connect(output).connect(audio.destination);
    impactBus=compressor;
   }
