@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/z-idle-hair-rebuild.yml
+      - scripts/rebuild-z-idle-hair.py
   workflow_dispatch:
 permissions:
   contents: write
