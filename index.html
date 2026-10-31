@@ -395,8 +395,14 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  pointer-events:none!important;filter:drop-shadow(0 2px 2px #0008);
  /* Keep this layer aligned with the shaft; the cap art itself is unchanged. */
  translate:0 -10.56%;
- /* Remove the old painted nub; the chrome shaft now owns that portion. */
- clip-path:inset(0 0 31% 0);
+ /* A hand-cut transparent bitmap matte eliminates ONLY the old painted
+    black stub under the glossy sphere, preserving the golden lower rim.
+    The separate live chrome shaft remains behind this foreground layer. */
+ -webkit-mask-image:var(--joystick-ball-mask-url,url('./assets/ui/z-arcade-stick-ball-only-mask.webp'));
+ mask-image:var(--joystick-ball-mask-url,url('./assets/ui/z-arcade-stick-ball-only-mask.webp'));
+ -webkit-mask-size:100% 100%;mask-size:100% 100%;
+ -webkit-mask-position:center;mask-position:center;
+ -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
  transition:translate .045s ease-out;
 }
 #stageWrap .analog-pad.engaged .analog-ring{
@@ -636,6 +642,9 @@ let joystickBaseImage=new Image();joystickBaseImage.src='./assets/ui/z-arcade-st
 // the original painted metal tube without adding a separate CSS offset.
 let joystickShaftImage=new Image();joystickShaftImage.src='./assets/ui/z-arcade-stick-shaft-centered.webp';
 let joystickKnobImage=new Image();joystickKnobImage.src='./assets/ui/z-arcade-stick-knob.webp';
+// The original red-ball raster is unchanged; preload a precision alpha matte
+// so its obsolete lower shaft piece cannot flash during asset loading.
+let joystickBallMaskImage=new Image();joystickBallMaskImage.src='./assets/ui/z-arcade-stick-ball-only-mask.webp';
 const keys=new Set(), padPrev={}, touchKey={};
 const p={x:270,y:570,z:0,vz:0,facing:1,hp:100,maxHp:100,stamina:100,stagger:0,inv:0,stun:0,attack:0,attackDuration:0,hitDone:false,comboIdx:0,comboWindow:0,parry:0,dodge:0,dodgeX:0,weapon:0,maxWeapon:18,moveDX:0,moveDY:0,moveName:'idle',kickIdx:-1,punchIdx:-1,animAge:0,mod:'none',mods:[],credits:0,hits:0,hitTimeout:0,damageBoost:0,glow:0};
 
@@ -1922,7 +1931,8 @@ function resetFailedUiBitmaps(){
   {get:()=>arcadeButtonsImage,set:im=>{arcadeButtonsImage=im},url:'./assets/ui/arcade-action-buttons-v1.webp',css:'arcade'},
   {get:()=>joystickBaseImage,set:im=>{joystickBaseImage=im},url:'./assets/ui/z-arcade-stick-base-centerhole.webp',css:'joystickBase'},
   {get:()=>joystickShaftImage,set:im=>{joystickShaftImage=im},url:'./assets/ui/z-arcade-stick-shaft-centered.webp',css:'joystickShaft'},
-  {get:()=>joystickKnobImage,set:im=>{joystickKnobImage=im},url:'./assets/ui/z-arcade-stick-knob.webp',css:'joystickKnob'}
+  {get:()=>joystickKnobImage,set:im=>{joystickKnobImage=im},url:'./assets/ui/z-arcade-stick-knob.webp',css:'joystickKnob'},
+  {get:()=>joystickBallMaskImage,set:im=>{joystickBallMaskImage=im},url:'./assets/ui/z-arcade-stick-ball-only-mask.webp',css:'joystickMask'}
  ];
  for(const item of sources){
   const current=item.get(),prior=UI_DECODE_CACHE.get(current);
@@ -1933,7 +1943,7 @@ function resetFailedUiBitmaps(){
   // A failed CSS image must point to the retried URL too; otherwise the
   // loading screen might pass while the cards retain the failed cached URL.
   if(item.css&&typeof document!=='undefined')
-   document.documentElement?.style?.setProperty(({arcade:'--arcade-control-url',joystickBase:'--joystick-base-url',joystickShaft:'--joystick-shaft-url',joystickKnob:'--joystick-knob-url'})[item.css]||'--upgrade-preloaded-url','url("'+path+'")');
+   document.documentElement?.style?.setProperty(({arcade:'--arcade-control-url',joystickBase:'--joystick-base-url',joystickShaft:'--joystick-shaft-url',joystickKnob:'--joystick-knob-url',joystickMask:'--joystick-ball-mask-url'})[item.css]||'--upgrade-preloaded-url','url("'+path+'")');
  }
 }
 function requiredSceneArt(preview=false){
@@ -1946,6 +1956,7 @@ function requiredSceneArt(preview=false){
   ['왼쪽 아케이드 스틱 베이스',()=>ensureBitmapDecoded(joystickBaseImage)],
   ['왼쪽 아케이드 스틱 금속 봉',()=>ensureBitmapDecoded(joystickShaftImage)],
   ['왼쪽 아케이드 스틱 빨간 볼탑',()=>ensureBitmapDecoded(joystickKnobImage)],
+  ['볼탑 옛 봉 제거 투명 마스크',()=>ensureBitmapDecoded(joystickBallMaskImage)],
   ...['burst_red','burst_blue','burst_gold'].map(k=>['전투 이펙트 '+k,()=>ensureBitmapDecoded(img[k])]),
   ...Object.keys(Z_REMOTE_ATLAS).map(k=>['Z '+k,()=>loadZMove(k),
    Z_ALL_ATTACKS.includes(k)&&!['jab','frontkick','cross','superman_punch','axe_kick','diagonal_airkick'].includes(k)]),

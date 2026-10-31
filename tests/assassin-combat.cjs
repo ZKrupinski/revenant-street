@@ -919,8 +919,17 @@ test('approved arcade joystick uses bitmap disc and separately movable red ball,
  'centered shaft art must be preloaded and visible as the real bitmap, not the offset original');
  assert(part.includes('position:absolute;left:50%;top:50%;width:100%;height:100%'),
  'shaft DOM and stationary base use the same exact visual center without offsets');
- assert(part.includes('clip-path:inset(0 0 31% 0)'),
- 'old knob nub is hidden so the separate shaft is not double-painted');
+ assert(part.includes("-webkit-mask-image:var(--joystick-ball-mask-url,url('./assets/ui/z-arcade-stick-ball-only-mask.webp'))")&&
+ part.includes("mask-image:var(--joystick-ball-mask-url,url('./assets/ui/z-arcade-stick-ball-only-mask.webp'))"),
+ 'the original red sphere uses a real matte bitmap to hide its attached black stub');
+ assert(!part.includes('clip-path:inset(0 0 31% 0)'),
+ 'old rectangular clipping is replaced by an antialiased sphere contour');
+ const alphaMask=fs.readFileSync(path.join(root,'z-arcade-stick-ball-only-mask.webp'));
+ assert(alphaMask.length>2400&&alphaMask.subarray(0,4).toString()==='RIFF'&&
+ alphaMask.toString('ascii',8,12)==='WEBP',
+ 'knob mask is a real alpha-raster webp, not CSS vector artwork');
+ assert(part.includes('-webkit-mask-size:100% 100%')&&part.includes('mask-size:100% 100%'),
+ 'cutout follows exact existing knob artwork size on Android and desktop');
  assert(html.includes('id="analogShaft" aria-hidden="true"')&&
  html.indexOf('id="analogShaft"')<html.indexOf('id="analogThumb"'),
  'shaft is positioned between the fixed metallic base and foreground red knob');
