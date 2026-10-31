@@ -195,7 +195,7 @@ async function uiBitmapPreload(){
  assert.equal(bad.failed,true,'decode errors fail the start gate rather than presenting missing UI');
  assert(html.includes("['업그레이드 아이콘 25종',()=>ensureBitmapDecoded(upgradeIconsImage)]"));
  assert(html.includes("['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)]"));
- assert(html.includes("['난입 연출 8프레임',()=>ensureBitmapDecoded(intruderEntryImage)]"));
+ assert(html.includes("['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)]"));
  assert(html.includes("...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임',()=>ensureBitmapDecoded(intruderMotionImages[k])])"));
  assert(html.includes("const INTRUDER_MOTION_KEYS=['idle','run','attack','hit','death','special']"));
  assert(html.includes("['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)]"));
