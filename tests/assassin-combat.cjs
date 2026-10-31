@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,COMBO_ROTATION,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,COMBO_ROTATION,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('opening battle spawns one small squad just beyond the screen',()=>{
@@ -1567,12 +1567,18 @@ test('new PA-K punch is a loud transient on its own audio bus and never ducks mu
   assert.equal(t.playImpactSound('punch',1),true);
   const firstSnap=filters.find(f=>f.type==='highpass');
   assert(firstSnap&&firstSnap.frequency.value>=1800,'ordinary punch needs instant audible snap');
-  assert(gains.some(g=>g.gain.max>=.9),'foreground punch snap must be powerful');
+  assert(gains.some(g=>g.gain.max>=.9),'foreground punch transient keeps its original input envelope');
+  assert(gains.some(g=>Math.abs(g.gain.value-(.98*.70))<1e-8),'impact master output uses exactly 70% previous gain');
   ctx.currentTime+=.14;
   assert.equal(t.playImpactSound('heavy',1.35),true);
   assert(filters.filter(f=>f.type==='highpass').length>=2,'heavy punch needs a second hard transient');
   assert(gains.some(g=>g.gain.max>1.3),'heavy attack transient must exceed normal strike');
   assert.equal(compressors.length,1,'reuse master limiter and prevent stacking clipping');
+  const toneStart=gains.length;t.sound('attack');
+  assert(gains.slice(toneStart).some(g=>Math.abs(g.gain.max-(.07*.70))<1e-8),'synthetic attack tone is set to 70%');
+  const breakStart=gains.length;t.sound('break');
+  assert(gains.slice(breakStart).some(g=>Math.abs(g.gain.max-(.19*.70))<1e-8),'break tone peak is set to 70%');
+  assert(gains.slice(breakStart).some(g=>Math.abs(g.gain.value-(.22*.70))<1e-8),'break noise body is set to 70%');
   assert.equal(ducked,false,'impact must not adjust music volume');
  }finally{
   if(previousAC)world.AudioContext=previousAC;else delete world.AudioContext;
