@@ -839,13 +839,15 @@ test('four smaller bitmap arcade controls retain large touch surfaces and presse
  'physical button depression responds within 20ms of pointerdown');
  assert(css.includes('transition:transform .05s ease-out,filter .05s ease-out;'),
  'released button rebounds within 50ms');
- assert(css.includes('--face-btn:clamp(50px,13.5cqw,70px)'),
- 'face buttons shrink about 25% while retaining at least a 50px tap target');
- assert(css.includes('--face-btn:clamp(50px,11.25vh,60px)'),
+ assert(css.includes('--face-btn:clamp(48px,12.4cqw,64px)'),
+ 'face buttons shrink modestly with at least a 48px tap target');
+ assert(css.includes('--face-btn:clamp(48px,10.5vh,56px)'),
  'landscape also uses a reduced physical footprint');
- assert(css.includes('--face-btn:50px'),
- 'narrow screens keep 50px minimum touch surfaces');
- assert(css.includes('calc(var(--face-btn)*.75)'),'adjacent buttons cluster into a tight diamond');
+ assert(css.includes('--face-btn:48px'),
+ 'narrow screens retain 48px touch surfaces');
+ assert(css.includes('calc(var(--face-btn)*.68)'),'button spacing tightens from .75 to .68 diameters');
+ assert(css.includes('calc(var(--face-btn)*1.36)'),'right and bottom keys join the tighter cluster');
+ assert(css.includes('calc(var(--face-btn)*2.36)'),'whole control area shrinks with the closer centers');
  const ctl=html.slice(html.indexOf('<div class="touch-actions"'),html.indexOf('</div>',html.indexOf('<div class="touch-actions"')));
  for(const [action,face,key] of [['attack','left','j'],['parry','right','l'],['dash','bottom','Shift'],['jump','top','k']]){
   assert(ctl.includes('data-face="'+face+'" data-art="'+action+'"'),
@@ -867,6 +869,11 @@ test('approved arcade joystick uses bitmap disc and separately movable red ball,
  'metallic base and red ball use independent transparent raster layers');
  assert(part.includes('.analog-ring::after')&&part.includes('.analog-axis')&&part.includes('display:none!important'),
  'old circle guide / vector axis must be gone');
+ assert(part.includes('transform:translate(10px,-8px)')&&
+ part.includes('clamp(118px,11.8cqw,138px)'),
+ 'arcade stick shifts 10px right, 8px up, and grows about 7%');
+ assert(part.includes('transform:translate(8px,-6px)')&&part.includes('width:108px!important'),
+ 'compact screens maintain a smaller proportional offset and larger cap');
  assert(part.includes('transition:translate .045s ease-out'),
  'ball tilts responsively within its collar');
  assert(html.includes('cy=r.top+r.height*.35'),
@@ -875,7 +882,7 @@ test('approved arcade joystick uses bitmap disc and separately movable red ball,
  'tilt travel stays visually inside the arcade stick while analog input remains full');
  const compact=html.slice(html.indexOf('<style id="compact-arcade-face-buttons">'),
  html.indexOf('</style>',html.indexOf('<style id="compact-arcade-face-buttons">')));
- assert(compact.includes('position:absolute;inset:4%'),'visible caps become 8% smaller');
+ assert(compact.includes('position:absolute;inset:6%'),'visible caps shrink without reducing tap targets');
  assert(compact.includes('button.pressed::before')&&compact.includes('background-position:var(--arcade-x) 100%'),
  'fast pressed sprite swapping is preserved');
  assert(compact.includes('background-image:none!important')&&compact.includes('transform:none!important'),

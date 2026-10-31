@@ -289,11 +289,11 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 #stageWrap .touch-controls .touch-actions{
  /* Reduce the pictured buttons by ~25% (photo QA: they obscured the fight).
     Keep each square touch target >=50 CSS pixels wide. */
- --face-btn:clamp(50px,13.5cqw,70px);
+ --face-btn:clamp(48px,12.4cqw,64px);
  position:relative;isolation:isolate;
  display:block!important;pointer-events:none;
- flex:0 0 calc(var(--face-btn)*2.5);
- width:calc(var(--face-btn)*2.5);height:calc(var(--face-btn)*2.5);
+ flex:0 0 calc(var(--face-btn)*2.36);
+ width:calc(var(--face-btn)*2.36);height:calc(var(--face-btn)*2.36);
  min-width:0;max-width:none!important;gap:0!important;
  align-self:flex-end;
 }
@@ -322,16 +322,16 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 #stageWrap .touch-controls .touch-actions button[data-art="parry"]{--arcade-x:33.333333%}
 #stageWrap .touch-controls .touch-actions button[data-art="dash"]{--arcade-x:66.666667%}
 #stageWrap .touch-controls .touch-actions button[data-art="jump"]{--arcade-x:100%}
-/* Center spacing = .75 diameters on X/Y, so diagonal neighbors are just 1.06
-   diameters apart. The four entire square button surfaces are touch targets. */
+/* Centers move to 0.68 diameters on X/Y, tightening the four-button diamond.
+   Full square tap targets remain active, with visible caps slightly inset. */
 #stageWrap .touch-controls .touch-actions button[data-face="top"]{
- top:0;left:calc(var(--face-btn)*.75)}
+ top:0;left:calc(var(--face-btn)*.68)}
 #stageWrap .touch-controls .touch-actions button[data-face="left"]{
- top:calc(var(--face-btn)*.75);left:0}
+ top:calc(var(--face-btn)*.68);left:0}
 #stageWrap .touch-controls .touch-actions button[data-face="right"]{
- top:calc(var(--face-btn)*.75);left:calc(var(--face-btn)*1.5)}
+ top:calc(var(--face-btn)*.68);left:calc(var(--face-btn)*1.36)}
 #stageWrap .touch-controls .touch-actions button[data-face="bottom"]{
- top:calc(var(--face-btn)*1.5);left:calc(var(--face-btn)*.75)}
+ top:calc(var(--face-btn)*1.36);left:calc(var(--face-btn)*.68)}
 #stageWrap .touch-controls .touch-actions button.pressed,
 #stageWrap .touch-controls .touch-actions button:active{
  background-position:var(--arcade-x) 100%!important;
@@ -344,10 +344,10 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  outline:3px solid #dffaff!important;outline-offset:0px;
 }
 @media (max-height:490px) and (orientation:landscape){
- #stageWrap .touch-controls .touch-actions{--face-btn:clamp(50px,11.25vh,60px)}
+ #stageWrap .touch-controls .touch-actions{--face-btn:clamp(48px,10.5vh,56px)}
 }
 @media (max-width:350px){
- #stageWrap .touch-controls .touch-actions{--face-btn:50px}
+ #stageWrap .touch-controls .touch-actions{--face-btn:48px}
 }
 </style>
 
@@ -355,16 +355,17 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 /* Two real transparent bitmap layers cut from the approved red-ball arcade
    joystick concept. No outer circular touch guide or vector arrows. */
 #stageWrap .analog-pad{
- flex:0 0 clamp(110px,11cqw,130px)!important;
- width:clamp(110px,11cqw,130px)!important;
- height:clamp(110px,11cqw,130px)!important;
+ flex:0 0 clamp(118px,11.8cqw,138px)!important;
+ width:clamp(118px,11.8cqw,138px)!important;
+ height:clamp(118px,11.8cqw,138px)!important;
+ transform:translate(10px,-8px);
  justify-content:flex-end!important;align-items:center!important;
  background:transparent!important;
 }
 #stageWrap .analog-pad .analog-ring{
  position:relative;
- width:clamp(106px,10.5cqw,126px)!important;
- height:clamp(106px,10.5cqw,126px)!important;
+ width:clamp(112px,11.2cqw,132px)!important;
+ height:clamp(112px,11.2cqw,132px)!important;
  background:var(--joystick-base-url,url('./assets/ui/z-arcade-stick-base.webp')) center / 100% 100% no-repeat!important;
  border:0!important;border-radius:0!important;
  box-shadow:none!important;overflow:visible!important;
@@ -385,19 +386,19 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  border:0!important;box-shadow:none!important;
 }
 @media(max-width:550px){
- #stageWrap .analog-pad{flex-basis:106px!important;width:106px!important;height:110px!important}
- #stageWrap .analog-pad .analog-ring{width:104px!important;height:104px!important}
+ #stageWrap .analog-pad{flex-basis:112px!important;width:112px!important;height:116px!important;transform:translate(8px,-6px)}
+ #stageWrap .analog-pad .analog-ring{width:108px!important;height:108px!important}
 }
 </style>
 <style id="compact-arcade-face-buttons">
-/* Preserve all four original square touch targets, but shrink only the
-   visible glossy bitmap by 8%. Extra corner pixels remain touchable. */
+/* Preserve square tap targets; artwork is inset 6% per edge for clarity.
+   The four glossy caps are visually smaller and more tightly grouped. */
 #stageWrap .touch-controls .touch-actions button{
  background-image:none!important;box-shadow:none!important;
  transform:none!important;filter:none!important;
 }
 #stageWrap .touch-controls .touch-actions button::before{
- content:"";display:block;position:absolute;inset:4%;
+ content:"";display:block;position:absolute;inset:6%;
  pointer-events:none!important;
  background:var(--arcade-control-url,url('./assets/ui/arcade-action-buttons-v1.webp')) var(--arcade-x) 0% / 400% 200% no-repeat;
  filter:drop-shadow(0 2px 4px #000b);
