@@ -176,4 +176,33 @@ function optionalArt(){
  }
  console.log('PASS: unavailable extra combo does not block start; required artwork still blocks');
 }
-(async()=>{spriteRetry();optionalArt();await startup();await startup(true);await audio();await combatVoices();console.log('PASS: start waits for art + full BGM; failures block start; repeated starts deduplicate; upgrades soften music but combat impact never ducks music');})().catch(e=>{console.error(e);process.exitCode=1});
+
+async function uiBitmapPreload(){
+ const source=html.slice(html.indexOf('const UI_DECODE_CACHE=new WeakMap();'),html.indexOf('function requiredSceneArt(preview=false){'));
+ assert(source.includes('function ensureBitmapDecoded(image)'),'decoder readiness tracker is present');
+ const vmWorld={Promise,WeakMap,Date,Image:class{constructor(){this.complete=false;this.naturalWidth=0;this.naturalHeight=0}},document:{documentElement:{style:{setProperty(){}}}}};
+ vm.createContext(vmWorld);vm.runInContext(source,vmWorld);
+ const d=deferred(),bitmap={complete:false,naturalWidth:640,naturalHeight:256,decode:()=>d.promise};
+ const before=vmWorld.ensureBitmapDecoded(bitmap);
+ assert.equal(before.ready,false,'downloaded bitmap is not marked ready until decoding resolves');
+ assert.equal(before.failed,false);
+ assert.equal(vmWorld.ensureBitmapDecoded(bitmap),before,'same bitmap has one shared decode state');
+ d.resolve();await d.promise;await Promise.resolve();await Promise.resolve();
+ assert.equal(before.ready,true,'decoded pixels allow the game to start');
+ const failure=deferred(),broken={complete:true,naturalWidth:640,naturalHeight:256,decode:()=>failure.promise};
+ const bad=vmWorld.ensureBitmapDecoded(broken);failure.reject(Error('corrupt bitmap'));
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(bad.failed,true,'decode errors fail the start gate rather than presenting missing UI');
+ assert(html.includes("['업그레이드 아이콘 22종',()=>ensureBitmapDecoded(upgradeIconsImage)]"));
+ assert(html.includes("['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)]"));
+ assert(html.includes("['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)]"));
+ for(const file of ['assets/ui/upgrade-icons-v2.webp','assets/ui/edge-arrows-animated.webp','assets/fx/parry-shield.png']){
+  const imgBytes=fs.readFileSync(path.join(root,file));
+  assert(imgBytes.length>3000,'real UI bitmap asset exists: '+file);
+ }
+ assert(html.includes('resetFailedUiBitmaps();'),'start retry resets failed UI assets');
+ assert(html.includes("background-image:var(--upgrade-preloaded-url,url('./assets/ui/upgrade-icons-v2.webp'))"),
+ 'CSS icon sprite shares the preloaded image URL and supports cache-busted retries');
+}
+
+(async()=>{await uiBitmapPreload();spriteRetry();optionalArt();await startup();await startup(true);await audio();await combatVoices();console.log('PASS: start waits for art + full BGM; failures block start; repeated starts deduplicate; upgrades soften music but combat impact never ducks music');})().catch(e=>{console.error(e);process.exitCode=1});

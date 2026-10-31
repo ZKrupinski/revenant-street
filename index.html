@@ -220,7 +220,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 <style id="upgrade-bitmap-icons">
 /* One hand-painted bitmap sprite atlas for every upgrade: 6 columns x 4 rows.
    The player sees the same individual picture in the choice cards and HUD. */
-.upgrade-art{display:block;flex:none;width:60px;height:60px;background-image:url('./assets/ui/upgrade-icons-v2.webp');
+.upgrade-art{display:block;flex:none;width:60px;height:60px;background-image:var(--upgrade-preloaded-url,url('./assets/ui/upgrade-icons-v2.webp'));
  background-repeat:no-repeat;background-size:600% 400%;image-rendering:auto;
  filter:drop-shadow(0 2px 3px #0009)}
 .upgrade-btn .sym{display:flex;flex-direction:column;align-items:flex-start;gap:0;
@@ -351,12 +351,14 @@ assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
 // Both keys reference exactly the same embedded panorama; decode only once.
 img.street_pano=img.street;
 // Eight hand-painted bitmap frames: top row points right, bottom row points left.
-const offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows-animated.webp';
+let offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows-animated.webp';
 // 8 fps ping-pong keeps the peak flash from harshly jumping back to the dim pose.
 const OFFSCREEN_ARROW_SEQUENCE=[0,1,2,3,2,1];
 function offscreenArrowFrameAt(seconds){return OFFSCREEN_ARROW_SEQUENCE[Math.floor(Math.max(0,seconds)*8)%OFFSCREEN_ARROW_SEQUENCE.length]}
 // 4x2 real transparent PNG sprite sheet: spark-filled metal shield impact.
-const parryShieldImage=new Image();parryShieldImage.src='./assets/fx/parry-shield.png';
+let parryShieldImage=new Image();parryShieldImage.src='./assets/fx/parry-shield.png';
+// Preload the CSS-backed upgrade atlas too; its decoded pixels are reused by the cards/HUD.
+let upgradeIconsImage=new Image();upgradeIconsImage.src='./assets/ui/upgrade-icons-v2.webp';
 const keys=new Set(), padPrev={}, touchKey={};
 const p={x:270,y:570,z:0,vz:0,facing:1,hp:100,maxHp:100,stamina:100,stagger:0,inv:0,stun:0,attack:0,attackDuration:0,hitDone:false,comboIdx:0,comboWindow:0,parry:0,dodge:0,dodgeX:0,weapon:0,maxWeapon:18,moveDX:0,moveDY:0,moveName:'idle',kickIdx:-1,punchIdx:-1,animAge:0,mod:'none',mods:[],credits:0,hits:0,hitTimeout:0,damageBoost:0,glow:0};
 
@@ -1596,12 +1598,57 @@ function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
  p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
  p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.comboMoveCycle=[];p.comboMoveCursor=0;p.comboMoveCount=0;p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
+// All game UI bitmap assets must be fetched and DECODED before starting.
+// A separate <img> for the CSS sprite primes the same exact browser URL cache;
+// the drawing engine already holds the arrow/shield <img> instances.
+const UI_DECODE_CACHE=new WeakMap();
+function ensureBitmapDecoded(image){
+ if(!image)return {ready:false,failed:true,error:'Missing bitmap'};
+ let state=UI_DECODE_CACHE.get(image);
+ if(state)return state;
+ state={ready:false,failed:false,error:null};UI_DECODE_CACHE.set(image,state);
+ const done=()=>{state.ready=!!image.naturalWidth&&!!image.naturalHeight;state.failed=!state.ready;
+  if(state.failed)state.error='Image has no decoded pixels'};
+ const fail=err=>{state.failed=true;state.error=String(err||'Image decode failed')};
+ if(typeof image.decode==='function'){
+  // decode() waits for a pending network load and then completes the actual
+  // browser decoder. A cached asset still needs this explicit readiness gate.
+  try{Promise.resolve(image.decode()).then(done,fail)}catch(e){fail(e)}
+ }else if(image.complete)done();
+ else if(typeof image.addEventListener==='function'){
+  image.addEventListener('load',done,{once:true});
+  image.addEventListener('error',()=>fail('Image download failed'),{once:true});
+ }else{
+  // Older WebViews can lack HTMLImageElement.decode and addEventListener.
+  image.onload=done;image.onerror=()=>fail('Image download failed');
+ }
+ return state;
+}
+function resetFailedUiBitmaps(){
+ const sources=[
+  {get:()=>offscreenArrow,set:im=>{offscreenArrow=im},url:'./assets/ui/edge-arrows-animated.webp'},
+  {get:()=>parryShieldImage,set:im=>{parryShieldImage=im},url:'./assets/fx/parry-shield.png'},
+  {get:()=>upgradeIconsImage,set:im=>{upgradeIconsImage=im},url:'./assets/ui/upgrade-icons-v2.webp',css:true}
+ ];
+ for(const item of sources){
+  const current=item.get(),prior=UI_DECODE_CACHE.get(current);
+  if(!prior?.failed&&!(current.complete&&current.naturalWidth===0))continue;
+  const next=new Image();item.set(next);
+  const path=item.url+(item.url.includes('?')?'&':'?')+'retry='+Date.now();
+  next.src=path;
+  // A failed CSS image must point to the retried URL too; otherwise the
+  // loading screen might pass while the cards retain the failed cached URL.
+  if(item.css&&typeof document!=='undefined')
+   document.documentElement?.style?.setProperty('--upgrade-preloaded-url','url("'+path+'")');
+ }
+}
 function requiredSceneArt(preview=false){
  const checks=[
-  ['배경',()=>({ready:img.street_pano?.complete&&img.street_pano.naturalWidth>0,failed:false})],
-  ['패링 이펙트',()=>({ready:parryShieldImage.complete&&parryShieldImage.naturalWidth>0,failed:false})],
-  ['적 방향 아이콘',()=>({ready:offscreenArrow.complete&&offscreenArrow.naturalWidth>0,failed:false})],
-  ['이펙트',()=>({ready:['burst_red','burst_blue','burst_gold'].every(k=>img[k]?.complete&&img[k].naturalWidth>0),failed:false})],
+  ['배경 디코딩',()=>ensureBitmapDecoded(img.street_pano)],
+  ['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)],
+  ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
+  ['업그레이드 아이콘 22종',()=>ensureBitmapDecoded(upgradeIconsImage)],
+  ...['burst_red','burst_blue','burst_gold'].map(k=>['전투 이펙트 '+k,()=>ensureBitmapDecoded(img[k])]),
   ...Object.keys(Z_REMOTE_ATLAS).map(k=>['Z '+k,()=>loadZMove(k),
    Z_ALL_ATTACKS.includes(k)&&!['jab','frontkick','cross','superman_punch','axe_kick','diagonal_airkick'].includes(k)]),
   ...Object.keys(MASKED_GRUNT_ATLAS).map(k=>['잡몹 '+k,()=>loadMaskedMove(k)]),
@@ -1637,9 +1684,9 @@ function waitSceneArt(preview,onProgress){
 }
 async function requestRunStart(){
  if(loadingRun)return;
- loadingRun=true;gameState='loading';resetFailedSceneArt();
+ loadingRun=true;gameState='loading';resetFailedSceneArt();resetFailedUiBitmaps();
  const preview=/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'');
- showMenu(`<div class="eyebrow">PROJECT Z / RESOURCE PREPARATION</div><h2>게임 리소스 준비 중</h2><p id="loadStatus">음악·실제 기합·비명·애니메이션을 모두 준비한 뒤 시작합니다.</p><div class="bar hp"><div class="bar-fill" id="loadBar" style="width:0%"></div></div><p class="micro">고해상도 비트맵 압축 해제 · 프레임 8장 정렬 중</p>`);
+ showMenu(`<div class="eyebrow">PROJECT Z / RESOURCE PREPARATION</div><h2>게임 리소스 준비 중</h2><p id="loadStatus">음악·전투 음성·캐릭터·UI 아이콘·화살표 이미지의 디코딩까지 완료한 뒤 시작합니다.</p><div class="bar hp"><div class="bar-fill" id="loadBar" style="width:0%"></div></div><p class="micro">고해상도 비트맵 압축 해제 · 프레임 8장 정렬 중</p>`);
  try{
   const music=window.__revenantBgm;
   if(!music)throw Error('음악 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');
