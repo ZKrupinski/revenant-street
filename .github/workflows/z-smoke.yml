@@ -32,6 +32,8 @@ jobs:
         run: node tests/loading-audio.cjs
       - name: Combat and animation regression tests
         run: node tests/assassin-combat.cjs
+      - name: All eight Iron Mask special frames, no skipped animation poses
+        run: node tests/elite-eight-frame.cjs
       - name: Z locomotion full-body motion planner checks
         run: node tests/z-gait-planner.cjs
       - name: Original Z V3 walk/run and backstep regression
