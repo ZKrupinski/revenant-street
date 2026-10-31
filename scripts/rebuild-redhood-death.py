@@ -29,7 +29,7 @@ for c in range(4):
     elif nonblank and start is not None:empty.append((start,y));start=None
   if start is not None:empty.append((start,235))
   # Find the quietest stripe between the dangling boots and the body below.
-  options=[(hi-lo,lo,hi) for lo,hi in empty if lo>=20 and hi<=225]
+  options=[(hi-lo,lo,hi) for lo,hi in empty if lo>=20 and hi<=235]
   assert options,f"no seam gap in column {c}: {empty}"
   length,lo,hi=max(options)
   assert length>=12,f"not enough alpha-free pixels to separate death row {c}: {empty}"

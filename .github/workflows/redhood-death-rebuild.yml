@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/redhood-death-rebuild.yml
+      - scripts/rebuild-redhood-death.py
   workflow_dispatch:
 permissions:
   contents: write
