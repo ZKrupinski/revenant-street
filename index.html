@@ -654,6 +654,18 @@ body{position:fixed;inset:0;touch-action:manipulation}
  #menu.title-dialog .buttons{flex-wrap:nowrap}
  #menu.title-dialog .buttons button{flex:1;min-width:0}
 }
+/* 16:9 letterboxed portrait phone: the available stage can be just 180px
+   high. All three essential title buttons must still remain usable. */
+#app.compact-game-stage #menu.title-dialog{width:min(98%,500px);padding:4px 8px!important}
+#app.compact-game-stage #menu.title-dialog .eyebrow,
+#app.compact-game-stage #menu.title-dialog .desc,
+#app.compact-game-stage #menu.title-dialog .feature-row,
+#app.compact-game-stage #menu.title-dialog .title-base-stats,
+#app.compact-game-stage #menu.title-dialog .micro{display:none!important}
+#app.compact-game-stage #menu.title-dialog h1{font-size:clamp(19px,7cqh,30px)!important;line-height:1!important;margin:0 0 4px!important;letter-spacing:0!important}
+#app.compact-game-stage #menu.title-dialog .buttons{display:flex!important;flex-direction:column!important;flex-wrap:nowrap!important;margin:0!important;gap:3px!important}
+#app.compact-game-stage #menu.title-dialog .buttons button{display:block!important;width:100%!important;min-height:27px!important;padding:3px 6px!important;font-size:clamp(9px,1.8vh,12px)!important;line-height:1.15!important}
+#app.compact-game-stage #menu.title-dialog .buttons button:not(:first-child){min-height:24px!important}
 </style>
 </head>
 <body>
@@ -720,6 +732,7 @@ function syncGameViewport(){
  const outerH=Math.max(1,host.height||window.innerHeight||720);
  const stageH=Math.min(outerH,outerW/MIN_GAME_ASPECT);
  stageWrap.style.setProperty('--game-stage-height',stageH+'px');
+ viewportHost.classList.toggle('compact-game-stage',stageH<310);
  const target=Math.max(1280,Math.round(H*outerW/stageH));
  if(W!==target||canvas.width!==target||canvas.height!==H){
   W=target;canvas.width=W;canvas.height=H;
