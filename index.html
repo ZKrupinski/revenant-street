@@ -610,6 +610,48 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  #menu.hub-dialog .hub-saved-note{font-size:8px}
 }
 </style>
+
+<style id="immersive-viewport">
+html,body{margin:0!important;width:100%;height:100%;min-height:0!important;overflow:hidden!important;overscroll-behavior:none}
+body{position:fixed;inset:0;touch-action:manipulation}
+#app{position:fixed!important;inset:0!important;width:100%!important;max-width:none!important;height:100%!important;height:100dvh!important;margin:0!important;padding:0!important;overflow:hidden!important}
+#app>.masthead,#app>footer{display:none!important}
+#stageWrap.stage-wrap{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important;background:#060a12;touch-action:none}
+#stageWrap.stage-wrap:fullscreen,#stageWrap.stage-wrap:-webkit-full-screen{width:100vw!important;height:100vh!important;inset:0!important}
+#stageWrap>canvas#game{width:100%!important;height:100%!important;object-fit:fill!important}
+#stageWrap>.overlay{padding:clamp(4px,1.6vh,14px);overflow:hidden;overscroll-behavior:none}
+#menu.title-dialog{box-sizing:border-box;overflow:hidden!important;max-height:100%!important;width:min(660px,100%);padding:clamp(10px,2vh,24px) clamp(12px,2.5vw,30px)!important}
+#menu.title-dialog h1{font-size:clamp(28px,min(7vw,9vh),65px);margin-bottom:clamp(4px,1vh,13px)}
+#menu.title-dialog .eyebrow{font-size:clamp(8px,1.25vh,12px);margin-bottom:5px}
+#menu.title-dialog p{line-height:1.35;margin:clamp(4px,.8vh,10px) 0;font-size:clamp(10px,1.6vh,13px)}
+#menu.title-dialog .feature-row{gap:5px}
+#menu.title-dialog .feature-row span{padding:4px 6px;font-size:clamp(8px,1.2vh,11px)}
+#menu.title-dialog .buttons{margin-top:clamp(5px,1.2vh,14px);gap:clamp(4px,.8vh,10px)}
+#menu.title-dialog .buttons button{padding:clamp(6px,.8vh,11px) clamp(8px,1.8vw,16px);min-height:clamp(34px,6vh,46px);font-size:clamp(10px,1.65vh,14px)}
+#menu.title-dialog .micro{margin-top:4px!important}
+#stageWrap .touch-controls{bottom:max(5px,env(safe-area-inset-bottom,0px))!important}
+@media(max-height:540px){
+ #menu.title-dialog .desc,#menu.title-dialog .micro,#menu.title-dialog .feature-row{display:none!important}
+ #menu.title-dialog .title-base-stats{margin:3px 0!important}
+ #menu.title-dialog h1{font-size:clamp(29px,8vh,48px)}
+}
+@media(max-height:370px){
+ #menu.title-dialog .title-base-stats{display:none!important}
+ #menu.title-dialog .buttons{margin-top:3px}
+ #menu.title-dialog .buttons button{min-height:30px;padding:5px 8px}
+}
+@media(max-width:460px) and (orientation:portrait){
+ #menu.title-dialog .desc,#menu.title-dialog .micro,#menu.title-dialog .feature-row{display:none!important}
+ #menu.title-dialog .buttons{display:flex;flex-direction:column}
+ #menu.title-dialog .buttons button{width:100%}
+ #hud .hud-center{display:none}
+ #stageWrap .touch-controls{padding-left:3px;padding-right:3px}
+}
+@media(max-height:420px) and (orientation:landscape){
+ #menu.title-dialog .buttons{flex-wrap:nowrap}
+ #menu.title-dialog .buttons button{flex:1;min-width:0}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -664,7 +706,41 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 <script>
 (()=>{'use strict';
 const $=id=>document.getElementById(id), canvas=$('game'),ctx=canvas.getContext('2d');
-const W=1280,H=720;
+let W=1280;const H=720;
+const stageWrap=$('stageWrap');
+// Device viewport and world viewport always have the same aspect ratio.
+// Paint is never stretched, cropped, or obscured by page chrome.
+function syncGameViewport(){
+ const box=stageWrap.getBoundingClientRect();
+ const cw=Math.max(1,box.width||window.innerWidth||1280);
+ const ch=Math.max(1,box.height||window.innerHeight||720);
+ const target=Math.max(1,Math.round(H*cw/ch));
+ if(W!==target||canvas.width!==target||canvas.height!==H){
+  W=target;canvas.width=W;canvas.height=H;
+  // Reframe the character when the device rotates/fullscreen changes.
+  if(typeof cameraX!=='undefined'&&typeof p!=='undefined'&&typeof STAGE_WIDTH!=='undefined')
+   cameraX=Math.max(0,Math.min(STAGE_WIDTH-W,p.x-W*.52));
+ }
+ return {width:W,height:H};
+}
+// Real fullscreen requires a direct START user gesture. Browser fallback
+// remains edge-to-edge within the available viewport.
+function requestGameFullscreen(){
+ try{
+  if(!document.fullscreenElement&&stageWrap.requestFullscreen){
+   const result=stageWrap.requestFullscreen({navigationUI:'hide'});
+   if(result&&typeof result.catch==='function')result.catch(()=>{});
+  }else if(!document.webkitFullscreenElement&&stageWrap.webkitRequestFullscreen){
+   stageWrap.webkitRequestFullscreen();
+  }
+ }catch(_){}
+ syncGameViewport();
+}
+window.addEventListener('resize',syncGameViewport,{passive:true});
+window.visualViewport?.addEventListener('resize',syncGameViewport,{passive:true});
+document.addEventListener('fullscreenchange',syncGameViewport);
+document.addEventListener('webkitfullscreenchange',syncGameViewport);
+
 // Animation-only tuning: reduce visible frame transitions by ~28%, preserve
 // world speed, attack collision windows and existing eight-frame atlases.
 const Z_ANIM_RATE=.72,Z_ANIM_ONESHOT_CURVE=1.16;
