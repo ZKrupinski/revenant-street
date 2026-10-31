@@ -18,7 +18,7 @@ function load(key){
    entry.loading=false;im.onload=null;im.onerror=null;
   };
   im.onerror=()=>{entry.failed=true;entry.loading=false;entry.error='Iron Mask '+key+' image missing'};
-  im.src=ROOT+key+'.webp'+(key==='special'?'?rev=ironmask-unclipped-eight-1bc78ad':'');
+  im.src=ROOT+key+'.webp'+(key==='special'?'?rev=newhood-special-1f83b64-v2':'');
   DATA[key]=entry;
  }
  return DATA[key];
@@ -87,6 +87,14 @@ function draw(e,x,y,z,api){
   ctx.fillStyle='#121c23';ctx.fillRect(-24,-204,48,191);
  }
  ctx.restore();
+ // Only in the explicit ?elite=preview QA encounter, expose the live atlas
+ // frame number so all 8 poses can be verified without guessing from motion.
+ if(/(?:[?&])elite=preview(?:&|$)/.test(window.location?.search||'')){
+  ctx.save();ctx.fillStyle='#ffffff';ctx.font='900 18px Arial';
+  ctx.textAlign='center';
+  ctx.fillText('HOODED IRON MASK  /  '+key.toUpperCase()+'  '+(idx+1)+'/8',x,y-z-359);
+  ctx.restore();
+ }
  if(e.dead)return;
  const top=y-z-325,bw=125,tell=e.eliteTell>0;
  ctx.fillStyle='#090f1aca';ctx.fillRect(x-bw/2-2,top-2,bw+4,13);
