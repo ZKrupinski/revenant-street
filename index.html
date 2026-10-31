@@ -1739,7 +1739,7 @@ let intruderEntryImage=new Image();intruderEntryImage.src='./assets/enemies/redh
 // ONLY. Every subsequent combat action is rendered from this enemy's own art.
 const INTRUDER_MOTION_KEYS=['idle','run','attack','hit','death','special'];
 const intruderMotionImages=Object.fromEntries(INTRUDER_MOTION_KEYS.map(key=>{
- const image=new Image();image.src='./assets/enemies/redhood-intruder/'+(key==='death'?'death-fullbody.webp':key+'.png');
+ const image=new Image();image.src='./assets/enemies/redhood-intruder/'+(key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.webp':key+'.png');
  return [key,image];
 }));
 // Per-frame bottommost opaque pixel, measured from the original transparent
@@ -1975,9 +1975,12 @@ function prepareIntruderSpriteCrops(){
    throw Error('빨간 후드 스프라이트 '+name+'의 커팅 영역을 확인해주세요.');
   diagnostic.atlases++;
   if(name==='난입')continue;
-  if(name==='hit'||name==='death'){
-   // Both hit and the rebuilt death atlas retain the complete original
-   // lower-body pixels. Death originally crossed the 4x2 source row seam,
+  if(name==='hit'||name==='death'||name==='attack'){
+   // Hit, rebuilt death and repaired attack atlases retain complete original
+   // pixels. Death crossed the row seam and extended attack fists originally
+   // crossed the column seams. Both are now physically reassembled as
+   // separate high-resolution 8-frame WebP sheets, so eroded-core cleanup
+   // is not allowed to delete detached boots or gloved fists.
    // so the entire eight-frame sheet has been reassembled without the
    // leftover boot fragments in frames 5-8.
    // All 8 original hit poses retain two complete boots, and none touch
@@ -2006,7 +2009,7 @@ function prepareIntruderSpriteCrops(){
 const INTRUDER_FRAME_FOOT={
  idle:[439,439,439,439,432,432,432,432],
  run:[433,433,432,433,415,414,416,415],
- attack:[438,438,438,438,415,415,415,415],
+ attack:[598,598,598,598,598,598,598,598],
  hit:[439,440,441,440,419,421,421,419],
  death:[536,536,536,536,536,536,536,536],
  special:[440,443,409,436,410,418,407,417]
