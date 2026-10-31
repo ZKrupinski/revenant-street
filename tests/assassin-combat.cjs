@@ -76,7 +76,7 @@ test('opening battle spawns one small squad just beyond the screen',()=>{
  assert(live.length>=3&&live.length<=6,'no initial crowd of 18+');
  assert(live.some(e=>e.type==='assassin'),'diverse enemy classes');
  assert(live.filter(e=>e.type!=='intruder').every(e=>e.x>1280),
- 'ordinary enemies still approach from offscreen while the one intruder jumps from camera foreground');
+ 'ordinary enemies must approach from outside the visible screen');
  assert(live.every(e=>e.type!=='intruder'),
  'the special red-hood should arrive as mid-fight reinforcements instead of spawning at the beginning');
  assert.equal(t.getSquad(),1);
@@ -85,14 +85,14 @@ test('each troop grows and covers a broader offscreen area deeper into both wave
  g.startRun();
  const counts1=t.SQUAD_SPOTS[1].map((_,i)=>t.encounterRoster(1,i).length);
  const counts2=t.SQUAD_SPOTS[2].map((_,i)=>t.encounterRoster(2,i).length);
- assert.equal(counts1[0],5,'opening crowd adds the intruder without removing the red-hood raider');
+ assert.equal(counts1[0],4,'opening troop has four normal foes; intruders arrive as support later');
  assert(counts1.at(-1)>=counts1[0]+5,'wave one ending troop is substantially larger');
  assert(counts2[0]>counts1[0],'wave two starts with more enemies than the opening');
  assert(counts2.at(-1)>counts2[0]+4,'wave two later encounters also grow');
  assert(counts1.every((n,i)=>i===0||n>=counts1[i-1]-1),'growth does not collapse between consecutive troops');
  const init=t.waveEnemyTotals();
- assert.equal(init.current,5);
- assert.equal(init.total,counts1.reduce((a,b)=>a+b,0));
+ assert.equal(init.current,4);
+ assert(init.total>counts1.reduce((a,b)=>a+b,0),'wave total includes the separately spawned intruder reinforcements');
  assert.equal(init.remaining,init.total);
  assert.equal(init.defeated,0);
  // Go to a later segment without keeping old enemies alive.
@@ -108,17 +108,17 @@ test('each troop grows and covers a broader offscreen area deeper into both wave
 test('new HUD distinguishes live squad from unspawned remaining wave enemies',()=>{
  g.startRun();t.setEnemies(t.getEnemies());t.updateHud();
  const start=t.waveEnemyTotals();
- assert.equal(start.current,5);assert(start.future>start.current);
- assert(node('enemyCount').textContent.includes('현재 5명'),'current onscreen squad is explicit');
+ assert.equal(start.current,4);assert(start.future>start.current);
+ assert(node('enemyCount').textContent.includes('현재 4명'),'current onscreen squad is explicit');
  assert(node('enemyCount').textContent.includes('턴 잔여 '+start.remaining+'명'),'future squads are included in total');
  assert(node('enemyStatus').textContent.includes('무리 1/11'),'enemy squad index is visible');
  assert.equal(node('enemyProgressFill').style.width,'0%');
  const killed=t.getEnemies()[0];killed.dead=true;t.updateHud();
  const after=t.waveEnemyTotals();
- assert.equal(after.current,4);
+ assert.equal(after.current,3);
  assert.equal(after.remaining,start.remaining-1);
  assert.equal(after.defeated,1);
- assert(node('enemyCount').textContent.includes('현재 4명'));
+ assert(node('enemyCount').textContent.includes('현재 3명'));
  assert(node('enemyProgressFill').style.width!=='0%','defeat fills progress meter');
  t.setEnemies([]);t.updateHud();
  assert(node('enemyCount').textContent.includes('다음 무리 대기'),'zero active enemies must not imply wave is over');
