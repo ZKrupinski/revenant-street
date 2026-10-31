@@ -328,7 +328,7 @@ test('new black-hoodie protagonist maps gameplay motions to eight local original
  }
  assert(html.includes("const Z_HOODIE_HERO=/(?:[?&])hero=hoodie"),'original Z must be the game default');
  assert(lab.includes("const isBlackHoodieHero=/(?:[?&])hero=hoodie"),'original Z must be the Frame Lab default');
- assert(html.includes('Z_HOODIE_HERO?prepareTransparentHeroCells'),'alternate hoodie art must preserve transparency');
+ assert(html.includes('if(Z_HOODIE_HERO)frames=prepareTransparentHeroCells(im)'),'alternate hoodie art must preserve transparency');
  assert(lab.includes('preclearedHeroFrames'),'alternate hoodie must remain available for comparison');
  t.p.getupTimer=.64;t.p.recoveryDuration=.64;
  assert.equal(t.currentZFrameIndex('getup'),0,'original hero get-up must begin on original first frame');
@@ -337,6 +337,22 @@ test('new black-hoodie protagonist maps gameplay motions to eight local original
 });
 
 
+test('original Z idle retains all eight complete hairstyles in transparent prematted game art',()=>{
+ const file=fs.readFileSync(path.join(__dirname,'../assets/project-z-hero/z-idle-hair-safe.webp'));
+ assert(file.length>85000,'eight high quality hair-safe sprites must load from the local repository');
+ assert.equal(file.subarray(0,4).toString('ascii'),'RIFF','not a placeholder or CSS vector');
+ assert.equal(file.subarray(8,12).toString('ascii'),'WEBP','use original painted WebP sprites');
+ assert(html.includes("if(!Z_HOODIE_HERO)Z_REMOTE_ATLAS.idle='./assets/project-z-hero/z-idle-hair-safe.webp'"),
+  'original protagonist idle source must use approved local hair-safe atlas');
+ assert(html.includes('function preparePremattedIdleCells(im){'),
+  'dedicated non-destructive 8-frame idle loading path required');
+ assert(html.includes('if(cw!==240||ch!==254)'),
+  'fixed 4x2 square-grid with common ground alignment is required');
+ assert(html.includes("else if(key==='idle'&&url==='./assets/project-z-hero/z-idle-hair-safe.webp')frames=preparePremattedIdleCells(im)"),
+  'the original hair must bypass green-screen connected-component removal');
+ assert(html.includes('else frames=prepareZCells(im,localSidekickFootFix?'),
+  'other original moves must retain their existing sprite pipeline');
+});
 test('all 21 combat upgrades, NEURO and 3 Hub modules have distinct square bitmap-icon cells',()=>{
  const bytes=fs.readFileSync(path.join(__dirname,'../assets/ui/upgrade-icons-v4.webp'));
  assert.equal(bytes.subarray(0,4).toString('ascii'),'RIFF','sprite is real WebP bitmap');
