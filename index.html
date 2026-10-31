@@ -1057,10 +1057,10 @@ function isolateIntruderFrames(image,frames,mode){
   for(let at=0;at<size;at++){
    if(labels[at]||!core[at])continue;
    let start=0,end=0;queue[end++]=at;labels[at]=nextId;
-   let n=0,sumX=0,minX=cw,maxX=-1,minY=ch,maxY=-1;
+   let n=0,sumX=0,sumY=0,minX=cw,maxX=-1,minY=ch,maxY=-1;
    while(start<end){
     const index=queue[start++],x=index%cw,y=(index/cw)|0;
-    n++;sumX+=x;minX=Math.min(minX,x);maxX=Math.max(maxX,x);
+    n++;sumX+=x;sumY+=y;minX=Math.min(minX,x);maxX=Math.max(maxX,x);
     minY=Math.min(minY,y);maxY=Math.max(maxY,y);
     for(let yy=Math.max(0,y-1);yy<=Math.min(ch-1,y+1);yy++)
      for(let xx=Math.max(0,x-1);xx<=Math.min(cw-1,x+1);xx++){
@@ -1070,13 +1070,18 @@ function isolateIntruderFrames(image,frames,mode){
       }
      }
    }
-   groups.push({id:nextId,size:n,x:sumX/n,minX,maxX,minY,maxY});
+   groups.push({id:nextId,size:n,x:sumX/n,y:sumY/n,minX,maxX,minY,maxY});
    if(nextId===65535)break;
    nextId++;
   }
   if(!groups.length)continue;
   const best=groups.reduce((a,b)=>{
-   const score=c=>c.size*(1-(strict?.35:.22)*Math.min(1,Math.abs(c.x-cw*.5)/(cw*.5)));
+   const score=c=>{
+    const expectedFoot=INTRUDER_FRAME_FOOT[mode]?.[frame]??ch*.83;
+    const footMatch=1-.30*Math.min(1,Math.abs(c.maxY-expectedFoot)/Math.max(1,ch*.4));
+    const centered=1-(strict?.30:.22)*Math.min(1,Math.abs(c.x-cw*.5)/(cw*.5));
+    return c.size*footMatch*centered;
+   };
    return score(a)>=score(b)?a:b;
   });
   // Very small side islands are usually the neighbouring animation's
@@ -1087,12 +1092,26 @@ function isolateIntruderFrames(image,frames,mode){
    if(part===best)continue;
    const overlap=Math.max(0,Math.min(part.maxX,best.maxX)-Math.max(part.minX,best.minX));
    const adjacent=Math.max(0,Math.max(part.minX-best.maxX,best.minX-part.maxX));
-   const close=Math.abs(part.x-best.x)<cw*(strict?.225:.34);
-   const meaningful=part.size>=Math.max(strict?110:85,best.size*(strict?.038:.020));
-   const seamFragment=part.minX<=cw*.045||part.maxX>=cw*.955;
-   // A separate island touching an atlas cell edge most often belongs to
-   // an adjacent animation's boot or cloak, so never reattach it to this frame.
-   if(meaningful&&close&&(overlap>0||adjacent<cw*.055)&&!seamFragment)
+   const xGap=Math.max(0,Math.max(part.minX-best.maxX,best.minX-part.maxX));
+   const yGap=Math.max(0,Math.max(part.minY-best.maxY,best.minY-part.maxY));
+   const upperGarbage=part.minY<ch*.065&&part.maxY<best.minY+ch*.09&&
+    part.maxY<best.minY;
+   const seamFragment=(part.minX<=cw*.045||part.maxX>=cw*.955)&&
+    xGap>cw*.11&&part.size<best.size*.26;
+   // Recover lower leg/boot islands: an articulated hit animation can pull
+   // two feet apart, and aggressive eroded-core extraction removed one leg.
+   const leg=(mode==='hit'||mode==='death')&&
+    part.minY>best.minY+ch*.28&&part.maxY>=best.maxY-ch*.14&&
+    yGap<ch*.17&&xGap<cw*.25;
+   // Recover the entire punching glove, even when it hangs off a very thin
+   // wrist (a narrow bridge deliberately erased by core erosion).
+   const glove=(mode==='attack'||mode==='special')&&
+    part.maxY>best.minY+ch*.07&&part.minY<best.maxY-ch*.19&&
+    yGap<ch*.15&&xGap<cw*.25&&part.size>=Math.max(8,best.size*.0008);
+   const close=Math.abs(part.x-best.x)<cw*(strict?.33:.42);
+   const meaningful=part.size>=Math.max(strict?45:65,best.size*.012);
+   if(!upperGarbage&&!seamFragment&&
+      ((meaningful&&close&&xGap<cw*.15&&yGap<ch*.13)||leg||glove))
     selected[part.id]=1;
   }
   // A multi-source breadth-first reconstruction labels every real alpha
