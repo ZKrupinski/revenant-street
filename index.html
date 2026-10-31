@@ -1288,6 +1288,344 @@ body{position:fixed;inset:0;touch-action:manipulation}
  #stageWrap #menu.reward-dialog .upgrade-btn{border-width:5px!important;border-image-width:5px!important}
 }
 </style>
+
+<style id="z-neon-cybernetic-ui-v3">
+/* Approved Project Z cybernetic UI: thin magenta outer rails, cyan card rails,
+   dark navy dot-grain, neon-framed square skill icons. Sprite/border art is PNG. */
+:root{
+ --z-neon-outer:url('./assets/ui/z-neon-outer-v2.png');
+ --z-neon-card:url('./assets/ui/z-neon-card-v2.png');
+ --z-neon-panel:url('./assets/ui/z-tech-panel-v2.png');
+ --z-pink:#ff3f86;--z-cyan:#63c6ed;--z-gold:#eacf8d;
+}
+/* 16:9 stage popup, rendered above world without stealing a screen's scroll. */
+#stageWrap .overlay.visible .overlay-shade{
+ background:rgba(2,4,14,.74)!important;
+ backdrop-filter:blur(5px) brightness(.70)!important;
+}
+#stageWrap #menu.menu{
+ color:#eff5ff!important;
+ background:#080d1b var(--z-neon-panel) center / cover repeat!important;
+ border:12px solid transparent!important;
+ border-image:var(--z-neon-outer) 22 / 12px / 0 stretch!important;
+ border-radius:0!important;
+ box-shadow:0 16px 66px #000e,0 0 18px #ff26732b!important;
+ isolation:isolate;
+}
+#stageWrap #menu.menu:not(.reward-dialog):not(.hub-dialog){
+ border-image-source:var(--z-neon-outer)!important;
+}
+#stageWrap #menu.menu::before{
+ content:'/////  ▪ ▪ ▪';position:absolute;
+ top:4px;right:18px;line-height:1;
+ color:#f84685;font:900 clamp(9px,1.25cqw,15px)/1.1 Arial,sans-serif;
+ letter-spacing:4px;text-shadow:0 0 8px #fe4282aa;
+ pointer-events:none;
+}
+#stageWrap #menu.menu::after{
+ content:'';position:absolute;right:15px;bottom:8px;
+ width:58px;height:2px;background:#ff3e85;
+ box-shadow:0 0 11px #ff3e8588;pointer-events:none;
+}
+#stageWrap #menu .eyebrow,
+#stageWrap #menu .hub-kicker{
+ color:var(--z-pink)!important;
+ text-transform:uppercase;font-weight:900!important;
+ letter-spacing:2.6px!important;text-shadow:0 0 7px #bd165a5c!important;
+}
+#stageWrap #menu .eyebrow{display:flex;gap:12px;align-items:center}
+#stageWrap #menu .eyebrow::after{
+ content:'';display:block;flex:1;height:1px;
+ max-width:48%;background:linear-gradient(90deg,#ff3373a8,#ff337326,transparent);
+}
+#stageWrap #menu h1,#stageWrap #menu h2{
+ font-family:Arial,'Malgun Gothic','Noto Sans KR',sans-serif!important;
+ font-style:normal!important;font-weight:1000!important;
+ letter-spacing:-1px!important;color:#f7fbff!important;
+ text-shadow:0 2px 3px #000!important;
+}
+#stageWrap #menu p{color:#becbdf!important}
+/* Power-up screen: one hierarchy as the reference, not a deck of thick metal slabs. */
+#stageWrap #menu.reward-dialog{
+ width:min(1180px,calc(100% - 4px))!important;
+ height:min(690px,calc(100% - 6px))!important;
+ max-height:calc(100% - 6px)!important;
+ padding:clamp(11px,2.3cqh,23px) clamp(12px,2.35cqw,29px) clamp(7px,1.5cqh,14px)!important;
+ gap:0!important;overflow:hidden!important;
+}
+#stageWrap #menu.reward-dialog>.eyebrow{
+ font-size:clamp(9px,1.5cqh,13px)!important;
+ margin-bottom:clamp(5px,1cqh,10px)!important;
+}
+#stageWrap #menu.reward-dialog>h2{
+ font-size:clamp(29px,6.8cqh,61px)!important;
+ line-height:1.03!important;
+ margin-bottom:clamp(4px,.85cqh,9px)!important;
+}
+#stageWrap #menu.reward-dialog>p:not(.all-face-confirm-hint){
+ font-size:clamp(11px,1.9cqh,17px)!important;
+ line-height:1.35!important;
+ color:#bec8da!important;
+ margin-bottom:clamp(9px,1.6cqh,17px)!important;
+}
+#stageWrap #menu.reward-dialog>.choice-grid{
+ grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ grid-template-rows:minmax(0,1fr)!important;
+ gap:clamp(6px,1.25cqw,16px)!important;
+ min-height:0!important;overflow:hidden!important;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn{
+ position:relative!important;display:flex!important;flex-direction:column!important;
+ align-items:stretch!important;min-height:0!important;
+ background:#101b2c var(--z-neon-panel) center / cover repeat!important;
+ padding:clamp(8px,1.55cqw,19px)!important;
+ border:6px solid transparent!important;
+ border-image:var(--z-neon-card) 22 / 6px / 0 stretch!important;
+ border-radius:0!important;
+ box-shadow:inset 0 0 15px #06101ec0,0 4px 16px #0009!important;
+ text-align:left!important;gap:0!important;filter:none;
+ transition:filter .14s,box-shadow .14s;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn:hover,
+#stageWrap #menu.reward-dialog .upgrade-btn.pad-selected,
+#stageWrap #menu.reward-dialog .upgrade-btn:focus-visible{
+ outline:none!important;
+ border-image-source:var(--z-neon-outer)!important;
+ box-shadow:inset 0 0 12px #0c1e33b0,0 0 15px #fb3b8388!important;
+ filter:brightness(1.15)!important;transform:none!important;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn.reward-chosen{
+ border-image-source:var(--z-neon-outer)!important;
+ box-shadow:0 0 22px #ff377fbb!important;
+ filter:brightness(1.35)!important;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn .sym{
+ display:flex!important;flex-direction:column!important;
+ width:100%!important;align-items:flex-start!important;flex:none!important;
+ gap:clamp(3px,.8cqh,7px)!important;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn .upgrade-art{
+ display:block!important;
+ width:clamp(56px,17.5cqh,124px)!important;
+ height:clamp(56px,17.5cqh,124px)!important;
+ max-width:72%!important;
+ border:0!important;border-radius:0!important;
+ box-shadow:none!important;
+ margin:0 auto clamp(2px,.55cqh,6px)!important;
+ background-color:#080e1a!important;
+ filter:drop-shadow(0 0 8px #5cc7f746)!important;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn .up-lvl{
+ font-size:clamp(11px,1.55cqh,14px)!important;
+ font-weight:1000!important;color:#e8ce8a!important;
+ line-height:1.1!important;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn>strong{
+ flex:none!important;
+ font-family:Arial,'Malgun Gothic','Noto Sans KR',sans-serif!important;
+ font-size:clamp(15px,2.8cqh,25px)!important;font-weight:1000!important;
+ line-height:1.16!important;
+ color:#f4f7fd!important;white-space:normal!important;
+ letter-spacing:-.4px!important;margin:clamp(6px,1cqh,11px) 0 0!important;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn>strong small.up-new{
+ display:inline-block!important;vertical-align:middle;
+ border:1px solid #fa3978!important;
+ border-radius:2px!important;padding:1px 5px!important;
+ color:#fc4e87!important;background:#fa397812!important;
+ font-size:clamp(9px,1.35cqh,13px)!important;line-height:1.25!important;
+ white-space:nowrap!important;margin-left:5px!important;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn>strong small.up-levelup{
+ display:inline-block!important;margin-left:4px;
+ color:#fbc3da!important;font-size:clamp(9px,1.3cqh,12px)!important;
+}
+#stageWrap #menu.reward-dialog .up-progression{
+ display:block;flex:none;
+ border-bottom:1px solid #62819a8c;
+ color:#b7ccdc;font-size:clamp(10px,1.65cqh,14px);
+ line-height:1.2;padding:clamp(4px,.9cqh,10px) 0 clamp(4px,.8cqh,8px);
+ margin-bottom:clamp(6px,1.2cqh,11px);
+}
+#stageWrap #menu.reward-dialog .upgrade-btn>small{
+ font-size:clamp(10px,1.8cqh,16px)!important;
+ line-height:1.5!important;color:#d2dce8!important;
+ font-weight:600!important;overflow:hidden!important;
+}
+#stageWrap #menu.reward-dialog>.overline{
+ flex:none!important;border-top:1px solid #d53c7477!important;
+ padding-top:clamp(4px,.9cqh,9px);
+ color:#91a7c3!important;margin:clamp(6px,1.1cqh,12px) 0 0!important;
+ font-size:clamp(10px,1.5cqh,14px)!important;
+ letter-spacing:1.4px!important;
+}
+#stageWrap #menu.reward-dialog>.pad-hint{
+ flex:none!important;color:#c0d8e7!important;
+ font-size:clamp(9px,1.6cqh,13px)!important;font-weight:900!important;
+ padding-left:clamp(4px,.7cqw,9px);
+ margin:clamp(3px,.6cqh,7px) 0 0!important;line-height:1.35!important;
+}
+/* All hub panels are from the same cybernetic interface family. */
+#stageWrap #menu.hub-dialog{
+ width:min(1110px,calc(100% - 6px))!important;
+ height:min(654px,calc(100% - 6px))!important;
+ max-height:calc(100% - 6px)!important;
+ padding:5px!important;overflow:hidden!important;
+}
+#stageWrap #menu.hub-dialog .hub-screen,
+#stageWrap #menu.hub-dialog .hub-modules{
+ background:transparent!important;
+}
+#stageWrap #menu.hub-dialog .hub-header{
+ min-height:clamp(40px,6cqh,60px)!important;
+ padding:clamp(5px,1.2cqh,12px) clamp(12px,2cqw,22px)!important;
+ background:#0913238a!important;
+ border-bottom:1px solid #c9396d8a!important;
+}
+#stageWrap #menu.hub-dialog .hub-title{
+ font:1000 clamp(25px,4.1cqh,38px)/1 Arial,'Malgun Gothic',sans-serif!important;
+ color:white!important;letter-spacing:.5px!important;
+}
+#stageWrap #menu.hub-dialog .hub-title em{color:#ff528a!important}
+#stageWrap #menu.hub-dialog .hub-intro,
+#stageWrap #menu.hub-dialog .hub-stat-board,
+#stageWrap #menu.hub-dialog .hub-bottom{
+ background:#0a1424a6!important;
+ border-color:#4c83a291!important;
+}
+#stageWrap #menu.hub-dialog .hub-wallet,
+#stageWrap #menu.hub-dialog .hub-stat-tile{
+ background:#112135cc!important;border:1px solid #426780a5!important;
+ border-radius:2px!important;
+}
+#stageWrap #menu.hub-dialog .hub-wallet strong{color:#eecb92!important}
+#stageWrap #menu.hub-dialog .hub-modules{
+ grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ overflow:hidden!important;scrollbar-width:none!important;
+ padding:clamp(5px,1cqh,9px)!important;
+ gap:clamp(5px,1cqw,12px)!important;
+}
+#stageWrap #menu.hub-dialog .hub-module{
+ position:relative!important;min-height:0!important;overflow:hidden!important;
+ gap:clamp(3px,.85cqh,7px)!important;
+ padding:clamp(6px,1.5cqw,15px)!important;
+ background:#0c1a2d var(--z-neon-panel) center / cover repeat!important;
+ border:6px solid transparent!important;
+ border-image:var(--z-neon-card) 22 / 6px / 0 stretch!important;
+ border-radius:0!important;color:#f3f8fc!important;
+ box-shadow:inset 0 0 8px #0007!important;
+ filter:none!important;
+}
+#stageWrap #menu.hub-dialog .hub-module.selected{
+ border-image-source:var(--z-neon-outer)!important;
+ box-shadow:0 0 12px #ff407962!important;
+}
+#stageWrap #menu.hub-dialog .hub-module.installed{
+ border-image-source:var(--z-neon-outer)!important;
+ box-shadow:0 0 12px #f94b86a0!important;
+}
+#stageWrap #menu.hub-dialog .hub-module.pad-selected,
+#stageWrap #menu.hub-dialog .hub-module:focus-visible{
+ outline:none!important;filter:brightness(1.16)!important;
+}
+#stageWrap #menu.hub-dialog .hub-row-head{
+ display:flex;flex-direction:column;align-items:flex-start!important;
+ gap:clamp(3px,.65cqh,6px)!important;
+}
+#stageWrap #menu.hub-dialog .hub-emblem{
+ display:block;align-self:center;
+ flex:0 0 auto!important;
+ width:clamp(46px,14.5cqh,107px)!important;
+ height:clamp(46px,14.5cqh,107px)!important;
+ padding:0!important;background:#080f1c!important;
+ border:0!important;border-radius:0!important;
+ box-shadow:none!important;
+}
+#stageWrap #menu.hub-dialog .hub-emblem .upgrade-art{
+ width:100%!important;height:100%!important;
+ border:0!important;filter:drop-shadow(0 0 7px #358af94a);
+}
+#stageWrap #menu.hub-dialog .hub-module-name{
+ color:white!important;font:1000 clamp(12px,2.7cqh,21px)/1.14 Arial,'Malgun Gothic',sans-serif!important;
+}
+#stageWrap #menu.hub-dialog .hub-module-name small{
+ color:#f2cf8d!important;
+ font-size:clamp(10px,1.55cqh,13px)!important;
+}
+#stageWrap #menu.hub-dialog .hub-desc{
+ color:#cbd9e9!important;font-size:clamp(10px,1.5cqh,13px)!important;
+ line-height:1.24!important;min-height:0!important;
+}
+#stageWrap #menu.hub-dialog .hub-forecast{
+ border-top:1px solid #6e879a66;
+ padding-top:clamp(4px,.6cqh,6px)!important;
+ font-size:clamp(11px,1.8cqh,16px)!important;
+}
+#stageWrap #menu.hub-dialog .hub-from{color:#a5bbd0!important}
+#stageWrap #menu.hub-dialog .hub-arrow{color:#ff6498!important}
+#stageWrap #menu.hub-dialog .hub-to{color:#efcf95!important}
+#stageWrap #menu.hub-dialog .hub-buy{
+ min-height:clamp(25px,4cqh,38px)!important;
+ background:#121f31!important;border:1px solid #5f96b6!important;
+ border-radius:1px!important;
+ color:#ffe0aa!important;font-size:clamp(10px,1.6cqh,14px)!important;
+}
+#stageWrap #menu.hub-dialog .hub-emblem,
+#stageWrap #menu.reward-dialog .upgrade-art{
+ overflow:visible!important;position:relative;
+}
+#stageWrap #menu.reward-dialog .upgrade-art::after,
+#stageWrap #menu.hub-dialog .hub-emblem .upgrade-art::after{
+ content:'';position:absolute;inset:0;pointer-events:none;
+ border:7px solid transparent;
+ border-image:var(--z-neon-outer) 22 / 7px / 0 stretch;
+}
+/* Solid dark high-tech controls, preserving button hitboxes, contrast and focus. */
+#stageWrap #menu button.main-btn,
+#stageWrap #menu button.hub-apply,
+#stageWrap #menu button.hub-danger{
+ background:#57152f!important;color:#fff6fb!important;
+ border:5px solid transparent!important;
+ border-image:var(--z-neon-outer) 22 / 5px / 0 stretch!important;
+ border-radius:0!important;
+ box-shadow:0 0 12px #ec3d7f49!important;
+ text-shadow:0 2px 2px #000a!important;
+}
+#stageWrap #menu button.secondary-btn,
+#stageWrap #menu button.hub-reset,
+#stageWrap #menu button.hub-reset:disabled{
+ background:#0b2335!important;color:#e4f8ff!important;
+ border:5px solid transparent!important;
+ border-image:var(--z-neon-card) 22 / 5px / 0 stretch!important;
+ border-radius:0!important;
+ box-shadow:0 1px 6px #0008!important;
+}
+#stageWrap #menu button:focus-visible{
+ outline:2px solid #d6f3ff!important;outline-offset:1px!important;
+}
+#stageWrap #menu button:disabled{filter:brightness(.54)!important}
+/* Dense 16:9 and mobile stages must keep every control and choice visible. */
+#app.tight-hub-stage #stageWrap #menu.menu,
+#app.compact-game-stage #stageWrap #menu.menu{
+ border-width:5px!important;border-image-width:5px!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-module,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-module,
+#app.tight-hub-stage #stageWrap #menu.reward-dialog .upgrade-btn,
+#app.compact-game-stage #stageWrap #menu.reward-dialog .upgrade-btn{
+ border-width:4px!important;border-image-width:4px!important;
+}
+@media (max-height:500px){
+ #stageWrap #menu.reward-dialog .upgrade-btn>strong{
+  font-size:clamp(11px,3.4cqh,16px)!important;
+ }
+ #stageWrap #menu.reward-dialog .upgrade-btn>small{
+  font-size:clamp(9px,2.5cqh,11px)!important;
+ }
+ #stageWrap #menu.hub-dialog .hub-row-head{flex-direction:row;align-items:center!important}
+ #stageWrap #menu.hub-dialog .hub-emblem{width:37px!important;height:37px!important}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -5279,8 +5617,8 @@ function rewardMenu(reason='wave'){
  for(const pick of fresh)if(cardsOffered.length<3&&!cardsOffered.some(o=>o.id===pick.id))cardsOffered.push(pick);
  for(const pick of [...owned.slice(1),...fresh])if(cardsOffered.length<3&&!cardsOffered.some(p=>p.id===pick.id))cardsOffered.push(pick);
  const cards=cardsOffered.map(({id,meta})=>{
-  const level=modRank(id),stack=level?'Lv.'+level+' → '+(level+1):'NEW → Lv.1';
-  return `<button class="upgrade-btn" data-mod="${id}"><span class="sym">${modIconMarkup(id)}<small class="up-lvl">Lv.${level+1}</small></span><strong>${meta.title} <small>${stack}</small></strong><small>${upgradeDescription(id,level)} / 최대 Lv.${MOD_LEVEL_CAP}</small></button>`;
+  const level=modRank(id),stack=level?'Lv.'+level+' → '+(level+1):'NEW';
+  return `<button class="upgrade-btn" data-mod="${id}"><span class="sym">${modIconMarkup(id)}<small class="up-lvl">Lv.${level+1}</small></span><strong>${meta.title} <small class="${level?'up-levelup':'up-new'}">${stack}</small></strong><span class="up-progression">→ Lv.${level+1}</span><small>${upgradeDescription(id,level)} / 최대 Lv.${MOD_LEVEL_CAP}</small></button>`;
  }).join('');
  const headline=reason==='mid'?'전투 중 파워업':'구역 클리어 파워업';
  const explanation=reason==='mid'?'재화 없이 1개 선택하면 전투가 이어집니다. 기존 강화도 중첩 가능.':

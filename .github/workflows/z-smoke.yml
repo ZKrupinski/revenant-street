@@ -23,6 +23,8 @@ jobs:
           node-version: '22'
       - name: Bitmap panel and button artwork QA
         run: node tests/ui-bitmap-frames.cjs
+      - name: Approved neon cybernetic UI art direction checks
+        run: node tests/neon-cybernetic-ui.cjs
       - name: Loading and music readiness regression tests
         run: node tests/loading-audio.cjs
       - name: Combat and animation regression tests
