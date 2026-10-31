@@ -1695,7 +1695,7 @@ test('WASD are the only PC keys that control X/Y locomotion',()=>{
  assert.equal(t.p.y,594,'up arrow must not move player toward background');
  t.keys.clear();t.keys.add('w');t.keys.add('a');
  t.control(.1,{dx:0,dy:0});
- assert(t.p.x<550,'A must move left');assert(t.p.y<594,'W must move toward road top');
+ assert(t.p.x<550,'A must move left; state='+JSON.stringify({x:t.p.x,y:t.p.y,dx:t.p.moveDX,dy:t.p.moveDY,attack:t.p.attack,parry:t.p.parry,recoil:t.p.parryRecoilTime,stun:t.p.stun,airAttack:t.p.airAttack,down:t.p.downTimer,up:t.p.getupTimer,game:g.getState().gameState}));assert(t.p.y<594,'W must move toward road top');
  const left=t.p.x,up=t.p.y;t.keys.clear();t.keys.add('s');t.keys.add('d');
  t.control(.1,{dx:0,dy:0});
  assert(t.p.x>left,'D must move right');assert(t.p.y>up,'S must move toward foreground');
