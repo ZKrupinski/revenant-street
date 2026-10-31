@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('opening battle spawns one small squad just beyond the screen',()=>{
@@ -953,7 +953,7 @@ test('eight new boss animation atlases exist and are genuinely used by boss draw
   assert.equal(file.subarray(8,12).toString('ascii'),'WEBP');
  }
  assert(game.includes("if(a.type==='boss'&&window.RZBossHunter?.draw"),'boss must render new sprite');
- assert(game.includes("window.RZBossHunter?.update(e,p,dt"),'boss behavior state machine not active');
+ assert(game.includes("window.RZBossHunter?.update(e,p,actorDt"),'boss behavior state machine must use per-actor time');
  assert(script.includes("e.bossPhasePending")&&script.includes("'slam'"));assert(!script.includes("start(e,'combo'"),'removed rapid combo must not be selected');
 });
 test('boss introduction, charge, phase 2 and death select real animations',()=>{
@@ -1385,6 +1385,58 @@ test('successful parry launches a strong physical knockback and short player rec
  assert(t.p.parryRecoilTime>0&&t.p.parryRecoilRemaining>0);
  const x=t.p.x;t.control(1/60,{dx:0,dy:0});
  assert(t.p.x<x&&t.p.x>x-6,'gradual short backward player slide');
+});
+test('JUST PARRY alone shows a huge bitmap shield and triggers a one-second global cinematic',()=>{
+ g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2100;t.p.y=570;
+ const enemy=t.makeEnemy('assassin',t.p.x+78,t.p.y,0);enemy.stun=0;t.setEnemies([enemy]);
+ t.parry();
+ assert.equal(t.getFx().filter(f=>f.kind==='parryShield').length,0,'no shield before a confirmed parry');
+ assert.equal(t.getSlowMotion(),0,'guard startup never slows the world');
+ t.enemyAttack(enemy);
+ const shields=t.getFx().filter(f=>f.kind==='parryShield');
+ assert.equal(shields.length,1,'one real bitmap shield for one success');
+ assert(shields[0].scale>=2&&shields[0].life>=.5,'impact shield is over twice its former 285px size');
+ assert(t.getFx().some(f=>f.kind==='modBitmap'&&f.color==='blue'&&f.scale>1.9),'secondary bitmap glow reinforces shield impact');
+ assert(t.getFx().some(f=>f.color==='gold'&&f.scale>2),'large painterly impact burst');
+ assert(t.getSlowMotion()>=.95,'cinematic lasts near one second instead of 120ms');
+ assert.equal(t.getSlowVictim(),enemy,'only the successfully parried actor gets double-stacked slowdown');
+ assert(t.getHitStop()>=.15,'impact has a sharp initial freeze');
+});
+test('global parry cinematic slows camera world clock, hero, and parried foe in three layers',()=>{
+ g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2200;t.p.y=570;t.p.stamina=100;
+ const target=t.makeEnemy('raider',t.p.x+79,t.p.y,0);
+ const other=t.makeEnemy('raider',t.p.x+375,t.p.y,1);other.stun=4;
+ t.setEnemies([target,other]);t.parry();t.enemyAttack(target);
+ // Freeze frames do not process movement; afterwards independently sample
+ // the global clock, hero sprite pose clock and target's motion clock.
+ for(let j=0;j<12;j++)t.update(1/60);
+ assert.equal(t.getHitStop(),0,'initial impact freeze must eventually release');
+ const oldWorld=t.getGameTime(),oldHero=t.p.motionTime,oldVictim=target.spriteTime,oldOther=other.spriteTime;
+ t.update(1/60);
+ const worldStep=t.getGameTime()-oldWorld,heroStep=t.p.motionTime-oldHero;
+ const victimStep=target.spriteTime-oldVictim,otherStep=other.spriteTime-oldOther;
+ assert(Math.abs(worldStep-(1/60)*.33)<.0002,'background/weather/camera world clock runs at roughly one third speed: '+worldStep);
+ assert(Math.abs(otherStep-worldStep)<.0002,'other foes use slowed global world time');
+ assert(Math.abs(heroStep-worldStep*.60)<.0002,'hero animation and movement run at 60% of already slowed world time');
+ assert(Math.abs(victimStep-worldStep*.45)<.0002,'parried actor animation, knockback and AI run at 45% of world time');
+ assert(victimStep<heroStep&&heroStep<otherStep,'layered time factors visibly separate victim/hero/environment');
+ assert(t.getSlowMotion()>.6,'cinematic is still active after impact freeze');
+ // All cooldowns recover to normal after the real-time cinematic ends.
+ for(let j=0;j<85;j++)t.update(1/60);
+ assert.equal(t.getSlowMotion(),0,'global time returns to normal without sticking');
+ assert.equal(t.getSlowVictim(),null,'victim-specific slow reference clears after the cinematic');
+ t.p.stun=0;t.p.parry=0;t.setEnemies([]);
+ const resumed=t.getGameTime();t.update(1/60);
+ assert(Math.abs(t.getGameTime()-resumed-1/60)<.0001,'world returns to 1x');
+});
+test('parry chase remains attack-input responsive during full-screen slow motion',()=>{
+ g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2350;t.p.y=570;
+ const e=t.makeEnemy('assassin',t.p.x+82,t.p.y,0);e.hp=e.maxHp=950;
+ t.setEnemies([e]);t.parry();t.enemyAttack(e);
+ t.startAttack();
+ assert.equal(t.p.riposteChasing,true,'counter chase starts immediately from fresh input despite cinematic');
+ assert(t.getSlowMotion()>.9,'chase begins while cinematic slow is active');
+ assert.equal(t.p.riposteChaseTarget,e,'original parry target retained');
 });
 test('parry shield is a real eight-frame transparent PNG',()=>{
  const png=fs.readFileSync(path.join(__dirname,'../assets/fx/parry-shield.png'));
