@@ -869,10 +869,10 @@ test('approved arcade joystick uses bitmap disc and separately movable red ball,
  'metallic base and red ball use independent transparent raster layers');
  assert(part.includes('.analog-ring::after')&&part.includes('.analog-axis')&&part.includes('display:none!important'),
  'old circle guide / vector axis must be gone');
- assert(part.includes('transform:translate(10px,-8px)')&&
+ assert(part.includes('transform:translate(10px,-13px)')&&
  part.includes('clamp(118px,11.8cqw,138px)'),
- 'arcade stick shifts 10px right, 8px up, and grows about 7%');
- assert(part.includes('transform:translate(8px,-6px)')&&part.includes('width:108px!important'),
+ 'arcade stick shifts 10px right, 13px up, with its current size unchanged');
+ assert(part.includes('transform:translate(8px,-11px)')&&part.includes('width:108px!important'),
  'compact screens maintain a smaller proportional offset and larger cap');
  assert(part.includes('transition:translate .045s ease-out'),
  'ball tilts responsively within its collar');
