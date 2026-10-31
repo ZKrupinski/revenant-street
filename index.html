@@ -990,6 +990,127 @@ body{position:fixed;inset:0;touch-action:manipulation}
  min-height:29px!important;font-size:10px!important;padding:3px 5px!important;
 }
 </style>
+
+<style id="reward-16x9-compact-v1">
+/* In-combat and between-wave power-up screens: no viewport or card scrolling. */
+#menu.reward-dialog{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ width:min(1080px,calc(100% - 10px))!important;
+ height:min(640px,calc(100% - 12px))!important;
+ max-height:calc(100% - 12px)!important;
+ padding:clamp(8px,1.6cqh,18px) clamp(10px,2.1cqw,25px) clamp(8px,1.35cqh,14px)!important;
+ overflow:hidden!important;overscroll-behavior:none;
+ gap:0;
+}
+#menu.reward-dialog>.eyebrow{
+ flex:none;font-size:clamp(9px,1.3cqh,12px);
+ margin:0 0 clamp(2px,.6cqh,7px)!important;line-height:1.1;letter-spacing:2.2px;
+}
+#menu.reward-dialog>h2{
+ flex:none;font-size:clamp(24px,4.6cqh,40px)!important;
+ line-height:1.05!important;margin:0 0 clamp(3px,.9cqh,9px)!important;
+}
+#menu.reward-dialog>p:not(.all-face-confirm-hint){
+ flex:none;font-size:clamp(10px,1.75cqh,14px)!important;
+ line-height:1.32!important;margin:0 0 clamp(5px,1.25cqh,12px)!important;
+}
+#menu.reward-dialog>.choice-grid{
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ grid-template-rows:minmax(0,1fr)!important;
+ flex:1 1 0!important;min-height:0!important;height:auto!important;
+ gap:clamp(5px,1.1cqw,13px)!important;
+ margin:0!important;padding:1px!important;
+ overflow:hidden!important;
+ align-items:stretch!important;
+}
+#menu.reward-dialog .upgrade-btn{
+ display:flex!important;flex-direction:column!important;align-items:flex-start!important;
+ justify-content:flex-start!important;min-width:0!important;min-height:0!important;
+ height:100%!important;max-height:100%!important;overflow:hidden!important;
+ padding:clamp(6px,1.35cqw,15px)!important;gap:clamp(3px,.7cqh,7px)!important;
+ border-radius:4px;
+}
+#menu.reward-dialog .upgrade-btn .sym{
+ display:flex!important;flex:none!important;flex-direction:column!important;
+ align-items:flex-start!important;width:100%;gap:3px;line-height:1!important;
+ grid-column:auto!important;grid-row:auto!important;
+}
+#menu.reward-dialog .upgrade-btn .upgrade-art{
+ width:clamp(49px,12cqh,93px)!important;
+ height:clamp(49px,12cqh,93px)!important;
+ max-width:32%!important;aspect-ratio:1;
+}
+#menu.reward-dialog .upgrade-btn .up-lvl{
+ font-size:clamp(10px,1.5cqh,13px)!important;line-height:1.1!important;
+ color:#ffdc93!important;
+}
+#menu.reward-dialog .upgrade-btn>strong{
+ display:block!important;flex:none!important;
+ margin:clamp(3px,.6cqh,7px) 0 0!important;
+ font-size:clamp(13px,2.45cqh,23px)!important;
+ line-height:1.16!important;letter-spacing:0!important;
+ word-break:keep-all;overflow-wrap:anywhere;
+}
+#menu.reward-dialog .upgrade-btn>strong small{
+ font-size:clamp(9px,1.5cqh,12px)!important;
+ line-height:1.1!important;white-space:normal;
+}
+#menu.reward-dialog .upgrade-btn>small{
+ flex:1 1 auto;min-height:0!important;
+ font-size:clamp(10px,1.72cqh,14px)!important;line-height:1.46!important;
+ color:#c7d7e4;overflow:hidden;
+}
+#menu.reward-dialog>.overline{
+ flex:none;font-size:clamp(9px,1.35cqh,12px)!important;
+ line-height:1.2!important;margin:clamp(5px,1.1cqh,12px) 0 0!important;
+ letter-spacing:1.4px;
+}
+#menu.reward-dialog>.pad-hint{
+ flex:none;font-size:clamp(10px,1.4cqh,12px)!important;
+ line-height:1.25!important;margin:clamp(4px,.8cqh,8px) 0 0!important;
+ white-space:normal!important;overflow-wrap:break-word;
+}
+/* Strictly use the genuine 16:9 stage dimensions: the overlay is centered
+   inside the letterboxed game, not the full portrait browser viewport. */
+#stageWrap .overlay:has(#menu.reward-dialog){
+ padding:clamp(4px,.8cqh,8px)!important;overflow:hidden!important;
+}
+#app.tight-hub-stage #menu.reward-dialog{
+ width:calc(100% - 8px)!important;
+ padding:7px 10px!important;
+}
+#app.tight-hub-stage #menu.reward-dialog>h2{font-size:clamp(20px,5cqh,28px)!important}
+#app.tight-hub-stage #menu.reward-dialog .upgrade-btn .upgrade-art{
+ width:clamp(36px,12cqh,58px)!important;height:clamp(36px,12cqh,58px)!important;
+}
+#app.tight-hub-stage #menu.reward-dialog .upgrade-btn>strong{font-size:clamp(10px,2.6cqh,16px)!important}
+#app.tight-hub-stage #menu.reward-dialog .upgrade-btn>small{font-size:clamp(9px,2cqh,11px)!important;line-height:1.2!important}
+#app.compact-game-stage #menu.reward-dialog{padding:3px 5px!important}
+#app.compact-game-stage #menu.reward-dialog>.eyebrow{display:none}
+#app.compact-game-stage #menu.reward-dialog>h2{font-size:15px!important;margin:0 0 2px!important}
+#app.compact-game-stage #menu.reward-dialog>p:not(.all-face-confirm-hint){display:none!important}
+#app.compact-game-stage #menu.reward-dialog>.choice-grid{gap:2px!important}
+#app.compact-game-stage #menu.reward-dialog .upgrade-btn{
+ padding:3px!important;gap:1px!important;
+}
+#app.compact-game-stage #menu.reward-dialog .upgrade-btn .upgrade-art{
+ width:26px!important;height:26px!important;max-width:50%!important;
+}
+#app.compact-game-stage #menu.reward-dialog .upgrade-btn .up-lvl{display:none!important}
+#app.compact-game-stage #menu.reward-dialog .upgrade-btn>strong{font-size:9px!important;margin:0!important;line-height:1.1!important}
+#app.compact-game-stage #menu.reward-dialog .upgrade-btn>strong small{font-size:8px!important}
+#app.compact-game-stage #menu.reward-dialog .upgrade-btn>small{
+ font-size:8px!important;line-height:1.05!important;
+ display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+}
+#app.compact-game-stage #menu.reward-dialog>.overline{display:none!important}
+#app.compact-game-stage #menu.reward-dialog>.pad-hint{
+ font-size:8px!important;line-height:1.1!important;margin:2px 0 0!important;
+}
+/* Reconstructed sprites stay a shared six-by-four SQUARE grid, not
+   independently stretched backgrounds. */
+.upgrade-art{background-size:600% 400%;background-repeat:no-repeat;aspect-ratio:1}
+</style>
 </head>
 <body>
 <div id="app">
@@ -2777,7 +2898,7 @@ function selectMenuItem(step=0){
  for(let i=0;i<items.length;i++)items[i].classList.toggle('pad-selected',i===menuPad.index);
  const selected=items[menuPad.index];
  selected.focus?.({preventScroll:true});
- if(!$('menu').classList.contains('title-dialog'))selected.scrollIntoView?.({block:'nearest',inline:'nearest'});
+ if(!$('menu').classList.contains('title-dialog')&&!$('menu').classList.contains('reward-dialog'))selected.scrollIntoView?.({block:'nearest',inline:'nearest'});
  return selected;
 }
 function menuConfirm(){if(!menuReady()){menuPad.readyAt=Math.max(menuPad.readyAt,Date.now()+250);return false;}const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
@@ -2786,10 +2907,12 @@ function showMenu(html){
  $('overlay').classList.remove('reward-confirming');
  menuPad.readyAt=Date.now()+(gameState==='reward'?700:180);menuPad.armed=false;menuPad.neutralAt=Date.now();
  menuBlockedKeys.clear();for(const key of heldKeyboard)menuBlockedKeys.add(key);
- canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;if(gameState==='hub')$('menu').classList.add('hub-dialog');else $('menu').classList.remove('hub-dialog');$('menu').classList.remove('title-dialog');$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
+ canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;if(gameState==='hub')$('menu').classList.add('hub-dialog');else $('menu').classList.remove('hub-dialog');
+ $('menu').classList.toggle('reward-dialog',gameState==='reward');
+ $('menu').classList.remove('title-dialog');$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
  // Four face buttons are equivalent CONFIRM on title, REBEL HUB,
  // pause, defeat, and upgrade panels; movement still picks the focus.
- if(['menu','hub','dead','reward','paused'].includes(gameState)){
+ if(['menu','hub','dead','paused'].includes(gameState)){
   const note=document.createElement('p');note.className='all-face-confirm-hint';
   note.textContent='패드 스틱·십자키 / WASD 이동  ·  X/Y/A/B 아무 버튼으로 선택';
   $('menu').appendChild(note);
