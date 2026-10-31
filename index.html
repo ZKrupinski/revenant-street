@@ -2397,6 +2397,74 @@ const MOD_UI_ORDER=['dashrange','dashspeed','jumpheight','jumpspeed','counter','
 
 const MOD_ICON_ORDER=[...MOD_UI_ORDER,'neuro'];
 const MOD_ICON_INDEX=Object.fromEntries(MOD_ICON_ORDER.map((id,i)=>[id,i]));
+// Rebuild the original 6x4 sprite atlas as 24 EXACT 96x96 square icons.
+// Source cells are 48x48, but the artwork within them is often off-center,
+// narrow, or reaches its clipping edge. Preserve ALL source pixels inside each
+// cell, detect the real nontransparent silhouette and give every artwork the
+// same square padding, without borrowing pixels from adjacent skill cells.
+let normalizedUpgradeIconAtlas=null;
+function buildSquareUpgradeIconAtlas(){
+ if(normalizedUpgradeIconAtlas)return normalizedUpgradeIconAtlas;
+ const src=upgradeIconsImage,columns=6,rows=4,iconSize=96;
+ if(!src.complete||!src.naturalWidth||!src.naturalHeight)return null;
+ const out=document.createElement('canvas');
+ out.width=columns*iconSize;out.height=rows*iconSize;
+ const outCtx=out.getContext('2d');
+ if(!outCtx)throw Error('아이콘 시트 정규화용 Canvas를 생성할 수 없습니다');
+ outCtx.imageSmoothingEnabled=true;
+ outCtx.imageSmoothingQuality='high';
+ const cell=document.createElement('canvas'),cellCtx=cell.getContext('2d',{willReadFrequently:true});
+ if(!cellCtx)throw Error('아이콘 프레임 외곽 검사용 Canvas가 없습니다');
+ const stats={source:[src.naturalWidth,src.naturalHeight],target:[out.width,out.height],
+  frames:0,nonSquareArtwork:[],edgeContact:[],empty:[],cellSize:iconSize};
+ for(let index=0;index<columns*rows;index++){
+  const col=index%columns,row=Math.floor(index/columns);
+  const left=Math.round(col*src.naturalWidth/columns),
+   top=Math.round(row*src.naturalHeight/rows),
+   right=Math.round((col+1)*src.naturalWidth/columns),
+   bottom=Math.round((row+1)*src.naturalHeight/rows),
+   sw=Math.max(1,right-left),sh=Math.max(1,bottom-top);
+  cell.width=sw;cell.height=sh;
+  cellCtx.clearRect(0,0,sw,sh);
+  cellCtx.drawImage(src,left,top,sw,sh,0,0,sw,sh);
+  const rgba=cellCtx.getImageData(0,0,sw,sh).data;
+  let x1=sw,y1=sh,x2=-1,y2=-1,visible=0;
+  for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){
+   const at=(y*sw+x)*4;
+   // A low threshold keeps thin glows and small hands/spikes rather than
+   // cutting them off while re-centering irregular icon silhouettes.
+   if(rgba[at+3]<20)continue;
+   visible++;
+   x1=Math.min(x1,x);x2=Math.max(x2,x);
+   y1=Math.min(y1,y);y2=Math.max(y2,y);
+  }
+  if(x2<0){stats.empty.push(index);continue}
+  const bw=x2-x1+1,bh=y2-y1+1;
+  if(Math.abs(bw-bh)>=5)stats.nonSquareArtwork.push(index);
+  if(x1<=0||y1<=0||x2>=sw-1||y2>=sh-1)stats.edgeContact.push(index);
+  // Fit BOTH dimensions inside 84% of a transparent square, keeping the
+  // original painted proportions. The remaining margin is equal on all sides.
+  const scale=Math.min(iconSize*.84/bw,iconSize*.84/bh),
+   dw=bw*scale,dh=bh*scale;
+  const x=col*iconSize+(iconSize-dw)/2,y=row*iconSize+(iconSize-dh)/2;
+  outCtx.drawImage(cell,x1,y1,bw,bh,x,y,dw,dh);
+  stats.frames++;
+ }
+ // Reuse the same 6x4 background-position code for choice cards, hub
+ // upgrades, floating acquisition animation and compact stack HUD.
+ const dataUrl=out.toDataURL('image/png');
+ if(!dataUrl.startsWith('data:image/png;base64,'))throw Error('정사각 아이콘 시트 생성 실패');
+ document.documentElement.style.setProperty('--upgrade-preloaded-url','url("'+dataUrl+'")');
+ normalizedUpgradeIconAtlas=out;
+ window.__upgradeIconQA=stats;
+ return out;
+}
+upgradeIconsImage.addEventListener('load',()=>{
+ try{buildSquareUpgradeIconAtlas()}catch(e){console.warn('업그레이드 아이콘 시트 재제작 실패',e)}
+});
+if(upgradeIconsImage.complete&&upgradeIconsImage.naturalWidth){
+ try{buildSquareUpgradeIconAtlas()}catch(e){console.warn('업그레이드 아이콘 시트 초기화 실패',e)}
+}
 function modIconMarkup(id){
  const idx=MOD_ICON_INDEX[id];
  if(idx===undefined)return '';
@@ -3060,6 +3128,9 @@ async function requestRunStart(){
    if(status)status.textContent=`준비 ${done}/${total} — ${name}`;
    if(bar)bar.style.width=`${Math.floor(100*done/total)}%`;
   });
+  $('loadStatus').textContent='업그레이드 아이콘 정사각 프레임 24개 재정렬 중';
+  await new Promise(resolve=>setTimeout(resolve,0));
+  if(!buildSquareUpgradeIconAtlas())throw Error('업그레이드 아이콘 원본을 읽지 못했습니다');
   $('loadStatus').textContent='빨간 후드 7개 시트 정밀 커팅 및 발 정렬 확인 중';
   await new Promise(resolve=>setTimeout(resolve,0));
   prepareIntruderSpriteCrops();
