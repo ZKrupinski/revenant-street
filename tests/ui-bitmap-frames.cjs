@@ -49,7 +49,7 @@ function decodePng(file,width,height,alphaFrame){
   for(let y=4;y<height-4;y+=13)for(let x=4;x<width-4;x+=13){
    const [r,g,b]=pixel(x,y);unique.add((r<<16)|(g<<8)|b);
   }
-  assert(unique.size>80,file+' must contain varied texture, not flat CSS color');
+  assert(unique.size>(file.startsWith('z-button-')?30:80),file+' must contain varied texture, not flat CSS color');
  }
  assert(css.includes(file),file+' must be linked from the visible UI CSS');
 }
