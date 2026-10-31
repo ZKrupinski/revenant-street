@@ -4153,6 +4153,7 @@ function makeEnemy(type,x,y,index){
   brain:type==='boss'?'boss':type==='elite'?'elite':type==='intruder'?'support_elite':['swarm','feint','charger','swarm','feint','charger'][index%6],
   chargeCooldown:1.6+(index%5)*.48,chargePrep:0,chargeTime:0,
    eliteCooldown:2.6,eliteTell:0,eliteTellDuration:1,eliteRush:0,eliteRushFace:-1,eliteAttack:false,eliteAnnounced:false,eliteMenace:0,eliteSpecialRecover:0,
+   eliteSpecialPlaying:false,eliteSpecialElapsed:0,eliteSpecialDuration:1.04,
   reactionVariant:0,reactionTime:0,reactionDuration:.48,reactionDir:1,bodyShakeTime:0,bodyShakeDuration:0,bodyShakePower:0,
   specialPhase:'',specialTime:0,specialCooldown:type==='intruder'?1.0:0,
   specialTargetX:x,specialTargetY:y,specialStartX:x,specialStartY:y}
@@ -4494,7 +4495,7 @@ function hurtEnemy(e,dmg,poise){
   // Taking a real hit completely interrupts the air special.
   e.specialPhase='';e.specialTime=0;e.specialCooldown=Math.max(e.specialCooldown||0,2.0);
  }
- if(e.type==='elite'){e.eliteTell=0;e.eliteRush=0;e.eliteMenace=0;e.eliteSpecialRecover=0;e.eliteAttack=false;e.eliteCooldown=Math.max(e.eliteCooldown,2.0)}
+ if(e.type==='elite'){e.eliteTell=0;e.eliteRush=0;e.eliteMenace=0;e.eliteSpecialRecover=0;e.eliteSpecialPlaying=false;e.eliteSpecialElapsed=0;e.eliteAttack=false;e.eliteCooldown=Math.max(e.eliteCooldown,2.0)}
  // Couple enemy displacement to the attacker's actual forward drive.
  // The hit target receives the same accelerated forward-pressure beat
  // immediately, then flies on through physical knockback and its own hit art.
@@ -4707,7 +4708,7 @@ function enemyAttack(e){
   e.stun=Math.max(e.stun,1.50);e.reactionTime=e.reactionDuration=.84;
   if(e.type!=='boss'){e.pendingFall=true;e.hitAnimation='hitFly'}
   e.eliteRush=0;
-  if(e.type==='elite'){e.eliteTell=0;e.eliteMenace=0;e.eliteSpecialRecover=0}
+  if(e.type==='elite'){e.eliteTell=0;e.eliteMenace=0;e.eliteSpecialRecover=0;e.eliteSpecialPlaying=false;e.eliteSpecialElapsed=0}
   if(e.type==='intruder'){e.specialPhase='';e.specialTime=0;e.specialCooldown=5.5}
   p.parry=Math.max(p.parry,.30);p.parryDuration=Math.max(p.parryDuration,.34);
   p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteChaseTime=0;
@@ -5079,6 +5080,11 @@ function updateEliteAI(e,dt,dx,dy,dist){
  if(e.windup>0)return false;
  e.eliteCooldown=Math.max(0,e.eliteCooldown-dt);
  e.eliteSpecialRecover=Math.max(0,(e.eliteSpecialRecover||0)-dt);
+ // Even after an early collision, hold the animation until frame 8 has played.
+ // The damage impact is handled by the normal enemyAttack windup below.
+ if(e.eliteSpecialPlaying&&e.eliteRush<=0&&e.eliteTell<=0){
+  e.visualMoving=false;return true;
+ }
  if(!e.eliteAnnounced&&dist<650){
   e.eliteAnnounced=true;
   floatText('IRON MASK — EXECUTIONER',e.x,e.y-290,'#ff9d9b');
@@ -5090,7 +5096,8 @@ function updateEliteAI(e,dt,dx,dy,dist){
  if(e.eliteTell>0){
   e.eliteTell=Math.max(0,e.eliteTell-dt);e.visualMoving=false;
   if(e.eliteTell===0){
-   e.eliteRush=.55;e.eliteRushFace=e.face;
+   e.eliteRush=.58;e.eliteRushFace=e.face;
+   e.eliteSpecialElapsed=0;e.eliteSpecialDuration=1.04;e.eliteSpecialPlaying=true;
    e.spriteKey='';e.spriteTime=0;
    fxBurst(e.x,e.y-140,'red',1.8);
    playCombatVoice('enemyShout',e);
@@ -5106,8 +5113,13 @@ function updateEliteAI(e,dt,dx,dy,dist){
   const moved=Math.hypot(e.x-startX,(e.y-startY)*1.7);
   e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
   if((Math.abs(e.x-p.x)<e.reach+99&&Math.abs(e.y-p.y)<70)||e.eliteRush===0){
-   e.eliteRush=0;e.eliteAttack=true;e.eliteSpecialRecover=.67;
-   e.windup=.19;e.windupDuration=.19;e.cooldown=1.2;
+   e.eliteRush=0;e.eliteAttack=true;
+   // Aim the actual hit at the fifth/sixth painted attack pose.
+   // A short dash waits longer; a long dash has a quicker impact.
+   e.windup=Math.max(.10,Math.min(.42,.64-(e.eliteSpecialElapsed||0)));
+   e.windupDuration=e.windup;
+   e.eliteSpecialRecover=Math.max(.7,(e.eliteSpecialDuration||1.04)-(e.eliteSpecialElapsed||0)+.15);
+   e.cooldown=1.2;
    fxBurst(e.x+e.face*67,e.y-123,'red',2.2);
    screenShake=Math.max(screenShake,13);
   }
@@ -5273,6 +5285,13 @@ function updateEnemies(dt,parryVictimScale=1){
   e.bodyShakeTime=Math.max(0,(e.bodyShakeTime||0)-actorDt);
   e.reactionTime=Math.max(0,(e.reactionTime||0)-actorDt);
   e.spriteTime=(e.spriteTime||0)+actorDt;
+  // Advance every painted Iron Mask special frame with a dedicated clock.
+  // This does not restart when the dash hits a target or when windup switches.
+  if(e.type==='elite'&&e.eliteSpecialPlaying){
+   const duration=Math.max(.1,e.eliteSpecialDuration||1.04);
+   e.eliteSpecialElapsed=Math.min(duration,(e.eliteSpecialElapsed||0)+actorDt);
+   if(e.eliteSpecialElapsed>=duration&&e.eliteRush<=0&&e.windup<=0)e.eliteSpecialPlaying=false;
+  }
   e.attackPoseTime=Math.max(0,(e.attackPoseTime||0)-actorDt);
   e.visualMoving=false;e.visualSpeed=0;
   if(e.dead){
