@@ -1,0 +1,29 @@
+name: Repair Iron Mask Elite Special Sprite
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/repair-ironmask-special.yml'
+      - 'scripts/repair_ironmask_special.py'
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install bitmap processor
+        run: python -m pip install --quiet Pillow
+      - name: Rebuild the cropped special frames
+        run: python scripts/repair_ironmask_special.py
+      - name: Publish corrected WebP atlas
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/ironmask-elite/special.webp
+          if ! git diff --cached --quiet; then
+            git commit -m "Replace clipped Iron Mask special frames with safe full-body animation"
+            git push
+          fi
