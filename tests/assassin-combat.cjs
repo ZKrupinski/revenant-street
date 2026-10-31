@@ -875,20 +875,24 @@ test('no connected actuator means no continuous footsteps or audio loop',()=>{
   assert.equal(t.footstepRumble(1/60,80),false);
  }finally{world.navigator.getGamepads=prior}
 });
-test('guard animation braces in 0.17s without shortening the active parry window',()=>{
+test('guard reaches its full brace then recovers while the active parry window remains open',()=>{
  g.startRun();t.keys.clear();t.setEnemies([]);
  t.p.parry=0;t.p.stun=0;t.p.stamina=100;t.parry();
  const activeWindow=t.p.parryDuration;
  assert(activeWindow>=.34&&activeWindow<.35,'original active counter window is preserved');
  assert.equal(t.currentZFrameIndex('guard'),0,'guard begins on its first actual atlas frame');
- t.control(.10,{dx:0,dy:0});
+ // control() only reads movement; the main update solver advances the timer.
+ // Exercise the frame curve directly to avoid a false regression.
+ t.p.parryAnimAge=.13;
  assert(t.currentZFrameIndex('guard')>=4,'defensive sprite advances rapidly within 100ms');
- t.control(.10,{dx:0,dy:0});
- assert.equal(t.currentZFrameIndex('guard'),7,'last guard pose arrives by 200ms after a 170ms windup');
- assert(t.p.parry>0,'parry collision is still open at 200ms');
+ t.p.parryAnimAge=.17;
+ assert.equal(t.currentZFrameIndex('guard'),7,'full guard brace appears at midpoint of the parry');
+ t.p.parryAnimAge=.23;
+ assert.equal(t.currentZFrameIndex('guard'),6,'painted recovery follows the held defensive pose');
+ assert(t.p.parry>0,'parry collision window remains open during visual recovery');
  const last=t.currentZFrameIndex('guard');
  t.p.parry=Math.max(t.p.parry,.30);
- assert.equal(t.currentZFrameIndex('guard'),last,'parry success hold must not rewind the animation');
+ assert.equal(t.currentZFrameIndex('guard'),last,'success hold must not rewind the animation');
 });
 test('four smaller bitmap arcade controls retain large touch surfaces and pressed sprite art',()=>{
  const atlas=fs.readFileSync(path.join(__dirname,'../assets/ui/arcade-action-buttons-v1.webp'));
