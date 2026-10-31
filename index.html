@@ -679,6 +679,9 @@ assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
 img.street_pano=img.street;
 // Eight hand-painted bitmap frames: top row points right, bottom row points left.
 let offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows-animated.webp';
+// The entire 4x2 bitmap belongs to a NEW enemy type: first four frames are the
+// camera-facing back-view entry, last four frames are its own combat stance.
+// Never pass this actor to the original raider/Masked Grunt atlas after landing.
 let intruderEntryImage=new Image();intruderEntryImage.src='./assets/enemies/redhood-ambush-entry-8.webp';
 // 8 fps ping-pong keeps the peak flash from harshly jumping back to the dim pose.
 const OFFSCREEN_ARROW_SEQUENCE=[0,1,2,3,2,1];
@@ -1094,6 +1097,62 @@ function drawIntruderEntry(e,x,y){
  ctx.drawImage(intruderEntryImage,(frame%4)*cellW,Math.floor(frame/4)*cellH,
   cellW,cellH,-w/2,-h+8,w,h);
  ctx.restore();
+}
+// Standalone foreground-intruder enemy. Its last four original painted frames
+// are a coherent combat pose; it never borrows a frame from the old red hood.
+// Whole-sprite lean/recoil/fall preserves the costume and foot scale until
+// dedicated additional action atlases are authored for this exact character.
+function intruderCombatFrame(e,key){
+ const t=Math.max(0,e.spriteTime||0);
+ if(key==='fall')return 7;
+ if(key==='getup')return 4+Math.min(3,Math.floor(clamp(1-(e.riseTime||0)/.67,0,.9999)*4));
+ if(key.startsWith('hit'))return 5+Math.min(2,Math.floor(clamp(1-(e.reactionTime||0)/Math.max(.01,e.reactionDuration||.48),0,.9999)*3));
+ if(key==='attack')return e.windup>0?5:7;
+ if(key==='charge')return 6;
+ if(key==='walk'||key==='run')return 4+(Math.floor(Math.max(0,e.spriteDistance||0)/(key==='run'?38:27))%4);
+ // Hold the final entry landing pose briefly to avoid a snap at the handoff.
+ if(t<.24)return 7;
+ return 4+([0,1,2,1][Math.floor(t*4.7)%4]);
+}
+function drawIntruderCombat(e,x,y,z){
+ if(!intruderEntryImage.complete||!intruderEntryImage.naturalWidth)return;
+ const key=getMaskedMove(e),frame=intruderCombatFrame(e,key);
+ const cw=intruderEntryImage.naturalWidth/4,ch=intruderEntryImage.naturalHeight/2;
+ const w=cw*.68,h=ch*.68;
+ const moving=key==='walk'||key==='run';
+ const step=moving?Math.sin((e.spriteDistance||0)/(key==='run'?20:26))*2.8:0;
+ const charging=key==='charge',attacking=key==='attack';
+ const struck=key.startsWith('hit'),down=key==='fall';
+ const groundedDown=down&&z<12;
+ const lean=groundedDown?1.21:down?.32:struck?.19:charging?-.12:attacking?-.09:0;
+ const shove=attacking?(e.windup>0?3:19):charging?7:0;
+ const opacity=e.dead?clamp(e.fade,0,1):1;
+ ellipseShadow(x,y,1.06,.42*opacity/(1+z*.022));
+ ctx.save();
+ ctx.globalAlpha=opacity;
+ ctx.translate(Math.round(x),Math.round(y-z+step));
+ // The landing/combat row faces RIGHT in the source artwork.
+ ctx.scale(e.face>0?1:-1,1);
+ ctx.translate(shove,0);
+ ctx.rotate(lean);
+ ctx.drawImage(intruderEntryImage,(frame%4)*cw,ch,cw,ch,-w/2,-h+8,w,h);
+ if(e.hitFlash>0){
+  ctx.filter='brightness(0) invert(1)';
+  ctx.globalAlpha=opacity*.75*clamp(e.hitFlash/.22,0,1);
+  ctx.drawImage(intruderEntryImage,(frame%4)*cw,ch,cw,ch,-w/2,-h+8,w,h);
+  ctx.filter='none';
+ }
+ ctx.restore();
+ if(e.dead)return;
+ // Combat and damage logic remains the ordinary grunt AI, with separate art.
+ const top=y-z-270,bw=95;
+ ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,top,bw,7);
+ ctx.fillStyle='#ff9aab';ctx.fillRect(x-bw/2,top,bw*clamp(e.hp/e.maxHp,0,1),7);
+ if(e.poise>0){ctx.fillStyle='#7ee5fa';ctx.fillRect(x-bw/2,top+9,bw*clamp(e.poise/e.maxPoise,0,1),4)}
+ ctx.textAlign='center';
+ if(e.windup>0){ctx.fillStyle='#ff697b';ctx.font='900 26px Arial';ctx.fillText('!',x,top-13)}
+ if(e.chargePrep>0){ctx.fillStyle='#ffb842';ctx.font='900 28px Arial';ctx.fillText('!!',x,top-18)}
+ if(e.groggy>0){ctx.fillStyle='#9ef4ff';ctx.font='900 14px Arial';ctx.fillText('공격 → 처형',x,top-12)}
 }
 function drawMaskedGrunt(e,x,y,z){
  const key=getMaskedMove(e);if(e.spriteKey!==key){
@@ -1634,8 +1693,10 @@ function encounterRoster(waveNumber,index){
  const more=waveNumber===1?Math.floor(index/2):2+Math.floor(index/2);
  const types=['raider','assassin','raider','guard','assassin','raider','guard'];
  // Every second squad swaps one ordinary red-hood raider for a foreground intruder.
- const slot=index%2===0?base.indexOf('raider'):-1;
- const lineup=base.map((kind,j)=>j===slot?'intruder':kind);
+ // A genuinely EXTRA enemy: retain every original raider and add the
+ // front-of-camera intruder every other encounter as its own roster member.
+ const lineup=base.slice();
+ if(index%2===0)lineup.splice(Math.min(2,lineup.length),0,'intruder');
  return lineup.concat(Array.from({length:more},(_,j)=>types[(index*2+j)%types.length]));
 }
 function waveEnemyTotals(){
@@ -1971,7 +2032,7 @@ function titleMenu(){
  <div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button>
  <button class="secondary-btn" data-action="hub">◆ REBEL HUB · 기본 스탯 강화</button>
  <button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div>
- <p class="micro">가로 10화면 · 마스크 잡몹 A + 쌍단검 암살자 B + 철가면 엘리트 / 키보드·게임패드·드래그 조이스틱</p>`);
+ <p class="micro">가로 10화면 · 마스크 잡몹 A + 신규 난입자 + 쌍단검 암살자 B + 철가면 엘리트 / 키보드·게임패드·드래그 조이스틱</p>`);
 }
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>지상 연속타격 · 점프 후 새로 누르면 수직 내려차기와 착지 광역타</div><div><kbd>↑ / K / Y / △</kbd>점프 · 이동 도약 / 자동 착지 공격 없음</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링 성공으로 적을 멀리 날려 보낸 직후 <b class="key">공격 버튼을 한 번</b> 누르면 자동 대쉬 추격과 빈사 강타가 이어집니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
 function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
@@ -2037,7 +2098,7 @@ function requiredSceneArt(preview=false){
   ['배경 디코딩',()=>ensureBitmapDecoded(img.street_pano)],
   ['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)],
   ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
-  ['빨간 후드 난입 8프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
+  ['신규 난입자 전용 난입·전투 8프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
   ['업그레이드 아이콘 22종',()=>ensureBitmapDecoded(upgradeIconsImage)],
   ['아케이드 조작 버튼 4종·눌림 8프레임',()=>ensureBitmapDecoded(arcadeButtonsImage)],
   ['왼쪽 아케이드 스틱 베이스',()=>ensureBitmapDecoded(joystickBaseImage)],
@@ -3627,7 +3688,7 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  if(a.type==='raider'){drawMaskedGrunt(a,x,y,z);return;}
  if(a.type==='intruder'){
   if(intruderEntering(a))drawIntruderEntry(a,x,y);
-  else drawMaskedGrunt(a,x,y,z); // Normal raid combat sprites and standard AI.
+  else drawIntruderCombat(a,x,y,z); // Its own painted combat row, never the raider.
   return;
  }
  if(a.type==='assassin'){drawAssassin(a,x,y,z);return;}
