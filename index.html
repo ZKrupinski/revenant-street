@@ -3217,24 +3217,29 @@ function pollPad(){
  let dx=Math.abs(g.axes[0])>.19?g.axes[0]:0,dy=Math.abs(g.axes[1])>.19?g.axes[1]:0;
  dx+=(g.buttons[15]?.pressed?1:0)-(g.buttons[14]?.pressed?1:0);
  dy+=(g.buttons[13]?.pressed?1:0)-(g.buttons[12]?.pressed?1:0);
- // X/square (attack) confirms only after the opening guard and input release.
+ // Upgrade confirmation accepts any of the four face buttons after a full release.
+ const upgradeConfirm=!!(g.buttons[0]?.pressed||g.buttons[1]?.pressed||
+  g.buttons[2]?.pressed||g.buttons[3]?.pressed);
  if(gameState!=='playing'){
   resetPadFaceVisuals();
-  if(rewardSelection){menuPad.nav=0;menuPad.confirm=!!g.buttons[2]?.pressed;return{dx:0,dy:0}}
+  if(rewardSelection){menuPad.nav=0;menuPad.confirm=upgradeConfirm;return{dx:0,dy:0}}
   const direction=Math.abs(dx)>.52?Math.sign(dx):Math.abs(dy)>.52?Math.sign(dy):0;
   if(direction&&direction!==menuPad.nav)selectMenuItem(direction);
   menuPad.nav=direction;
-  const accept=!!g.buttons[2]?.pressed;
+  const accept=gameState==='reward'?upgradeConfirm:!!g.buttons[2]?.pressed;
   const neutral=!g.buttons.some(b=>b?.pressed)&&Math.abs(dx)<.2&&Math.abs(dy)<.2;
   if(!neutral)menuPad.neutralAt=Date.now();
   if(menuReady()&&neutral&&Date.now()-menuPad.neutralAt>=250)menuPad.armed=true;
   if(accept&&!menuPad.confirm&&menuPad.armed&&menuReady()){menuPad.armed=false;menuConfirm()}
-  // The same A button must not trigger a dash immediately after
-  // confirming a menu selection that resumes combat.
-  padPrev.dodge=accept;padPrev.attack=!!g.buttons[2]?.pressed;
+  // Carry actual controller holds to the action edge-gate so that confirming
+  // with jump / guard / dash does not accidentally execute on menu close.
+  padPrev.dodge=!!g.buttons[0]?.pressed;
+  padPrev.parry=!!(g.buttons[1]?.pressed||g.buttons[4]?.pressed);
+  padPrev.attack=!!(g.buttons[2]?.pressed||g.buttons[5]?.pressed);
+  padPrev.jump=!!g.buttons[3]?.pressed;
   menuPad.confirm=accept;
   const back=!!g.buttons[1]?.pressed;
-  if(back&&!menuPad.back&&menuPad.armed&&menuReady())menuBack();
+  if(gameState!=='reward'&&back&&!menuPad.back&&menuPad.armed&&menuReady())menuBack();
   menuPad.back=back;
   return{dx:0,dy:0};
  }
@@ -4367,7 +4372,7 @@ function rewardMenu(reason='wave'){
  const headline=reason==='mid'?'전투 중 파워업':'구역 클리어 파워업';
  const explanation=reason==='mid'?'재화 없이 1개 선택하면 전투가 이어집니다. 기존 강화도 중첩 가능.':
  '무료 선택 · 체력 +20 회복 · 다음 지역으로 이동. 모든 강화는 최대 6레벨까지 중첩됩니다.';
- showMenu(`<div class="eyebrow">PROJECT Z / CYBERNETIC GROWTH</div><h2>${headline}</h2><p>${explanation}</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT GROWTH — ${p.mods.length} STACKS · LEVEL ${level}</div><div class="pad-hint">WASD / 패드 십자키·스틱 이동　 ← / 패드 X(공격) 선택 · 창이 뜨면 입력을 놓고 다시 눌러주세요</div>`);
+ showMenu(`<div class="eyebrow">PROJECT Z / CYBERNETIC GROWTH</div><h2>${headline}</h2><p>${explanation}</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT GROWTH — ${p.mods.length} STACKS · LEVEL ${level}</div><div class="pad-hint">WASD·패드 스틱/십자키로 선택 · 패드 A/B/X/Y 또는 키보드 화살표 아무 키로 확정 · 창이 뜨면 버튼을 놓고 다시 눌러주세요</div>`);
 }
 function finishRewardSelection(m){
  if(wave!==2||upgradeReason==='mid'){selectMod(m);return}
@@ -4566,6 +4571,9 @@ function keyDown(ev){
   if(rewardSelection||menuBlockedKeys.has(k)||ev.repeat||held)return;
   if(k==='a'||k==='w'){selectMenuItem(-1);return}
   if(k==='d'||k==='s'){selectMenuItem(1);return}
+  if(gameState==='reward'&&['arrowleft','arrowup','arrowright','arrowdown'].includes(k)){
+   menuConfirm();return;
+  }
   if(k==='arrowleft'){menuConfirm();return}
   if((k==='escape'||k==='p')&&menuReady())menuBack();
   return;
