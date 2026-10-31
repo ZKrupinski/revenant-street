@@ -108,17 +108,17 @@ test('each troop grows and covers a broader offscreen area deeper into both wave
 test('new HUD distinguishes live squad from unspawned remaining wave enemies',()=>{
  g.startRun();t.setEnemies(t.getEnemies());t.updateHud();
  const start=t.waveEnemyTotals();
- assert.equal(start.current,4);assert(start.future>start.current);
- assert(node('enemyCount').textContent.includes('현재 4명'),'current onscreen squad is explicit');
+ assert.equal(start.current,5);assert(start.future>start.current);
+ assert(node('enemyCount').textContent.includes('현재 5명'),'current onscreen squad is explicit');
  assert(node('enemyCount').textContent.includes('턴 잔여 '+start.remaining+'명'),'future squads are included in total');
  assert(node('enemyStatus').textContent.includes('무리 1/11'),'enemy squad index is visible');
  assert.equal(node('enemyProgressFill').style.width,'0%');
  const killed=t.getEnemies()[0];killed.dead=true;t.updateHud();
  const after=t.waveEnemyTotals();
- assert.equal(after.current,3);
+ assert.equal(after.current,4);
  assert.equal(after.remaining,start.remaining-1);
  assert.equal(after.defeated,1);
- assert(node('enemyCount').textContent.includes('현재 3명'));
+ assert(node('enemyCount').textContent.includes('현재 4명'));
  assert(node('enemyProgressFill').style.width!=='0%','defeat fills progress meter');
  t.setEnemies([]);t.updateHud();
  assert(node('enemyCount').textContent.includes('다음 무리 대기'),'zero active enemies must not imply wave is over');
