@@ -314,7 +314,8 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;
  filter:drop-shadow(0 3px 6px #000a);
  box-shadow:none!important;transform:translate3d(0,0,0);
- transition:transform .095s cubic-bezier(.2,.85,.3,1.1),filter .09s ease-out;
+ /* Fast spring-back: pressed pose switches bitmap immediately on pointerdown. */
+ transition:transform .05s ease-out,filter .05s ease-out;
  will-change:transform;
 }
 #stageWrap .touch-controls .touch-actions button[data-art="attack"]{--arcade-x:0%}
@@ -334,6 +335,8 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 #stageWrap .touch-controls .touch-actions button.pressed,
 #stageWrap .touch-controls .touch-actions button:active{
  background-position:var(--arcade-x) 100%!important;
+ /* Super-fast physical switch: 20ms button depression, 50ms rebound. */
+ transition:transform .02s linear,filter .02s linear;
  transform:translate3d(0,4px,0) scale(.965);
  filter:brightness(1.08) drop-shadow(0 1px 2px #0008);
 }

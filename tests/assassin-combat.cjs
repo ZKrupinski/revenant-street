@@ -835,6 +835,10 @@ test('four smaller bitmap arcade controls retain large touch surfaces and presse
  assert(css.includes('background-position:var(--arcade-x) 100%!important;'),
  'press should switch to the real recessed button sprite');
  assert(css.includes('translate3d(0,4px,0) scale(.965)'),'press should physically sink');
+ assert(css.includes('transition:transform .02s linear,filter .02s linear;'),
+ 'physical button depression responds within 20ms of pointerdown');
+ assert(css.includes('transition:transform .05s ease-out,filter .05s ease-out;'),
+ 'released button rebounds within 50ms');
  assert(css.includes('--face-btn:clamp(50px,13.5cqw,70px)'),
  'face buttons shrink about 25% while retaining at least a 50px tap target');
  assert(css.includes('--face-btn:clamp(50px,11.25vh,60px)'),
