@@ -16,7 +16,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install bitmap processor
         run: python -m pip install --quiet Pillow
-      - name: Rebuild the cropped special frames
+      - name: Retrieve fixed original illustrated crimson sweep
+        run: |
+          mkdir -p assets/ironmask-elite/source
+          curl --fail --location --retry 3 --connect-timeout 20 \
+            https://raw.githubusercontent.com/ZKrupinski/revenant-street/acf1e87129ffc2a9b6cd7fae2141942bf0b11476/assets/ironmask-elite/special.webp \
+            --output assets/ironmask-elite/source/special-original.webp
+          test "$(stat -c%s assets/ironmask-elite/source/special-original.webp)" -gt 200000
+      - name: Rebuild and inspect all eight cropped attack frames
         run: python scripts/repair_ironmask_special.py
       - name: Publish corrected WebP atlas
         run: |
