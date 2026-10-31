@@ -25,5 +25,9 @@ jobs:
           git add assets/ironmask-elite/special.webp
           if ! git diff --cached --quiet; then
             git commit -m "Replace clipped Iron Mask special frames with safe full-body animation"
-            git push
+            # Other game edits may land while the sprites are being rebuilt.
+            # Replay only the rebuilt bitmap on top of the latest main.
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
           fi
