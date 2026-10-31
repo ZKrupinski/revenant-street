@@ -1818,7 +1818,7 @@ test('WASD moves reward focus and left arrow confirms only the selected card',()
   press('ArrowLeft');release('ArrowLeft');assert.equal(fake[1].clicked,1);assert.equal(fake[0].clicked,0);
  }finally{m.querySelectorAll=old;t.heldKeyboard.clear()}
 });
-test('held pad attack cannot auto-pick until released; X confirms and A does not',()=>{
+test('held pad attack cannot auto-pick until released; A and X both confirm menu items',()=>{
  g.startRun();const fake=Array.from({length:3},()=>({disabled:false,dataset:{},clicked:0,classList:{toggle(){}},click(){this.clicked++}}));
  const m=node('menu'),old=m.querySelectorAll;m.querySelectorAll=()=>fake;
  const pad={axes:[0,0],buttons:Array.from({length:18},()=>({pressed:false}))};world.navigator.getGamepads=()=>[pad];
@@ -1827,8 +1827,10 @@ test('held pad attack cannot auto-pick until released; X confirms and A does not
   t.pollPad();t.menuPad.readyAt=0;for(let i=0;i<10;i++)t.pollPad();assert.equal(fake[0].clicked,0);
   pad.buttons[2].pressed=false;t.menuPad.neutralAt=0;t.pollPad();
   for(let i=0;i<10;i++){pad.buttons[0].pressed=true;t.pollPad();pad.buttons[0].pressed=false;t.pollPad()}
-  assert.equal(fake[0].clicked,0,'A/cross must not confirm');
-  pad.buttons[2].pressed=true;t.pollPad();t.pollPad();assert.equal(fake[0].clicked,1);
+  assert(fake[0].clicked>=1,'A/cross must confirm after release of a previously held face button');
+  const afterA=fake[0].clicked;
+  pad.buttons[2].pressed=true;t.pollPad();t.pollPad();
+  assert.equal(fake[0].clicked,afterA+1,'X also confirms after the intervening neutral release');
  }finally{m.querySelectorAll=old;world.navigator.getGamepads=()=>[];t.pollPad()}
 });
 
