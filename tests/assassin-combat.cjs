@@ -904,14 +904,27 @@ test('four smaller bitmap arcade controls retain large touch surfaces and presse
 });
 test('approved arcade joystick uses bitmap disc and separately movable red ball, no guide circles',()=>{
  const root=path.join(__dirname,'../assets/ui');
- for(const name of ['z-arcade-stick-base.webp','z-arcade-stick-knob.webp']){
+ for(const name of ['z-arcade-stick-base.webp','z-arcade-stick-shaft.webp','z-arcade-stick-knob.webp']){
   const bytes=fs.readFileSync(path.join(root,name));
-  assert(bytes.length>8000&&bytes.subarray(0,4).toString()==='RIFF',name+' exists as original raster');
+  assert(bytes.length>4000&&bytes.subarray(0,4).toString()==='RIFF',name+' exists as a transparent bitmap');
  }
  const part=html.slice(html.indexOf('<style id="joystick-arcade-control">'),
  html.indexOf('</style>',html.indexOf('<style id="joystick-arcade-control">')));
- assert(part.includes('--joystick-base-url')&&part.includes('--joystick-knob-url'),
- 'metallic base and red ball use independent transparent raster layers');
+ assert(part.includes('--joystick-base-url')&&part.includes('--joystick-shaft-url')&&part.includes('--joystick-knob-url'),
+ 'fixed base, angled metal shaft and red ball use three independent bitmap layers');
+ assert(part.includes('transform-origin:50% 72%')&&part.includes('z-index:1'),
+ 'shaft rotates about the actual lower socket and renders beneath the ball');
+ assert(part.includes('clip-path:inset(0 0 31% 0)'),
+ 'old knob nub is hidden so the separate shaft is not double-painted');
+ assert(html.includes('id="analogShaft" aria-hidden="true"')&&
+ html.indexOf('id="analogShaft"')<html.indexOf('id="analogThumb"'),
+ 'shaft is positioned between the fixed metallic base and foreground red knob');
+ assert(html.includes('shaftAngle=clamp(nx,-1,1)*28')&&
+ html.includes('shaftDepth=1-clamp(ny,-1,1)*.38'),
+ 'live pointer lean and fore/aft shaft depth are both calculated');
+ assert(html.includes('analogShaft.style.transform=')&&
+ html.includes("analogShaft.style.transform='translate(-50%,-50%) rotate(0deg) scaleY(1)'"),
+ 'pointer motion tilts the shaft and release returns it upright');
  assert(part.includes('.analog-ring::after')&&part.includes('.analog-axis')&&part.includes('display:none!important'),
  'old circle guide / vector axis must be gone');
  assert(part.includes('transform:translate(10px,-13px)')&&
