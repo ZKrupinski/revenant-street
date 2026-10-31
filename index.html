@@ -312,6 +312,9 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  background-repeat:no-repeat!important;
  -webkit-appearance:none;appearance:none;-webkit-tap-highlight-color:transparent;
  pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;
+ /* Overlapping square hit targets were stealing presses intended for a
+    neighbouring circular action cap. Hit-test the painted circle itself. */
+ clip-path:circle(48% at 50% 50%);
  filter:drop-shadow(0 3px 6px #000a);
  box-shadow:none!important;transform:translate3d(0,0,0);
  /* Fast spring-back: pressed pose switches bitmap immediately on pointerdown. */
@@ -2900,7 +2903,7 @@ function dodge(fromBuffer=false){
  p.dashSmash=false;p.dashFollowWindow=0;
  // Deliberate dash overrides an automatic post-parry pursuit.
  p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;
- p.riposteChaseTime=0;p.riposteChaseWarmup=0;
+ p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteWindow=0;p.riposteTarget=null;
  const backInput=p.moveDX*p.facing<-.42||analog.dx*p.facing<-.42||(keys.has('a')&&p.facing>0)||(keys.has('d')&&p.facing<0);
  const dash=backInput?{duration:.30}:dashMobilityStats();
  // At low stamina, a visibly shorter emergency dash is still responsive,
