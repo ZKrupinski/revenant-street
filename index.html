@@ -1130,7 +1130,7 @@ try{const stored=JSON.parse(localStorage.getItem('revenant-perma-v1')||'null');i
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),near=(a,b,d)=>Math.abs(a-b)<=d;
 function save(){try{localStorage.setItem('revenant-perma-v1',JSON.stringify(perma))}catch(_){}}
 function sound(type='hit'){if(mute)return;try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!audio)audio=new AC();if(audio.state==='suspended')audio.resume();const t=audio.currentTime;const o=audio.createOscillator(),g=audio.createGain();o.type=type==='execution'?'sawtooth':'triangle';let f=type==='parry'?1050:type==='hurt'?90:type==='break'?60:type==='execution'?270:type==='attack'?160:230;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(Math.max(35,f*.25),t+.14);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(type==='break'?.19:.07,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+(type==='execution'?.43:.18));o.connect(g).connect(audio.destination);o.start(t);o.stop(t+(type==='execution'?.44:.19));if(['hit','break','execution','parry'].includes(type)){const len=Math.floor(audio.sampleRate*.15);const buf=audio.createBuffer(1,len,audio.sampleRate);const dat=buf.getChannelData(0);for(let i=0;i<len;i++)dat[i]=(Math.random()*2-1)*Math.exp(-i/len*5);const n=audio.createBufferSource(),fl=audio.createBiquadFilter(),gn=audio.createGain();n.buffer=buf;fl.type='lowpass';fl.frequency.value=type==='parry'?2200:980;gn.gain.value=type==='break'?.22:.11;n.connect(fl).connect(gn).connect(audio.destination);n.start(t)}}catch(e){}}
-// Decode all four human recordings during the START gesture, before gameplay.
+// Decode all enemy vocals, mechanical slides and gunshots before gameplay.
 function prepareCombatVoices(){
  const AC=window.AudioContext||window.webkitAudioContext;
  if(!AC||!window.__zCombatVoice)return Promise.resolve(false);
@@ -1140,6 +1140,9 @@ function prepareCombatVoices(){
 }
 function playCombatVoice(kind,actor=p){
  return !mute&&gameState==='playing'&&!!window.__zCombatVoice?.play(kind,actor,p);
+}
+function playCombatGunfire(kind='normal',move=p.moveName){
+ return !mute&&gameState==='playing'&&!!window.__zCombatVoice?.fire(kind,move);
 }
 // HEAVY IMPACT ENGINE: filtered percussion, deep sub-hit, crack transients,
 // and real device rumble. Audio is unlocked by the normal combat user gesture.
@@ -1740,7 +1743,8 @@ function startAttack(){
  if(modRank('haste'))spawnModBitmap('blue',p.x-p.facing*24,p.y-94,.44+modRank('haste')*.06,'brightness(1.3)',.17);
  p.attack=p.attackDuration;p.animAge=0;p.hitDone=false;p.glow=.18;p.comboWindow=.95;
  sound('attack');
- if(p.comboMoveCount%3!==0)playCombatVoice('heroStrike');
+ // Every basic move cycles its mechanism before the timed gunshot.
+ playCombatVoice('heroStrike');
 }
 function parry(){
  if(gameState!=='playing'||p.stun>0||p.parry>0||p.downTimer>0||p.getupTimer>0||p.stamina<7)return;
@@ -1756,7 +1760,7 @@ function parry(){
  if(incoming)p.facing=incoming.x>=p.x?1:-1;
  p.inv=Math.max(p.inv,.08);p.stamina-=7;
  // Ordinary parry preparation has no impact flash.
- sound('parry');
+ sound('parry');playCombatVoice('heroStrike');
 }
 function dodge(){
  if(gameState!=='playing'||p.dodge>0||p.stun>0||p.downTimer>0||p.getupTimer>0||p.stamina<19)return;
@@ -1765,7 +1769,7 @@ function dodge(){
  const backInput=p.moveDX*p.facing<-.42||analog.dx*p.facing<-.42||(keys.has('a')&&p.facing>0)||(keys.has('d')&&p.facing<0);
  p.evadeBackstep=backInput;p.dodge=.30;p.inv=.34;p.dodgeX=backInput?-p.facing:p.facing;p.stamina-=19;
  p.dashFollowWindow=backInput?0:.63;
- fxBurst(p.x-p.facing*22,p.y-24,'blue',.42);sound('attack');
+ fxBurst(p.x-p.facing*22,p.y-24,'blue',.42);sound('attack');playCombatVoice('heroPower');
 }
 function jump(){
  if(gameState!=='playing'||p.attack>0||p.parry>0||p.dodge>0||
@@ -1785,7 +1789,7 @@ function jump(){
  p.dashSmash=false;p.dashFollowWindow=0;
  p.jumpTime=0;p.moveName='jumpstart';
  p.vz=760;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;
- p.airKickUsed=false;sound('attack');
+ p.airKickUsed=false;sound('attack');playCombatVoice('heroStrike');
 }
 function execute(target){
  if(gameState!=='playing'||p.stun>0||!target||target.dead||target.groggy<=0)return false;
@@ -1796,7 +1800,8 @@ function execute(target){
  hurtEnemy(target,target.type==='boss'?260:999,100);
  screenShake=25;screenTint=.6;hitStop=.15;
  fxBurst(target.x,target.y-130,target.type==='boss'?'red':'gold',2.4);
- flash('EXECUTION!',1.1);vibrateImpact('execution',true);sound('execution');playCombatVoice('heroPower');return true
+ flash('EXECUTION!',1.1);vibrateImpact('execution',true);sound('execution');
+ playCombatVoice('heroPower');playCombatGunfire('execution','uppercut');return true
 }
 function awardEnemyKill(e){
  if(e.killAwarded)return;
@@ -1909,6 +1914,7 @@ function heelLandingShockwave(powered=false){
  spawnModBitmap('gold',p.x,p.y-36,skill.visual*.8,
   'brightness(1.45) saturate(1.2)',.30);
  playImpactSound('heavy',powered?1.4:1.1);
+ if(powered)playCombatGunfire('slam','axe_kick');
  vibrateImpact('slam',true);
  for(const enemy of impacted){
   const fromX=enemy.x,fromY=enemy.y;
@@ -1932,6 +1938,7 @@ function heelLandingShockwave(powered=false){
 }
 function attackCheck(){
  if(p.riposteStrikeTarget){
+  playCombatGunfire('counter','superman_punch');
   const e=p.riposteStrikeTarget;p.riposteStrikeTarget=null;
   if(e.dead||!enemies.includes(e))return;
   // Counter damage and splash grow with its own upgrade; never reserve an HP floor.
@@ -1964,6 +1971,9 @@ function attackCheck(){
   p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
   return;
  }
+ // Every one of the 19 attack motions gets a different report at contact,
+ // including whiffs, without replacing the physical hit/transient sound.
+ playCombatGunfire(p.dashSmash?'heavy':'normal',p.moveName);
  const armed=p.weapon>0&&!Z_KICK_MOVES.has(p.moveName)&&!Z_HEAD_MOVES.has(p.moveName)&&!p.airAttack;
  const baseDamage={jab:15,cross:19,hook:22,uppercut:26,backfist:20,hammerfist:30,spinning_elbow:28,rising_elbow:26,superman_punch:32,shovel_hook:23,frontkick:20,lowkick:18,roundkick:29,axe_kick:32,sidekick:27,spinning_heel:34,crescent_kick:28,diagonal_airkick:35,rising_headbutt:27,forward_headbutt:25,airkick:37};
  const baseReach={jab:94,cross:112,hook:105,uppercut:100,backfist:105,hammerfist:110,spinning_elbow:108,rising_elbow:95,superman_punch:166,shovel_hook:96,frontkick:133,lowkick:132,roundkick:151,axe_kick:128,sidekick:154,spinning_heel:165,crescent_kick:151,diagonal_airkick:160,rising_headbutt:88,forward_headbutt:89,airkick:174};
@@ -2070,7 +2080,7 @@ function enemyAttack(e){
   floatText('JUST PARRY!',p.x,p.y-220,'#7df7ff');
   flash('패링 성공! 공격으로 추격!',1.35);
   screenShake=Math.max(screenShake,27);hitStop=Math.max(hitStop,.14);slowMotion=Math.max(slowMotion,.12);playImpactSound('parry',1.50);vibrateImpact('parry',true);
-  p.stamina=clamp(p.stamina+25,0,100);sound('parry');
+  p.stamina=clamp(p.stamina+25,0,100);sound('parry');playCombatVoice('heroPower');
   if(e.poise>=e.maxPoise){e.groggy=3.4;e.stun=3.4;floatText('GROGGY',e.x,e.y-185,'#8fe6ff')}
   return;
  }
@@ -2183,6 +2193,9 @@ function control(dt,pad){
    // Eight full-body running frames loop at a legible fast cadence while
    // collision-safe chase travel keeps its existing independent speed.
    p.riposteRunCycle=(p.riposteRunCycle||0)+dt*16;
+   if(time-(p._lastGunMotionAt??-99)>1.20){
+    p._lastGunMotionAt=time;playCombatVoice('heroMove');
+   }
    p.moveDX=0;p.moveDY=0; // dedicated pursuit owns locomotion this tick
    return;
   }
@@ -2245,6 +2258,11 @@ function control(dt,pad){
   p.gaitDistance=(p.gaitDistance||0)+distanceTraveled;
  }
  footstepRumble(dt,distanceTraveled);
+ // Softer occasional slide action on locomotion; avoid a loud click per step.
+ if(distanceTraveled>1.2&&p.attack<=0&&p.dodge<=0&&p.parry<=0&&
+   p.downTimer<=0&&p.getupTimer<=0&&time-(p._lastGunMotionAt??-99)>1.20){
+  p._lastGunMotionAt=time;playCombatVoice('heroMove');
+ }
  // Hold the raised heel briefly, then commit to a fast downward strike.
  if(p.airAttack&&p.attack>0&&p.stun<=0){
   const age=p.attackDuration-p.attack;
