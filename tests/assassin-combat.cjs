@@ -463,14 +463,14 @@ test('a fresh attack press does not interrupt committed dash-smash or airborne h
  assert.equal(t.p.airKickPhase,phase);
  assert.equal(t.p.attack,remaining,'airborne heel slam is committed, not canceled');
 });
-test('faster basic forward rush keeps the original distance cap and respects enemy footprints',()=>{
+test('faster, longer basic forward rush respects enemy footprints',()=>{
  g.startRun();t.setEnemies([]);
  for(const move of t.COMBO_ROTATION)t.zArtState[move]={ready:move==='jab'};
  t.p.x=1100;t.p.y=570;t.p.facing=1;t.p.stamina=100;
  t.startAttack();const total=t.p.attackDriveTotal,start=t.p.x;
- assert(total>=50,'neutral punch must keep a meaningful forward lunge');
+ assert(total>=65,'neutral punch gains noticeably more forward lunge');
  for(let i=0;i<6;i++)t.control(1/60,{dx:0,dy:0});
- assert(t.p.x-start>29,'forward rush should get visibly ahead within 0.10 seconds');
+ assert(t.p.x-start>=60,'new forward rush should spend most of its longer lunge within 0.10 seconds');
  assert(t.p.x-start<=total+1,'no extra distance from the faster profile');
  g.startRun();t.p.x=1200;t.p.y=570;t.p.stamina=100;
  const e=t.makeEnemy('raider',t.p.x+130,t.p.y,0);e.stun=3;e.hp=e.maxHp=2000;t.setEnemies([e]);
@@ -483,6 +483,27 @@ test('faster basic forward rush keeps the original distance cap and respects ene
  }
  assert(maxMove<40,'burst movement must stay below 40px/frame at 60fps');
  assert(minGap>=100,'hero cannot pass through the raider collision footprint');
+});
+test('basic hit shoves the enemy and its sprite immediately while the hero keeps pressing forward',()=>{
+ g.startRun();t.keys.clear();t.setEnemies([]);
+ for(const move of t.COMBO_ROTATION)t.zArtState[move]={ready:move==='jab'};
+ t.p.x=1650;t.p.y=570;t.p.facing=1;t.p.stamina=100;t.p.moveDX=0;t.p.moveDY=0;
+ const foe=t.makeEnemy('raider',t.p.x+132,t.p.y,0);
+ foe.hp=foe.maxHp=2000;foe.stun=3;t.setEnemies([foe]);
+ const foeStart=foe.x,heroStart=t.p.x;
+ t.startAttack();const budget=t.p.attackDriveTotal;
+ for(let i=0;i<14&&!t.p.hitDone;i++)t.control(1/60,{dx:0,dy:0});
+ assert(t.p.hitDone,'first ground jab contacts the target during the forward surge');
+ assert(foe.hp<2000,'target takes damage at the contact beat');
+ assert(foe.x>foeStart+24,'victim footprint moves back in the very same contact tick');
+ assert.equal(foe.renderX,foe.x,'victim bitmap has no delayed post-impact visual position');
+ assert(foe.knockVX>budget*4,'knockback follows the stronger forward drive');
+ const oldVictim=foe.x,oldHero=t.p.x;
+ t.control(1/60,{dx:0,dy:0});t.updateEnemies(1/60);
+ assert(foe.x>oldVictim,'enemy continues moving backward after instant recoil');
+ assert(t.p.x>=oldHero,'hero continues forward to sustain the combo pressure');
+ assert(foe.x-t.p.x>=95,'hero and victim do not overlap');
+ assert(t.p.x>heroStart,'hero visibly pursues the target');
 });
 test('combo lunge respects facing and does not teleport on one frame',()=>{
  g.startRun();t.setEnemies([]);
@@ -1120,8 +1141,8 @@ test('ground attacks drive farther than Alpha 1.26 and stay capped per frame',()
  t.p.x=440;t.p.y=570;t.p.facing=1;t.p.stamina=100;t.p.attack=0;
  t.p.comboWindow=0;t.p.moveDX=0;t.p.moveDY=0;
  t.startAttack();
- assert(t.p.attackDriveTotal>=50,'every neutral attack should surge substantially');
- assert(t.p.attackDriveTotal<=275,'total lunge stays within the current combat budget');
+ assert(t.p.attackDriveTotal>=65,'every neutral attack should surge substantially');
+ assert(t.p.attackDriveTotal<=315,'total lunge stays within a controlled combat budget');
  const start=t.p.x;
  for(let i=0;i<12;i++){const before=t.p.x;t.control(1/60,{dx:0,dy:0});assert(t.p.x-before<=35,'a single frame must not teleport the player')}
  assert(t.p.x>start+30,'visible forward momentum even with no joystick input');

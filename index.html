@@ -1818,10 +1818,10 @@ function startAttack(){
  // Even with no joystick input the hero surges forward into his punches.
  // Each move gets its own travel distance; directional input adds intent,
  // not an on/off gate for attacking momentum.
- // Bigger intentional chase step on every strike. Kicks and finishers drive
- // farther than jabs; keep a hard cap to prevent a one-tap screen teleport.
+ // Accelerated forward-driving ground strikes: 15-20% longer, with the
+ // initial burst spent sooner. Kicks still leap farther than jabs.
  const impactStep=isKick?1.20:move==='superman_punch'?1.14:1;
- p.attackDriveTotal=Math.min(275,Math.round((advance[move]||32)*(hasInput?2.68:2.42)*impactStep*(1+modRank('rush')*.2)));
+ p.attackDriveTotal=Math.min(315,Math.round((advance[move]||32)*(hasInput?3.12:2.83)*impactStep*(1+modRank('rush')*.2)));
  p.attackDriveRemaining=p.attackDriveTotal;
  if(modRank('rush'))spawnModLink('blue',p.x-p.facing*56,p.y-118,p.x+p.facing*75,p.y-118,.75+modRank('rush')*.06,'brightness(1.2)',.19);
  if(modRank('haste'))spawnModBitmap('blue',p.x-p.facing*24,p.y-94,.44+modRank('haste')*.06,'brightness(1.3)',.17);
@@ -1953,15 +1953,15 @@ function hurtEnemy(e,dmg,poise){
  e.hitFlash=e.type==='boss'?.33:e.type==='elite'?.30:.22;e.windup=0;e.chargePrep=0;e.chargeTime=0;e.attackPoseTime=0;
  if(e.type==='elite'){e.eliteTell=0;e.eliteRush=0;e.eliteAttack=false;e.eliteCooldown=Math.max(e.eliteCooldown,1.8)}
  // Couple enemy displacement to the attacker's actual forward drive.
- // At the same 4/s drag coefficient, the enemy travels at least as far as
- // the hero's step, with a heavier knock on kicks and counter blows.
+ // The hit target receives the same accelerated forward-pressure beat
+ // immediately, then flies on through physical knockback and its own hit art.
  const drive=p.counterBoost?210:Math.max(0,p.attackDriveTotal||0);
  const kick=Z_KICK_MOVES.has(p.moveName);
  const force=clamp(Math.max(vx*(smash?1.27:.82),
-    drive*(kick?5.1:4.55)+(smash?105:35)),260,1300);
+    drive*(kick?5.75:5.25)+(smash?105:35)),260,1440);
  const resistance=(e.type==='boss'?.34:e.type==='elite'?.78:e.type==='guard'?.88:1)*(1+modRank('impact')*.22);
  const carry=Math.max(0,(e.knockVX||0)*p.facing)*.29;
- e.knockVX=p.facing*clamp(force*resistance+carry,0,1360);
+ e.knockVX=p.facing*clamp(force*resistance+carry,0,1490);
  e.knockDrag=3.55;
  e.knockVY=(e.type==='boss'?.2:e.type==='elite'?.67:.84)*vy;
  // Juggle an already airborne enemy instead of snapping it to the floor.
@@ -1979,8 +1979,12 @@ function hurtEnemy(e,dmg,poise){
   fxBurst(e.x,e.y-118,'gold',specialStats('dashspeed').visual);
   playImpactSound('heavy',1.1);
  }
- const contactPush=e.type==='boss'?12:clamp(drive*.21+(smash?17:9),22,61);
+ const basicContact=p.attack>0&&!p.dashSmash&&!p.counterBoost&&!p.airAttack&&!p.riposteStrikeTarget;
+ const contactPush=e.type==='boss'?12:clamp(drive*(basicContact?.28:.21)+(smash?17:9),22,basicContact?72:61);
  e.x=clamp(e.x+p.facing*contactPush,55,STAGE_WIDTH-55);
+ // No trailing visual interpolation after a fresh basic-attack impact.
+ // Hit-stop now freezes both bodies AFTER the victim has already recoiled.
+ if(basicContact)e.renderX=e.x;
  fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:smash?1.65:1.2);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');applyImpactFeedback(e,smash||p.dashSmash,p.dashSmash?'dashImpact':smash?'heavy':'punch');p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
  if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=e.type==='boss'?1.30:e.type==='elite'?2.4:3.6;e.stun=e.groggy;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
  if(e.type==='elite'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.14;e.eliteCooldown=Math.min(e.eliteCooldown,1.6);fxBurst(e.x,e.y-150,'gold',1.8);floatText('OVERDRIVE',e.x,e.y-255,'#f9c26a')}
@@ -2317,11 +2321,11 @@ function control(dt,pad){
   if(p.attack>0&&p.attackDriveRemaining>0&&!p.airAttack&&p.counterRush<=0){
    const phase=1-p.attack/Math.max(.001,p.attackDuration);
    if(phase<.80){
-    // Spend the SAME lunge distance faster: an earlier, sharper burst.
-    // Keep a <=38px step and the collision stop against target footprints.
-    const burstRate=phase<.085?1.16:phase<.48?2.08:1.24;
-    const desired=p.attackDriveTotal*dt/(p.attackDuration*.52)*burstRate;
-    const burst=Math.min(p.attackDriveRemaining,Math.min(38,desired));
+    // Leap forward sooner while staying inside the per-frame movement cap.
+    // Enemy footprint stops the rush until the contact beat pushes it away.
+    const burstRate=phase<.085?1.48:phase<.48?2.70:1.56;
+    const desired=p.attackDriveTotal*dt/(p.attackDuration*.46)*burstRate;
+    const burst=Math.min(p.attackDriveRemaining,Math.min(34,desired));
     const before=p.x;
     let nextX=clamp(p.x+p.attackDriveX*burst,64,STAGE_WIDTH-64);
     // Closing distance cannot cross the next target before the attack's
