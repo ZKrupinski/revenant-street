@@ -2808,7 +2808,8 @@ async function requestRunStart(){
   prepareIntruderSpriteCrops();
   $('loadStatus').textContent='배경 효과 준비 중';
   await new Promise(resolve=>setTimeout(resolve,0));
-  depthBackdrop(img.street_pano);
+  const photoBackground=depthBackdrop(img.street_pano);
+  prepareStreetSeamProps(photoBackground);
   $('loadStatus').textContent='음악과 전투 음성 전체 재생 준비 중';
   const musicError=await musicResult;if(musicError)throw musicError;
   const voiceError=await voicesReady;if(voiceError)throw voiceError;
@@ -4367,6 +4368,51 @@ c.filter='saturate(.85)';c.drawImage(bg,0,0,w,h);c.filter='none';
  }
  backdropDepthCache.set(bg,output);return output;
 }
+// The existing road photograph already contains a painted manhole and wet
+// asphalt. A cached PHOTO bitmap patch, not a vector placeholder, covers the
+// distracting ground breaks while keeping the panorama and collision intact.
+const streetSeamPropCache=new WeakMap();
+function prepareStreetSeamProps(prepared){
+ if(streetSeamPropCache.has(prepared))return streetSeamPropCache.get(prepared);
+ const width=prepared.width,height=prepared.height;
+ if(width<150||height<120)throw Error('도로 사진 원본이 준비되지 않았습니다');
+ // Original city-side manhole + steam + reflected asphalt.
+ const srcX=Math.round(width*.19),srcY=Math.round(height*.705);
+ const srcW=Math.min(Math.round(width*.305),width-srcX),srcH=height-srcY;
+ const decal=document.createElement('canvas');
+ decal.width=srcW;decal.height=srcH;
+ const c=decal.getContext('2d',{willReadFrequently:true});
+ c.drawImage(prepared,srcX,srcY,srcW,srcH,0,0,srcW,srcH);
+ const imageData=c.getImageData(0,0,srcW,srcH),data=imageData.data;
+ for(let y=0;y<srcH;y++)for(let x=0;x<srcW;x++){
+  const nx=(x-srcW*.5)/(srcW*.535),ny=(y-srcH*.60)/(srcH*.74);
+  const ripple=Math.sin(x*.048+y*.041)*.016+Math.sin(x*.11-y*.035)*.008;
+  const r=Math.hypot(nx,ny*.97)+ripple;
+  const feather=clamp((.99-r)/.265,0,1);
+  data[(y*srcW+x)*4+3]=Math.round(data[(y*srcW+x)*4+3]*feather*.97);
+ }
+ c.putImageData(imageData,0,0);
+ const result={image:decal,source:{x:srcX,y:srcY,w:srcW,h:srcH},innerJoin:.215};
+ streetSeamPropCache.set(prepared,result);
+ return result;
+}
+function drawStreetSeamProps(prepared,tileW,offset){
+ const prop=prepareStreetSeamProps(prepared),factor=tileW/prepared.width;
+ const dw=prop.image.width*factor,dh=prop.image.height;
+ let count=0;
+ for(let i=-1;i<=2;i++){
+  const base=i*tileW-offset;
+  // 0 = repeating atlas edge; .215 = the factory-to-neon-road junction
+  // visible in the current stage. The photographic patch tracks parallax.
+  for(const join of [0,prop.innerJoin]){
+   const x=Math.round(base+tileW*join);
+   if(x+dw*.5<0||x-dw*.5>W)continue;
+   ctx.drawImage(prop.image,x-dw*.5,H-dh,dw,dh);
+   count++;
+  }
+ }
+ window.__streetSeamQA={visibleProps:count,patchSource:prop.source,screenTile:tileW};
+}
 function drawBackdrop(){
  const bg=img.street_pano;
  if(bg&&bg.complete&&bg.naturalWidth&&bg.naturalHeight){
@@ -4380,6 +4426,7 @@ function drawBackdrop(){
    if(destX>W||destX+tileW<0)continue;
    ctx.drawImage(prepared,destX,0,tileW+1,H);
   }
+  drawStreetSeamProps(prepared,tileW,offset);
  }else if(img.street&&img.street.complete&&img.street.naturalWidth)ctx.drawImage(depthBackdrop(img.street),0,0,W,H);
  else{ctx.fillStyle='#0a101b';ctx.fillRect(0,0,W,H)}
  const progress=clamp((cameraX+W*.5)/STAGE_WIDTH,0,1);
