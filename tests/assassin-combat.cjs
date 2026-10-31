@@ -18,7 +18,7 @@ test('Rebel Hub is a compact permanent-upgrade workshop with always-visible navi
   'replay and title buttons remain docked below the list');
  assert(css.includes('@container(max-width:610px)'),
   'compact devices show legible horizontal module cards');
- assert(html.includes("classList.toggle('hub-dialog',gameState==='hub')"),
+ assert(html.includes("if(gameState==='hub')$('menu').classList.add('hub-dialog');else $('menu').classList.remove('hub-dialog')"),
   'workshop-only styles do not leak into battle upgrades');
  t.hubMenu();
  const screen=node('menu').innerHTML;
