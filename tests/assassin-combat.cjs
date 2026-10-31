@@ -806,6 +806,30 @@ test('no connected actuator means no continuous footsteps or audio loop',()=>{
   assert.equal(t.footstepRumble(1/60,80),false);
  }finally{world.navigator.getGamepads=prior}
 });
+test('guard animation braces in 0.19s without shortening the active parry window',()=>{
+ g.startRun();t.keys.clear();t.setEnemies([]);
+ t.p.parry=0;t.p.stun=0;t.p.stamina=100;t.parry();
+ const activeWindow=t.p.parryDuration;
+ assert(activeWindow>=.34&&activeWindow<.35,'original active counter window is preserved');
+ assert.equal(t.currentZFrameIndex('guard'),0,'guard begins on its first actual atlas frame');
+ t.control(.10,{dx:0,dy:0});
+ assert(t.currentZFrameIndex('guard')>=4,'defensive sprite advances rapidly within 100ms');
+ t.control(.10,{dx:0,dy:0});
+ assert.equal(t.currentZFrameIndex('guard'),7,'last guard pose arrives in roughly 190ms');
+ assert(t.p.parry>0,'parry collision is still open at 200ms');
+ const last=t.currentZFrameIndex('guard');
+ t.p.parry=Math.max(t.p.parry,.30);
+ assert.equal(t.currentZFrameIndex('guard'),last,'parry success hold must not rewind the animation');
+});
+test('offscreen direction hints use an animated two-way red bitmap without the old rectangle UI',()=>{
+ assert(html.includes("offscreenArrow.src='./assets/ui/edge-arrows.webp'"));
+ const section=html.slice(html.indexOf('function drawOffscreenEnemyIndicator(){'),html.indexOf('function drawTravelMeter(){'));
+ assert(section.includes("left?96:0,0,96,74"),'right and left are separate bitmap atlas cells');
+ assert(section.includes('Math.sin(time*11.5)')&&section.includes('ctx.globalAlpha=blink'),
+ 'sprite flashes continuously with an animation clock');
+ assert(!/fillRect|strokeRect|fillStyle='rgba\(7,15,28/.test(section),
+ 'box-shaped vector backdrop is removed');
+});
 test('rear-side enemy attacks are caught by parry and hero immediately turns',()=>{
  g.startRun();
  const e=t.makeEnemy('raider',t.p.x-72,t.p.y,0);

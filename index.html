@@ -350,7 +350,8 @@ const img={};
 assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
 // Both keys reference exactly the same embedded panorama; decode only once.
 img.street_pano=img.street;
-const offscreenArrow=new Image();offscreenArrow.src='./assets/ui/target-arrow.png';
+// Two transparent, hand-painted metal arrow tiles: right then left.
+const offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows.webp';
 // 4x2 real transparent PNG sprite sheet: spark-filled metal shield impact.
 const parryShieldImage=new Image();parryShieldImage.src='./assets/fx/parry-shield.png';
 const keys=new Set(), padPrev={}, touchKey={};
@@ -898,7 +899,8 @@ function currentZFrameIndex(key){
  if(key==='getup')return Z_HOODIE_HERO?7-oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64)):oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64));
  if(key==='hit'||key==='heavyhit')return oneshot(1-p.stun/Math.max(.001,p.hitDuration||.4));
  if(key==='dash'||key==='dodge')return oneshot(1-p.dodge/Math.max(.001,p.dodgeDuration||.30));
- if(key==='guard')return oneshot(1-p.parry/Math.max(.001,p.parryDuration||.34));
+ // Full 8-frame guard snaps into pose in 0.19s; collision window remains 0.34s+reflex.
+ if(key==='guard')return oneshot(Math.min(1,(p.parryAnimAge||0)/.19));
  if(p.jumpLandingVisual>0&&p.jumpLandingTriggered&&key==='axe_kick')
   return p.jumpLandingVisual>.125?6:7;
  if(key==='jumpstart')return oneshot(1-p.jumpStartTimer/.23);
@@ -1917,7 +1919,7 @@ function parry(){
  if(gameState!=='playing'||p.stun>0||p.parry>0||p.downTimer>0||p.getupTimer>0||p.stamina<7)return;
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.attackDriveRemaining=0;p.counterRush=0;
  p.dashSmash=false;p.dashFollowWindow=0;
- p.parryDuration=.34+perma.reflex*.035;p.parry=p.parryDuration;
+ p.parryDuration=.34+perma.reflex*.035;p.parry=p.parryDuration;p.parryAnimAge=0;
  // Immediately face the most imminent attacker, including enemies behind.
  // Selecting a target NEVER triggers parry automatically; the player still
  // must press their parry button within the ordinary parry window.
@@ -2485,6 +2487,7 @@ function control(dt,pad){
   if(p.downTimer===0){p.getupTimer=p.recoveryDuration||.64;p.stun=0;p.inv=Math.max(p.inv,p.getupTimer)}
  }else if(p.getupTimer>0)p.getupTimer=Math.max(0,p.getupTimer-dt);
  p.stun=Math.max(0,p.stun-dt);p.inv=Math.max(0,p.inv-dt);
+ if(p.parry>0)p.parryAnimAge=Math.min(.25,(p.parryAnimAge||0)+dt);
  p.parry=Math.max(0,p.parry-dt);p.dodge=Math.max(0,p.dodge-dt);
  p.dashFollowWindow=Math.max(0,(p.dashFollowWindow||0)-dt);
  p.riposteWindow=Math.max(0,p.riposteWindow-dt);
@@ -2971,20 +2974,32 @@ function offscreenEnemyTarget(){
 function drawOffscreenEnemyIndicator(){
  if(gameState!=='playing')return;
  const target=offscreenEnemyTarget();if(!target)return;
- const left=target.side==='left',x=left?16:W-158,y=260;
- ctx.save();ctx.globalAlpha=.94;
- ctx.fillStyle='rgba(7,15,28,.78)';ctx.fillRect(x,y,142,91);
- ctx.strokeStyle='#83eaff';ctx.lineWidth=2;ctx.strokeRect(x+1,y+1,140,89);
- if(offscreenArrow.complete&&offscreenArrow.naturalWidth>0){
-  ctx.save();ctx.translate(left?x+82:x+60,y+14);if(left)ctx.scale(-1,1);
-  ctx.drawImage(offscreenArrow,-40,0,80,54);ctx.restore();
- }else{
-  ctx.fillStyle='#a6f4ff';ctx.font='900 54px Arial';ctx.fillText(left?'◀':'▶',x+28,y+60);
- }
- ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#edfaff';
- ctx.fillText('남은 적 '+target.remaining+'명',x+71,y+73);
- ctx.font='900 11px Arial';ctx.fillStyle='#a5d8ed';
- ctx.fillText(target.distance+' px',x+71,y+86);
+ // No vector/box panel. The imported red-and-black bitmap is two horizontal
+ // sprite cells (right at 0, left at 96) on a transparent WebP atlas.
+ if(!offscreenArrow.complete||offscreenArrow.naturalWidth<192)return;
+ const left=target.side==='left',x=left?12:W-154,y=238;
+ // Crisp warning pulse plus a small forward lean; bitmap gets brighter
+ // on each peak, never disappears completely or obstructs combat.
+ const wave=(1+Math.sin(time*11.5))/2;
+ const blink=.44+.56*wave*wave;
+ const sway=Math.sin(time*6.2)*4*(left?-1:1);
+ ctx.save();
+ ctx.globalAlpha=blink;
+ ctx.filter='brightness('+(0.76+wave*.92).toFixed(2)+') drop-shadow(0px 0px 9px rgba(255,38,36,0.9))';
+ ctx.drawImage(offscreenArrow,left?96:0,0,96,74,x+sway,y-5,130,100);
+ ctx.filter='none';
+ // The only supplemental information is compact, shadowed type; no boxes,
+ // borders, gradients or vector polygons around the direction marker.
+ ctx.globalAlpha=.70+.30*wave;
+ ctx.textAlign='center';ctx.textBaseline='alphabetic';
+ ctx.font='900 13px Arial,"Malgun Gothic",sans-serif';
+ ctx.lineWidth=4;ctx.strokeStyle='#09080c';
+ const note='남은 적 '+target.remaining+'명';
+ ctx.strokeText(note,x+65,y+107);ctx.fillStyle='#ffe8db';ctx.fillText(note,x+65,y+107);
+ ctx.font='900 11px Arial,sans-serif';
+ const distance=target.distance+' px';
+ ctx.strokeText(distance,x+65,y+123);ctx.fillStyle='#ff8583';
+ ctx.fillText(distance,x+65,y+123);
  ctx.restore();
 }
 function drawTravelMeter(){
