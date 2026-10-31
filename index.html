@@ -274,7 +274,7 @@ const Z_ANIM_RATE=.72,Z_ANIM_ONESHOT_CURVE=1.16;
 // Enemy visuals only: retain ALL movement physics, attacks, hitbox timings.
 const ENEMY_WALK_FRAME_SPACING=1.70,ENEMY_IDLE_FRAME_RATE=.67;
 const zOneShotFrame=t=>Math.min(7,Math.max(0,Math.floor(Math.pow(Math.min(1,Math.max(0,t)),Z_ANIM_ONESHOT_CURVE)*8)));
-const zStride=key=>(key==='run'?32:key==='backwalk'?23:key==='walk'?24:24);
+const zStride=key=>(key==='run'?32:key==='backwalk'?23:key==='walk'?32:24);
 const assetNames=['street','assassin','guard','boss','pipe_metal','pipe_charged','burst_red','burst_blue','burst_gold'];
 const img={};
 assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
@@ -351,6 +351,9 @@ if(Z_HOODIE_HERO){
   Z_REMOTE_ATLAS[key]='./assets/new-hero/'+motion+'.png';
  }
 }
+// Both standard speeds now show the already approved eight-frame RUN art.
+// The separate prior walk art remains reachable through ?gait=previous.
+if(!zUsePreviousGait)Z_REMOTE_ATLAS.walk=Z_REMOTE_ATLAS.run;
 const zArtState={},zArtFrameShared=new Map(),zArtNode=$('z-art-sprite'), zStage=$('stageWrap');
 let zArtLastKey='',zArtFrame=-1,zLastGoodFrame=null;
 // Ghosts reuse current original character frames: no new FX art or geometry.
@@ -2154,6 +2157,9 @@ function pollPad(){
 }
 function action(a){if(a==='start')requestRunStart();else if(a==='attack')startAttack();else if(a==='parry')parry();else if(a==='jump')jump();else if(a==='dodge')dodge();else if(a==='pause')pauseToggle()}
 const analog={dx:0,dy:0,pointerId:null};
+// Old 395px/sec run becomes walk. Full analog run covers ~75% more ground.
+// Dash spans roughly a screen in its existing 0.30s eight-frame window.
+const PLAYER_WALK_SPEED=395,PLAYER_RUN_SPEED=690,PLAYER_DASH_SPEED=3600;
 function control(dt,pad){
  if(gameState!=='playing')return;
  // Physical keyboard: WASD is exclusively world movement; the four arrow
@@ -2214,8 +2220,8 @@ function control(dt,pad){
  // Post-impact brace briefly suppresses movement input while taking a low step back.
  if(p.parryRecoilTime>0){dx=0;dy=0}
  if(p.stun<=0&&p.downTimer<=0&&p.getupTimer<=0){
-  let speed=p.running?395:218;
-  if(p.dodge>0){dx=p.dodgeX;dy=0;speed=880}
+  let speed=p.running?PLAYER_RUN_SPEED:PLAYER_WALK_SPEED;
+  if(p.dodge>0){dx=p.dodgeX;dy=0;speed=PLAYER_DASH_SPEED}
   if(p.counterRush>0){dx=p.facing;dy=0;speed=980;p.counterRush=Math.max(0,p.counterRush-dt)}
   if(p.attack>0&&!p.airAttack&&p.counterRush<=0)speed*=.28;
   if(p.jumpActive&&p.z>0&&p.stun<=0){
