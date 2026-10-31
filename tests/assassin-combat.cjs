@@ -286,8 +286,8 @@ test('each of the 21 upgrade skills and NEURO has a unique bitmap-icon atlas cel
   return t.modIconMarkup(id).match(/background-position:([^"]+)/)?.[1];
  });
  assert.equal(new Set(cells).size,22,'no two upgrades may display the same atlas cell');
- assert(html.includes("background-image:url('./assets/ui/upgrade-icons-v2.webp')"),
-  'both HUD and power-up cards load the locally archived raster sprite');
+ assert(html.includes("background-image:var(--upgrade-preloaded-url,url('./assets/ui/upgrade-icons-v2.webp'))"),
+  'HUD and power-up cards use the decoded bitmap cache, including failed-download retry');
  assert(html.includes("<span class=\"sym\">${modIconMarkup(id)}"),
   'reward cards show unique imagery instead of repeated Unicode symbols');
  assert(html.includes("modIconMarkup('neuro')"),'hybrid element also has unique picture');
