@@ -1475,7 +1475,7 @@ test('Red hood grunt enters from the camera on one eight-frame bitmap sheet',()=
  assert(html.includes("intruderEntryImage.src='./assets/enemies/redhood-ambush-entry-8.webp'"));
  assert(html.includes("['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)]"));
  for(const action of ['idle','run','attack','hit','death','special'])
-  assert(html.includes("image.src='./assets/enemies/redhood-intruder/'+key+'.png'"));
+  assert(html.includes("image.src='./assets/enemies/redhood-intruder/'+(key==='death'?'death-fullbody.webp':key+'.png')"));
  assert(html.includes("...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임'"));
 });
 test('Crimson intruder drops into an ongoing squad as reinforcements and joins the fight',()=>{
@@ -1496,6 +1496,20 @@ test('Crimson intruder drops into an ongoing squad as reinforcements and joins t
  assert.equal(t.intruderEntering(enemy),false,'entry concludes before normal combat behavior');
  assert.equal(enemy.entryLandingPlayed,true,'landing is signaled once');
  assert.equal(enemy.brain,'support_elite','elite fighter retains its own special attack AI');
+});
+test('redhood death uses the rebuilt 8-frame full-body atlas and restores legs across the former row seam',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../assets/enemies/redhood-intruder/death-fullbody.webp'));
+ assert(source.length>150000,'full-body 8-frame bitmap exists and retains illustrated leg details');
+ assert.equal(source.toString('ascii',0,4),'RIFF');
+ assert.equal(source.toString('ascii',8,12),'WEBP');
+ assert(html.includes("key==='death'?'death-fullbody.webp':key+'.png'"),'death must use rebuilt art, not the original row-overlapping PNG');
+ assert.equal(t.intruderMotionImages.death.src,'./assets/enemies/redhood-intruder/death-fullbody.webp');
+ assert(html.includes("if(name==='hit'||name==='death'){"),'death must skip destructive eroded-core sprite isolation');
+ assert(html.includes('diagnostic.byAtlas[name]=cuts.map'),'death cut QA must register sourcePreserved and zero removed pixels');
+ assert.deepEqual(Array.from(t.INTRUDER_FRAME_FOOT.death),Array(8).fill(536),'all 8 poses have consistent foot position after reassembly');
+ const e=t.makeEnemy('intruder',800,560,88);e.dead=true;e.collapseAge=.76;
+ assert.equal(t.intruderVisualMove(e,'fall'),'death');
+ assert(t.intruderCombatFrame(e,'fall')>=0&&t.intruderCombatFrame(e,'fall')<8);
 });
 test('redhood hit keeps original full-length boots and audited ground anchors',()=>{
  // Source 1774x887 bitmap audit: eight original poses show both complete feet,
@@ -1531,7 +1545,7 @@ test('Crimson support enemies are separate from regular wave rosters and keep di
  assert.equal(Object.keys(t.intruderMotionImages).length,6,'six independent action sheets');
  for(const kind of ['idle','run','attack','hit','death','special']){
   assert.equal(t.INTRUDER_FRAME_FOOT[kind].length,8,kind+' frames align with ground');
-  assert.equal(t.intruderMotionImages[kind].src,'./assets/enemies/redhood-intruder/'+kind+'.png');
+  assert.equal(t.intruderMotionImages[kind].src,'./assets/enemies/redhood-intruder/'+(kind==='death'?'death-fullbody.webp':kind+'.png'));
  }
  for(const [key,detail] of [['idle',{}],['run',{visualMoving:true,spriteDistance:200,locomotionMode:'run'}],
    ['attack',{windup:.2,windupDuration:.45}],['hit',{reactionTime:.3,reactionDuration:.48,hitAnimation:'hitHead'}]]){

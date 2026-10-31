@@ -1739,7 +1739,7 @@ let intruderEntryImage=new Image();intruderEntryImage.src='./assets/enemies/redh
 // ONLY. Every subsequent combat action is rendered from this enemy's own art.
 const INTRUDER_MOTION_KEYS=['idle','run','attack','hit','death','special'];
 const intruderMotionImages=Object.fromEntries(INTRUDER_MOTION_KEYS.map(key=>{
- const image=new Image();image.src='./assets/enemies/redhood-intruder/'+key+'.png';
+ const image=new Image();image.src='./assets/enemies/redhood-intruder/'+(key==='death'?'death-fullbody.webp':key+'.png');
  return [key,image];
 }));
 // Per-frame bottommost opaque pixel, measured from the original transparent
@@ -1975,13 +1975,17 @@ function prepareIntruderSpriteCrops(){
    throw Error('빨간 후드 스프라이트 '+name+'의 커팅 영역을 확인해주세요.');
   diagnostic.atlases++;
   if(name==='난입')continue;
-  if(name==='hit'){
+  if(name==='hit'||name==='death'){
+   // Both hit and the rebuilt death atlas retain the complete original
+   // lower-body pixels. Death originally crossed the 4x2 source row seam,
+   // so the entire eight-frame sheet has been reassembled without the
+   // leftover boot fragments in frames 5-8.
    // All 8 original hit poses retain two complete boots, and none touch
    // their cell borders. Eroded-core cleanup can mistake a detached shin
    // for neighbouring-frame junk, visibly amputating the lower leg.
    // Keep every original hit pixel; untouched per-frame bbox crop is safe.
    diagnostic.frames+=cuts.length;
-   diagnostic.byAtlas.hit=cuts.map((crop,index)=>({
+   diagnostic.byAtlas[name]=cuts.map((crop,index)=>({
     frame:index+1,removedPixels:0,recoveredPixels:0,sourcePreserved:true,
     coverage:+(crop.sw*crop.sh/(crop.cellW*crop.cellH)).toFixed(3)
    }));
@@ -2004,7 +2008,7 @@ const INTRUDER_FRAME_FOOT={
  run:[433,433,432,433,415,414,416,415],
  attack:[438,438,438,438,415,415,415,415],
  hit:[439,440,441,440,419,421,421,419],
- death:[444,444,444,444,377,379,375,376],
+ death:[536,536,536,536,536,536,536,536],
  special:[440,443,409,436,410,418,407,417]
 };
 // 8 fps ping-pong keeps the peak flash from harshly jumping back to the dim pose.
