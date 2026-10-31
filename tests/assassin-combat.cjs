@@ -1386,7 +1386,7 @@ test('successful parry launches a strong physical knockback and short player rec
  const x=t.p.x;t.control(1/60,{dx:0,dy:0});
  assert(t.p.x<x&&t.p.x>x-6,'gradual short backward player slide');
 });
-test('JUST PARRY alone shows a huge bitmap shield and triggers a one-second global cinematic',()=>{
+test('JUST PARRY shows a 1.5x bitmap shield and triggers a one-second global cinematic',()=>{
  g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2100;t.p.y=570;
  const enemy=t.makeEnemy('assassin',t.p.x+78,t.p.y,0);enemy.stun=0;t.setEnemies([enemy]);
  t.parry();
@@ -1395,9 +1395,9 @@ test('JUST PARRY alone shows a huge bitmap shield and triggers a one-second glob
  t.enemyAttack(enemy);
  const shields=t.getFx().filter(f=>f.kind==='parryShield');
  assert.equal(shields.length,1,'one real bitmap shield for one success');
- assert(shields[0].scale>=2&&shields[0].life>=.5,'impact shield is over twice its former 285px size');
- assert(t.getFx().some(f=>f.kind==='modBitmap'&&f.color==='blue'&&f.scale>1.9),'secondary bitmap glow reinforces shield impact');
- assert(t.getFx().some(f=>f.color==='gold'&&f.scale>2),'large painterly impact burst');
+ assert(Math.abs(shields[0].scale-1.5)<.001&&shields[0].life>=.5,'impact shield stays at exactly 1.5x original size');
+ assert(t.getFx().some(f=>f.kind==='modBitmap'&&f.color==='blue'&&Math.abs(f.scale-1.5)<.001),'secondary bitmap glow matches the 1.5x parry size');
+ assert(t.getFx().some(f=>f.color==='gold'&&Math.abs(f.scale-1.725)<.001),'gold impact burst is 1.5x original size');
  assert(t.getSlowMotion()>=.95,'cinematic lasts near one second instead of 120ms');
  assert.equal(t.getSlowVictim(),enemy,'only the successfully parried actor gets double-stacked slowdown');
  assert(t.getHitStop()>=.15,'impact has a sharp initial freeze');

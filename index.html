@@ -2162,10 +2162,10 @@ function enemyAttack(e){
   p.parryRecoilDuration=.24;p.parryRecoilTime=.24;
   p.parryRecoilRemaining=e.type==='boss'?25:19;
   // Show the bitmap shield collision ONLY when enemyAttack is really parried.
-  spawnParryShieldFx(p.x+p.facing*70,p.y-140,p.facing,e.type==='boss'?2.3:2.05);
-  // Larger painterly shield shock and a second bitmap-only bloom.
-  spawnModBitmap('blue',p.x+p.facing*72,p.y-140,2.05,'brightness(1.5) saturate(1.2)',.48);
-  fxBurst(p.x+p.facing*68,p.y-136,'gold',2.35);
+  spawnParryShieldFx(p.x+p.facing*70,p.y-140,p.facing,e.type==='boss'?1.77:1.5);
+  // Keep the successful parry impact at 1.5x its original size, without changing layered slow motion.
+  spawnModBitmap('blue',p.x+p.facing*72,p.y-140,1.5,'brightness(1.5) saturate(1.2)',.48);
+  fxBurst(p.x+p.facing*68,p.y-136,'gold',1.725);
   floatText('JUST PARRY!',p.x,p.y-220,'#7df7ff');
   flash('패링 성공! 공격으로 추격!',1.35);
   screenShake=Math.max(screenShake,31);hitStop=Math.max(hitStop,.16);
