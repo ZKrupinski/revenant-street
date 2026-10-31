@@ -1013,7 +1013,7 @@ function specialStats(id,rank=modRank(id)){
 // or making the first unupgraded dodge an unearned screen-width teleport.
 function dashMobilityStats(rangeRank=modRank('dashrange'),speedRank=modRank('dashspeed')){
  const duration=.28+.03*clamp(rangeRank,0,MOD_LEVEL_CAP);
- const speed=Math.round(2200*(1+.14*clamp(speedRank,0,MOD_LEVEL_CAP)));
+ const speed=Math.round(PLAYER_DASH_SPEED*(1+.14*clamp(speedRank,0,MOD_LEVEL_CAP)));
  return {duration,speed,distance:Math.round(duration*speed)};
 }
 function jumpMobilityStats(heightRank=modRank('jumpheight'),speedRank=modRank('jumpspeed')){
@@ -2215,9 +2215,9 @@ function pollPad(){
 }
 function action(a){if(a==='start')requestRunStart();else if(a==='attack')startAttack();else if(a==='parry')parry();else if(a==='jump')jump();else if(a==='dodge')dodge();else if(a==='pause')pauseToggle()}
 const analog={dx:0,dy:0,pointerId:null};
-// Old 395px/sec run becomes walk. Full analog run covers ~75% more ground.
-// Dash spans roughly a screen in its existing 0.30s eight-frame window.
-const PLAYER_WALK_SPEED=395,PLAYER_RUN_SPEED=690,PLAYER_DASH_SPEED=3600;
+// Old 395px/sec run becomes walk; full-stick run remains 690px/sec.
+// The old almost-screen-length dash is now gained through mobility upgrades.
+const PLAYER_WALK_SPEED=395,PLAYER_RUN_SPEED=690,PLAYER_DASH_SPEED=2200;
 function control(dt,pad){
  if(gameState!=='playing')return;
  // Physical keyboard: WASD is exclusively world movement; the four arrow
