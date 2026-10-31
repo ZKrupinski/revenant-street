@@ -616,10 +616,11 @@ html,body{margin:0!important;width:100%;height:100%;min-height:0!important;overf
 body{position:fixed;inset:0;touch-action:manipulation}
 #app{position:fixed!important;inset:0!important;width:100%!important;max-width:none!important;height:100%!important;height:100dvh!important;margin:0!important;padding:0!important;overflow:hidden!important}
 #app>.masthead,#app>footer{display:none!important}
-#stageWrap.stage-wrap{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important;background:#060a12;touch-action:none}
+#stageWrap.stage-wrap{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important;background:#060a12;touch-action:manipulation}
 #stageWrap.stage-wrap:fullscreen,#stageWrap.stage-wrap:-webkit-full-screen{width:100vw!important;height:100vh!important;inset:0!important}
-#stageWrap>canvas#game{width:100%!important;height:100%!important;object-fit:fill!important}
-#stageWrap>.overlay{padding:clamp(4px,1.6vh,14px);overflow:hidden;overscroll-behavior:none}
+#stageWrap>canvas#game{width:100%!important;height:100%!important;object-fit:fill!important;touch-action:none!important}
+#stageWrap>.overlay{padding:clamp(4px,1.6vh,14px);overflow:hidden;overscroll-behavior:none;touch-action:pan-y}
+#stageWrap>.overlay .menu:not(.title-dialog){touch-action:pan-y;overscroll-behavior:contain}
 #menu.title-dialog{box-sizing:border-box;overflow:hidden!important;max-height:100%!important;width:min(660px,100%);padding:clamp(10px,2vh,24px) clamp(12px,2.5vw,30px)!important}
 #menu.title-dialog h1{font-size:clamp(28px,min(7vw,9vh),65px);margin-bottom:clamp(4px,1vh,13px)}
 #menu.title-dialog .eyebrow{font-size:clamp(8px,1.25vh,12px);margin-bottom:5px}
