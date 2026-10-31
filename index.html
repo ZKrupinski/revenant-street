@@ -679,9 +679,8 @@ assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
 img.street_pano=img.street;
 // Eight hand-painted bitmap frames: top row points right, bottom row points left.
 let offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows-animated.webp';
-// The entire 4x2 bitmap belongs to a NEW enemy type: first four frames are the
-// camera-facing back-view entry, last four frames are its own combat stance.
-// Never pass this actor to the original raider/Masked Grunt atlas after landing.
+// Top row: four exclusive back-view entrance frames. The bottom row never
+// appears during entry; the six independent combat atlases take over after landing.
 let intruderEntryImage=new Image();intruderEntryImage.src='./assets/enemies/redhood-ambush-entry-8.webp';
 // Six painted 8-frame action sheets: the foreground entrance is cinematic
 // ONLY. Every subsequent combat action is rendered from this enemy's own art.
@@ -693,6 +692,53 @@ const intruderMotionImages=Object.fromEntries(INTRUDER_MOTION_KEYS.map(key=>{
 // Per-frame bottommost opaque pixel, measured from the original transparent
 // 4x2 atlases; corrects the AI sheets' different row baselines without
 // changing body proportions or borrowing another enemy's animation.
+// Each source atlas has eight 4x2 poses. Analyze opaque pixels once while
+// resources are loaded. Crop within each cell; NEVER stretch to the bounding
+// box size, because that would vary sprite scale between frames.
+const INTRUDER_CROPS=new WeakMap();
+function getIntruderCrops(image){
+ if(!image?.complete||!image.naturalWidth||!image.naturalHeight)return null;
+ if(INTRUDER_CROPS.has(image))return INTRUDER_CROPS.get(image);
+ const w=image.naturalWidth,h=image.naturalHeight,frames=[];
+ let rgba=null,cv=null;
+ try{
+  cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  const gc=cv.getContext('2d',{willReadFrequently:true});
+  gc.drawImage(image,0,0);
+  rgba=gc.getImageData(0,0,w,h).data;
+ }catch(_){rgba=null}
+ for(let n=0;n<8;n++){
+  const col=n%4,row=Math.floor(n/4);
+  const ox=Math.round(col*w/4),oy=Math.round(row*h/2);
+  const cx=Math.round((col+1)*w/4)-ox,cy=Math.round((row+1)*h/2)-oy;
+  let left=cx,top=cy,right=-1,bottom=-1;
+  if(rgba)for(let y=0;y<cy;y++)for(let x=0;x<cx;x++){
+   if(rgba[((oy+y)*w+ox+x)*4+3]<10)continue;
+   left=Math.min(left,x);right=Math.max(right,x);
+   top=Math.min(top,y);bottom=Math.max(bottom,y);
+  }
+  const empty=right<0;
+  if(empty){left=0;right=cx-1;top=0;bottom=cy-1}
+  else{
+   left=Math.max(0,left-2);right=Math.min(cx-1,right+2);
+   top=Math.max(0,top-2);bottom=Math.min(cy-1,bottom+2);
+  }
+  frames.push({sx:ox+left,sy:oy+top,sw:right-left+1,sh:bottom-top+1,
+   left,top,cellW:cx,cellH:cy,empty:empty&&!!rgba});
+ }
+ if(cv){cv.width=0;cv.height=0}
+ INTRUDER_CROPS.set(image,frames);return frames;
+}
+function getIntruderFrameCrop(image,index){
+ return getIntruderCrops(image)?.[Math.max(0,Math.min(7,index|0))]||null;
+}
+function prepareIntruderSpriteCrops(){
+ for(const [name,image] of [['난입',intruderEntryImage],...INTRUDER_MOTION_KEYS.map(k=>[k,intruderMotionImages[k]])]){
+  const cuts=getIntruderCrops(image);
+  if(!cuts||cuts.length!==8||cuts.some(c=>c.empty||c.sw<1||c.sh<1))
+   throw Error('빨간 후드 스프라이트 '+name+'의 커팅 영역을 확인해주세요.');
+ }
+}
 const INTRUDER_FRAME_FOOT={
  idle:[439,439,439,439,432,432,432,432],
  run:[433,433,432,433,415,414,416,415],
@@ -1096,24 +1142,25 @@ function maskedFrame(e,key){
   return Math.floor(Math.max(0,e.spriteDistance||0)/(zStride(key)*ENEMY_WALK_FRAME_SPACING))%8;
  return Math.floor(Math.max(0,e.spriteTime||0)*5.7*Z_ANIM_RATE*ENEMY_IDLE_FRAME_RATE)%8;
 }
-const INTRUDER_ENTRY_FRAMES=8;
+const INTRUDER_ENTRY_FRAMES=4; // Only frames 0-3, all top row.
 function intruderEntering(e){return e.type==='intruder'&&!e.dead&&(e.entryAge||0)<(e.entryDuration||0)}
 function intruderEntryFrame(e){
  const duration=Math.max(.1,e.entryDuration||1.12);
- return Math.min(INTRUDER_ENTRY_FRAMES-1,Math.floor(clamp((e.entryAge||0)/duration,0,.9999)*INTRUDER_ENTRY_FRAMES));
+ return Math.min(3,Math.floor(clamp((e.entryAge||0)/duration,0,.9999)*INTRUDER_ENTRY_FRAMES));
 }
 function drawIntruderEntry(e,x,y){
  if(!intruderEntryImage.complete||!intruderEntryImage.naturalWidth)return;
- const u=clamp(e.entryAge/e.entryDuration,0,1);
- const frame=intruderEntryFrame(e),cellW=intruderEntryImage.naturalWidth/4,cellH=intruderEntryImage.naturalHeight/2;
- // Large back-view jump near the camera, moving away toward the ground.
- const scale=1.18-.48*u,w=cellW*scale,h=cellH*scale,drift=(1-u)*(1-u);
- const side=e.entrySide||1;
+ const u=clamp((e.entryAge||0)/Math.max(.1,e.entryDuration||1.12),0,1);
+ const crop=getIntruderFrameCrop(intruderEntryImage,intruderEntryFrame(e));
+ if(!crop)return;
+ const scale=1.18-.48*u,drift=(1-u)*(1-u),side=e.entrySide||1;
  if(u>.46)ellipseShadow(x,y,1.03,.33*u);
  ctx.save();ctx.translate(x+side*78*drift,y+140*drift);
  if(side<0)ctx.scale(-1,1);
- ctx.drawImage(intruderEntryImage,(frame%4)*cellW,Math.floor(frame/4)*cellH,
-  cellW,cellH,-w/2,-h+8,w,h);
+ // Keep the intact original cell pivot even though empty space is trimmed.
+ ctx.drawImage(intruderEntryImage,crop.sx,crop.sy,crop.sw,crop.sh,
+  (-crop.cellW/2+crop.left)*scale,(-crop.cellH+crop.top)*scale+8,
+  crop.sw*scale,crop.sh*scale);
  ctx.restore();
 }
 // Standalone foreground-intruder enemy. Its last four original painted frames
@@ -1161,26 +1208,24 @@ function drawIntruderCombat(e,x,y,z){
  // The game waits for ALL six images to decode before entering combat.
  // Never substitute the preexisting red-hood raider's artwork.
  if(!image?.complete||!image.naturalWidth)return;
- const frame=intruderCombatFrame(e,key);
- const iw=image.naturalWidth,ih=image.naturalHeight;
- const col=frame%4,row=Math.floor(frame/4);
- const sx=Math.round(col*iw/4),sy=Math.round(row*ih/2);
- const sw=Math.round((col+1)*iw/4)-sx,sh=Math.round((row+1)*ih/2)-sy;
- // One common physical scale for idle, run, attack and reactions.
+ const frame=intruderCombatFrame(e,key),crop=getIntruderFrameCrop(image,frame);
+ if(!crop)return;
  const scale=move==='special'?.61:.585;
- const w=sw*scale,h=sh*scale;
- const foot=INTRUDER_FRAME_FOOT[move]?.[frame]??sh-5;
+ const foot=INTRUDER_FRAME_FOOT[move]?.[frame]??crop.cellH-5;
  const opacity=e.dead?clamp(e.fade,0,1):1;
  ellipseShadow(x,y,1.06,.42*opacity/(1+z*.022));
  ctx.save();ctx.globalAlpha=opacity;
  ctx.translate(Math.round(x),Math.round(y-z));
- ctx.scale(e.face>0?1:-1,1); // All six source sheets face right.
- const left=-w/2,top=-foot*scale;
- ctx.drawImage(image,sx,sy,sw,sh,left,top,w,h);
+ ctx.scale(e.face>0?1:-1,1);
+ // Original cell-centre X and original per-frame foot Y are preserved:
+ // alpha-trimming must not introduce size popping or idle/run jitter.
+ const left=(-crop.cellW/2+crop.left)*scale,top=(-foot+crop.top)*scale;
+ const w=crop.sw*scale,h=crop.sh*scale;
+ ctx.drawImage(image,crop.sx,crop.sy,crop.sw,crop.sh,left,top,w,h);
  if(e.hitFlash>0){
   ctx.filter='brightness(0) invert(1)';
   ctx.globalAlpha=opacity*.75*clamp(e.hitFlash/.22,0,1);
-  ctx.drawImage(image,sx,sy,sw,sh,left,top,w,h);
+  ctx.drawImage(image,crop.sx,crop.sy,crop.sw,crop.sh,left,top,w,h);
   ctx.filter='none';
  }
  ctx.restore();
@@ -2152,7 +2197,7 @@ function requiredSceneArt(preview=false){
   ['배경 디코딩',()=>ensureBitmapDecoded(img.street_pano)],
   ['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)],
   ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
-  ['난입 연출 8프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
+  ['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
   ...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임',()=>ensureBitmapDecoded(intruderMotionImages[k])]),
   ['업그레이드 아이콘 22종',()=>ensureBitmapDecoded(upgradeIconsImage)],
   ['아케이드 조작 버튼 4종·눌림 8프레임',()=>ensureBitmapDecoded(arcadeButtonsImage)],
@@ -2212,6 +2257,9 @@ async function requestRunStart(){
    if(status)status.textContent=`준비 ${done}/${total} — ${name}`;
    if(bar)bar.style.width=`${Math.floor(100*done/total)}%`;
   });
+  $('loadStatus').textContent='빨간 후드 7개 시트 정밀 커팅 및 발 정렬 확인 중';
+  await new Promise(resolve=>setTimeout(resolve,0));
+  prepareIntruderSpriteCrops();
   $('loadStatus').textContent='배경 효과 준비 중';
   await new Promise(resolve=>setTimeout(resolve,0));
   depthBackdrop(img.street_pano);
