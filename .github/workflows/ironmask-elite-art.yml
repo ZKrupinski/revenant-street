@@ -1,0 +1,50 @@
+name: Build new Iron Mask Elite 64-frame sprite art
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/ironmask-elite-art.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --quiet Pillow
+      - name: Download eight newly illustrated transparent sprite sheets
+        run: |
+          mkdir -p assets/ironmask-elite/source
+          curl -fL --retry 3 --connect-timeout 20 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/2b9b54f8-e359-4093-bc19-aab214437ae6.png' -o 'assets/ironmask-elite/source/idle.png'
+          test "$(stat -c%s 'assets/ironmask-elite/source/idle.png')" -gt 100000
+          curl -fL --retry 3 --connect-timeout 20 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/d48243c4-4c7d-4a2c-902c-75419875ab97.png' -o 'assets/ironmask-elite/source/run.png'
+          test "$(stat -c%s 'assets/ironmask-elite/source/run.png')" -gt 100000
+          curl -fL --retry 3 --connect-timeout 20 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/1e014017-e262-461a-8dbc-0245bd4c70ef.png' -o 'assets/ironmask-elite/source/attack.png'
+          test "$(stat -c%s 'assets/ironmask-elite/source/attack.png')" -gt 100000
+          curl -fL --retry 3 --connect-timeout 20 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/4b76c520-929d-4ac3-94ec-67624c3fe47e.png' -o 'assets/ironmask-elite/source/hit.png'
+          test "$(stat -c%s 'assets/ironmask-elite/source/hit.png')" -gt 100000
+          curl -fL --retry 3 --connect-timeout 20 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/9904d6ce-2493-4e75-b51a-a4082c8db04e.png' -o 'assets/ironmask-elite/source/menace.png'
+          test "$(stat -c%s 'assets/ironmask-elite/source/menace.png')" -gt 100000
+          curl -fL --retry 3 --connect-timeout 20 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/e2c9975c-8901-47e4-a212-0eb5aae1171c.png' -o 'assets/ironmask-elite/source/death.png'
+          test "$(stat -c%s 'assets/ironmask-elite/source/death.png')" -gt 100000
+          curl -fL --retry 3 --connect-timeout 20 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/9ec6c8ec-2821-49e3-bb75-6bcab6a4e941.png' -o 'assets/ironmask-elite/source/charge.png'
+          test "$(stat -c%s 'assets/ironmask-elite/source/charge.png')" -gt 100000
+          curl -fL --retry 3 --connect-timeout 20 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/115be7b1-5ec7-434c-9df9-ae85cb91f94c.png' -o 'assets/ironmask-elite/source/special.png'
+          test "$(stat -c%s 'assets/ironmask-elite/source/special.png')" -gt 100000
+      - name: Precisely crop and ground-align 64 original painted poses
+        run: python scripts/build-ironmask-elite.py
+      - name: Save eight production WebP animations
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/ironmask-elite/*.webp
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Add 64 complete Iron Mask elite sprite frames'
+          git push origin HEAD:main
