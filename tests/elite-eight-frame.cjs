@@ -30,7 +30,7 @@ assert(html.includes('e.eliteSpecialElapsed=0;e.eliteSpecialDuration=1.04;e.elit
 assert(!code.includes('(e.spriteTime||0)*16.4'),
   'old unrelated sprite clock must never skip attack frames');
 assert(code.includes('e.eliteSpecialElapsed||0'),'the atlas uses its own timeline');
-assert(html.includes('?v=ironmask-8frames-20261101'),
+assert(html.includes('?v=ironmask-8frames-1bc78ad'),
   'the game reloads the updated Iron Mask animation logic');
 const sheet=fs.readFileSync(path.join(root,'assets/ironmask-elite/special.webp'));
 assert(sheet.length>100000,'8-frame bitmap atlas should be fully populated');
