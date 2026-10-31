@@ -2450,6 +2450,8 @@ function resetFailedUiBitmaps(){
 }
 function requiredSceneArt(preview=false){
  const checks=[
+  // All embedded combat/camera illustrations are fully decoded before play.
+  ...assetNames.filter(k=>EMBEDDED_ASSETS[k]).map(k=>['내장 비트맵 '+k,()=>ensureBitmapDecoded(img[k])]),
   ['배경 디코딩',()=>ensureBitmapDecoded(img.street_pano)],
   ['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)],
   ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
@@ -2462,13 +2464,12 @@ function requiredSceneArt(preview=false){
   ['왼쪽 아케이드 스틱 빨간 볼탑',()=>ensureBitmapDecoded(joystickKnobImage)],
   ['볼탑 옛 봉 제거 투명 마스크',()=>ensureBitmapDecoded(joystickBallMaskImage)],
   ...['burst_red','burst_blue','burst_gold'].map(k=>['전투 이펙트 '+k,()=>ensureBitmapDecoded(img[k])]),
-  ...Object.keys(Z_REMOTE_ATLAS).map(k=>['Z '+k,()=>loadZMove(k),
-   Z_ALL_ATTACKS.includes(k)&&!['jab','frontkick','cross','superman_punch','axe_kick','diagonal_airkick'].includes(k)]),
+  ...Object.keys(Z_REMOTE_ATLAS).map(k=>['Z '+k,()=>loadZMove(k)]),
   ...Object.keys(MASKED_GRUNT_ATLAS).map(k=>['잡몹 '+k,()=>loadMaskedMove(k)]),
   ...RZAssassinArt.keys.map(k=>['암살자 '+k,()=>RZAssassinArt.load(k)]),
   ...RIOT_GUARD_KEYS.map(k=>['방패 '+k,()=>loadRiotGuard(k)])
  ];
- if(preview&&window.RZBossHunter?.isEnabled?.())for(const k of ['idle','walk','taunt','dash','slam','death','hit'])checks.push(['보스 '+k,()=>window.RZBossHunter.load(k)]);
+ if(window.RZBossHunter?.isEnabled?.())for(const k of ['idle','walk','taunt','dash','slam','death','hit'])checks.push(['보스 '+k,()=>window.RZBossHunter.load(k)]);
  return checks;
 }
 function waitSceneArt(preview,onProgress){
@@ -2530,7 +2531,13 @@ async function requestRunStart(){
   showMenu(`<div class="eyebrow">RESOURCE ERROR</div><h2>리소스 로딩 중단</h2><p>${String(err.message).replace(/[<>]/g,'')}</p><p>불완전한 캐릭터가 보이지 않도록 게임 실행을 막았습니다.</p><div class="buttons"><button class="main-btn" data-action="start">다시 불러오기</button><button class="secondary-btn" data-action="title">타이틀</button></div>`);
  }
 }
-function startRun(){resetInputs();resetPlayer();setModsExpanded(false);wave=0;fx=[];floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;parrySlowTarget=null;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
+function startRun(){resetInputs();resetPlayer();
+ // Preserve WASD that was held while the loading or start overlay was visible.
+ for(const k of ['w','a','s','d'])if(heldKeyboard.has(k))keys.add(k);
+ menuBlockedKeys.clear();syncFaceButtonVisuals();
+ setModsExpanded(false);wave=0;fx=[];floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;parrySlowTarget=null;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
+ // A previous menu button cannot be treated as a fresh combat press.
+ menuPad.armed=false;menuPad.confirm=false;
  if(/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'')){
   // Explicit QA shortcut: test the actual final encounter without traversing
   // ten screens. Normal gameplay and progression stay unchanged.
