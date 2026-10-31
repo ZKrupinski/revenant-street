@@ -1733,10 +1733,14 @@ function findExecutionTarget(){
  (e.x-p.x)*p.facing<142&&Math.abs(e.y-p.y)<67)
  .sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0]||null;
 }
+// A fresh ATTACK press is a new action, not a request to finish rendering
+// the previous ground attack. Specials retain their committed animations.
 function startAttack(){
  if(gameState!=='playing'||p.stun>0||p.riposteChasing||(p.dodge>0&&p.dashFollowWindow<=0)||
   p.downTimer>0||p.getupTimer>0)return;
- if(p.attack>0){p.attackQueued=true;return}
+ const cancelNormal=p.attack>0&&!p.airAttack&&!p.dashSmash&&!p.counterBoost&&
+  !p.riposteStrikeTarget&&!p.airKickPhase&&p.z<=0;
+ if(p.attack>0&&!cancelNormal){p.attackQueued=true;return}
  // Forward dash + attack is a deliberate single-frame-window strong shove.
  if(p.dashFollowWindow>0&&p.z<=16){
   if(p.stamina<16)return;
@@ -1787,13 +1791,22 @@ function startAttack(){
  }
  const step=p.comboWindow>0?(p.comboIdx+1)%4:0;
  const move=pickComboMove(step,p.moveName,p.weapon>0);
- const isKick=Z_KICK_MOVES.has(move),cost=isKick?16:Z_HEAD_MOVES.has(move)?15:12;
+ const isKick=Z_KICK_MOVES.has(move),cost=isKick?9:Z_HEAD_MOVES.has(move)?9:7;
  if(p.stamina<cost)return;
+ if(cancelNormal){
+  const fraction=1-p.attack/Math.max(.001,p.attackDuration);
+  // The outgoing attack has a real contact beat. Finish that beat once if
+  // the pose reached its strike window; avoid creating phantom hits when
+  // multiple presses arrive before any visible animation frame.
+  if(!p.hitDone&&fraction>=.16){p.hitDone=true;attackCheck()}
+  p.attack=0;p.attackDriveRemaining=0;p.attackQueued=false;
+  hitStop=Math.min(hitStop,.025); // never park the next move in old impact freeze
+ }
  p.stamina-=cost;p.comboIdx=step;p.moveName=move;p.attackQueued=false;p.airAttack=false;p.counterBoost=false;recordComboMove(move);
  const durations={jab:.31,cross:.37,hook:.41,uppercut:.44,backfist:.39,hammerfist:.50,spinning_elbow:.52,rising_elbow:.42,superman_punch:.56,shovel_hook:.41,frontkick:.48,lowkick:.40,roundkick:.54,axe_kick:.59,sidekick:.48,spinning_heel:.57,crescent_kick:.53,diagonal_airkick:.58,rising_headbutt:.45,forward_headbutt:.40};
- // Restore authored eight-frame attack speed instead of the slowed 1.14x
- // duration and forced .39s floor. Keep haste and all 19 move variants.
- p.attackDuration=Math.max(.29,(durations[move]||.40)/(1+modRank('haste')*.075));
+ // Faster eight-frame attacks; repeated presses can interrupt the rendering
+ // immediately, while held attack loops a little before recovery finishes.
+ p.attackDuration=Math.max(.23,(durations[move]||.40)*.80/(1+modRank('haste')*.075));
  const advance={jab:23,cross:43,hook:31,uppercut:22,backfist:29,hammerfist:46,
   spinning_elbow:53,rising_elbow:30,superman_punch:100,shovel_hook:34,
   frontkick:45,lowkick:32,roundkick:48,axe_kick:37,sidekick:66,
@@ -2400,7 +2413,7 @@ function control(dt,pad){
  p.motionTime=(p.motionTime||0)+dt;
  if(p.attack>0){
   p.attack-=dt;
-  if(!p.airKickPhase&&!p.hitDone&&p.attack<p.attackDuration*.58){p.hitDone=true;attackCheck()}
+  if(!p.airKickPhase&&!p.hitDone&&p.attack<p.attackDuration*.70){p.hitDone=true;attackCheck()}
   p.attack=Math.max(0,p.attack);
   if(p.attack===0){p.airKickPhase='';p.counterBoost=false;p.dashSmash=false;if(!p.z)p.airAttack=false}
  }
@@ -2408,12 +2421,12 @@ function control(dt,pad){
  // only a newly pressed attack event can call startAttack().
  const wantsCombo=p.attackQueued||(!p.jumpActive&&p.z<=0&&(keys.has('j')||padPrev.attack));
  const canCombo=p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0;
- // Once the hit lands, a buffered ground combo can link on the last
- // visible (eighth) sprite frame, not after a separate recovery pause.
- // Never cancel dash finisher, dive slam or parry chase.
+ // A held ATTACK loops early, without a dead beat at the end of each pose.
+ // A new press already transitions immediately inside startAttack().
+ // Do not interrupt dash finishers, dive slams or parry-chase strikes.
  const canChainTail=p.attack>0&&p.hitDone&&!p.airAttack&&!p.dashSmash&&
   !p.counterBoost&&!p.riposteStrikeTarget&&!p.airKickPhase&&p.z<=0&&
-  p.attack<=p.attackDuration*.10&&(p.attack+dt)<=p.attackDuration*.11;
+  p.attack<=p.attackDuration*.22;
  if(wantsCombo&&canCombo&&(p.attack===0||canChainTail)){
   p.attack=0;p.attackQueued=false;startAttack();
  }
