@@ -1103,6 +1103,13 @@ function drawIntruderEntry(e,x,y){
 // Whole-sprite lean/recoil/fall preserves the costume and foot scale until
 // dedicated additional action atlases are authored for this exact character.
 function intruderCombatFrame(e,key){
+ if(e.specialPhase){
+  if(e.specialPhase==='leap')return 0+Math.min(3,Math.floor((e.specialTime||0)/.32*4));
+  if(e.specialPhase==='hang')return 1;
+  if(e.specialPhase==='dive')return 2;
+  if(e.specialPhase==='windup')return 6;
+  return 7;
+ }
  const t=Math.max(0,e.spriteTime||0);
  if(key==='fall')return 7;
  if(key==='getup')return 4+Math.min(3,Math.floor(clamp(1-(e.riseTime||0)/.67,0,.9999)*4));
@@ -1118,28 +1125,31 @@ function drawIntruderCombat(e,x,y,z){
  if(!intruderEntryImage.complete||!intruderEntryImage.naturalWidth)return;
  const key=getMaskedMove(e),frame=intruderCombatFrame(e,key);
  const cw=intruderEntryImage.naturalWidth/4,ch=intruderEntryImage.naturalHeight/2;
- const w=cw*.68,h=ch*.68;
+ const specialAir=['leap','hang','dive'].includes(e.specialPhase);
+ const specialScale=specialAir?1.16:e.specialPhase==='windup'?1.055:1;
+ const w=cw*.68*specialScale,h=ch*.68*specialScale;
+ const sourceY=specialAir?0:ch;
  const moving=key==='walk'||key==='run';
  const step=moving?Math.sin((e.spriteDistance||0)/(key==='run'?20:26))*2.8:0;
  const charging=key==='charge',attacking=key==='attack';
  const struck=key.startsWith('hit'),down=key==='fall';
  const groundedDown=down&&z<12;
- const lean=groundedDown?1.21:down?.32:struck?.19:charging?-.12:attacking?-.09:0;
+ const lean=groundedDown?1.21:down?.32:struck?.19:charging?-.12:attacking?-.09:e.specialPhase==='windup'?.13:0;
  const shove=attacking?(e.windup>0?3:19):charging?7:0;
  const opacity=e.dead?clamp(e.fade,0,1):1;
  ellipseShadow(x,y,1.06,.42*opacity/(1+z*.022));
  ctx.save();
  ctx.globalAlpha=opacity;
  ctx.translate(Math.round(x),Math.round(y-z+step));
- // The landing/combat row faces RIGHT in the source artwork.
+ // Both rows belong to the SAME new intruder, including his aerial special.
  ctx.scale(e.face>0?1:-1,1);
  ctx.translate(shove,0);
  ctx.rotate(lean);
- ctx.drawImage(intruderEntryImage,(frame%4)*cw,ch,cw,ch,-w/2,-h+8,w,h);
+ ctx.drawImage(intruderEntryImage,(frame%4)*cw,sourceY,cw,ch,-w/2,-h+8,w,h);
  if(e.hitFlash>0){
   ctx.filter='brightness(0) invert(1)';
   ctx.globalAlpha=opacity*.75*clamp(e.hitFlash/.22,0,1);
-  ctx.drawImage(intruderEntryImage,(frame%4)*cw,ch,cw,ch,-w/2,-h+8,w,h);
+  ctx.drawImage(intruderEntryImage,(frame%4)*cw,sourceY,cw,ch,-w/2,-h+8,w,h);
   ctx.filter='none';
  }
  ctx.restore();
@@ -1153,6 +1163,22 @@ function drawIntruderCombat(e,x,y,z){
  if(e.windup>0){ctx.fillStyle='#ff697b';ctx.font='900 26px Arial';ctx.fillText('!',x,top-13)}
  if(e.chargePrep>0){ctx.fillStyle='#ffb842';ctx.font='900 28px Arial';ctx.fillText('!!',x,top-18)}
  if(e.groggy>0){ctx.fillStyle='#9ef4ff';ctx.font='900 14px Arial';ctx.fillText('공격 → 처형',x,top-12)}
+}
+// No vector circles/rings: the warning and landing flash stamp original
+// painted burst bitmap sprites onto the lane in world coordinates.
+function drawIntruderSpecialWarnings(){
+ const bitmap=img.burst_red;
+ if(!bitmap?.complete||!bitmap.naturalWidth)return;
+ for(const e of enemies){
+  if(e.dead||!['windup','leap','hang','dive'].includes(e.specialPhase))continue;
+  if(e.specialTargetX<cameraX-330||e.specialTargetX>cameraX+W+330)continue;
+  const pulse=.64+.36*Math.sin(time*21+e.slot);
+  const w=230+(1-pulse)*50,h=77;
+  ctx.save();ctx.globalAlpha=.22+.25*pulse;
+  ctx.filter='saturate(1.7) brightness(1.25)';
+  ctx.drawImage(bitmap,e.specialTargetX-w/2,e.specialTargetY-h/2,w,h);
+  ctx.restore();
+ }
 }
 function drawMaskedGrunt(e,x,y,z){
  const key=getMaskedMove(e);if(e.spriteKey!==key){
@@ -2203,6 +2229,7 @@ function spawnNextEncounter(){
   if(type==='intruder'){
    enemy.entryAge=0;enemy.entryDuration=1.12;enemy.entrySide=entrySide;
    enemy.entryLandingPlayed=false;enemy.cooldown=1.4;enemy.face=entrySide>0?-1:1;
+   enemy.specialCooldown=1.0;
   }else if(left)enemy.face=1;
   enemies.push(enemy);
  });
@@ -2249,7 +2276,9 @@ function makeEnemy(type,x,y,index){
   brain:type==='boss'?'boss':type==='elite'?'elite':['swarm','feint','charger','swarm','feint','charger'][index%6],
   chargeCooldown:1.6+(index%5)*.48,chargePrep:0,chargeTime:0,
    eliteCooldown:2.6,eliteTell:0,eliteRush:0,eliteAttack:false,eliteAnnounced:false,
-  reactionVariant:0,reactionTime:0,reactionDuration:.48,reactionDir:1,bodyShakeTime:0,bodyShakeDuration:0,bodyShakePower:0}
+  reactionVariant:0,reactionTime:0,reactionDuration:.48,reactionDir:1,bodyShakeTime:0,bodyShakeDuration:0,bodyShakePower:0,
+  specialPhase:'',specialTime:0,specialCooldown:type==='intruder'?1.0:0,
+  specialTargetX:x,specialTargetY:y,specialStartX:x,specialStartY:y}
 }
 const Z_FIST_NAMES=['jab','cross','hook','uppercut','backfist','hammerfist','spinning_elbow','rising_elbow','superman_punch','shovel_hook'];
 const Z_KICK_NAMES=['frontkick','roundkick','lowkick','axe_kick','sidekick','spinning_heel','crescent_kick','diagonal_airkick'];
@@ -2550,6 +2579,10 @@ function hurtEnemy(e,dmg,poise){
  e.stun=e.type==='boss'?(e.bossMode==='dash'||e.bossMode==='slam'?0:.085):
   e.type==='elite'?life*.82:life;
  e.hitFlash=e.type==='boss'?.33:e.type==='elite'?.30:.22;e.windup=0;e.chargePrep=0;e.chargeTime=0;e.attackPoseTime=0;
+ if(e.type==='intruder'){
+  // Taking a real hit completely interrupts the air special.
+  e.specialPhase='';e.specialTime=0;e.specialCooldown=Math.max(e.specialCooldown||0,2.0);
+ }
  if(e.type==='elite'){e.eliteTell=0;e.eliteRush=0;e.eliteAttack=false;e.eliteCooldown=Math.max(e.eliteCooldown,1.8)}
  // Couple enemy displacement to the attacker's actual forward drive.
  // The hit target receives the same accelerated forward-pressure beat
@@ -2759,6 +2792,7 @@ function enemyAttack(e){
   e.stun=Math.max(e.stun,1.50);e.reactionTime=e.reactionDuration=.84;
   if(e.type!=='boss'){e.pendingFall=true;e.hitAnimation='hitFly'}
   e.eliteRush=0;
+  if(e.type==='intruder'){e.specialPhase='';e.specialTime=0;e.specialCooldown=5.5}
   p.parry=Math.max(p.parry,.30);p.parryDuration=Math.max(p.parryDuration,.34);
   p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteChaseTime=0;
   p.riposteWindow=1.85;p.riposteTarget=e;p.inv=Math.max(p.inv,.35);
@@ -3145,6 +3179,79 @@ function updateEliteAI(e,dt,dx,dy,dist){
  }
  return false;
 }
+// CRIMSON DIVE: unique painted-actor aerial slam with a strong telegraph.
+// All timings are world-slow-motion-aware and can be canceled by hits/parries.
+function updateIntruderSpecial(e,dt){
+ if(e.type!=='intruder'||e.dead)return false;
+ e.specialCooldown=Math.max(0,(e.specialCooldown||0)-dt);
+ const phase=e.specialPhase;
+ if(!phase){
+  const dx=Math.abs(p.x-e.x),dy=Math.abs(p.y-e.y);
+  if(e.specialCooldown>0||e.z>6||e.stun>0||e.groggy>0||
+     dx<125||dx>540||dy>115||e.windup>0||e.chargeTime>0||e.chargePrep>0)return false;
+  e.specialPhase='windup';e.specialTime=0;
+  e.specialTargetX=clamp(p.x+(e.x>p.x?68:-68),75,STAGE_WIDTH-75);
+  e.specialTargetY=groundY(p.y);
+  e.specialCooldown=6.5;
+  e.cooldown=Math.max(e.cooldown,1.35);
+  e.face=p.x>=e.x?1:-1;
+  floatText('CRIMSON DIVE!',e.x,e.y-285,'#ff6983');
+  spawnModBitmap('red',e.x,e.y-132,1.6,'saturate(1.7) brightness(1.2)',.38);
+  playCombatVoice('enemyShout',e);
+  return true;
+ }
+ e.specialTime+=dt;
+ e.visualMoving=false;e.visualSpeed=0;
+ if(phase==='windup'){
+  if(e.specialTime>=.57){
+   e.specialPhase='leap';e.specialTime=0;
+   e.specialStartX=e.x;e.specialStartY=e.y;
+   e.vz=0;
+   spawnModBitmap('red',e.x,e.y-95,2.2,'saturate(1.8)',.34);
+  }
+  return true;
+ }
+ if(phase==='leap'){
+  const u=clamp(e.specialTime/.32,0,1);
+  e.x=e.specialStartX+(e.specialTargetX-e.specialStartX)*u*.68;
+  e.y=groundY(e.specialStartY+(e.specialTargetY-e.specialStartY)*u*.68);
+  e.z=225*Math.sin(u*Math.PI/2);e.vz=0;
+  if(u>=1){e.specialPhase='hang';e.specialTime=0;}
+  return true;
+ }
+ if(phase==='hang'){
+  e.z=225;e.vz=0;
+  if(e.specialTime>=.16){e.specialPhase='dive';e.specialTime=0;}
+  return true;
+ }
+ if(phase==='dive'){
+  const u=clamp(e.specialTime/.25,0,1);
+  e.x=e.specialStartX+(e.specialTargetX-e.specialStartX)*(.68+.32*u);
+  e.y=groundY(e.specialStartY+(e.specialTargetY-e.specialStartY)*(.68+.32*u));
+  e.z=225*(1-u)*(1-u);e.vz=0;
+  if(u>=1){
+   e.specialPhase='recovery';e.specialTime=0;e.z=0;e.vz=0;
+   spawnModBitmap('red',e.x,e.y-32,3.45,'saturate(1.85) brightness(1.25)',.56);
+   spawnModBitmap('gold',e.x,e.y-77,2.4,'saturate(1.25) brightness(1.2)',.44);
+   spawnModBitmap('red',e.x,e.y-155,2.0,'brightness(1.4)',.36);
+   screenShake=Math.max(screenShake,27);
+   screenTint=Math.max(screenTint,.55);
+   hitStop=Math.max(hitStop,.10);
+   playImpactSound('heavy',1.45);vibrateImpact('heavy');
+   // Reuse the SAME parry/dodge/hit rules rather than un-blockable damage.
+   const reach=e.reach,damage=e.damage;
+   e.reach=193;e.damage=Math.round(damage*1.65);
+   enemyAttack(e);
+   e.reach=reach;e.damage=damage;
+  }
+  return true;
+ }
+ if(phase==='recovery'){
+  if(e.specialTime>=.41){e.specialPhase='';e.specialTime=0;e.cooldown=Math.max(e.cooldown,.50);}
+  return true;
+ }
+ e.specialPhase='';return false;
+}
 function updateEnemies(dt,parryVictimScale=1){
  // AI scans only nearby encounters rather than the whole 12,800 px street.
  const nearbyEnemies=enemies.filter(e=>!e.dead&&Math.abs(e.x-p.x)<1150);
@@ -3220,6 +3327,7 @@ function updateEnemies(dt,parryVictimScale=1){
   // During a committed dash, keep the sprite facing the direction it
   // actually charges; avoid mid-dash left/right art snapping.
   if(e.type!=='boss'||!e.bossMode)e.face=dx>=0?1:-1;
+  if(e.type==='intruder'&&updateIntruderSpecial(e,actorDt))continue;
   if(dist>910){
    const boost=clamp(e.speed*1.55+(dist-910)*.25,245,510);
    const before=e.x,beforeY=e.y;
@@ -3773,6 +3881,7 @@ function draw(){
  const actors=visibleActors;actors.length=0;
  if(p.x>cameraX-300&&p.x<cameraX+W+300)actors.push(p);
  for(const e of enemies)if((!e.dead||e.fade>0)&&e.x>cameraX-300&&e.x<cameraX+W+300)actors.push(e);
+ drawIntruderSpecialWarnings();
  actors.sort((a,b)=>a.y-b.y);
  actors.forEach(drawActor);
  drawEffects();for(const e of actors)if(e!==p&&!e.dead)drawEnemyStatusIcons(e);
