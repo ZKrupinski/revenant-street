@@ -1,123 +1,122 @@
 #!/usr/bin/env python3
-"""Rebuild the Iron Mask 8-frame special using complete existing painted poses.
+"""Reconstruct the *new hooded* Iron Mask special from its actual original art.
 
-The first-generation crimson-rush atlas includes baked-in cuts to the limbs,
-cloak and crimson sweep. Padding those cropped frames cannot restore pixels.
-Use complete run/attack poses for the body and retain the red energy as a
-separate translucent bitmap effect, without repainting the character.
+The source artist's eight poses are in special-original.webp at 4x2 / 512x608.
+Four shots spill over the generated cell borders, so pasting the old crops
+directly into the game loses body parts. Keep the intact original poses;
+rebuild the two unsafe action extremes with complete original hooded punch
+poses and original charge/slash bitmap VFX. No blank or repeated atlas cells.
 """
 from pathlib import Path
-from PIL import Image, ImageFilter
+from PIL import Image,ImageFilter,ImageChops
 from collections import deque
-
 ROOT=Path(__file__).resolve().parents[1]
-DIR=ROOT/"assets/ironmask-elite"
+DIR=ROOT/'assets/ironmask-elite'
 W,H,FOOT=512,608,557
-
-def sheet_frames(name):
-    im=Image.open(DIR/name).convert("RGBA")
-    assert im.size==(W*4,H*2), f"{name} has unexpected size {im.size}"
-    return [im.crop(((i%4)*W,(i//4)*H,((i%4)+1)*W,((i//4)+1)*H)) for i in range(8)]
-
-def isolate_subject(im):
-    """Discard separated residual scraps from adjacent generated atlas cells."""
-    alpha=im.getchannel('A')
-    mask=alpha.point(lambda v: 255 if v>=22 else 0).filter(ImageFilter.MaxFilter(3))
-    pix=mask.load();seen=bytearray(W*H);largest=[]
+def frames(name):
+    im=Image.open(DIR/name).convert('RGBA')
+    assert im.size==(W*4,H*2), (name,im.size)
+    return [im.crop(((i%4)*W,(i//4)*H,(i%4+1)*W,(i//4+1)*H)) for i in range(8)]
+special=frames('source/special-original.webp')
+charge=frames('charge.webp')
+attack=frames('attack.webp')
+run=frames('run.webp')
+def subject(img):
+    """Remove tiny disconnected fragments spilled across atlas gridlines."""
+    # Existing generated cells contain partial neighbors along their borders.
+    mask=img.getchannel('A').point(lambda a:255 if a>=22 else 0).filter(ImageFilter.MaxFilter(3))
+    px=mask.load(); seen=bytearray(W*H);best=[]
     for y in range(H):
         for x in range(W):
-            first=y*W+x
-            if seen[first] or not pix[x,y]:continue
-            todo=deque([first]);seen[first]=1;group=[]
-            while todo:
-                pos=todo.popleft();group.append(pos);yy,xx=divmod(pos,W)
-                for nx,ny in ((xx-1,yy),(xx+1,yy),(xx,yy-1),(xx,yy+1)):
+            j=y*W+x
+            if seen[j] or not px[x,y]:continue
+            queue=deque([j]); seen[j]=1;component=[]
+            while queue:
+                u=queue.popleft();component.append(u);uy,ux=divmod(u,W)
+                for nx,ny in ((ux-1,uy),(ux+1,uy),(ux,uy-1),(ux,uy+1)):
                     if 0<=nx<W and 0<=ny<H:
-                        p=ny*W+nx
-                        if not seen[p] and pix[nx,ny]:
-                            seen[p]=1;todo.append(p)
-            if len(group)>len(largest):largest=group
-    if not largest:return im
-    selection=Image.new('L',(W,H))
-    ss=selection.load()
-    for pos in largest:
-        yy,xx=divmod(pos,W);ss[xx,yy]=255
-    selection=selection.filter(ImageFilter.MaxFilter(5))
-    from PIL import ImageChops
-    result=im.copy()
-    result.putalpha(ImageChops.multiply(alpha,selection))
-    return result
+                        k=ny*W+nx
+                        if not seen[k] and px[nx,ny]:
+                            seen[k]=1;queue.append(k)
+            if len(component)>len(best):best=component
+    if not best:return img
+    connected=Image.new('L',(W,H));p=connected.load()
+    for u in best:
+        y,x=divmod(u,W);p[x,y]=255
+    connected=connected.filter(ImageFilter.MaxFilter(5))
+    out=img.copy()
+    out.putalpha(ImageChops.multiply(img.getchannel('A'),connected))
+    return out
 
-run=sheet_frames('run.webp')
-attack=sheet_frames('attack.webp')
-# Always use the ORIGINAL artist-painted special effects; using an already
-# repaired sheet would progressively erase the vivid red sweep on every build.
-original=DIR/'source'/'special-original.webp'
-if not original.is_file():
-    raise FileNotFoundError('Original Iron Mask special effect sheet is required: '+str(original))
-original_image=Image.open(original).convert('RGBA')
-if original_image.size!=(W*4,H*2):
-    raise RuntimeError('Unexpected original special atlas dimensions')
-# Source frame 4 has the most complete crimson sweep. Remove the chopped
-# character silhouette and keep only the saturated red painted energy.
-original_arc=original_image.crop((3*W,0,4*W,H))
-effect=Image.new('RGBA',(W,H))
-pix=[]
-for rr,gg,bb,aa in original_arc.getdata():
-    vivid=(rr>115 and rr>gg*1.45 and rr>bb*1.24)
-    if aa>16 and vivid:
-        power=min(1.0,max(0.0,(rr-gg)/65))
-        pix.append((rr,gg,bb,round(aa*power)))
-    else:
-        pix.append((0,0,0,0))
-effect.putdata(pix)
-effect.putalpha(effect.getchannel('A').filter(ImageFilter.GaussianBlur(.8)))
-# Each base is a COMPLETE painted sprite, not one of the damaged strike poses.
-# 8 distinct complete stages: ready, rush, leap, impact, hard punch, recovery.
-timeline=[
-    ('attack',0,1.00,0,0,0.00),
-    ('run',0,1.00,-4,0,0.00),
-    ('run',2,1.00,1,0,0.32),
-    ('run',3,1.00,4,0,0.65),
-    ('attack',5,.97,4,0,1.00),
-    ('run',5,1.00,8,0,0.78),
-    ('attack',6,1.00,0,0,0.30),
-    ('attack',7,1.00,0,0,0.00)
+def stage_pose(img,shift_x=0,shift_y=0,max_width=452,max_height=525):
+    # Per-frame alpha trim followed by fixed ground alignment; no clipping,
+    # no arbitrary canvas scaling of the body's anatomy.
+    bb=img.getchannel('A').point(lambda a:255 if a>=22 else 0).getbbox()
+    if not bb:raise RuntimeError('blank pose in input source')
+    crop=img.crop(bb)
+    factor=min(1.0,max_width/crop.width,max_height/crop.height)
+    if factor<1:
+        crop=crop.resize((round(crop.width*factor),round(crop.height*factor)),Image.Resampling.LANCZOS)
+    canvas=Image.new('RGBA',(W,H))
+    x=max(8,min(W-crop.width-8,(W-crop.width)//2+shift_x))
+    y=max(8,min(H-crop.height-8,FOOT-crop.height+shift_y))
+    canvas.paste(crop,(x,y))
+    return canvas
+
+def painted_energy(img,opacity=1.0):
+    # Isolate the existing *painted* crimson energy, not character silhouette.
+    filtered=Image.new('RGBA',img.size)
+    data=[]
+    for rr,gg,bb,aa in img.getdata():
+        vivid=rr>110 and rr>gg*1.48 and rr>bb*1.24
+        alpha=round(aa*opacity*min(1,(rr-gg)/65)) if vivid else 0
+        data.append((rr,gg,bb,alpha))
+    filtered.putdata(data)
+    return filtered
+def add_energy(stage,source,opacity=1.0,shift_x=25,shift_y=-48,max_width=390):
+    bitmap=painted_energy(source,opacity)
+    bb=bitmap.getchannel('A').point(lambda a:255 if a>=10 else 0).getbbox()
+    if not bb:return stage
+    crop=bitmap.crop(bb)
+    factor=min(1.0,max_width/crop.width,470/crop.height)
+    if factor<1:crop=crop.resize((max(1,round(crop.width*factor)),max(1,round(crop.height*factor))),Image.Resampling.LANCZOS)
+    fx=Image.new('RGBA',(W,H))
+    x=max(8,min(W-crop.width-8,(W-crop.width)//2+shift_x))
+    y=max(8,min(H-crop.height-8,(H-crop.height)//2+shift_y))
+    fx.paste(crop,(x,y))
+    return Image.alpha_composite(fx,stage)
+# Preserve the new character's original one-shot storyboard, not a duplicate
+# of the regular locomotion strip. Original 4 & 5 were already cut by the
+# artwork generator; those two must be rebuilt from the SAME hooded character.
+storyboard=[
+    ('original',0),  # ready
+    ('original',1),  # crouched start
+    ('original',2),  # accelerating with cape
+    ('original',3),  # long red diving strike
+    ('rebuild',4),   # full-body impact
+    ('rebuild',5),   # extended fist follow-through
+    ('original',6),  # slide recovery with scarlet trail
+    ('original',7)   # return to guard
 ]
-atlas=Image.new('RGBA',(W*4,H*2))
-for i,(which,source_idx,scale,shift_x,shift_y,flash) in enumerate(timeline):
-    body=isolate_subject((run if which=='run' else attack)[source_idx])
-    body=body.resize((round(W*scale),round(H*scale)),Image.Resampling.LANCZOS)
-    stage=Image.new('RGBA',(W,H))
-    bx=round((W-body.width)/2+shift_x)
-    by=round(FOOT*(1-scale)+shift_y)
-    backing=Image.new('RGBA',(W,H))
-    backing.paste(body,(bx,by))  # no mask: preserve original sprite alpha
-    if flash:
-        # Original BITMAP crimson arc, re-scaled inside each 512x608 cell:
-        # never rely on image data protruding into a neighbor's cell.
-        # Each impact stage has its own frame size, energy opacity and placement.
-        effect_scales={2:.60,3:.73,4:.87,5:.81,6:.63}
-        scale_fx=effect_scales.get(i,.65)
-        spark=effect.resize((round(W*scale_fx),round(H*scale_fx)),Image.Resampling.LANCZOS)
-        spark_alpha=spark.getchannel('A').point(lambda v:round(v*flash))
-        spark.putalpha(spark_alpha)
-        # Place the original uppercut arc ABOVE the fighter's fist, behind the body.
-        spark_x=round((W-spark.width)/2+14)
-        spark_y=round((H-spark.height)/2-56)
-        eback=Image.new('RGBA',(W,H))
-        eback.paste(spark,(spark_x,spark_y))
-        stage=Image.alpha_composite(stage,eback)
-    stage=Image.alpha_composite(stage,backing)
-    atlas.alpha_composite(stage,((i%4)*W,(i//4)*H))
-    # Verify no missing frame or hidden, partially cropped fighter.
-    ink=stage.getchannel('A').point(lambda a:255 if a>=28 else 0)
-    bbox=ink.getbbox()
-    if not bbox:raise RuntimeError(f'Special frame {i+1} is empty')
-    if bbox[0]<4 or bbox[1]<5 or bbox[2]>W-4 or bbox[3]>H-6:
-        raise RuntimeError(f'Special frame {i+1} spills outside the safe rectangle: {bbox}')
-    print(f'SPECIAL FRAME {i+1}/8: complete, safe bounds {bbox}',flush=True)
-# Source dimensions and foot anchor are identical to the JavaScript loader.
-out=DIR/'special.webp'
-atlas.save(out,format='WEBP',quality=97,method=6)
-print('Iron Mask: 8 complete frames,',out.stat().st_size,'bytes')
+out=Image.new('RGBA',(4*W,2*H))
+for i,(kind,index) in enumerate(storyboard):
+    if kind=='original':
+        stage=stage_pose(subject(special[index]),shift_x=6 if i in (2,3) else 0)
+    elif i==4:
+        body=stage_pose(subject(attack[4]),shift_x=20)
+        stage=add_energy(body,charge[7],.96,35,-65)
+        stage=add_energy(stage,special[3],.72,30,-52)
+    else:
+        body=stage_pose(subject(attack[5]),shift_x=15)
+        stage=add_energy(body,charge[6],.92,36,-54)
+        stage=add_energy(stage,special[3],.80,32,-42)
+    # Keep every frame safely within its cell so the *next* pose is untouched.
+    bounds=stage.getchannel('A').point(lambda a:255 if a>=24 else 0).getbbox()
+    if not bounds or bounds[0]<5 or bounds[1]<5 or bounds[2]>W-5 or bounds[3]>H-5:
+        raise RuntimeError(f'Frame {i+1} unsafe or empty: {bounds}')
+    out.alpha_composite(stage,((i%4)*W,(i//4)*H))
+    print(f'REBUILT HOODED IRON MASK {i+1}/8: {bounds}',flush=True)
+dest=DIR/'special.webp'
+out.save(dest,'WEBP',quality=98,method=6)
+assert dest.stat().st_size>150000,('Suspiciously empty animation',dest.stat().st_size)
+print('PASS: exact eight poses, no unused sprite cells',dest.stat().st_size)
