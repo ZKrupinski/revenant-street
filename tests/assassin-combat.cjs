@@ -821,6 +821,31 @@ test('guard animation braces in 0.17s without shortening the active parry window
  t.p.parry=Math.max(t.p.parry,.30);
  assert.equal(t.currentZFrameIndex('guard'),last,'parry success hold must not rewind the animation');
 });
+test('four physical bitmap arcade controls show distinct colors and pressed art with large touch surfaces',()=>{
+ const atlas=fs.readFileSync(path.join(__dirname,'../assets/ui/arcade-action-buttons-v1.webp'));
+ assert.equal(atlas.toString('ascii',0,4),'RIFF','arcade art is real transparent WebP bitmap');
+ assert.equal(atlas.toString('ascii',8,12),'WEBP');
+ assert.equal(atlas.toString('ascii',12,16),'VP8X');
+ assert.equal(atlas.readUIntLE(24,3)+1,1024,'four 256px wide raised/pressed sprite columns');
+ assert.equal(atlas.readUIntLE(27,3)+1,512,'two 256px high button states');
+ const css=html.slice(html.indexOf('<style id="arcade-physical-controls">'),
+  html.indexOf('</style>',html.indexOf('<style id="arcade-physical-controls">')));
+ assert(css.includes("background-image:var(--arcade-control-url,url('./assets/ui/arcade-action-buttons-v1.webp'))"));
+ assert(css.includes('background-size:400% 200%'));
+ assert(css.includes('background-position:var(--arcade-x) 100%!important;'),
+ 'press should switch to the real recessed button sprite');
+ assert(css.includes('translate3d(0,4px,0) scale(.965)'),'press should physically sink');
+ assert(css.includes('--face-btn:clamp(62px,18cqw,92px)'),'enlarged arcade touch targets');
+ assert(css.includes('calc(var(--face-btn)*.75)'),'adjacent buttons cluster into a tight diamond');
+ const ctl=html.slice(html.indexOf('<div class="touch-actions"'),html.indexOf('</div>',html.indexOf('<div class="touch-actions"')));
+ for(const [action,face,key] of [['attack','left','j'],['parry','right','l'],['dash','bottom','Shift'],['jump','top','k']]){
+  assert(ctl.includes('data-face="'+face+'" data-art="'+action+'"'),
+   action+' has a correctly positioned, labeled arcade bitmap');
+  assert(ctl.includes('data-key="'+key+'"'),'original '+action+' input remains intact');
+ }
+ assert(html.includes("b.classList.add('pressed')")&&html.includes("b.classList.remove('pressed')"),
+ 'all touch down/up/cancel handlers still animate both button states');
+});
 test('offscreen arrows ping-pong across eight hand-painted frames at 8 fps',()=>{
  const atlas=fs.readFileSync(path.join(__dirname,'../assets/ui/edge-arrows-animated.webp'));
  assert.equal(atlas.toString('ascii',0,4),'RIFF','WebP signature');
