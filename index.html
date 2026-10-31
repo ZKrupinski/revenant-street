@@ -2573,8 +2573,8 @@ function execute(target){
 function awardEnemyKill(e){
  if(e.killAwarded)return;
  e.killAwarded=true;
- const money=e.type==='boss'?300:e.type==='elite'?135:e.type==='guard'?65:45;
- const shards=e.type==='boss'?4:e.type==='elite'?2:e.type==='guard'?1:(runKills%4===0?1:0);
+ const money=e.type==='boss'?300:e.type==='elite'?135:e.type==='intruder'?110:e.type==='guard'?65:45;
+ const shards=e.type==='boss'?4:e.type==='elite'||e.type==='intruder'?2:e.type==='guard'?1:(runKills%4===0?1:0);
  p.credits+=money;
  if(shards>0){perma.shards+=shards;save()}
  const textValue='+₩'+money+(shards?'  +'+shards+' 파편':'');
@@ -2590,7 +2590,7 @@ function hurtEnemy(e,dmg,poise){
  e.hp-=dmg;
  if(e.hp<=0){if(e.type==='boss'||e.type==='elite'||Math.random()<.48)playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e)}
  else if(Math.random()<.75)playCombatVoice('enemyHurt',e);
- e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:e.type==='elite'?.80:1),0,e.maxPoise);
+ e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:(e.type==='elite'||e.type==='intruder')?.80:1),0,e.maxPoise);
  // Twelve distinct impacts: head snaps, gut folds, ankle buckles, spins,
  // side stumbles and aerial knockdowns. Keep the existing enemy bitmap.
  const smash=Z_KICK_MOVES.has(p.moveName)||Z_HEAD_MOVES.has(p.moveName)||p.moveName==='uppercut'||dmg>=60;
@@ -2629,7 +2629,7 @@ function hurtEnemy(e,dmg,poise){
  // Normal combos must not permanently stun-lock the boss out of using
  // its original dash/slam art. Explicit poise breaks still trigger GROGGY.
  e.stun=e.type==='boss'?(e.bossMode==='dash'||e.bossMode==='slam'?0:.085):
-  e.type==='elite'?life*.82:life;
+  e.type==='elite'?life*.82:e.type==='intruder'?life*.86:life;
  e.hitFlash=e.type==='boss'?.33:e.type==='elite'?.30:.22;e.windup=0;e.chargePrep=0;e.chargeTime=0;e.attackPoseTime=0;
  if(e.type==='intruder'){
   // Taking a real hit completely interrupts the air special.
@@ -2643,7 +2643,7 @@ function hurtEnemy(e,dmg,poise){
  const kick=Z_KICK_MOVES.has(p.moveName);
  const force=clamp(Math.max(vx*(smash?1.27:.82),
     drive*(kick?5.75:5.25)+(smash?105:35)),260,1440);
- const resistance=(e.type==='boss'?.34:e.type==='elite'?.78:e.type==='guard'?.88:1)*(1+modRank('impact')*.22);
+ const resistance=(e.type==='boss'?.34:e.type==='elite'||e.type==='intruder'?.78:e.type==='guard'?.88:1)*(1+modRank('impact')*.22);
  const carry=Math.max(0,(e.knockVX||0)*p.facing)*.29;
  e.knockVX=p.facing*clamp(force*resistance+carry,0,1490);
  e.knockDrag=3.55;
@@ -2672,6 +2672,10 @@ function hurtEnemy(e,dmg,poise){
  fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:smash?1.65:1.2);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');applyImpactFeedback(e,smash||p.dashSmash,p.dashSmash?'dashImpact':smash?'heavy':'punch');p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
  if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=e.type==='boss'?1.30:e.type==='elite'?2.4:3.6;e.stun=e.groggy;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
  if(e.type==='elite'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.14;e.eliteCooldown=Math.min(e.eliteCooldown,1.6);fxBurst(e.x,e.y-150,'gold',1.8);floatText('OVERDRIVE',e.x,e.y-255,'#f9c26a')}
+ if(e.type==='intruder'&&e.hp>0&&e.hp<e.maxHp*.42&&e.phase===1){
+  e.phase=2;e.speed*=1.15;e.specialCooldown=Math.min(e.specialCooldown,2.2);
+  fxBurst(e.x,e.y-150,'red',1.65);floatText('CRIMSON RAGE!',e.x,e.y-247,'#ff8ca0');
+ }
  if(e.type==='boss'&&e.hp<e.maxHp*.55&&e.phase===1){e.phase=2;e.bossPhasePending=true;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
  if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);fxBurst(e.x,e.y-70,'gold',1.1);}}
 // Neutral jump and long leap share the same heel-slam landing.
@@ -2695,7 +2699,7 @@ function heelLandingShockwave(powered=false){
   const fromX=enemy.x,fromY=enemy.y;
   const push=fromX===p.x?p.facing:Math.sign(fromX-p.x);
   hurtEnemy(enemy,(skill.damage+p.damageBoost)*(1+modRank('power')*.16),45+modRank('jumpspeed')*14);
-  const resist=enemy.type==='boss'?.33:enemy.type==='elite'?.78:
+  const resist=enemy.type==='boss'?.33:(enemy.type==='elite'||enemy.type==='intruder')?.78:
    enemy.type==='guard'?.88:1;
   // Rank-scaled impulse remains damped, so landing blasts do not teleport targets.
   enemy.knockVX=push*skill.push*resist;
@@ -3231,6 +3235,43 @@ function updateEliteAI(e,dt,dx,dy,dist){
  }
  return false;
 }
+// The elite red-hood relief team takes flanking lanes, keeps a defensive
+// distance during Z's attack/parry and commits only one or two strikes at once.
+// Regular grunts retain their simpler random swarm tactics.
+function updateIntruderAI(e,dt,dx,dy,dist,nearby){
+ if(e.type!=='intruder')return false;
+ const teammates=nearby.filter(o=>o!==e&&o.type==='intruder'&&
+  o.supportGroup===e.supportGroup&&!intruderEntering(o));
+ const busy=teammates.filter(o=>o.windup>0||o.chargeTime>0||o.specialPhase).length;
+ const slot=e.supportIndex||0,flank=slot%2===0?-1:1;
+ const lane=[-38,37,7][slot%3];
+ const guarding=p.parry>0;
+ const threatened=(p.attack>0||p.dashSmash||guarding)&&dist<235&&
+  (guarding||(e.x-p.x)*p.facing>0);
+ e.tacticTime=Math.max(0,(e.tacticTime||0)-dt);
+ if(e.tacticTime===0){e.strafe*=-1;e.tacticTime=.48+(e.slot%4)*.17}
+ const meleeRange=Math.max(e.reach+64,bodyHalfX(p)+bodyHalfX(e)+28);
+ if(!threatened&&busy<2&&e.cooldown<=0&&dist<meleeRange&&Math.abs(dy)<67&&e.z<40){
+  e.windup=e.phase===2?.28:.38+(slot%2)*.06;
+  e.windupDuration=e.windup;e.attackDone=false;
+  if(slot===0||Math.random()<.32)playCombatVoice('enemyShout',e);
+  return true;
+ }
+ // The third fighter circles wider as a dive specialist; the front two
+ // pressure Z from opposite directions. Never teleport to new lanes.
+ const offset=threatened?270:145+(slot===2?63:0);
+ const targetX=clamp(p.x+flank*offset,55,STAGE_WIDTH-55);
+ const targetY=groundY(p.y+lane+(threatened?e.strafe*13:0));
+ const moveSpeed=e.speed*(dist>440?1.75:threatened?1.45:1.26);
+ const oldX=e.x,oldY=e.y;
+ if(Math.abs(targetX-e.x)>5)e.x+=Math.sign(targetX-e.x)*Math.min(Math.abs(targetX-e.x),moveSpeed*dt);
+ if(Math.abs(targetY-e.y)>4)e.y=groundY(e.y+
+  Math.sign(targetY-e.y)*Math.min(Math.abs(targetY-e.y),moveSpeed*.82*dt));
+ e.x=clamp(e.x,45,STAGE_WIDTH-45);
+ const moved=Math.hypot(e.x-oldX,(e.y-oldY)*1.7);
+ e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
+ return true;
+}
 // CRIMSON DIVE: unique painted-actor aerial slam with a strong telegraph.
 // All timings are world-slow-motion-aware and can be canceled by hits/parries.
 function updateIntruderSpecial(e,dt){
@@ -3240,7 +3281,9 @@ function updateIntruderSpecial(e,dt){
  if(!phase){
   const dx=Math.abs(p.x-e.x),dy=Math.abs(p.y-e.y);
   if(e.specialCooldown>0||e.z>6||e.stun>0||e.groggy>0||
-     dx<125||dx>540||dy>115||e.windup>0||e.chargeTime>0||e.chargePrep>0)return false;
+     dx<125||dx>540||dy>115||e.windup>0||e.chargeTime>0||e.chargePrep>0||
+      enemies.some(o=>o!==e&&o.type==='intruder'&&!o.dead&&
+       o.supportGroup===e.supportGroup&&o.specialPhase))return false;
   e.specialPhase='windup';e.specialTime=0;
   e.specialTargetX=clamp(p.x+(e.x>p.x?68:-68),75,STAGE_WIDTH-75);
   e.specialTargetY=groundY(p.y);
@@ -3431,9 +3474,11 @@ function updateEnemies(dt,parryVictimScale=1){
    e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=actorDt>0?moved/actorDt:0;
    continue;
   }
-  // Tactical decision below committed strike / charge so enemies can't
+  // After committed strikes, the red-hood team flanks tactically.
+   if(e.type==='intruder'&&updateIntruderAI(e,actorDt,dx,dy,dist,nearbyEnemies))continue;
+   // Tactical decision below committed strike / charge so enemies can't
   // cancel attacks mid-animation. Only ordinary mobs get mood changes.
-  if(e.type!=='boss'&&e.type!=='elite'){
+  if(e.type!=='boss'&&e.type!=='elite'&&e.type!=='intruder'){
    e.tacticTime=Math.max(0,(e.tacticTime||0)-actorDt);
    e.retreatCooldown=Math.max(0,(e.retreatCooldown||0)-actorDt);
    e.berserkCooldown=Math.max(0,(e.berserkCooldown||0)-actorDt);
@@ -3594,7 +3639,21 @@ function updateHud(){
   `무리 ${squadIndex}/${squads}  ·  턴 처치 ${progress.defeated}/${progress.total}`;
  const percent=progress.total?Math.round(progress.defeated/progress.total*100):0;
  $('enemyProgressFill').style.width=percent+'%';
- $('enemyProgress').setAttribute?.('aria-valuenow',String(percent));$('level').textContent=String(level).padStart(2,'0');const eliteOrBoss=enemies.find(e=>!e.dead&&e.type==='boss'&&Math.abs(e.x-p.x)<1050)||enemies.find(e=>!e.dead&&e.type==='elite'&&Math.abs(e.x-p.x)<850);$('bossHud').hidden=gameState!=='playing'||!eliteOrBoss;if(eliteOrBoss){$('bossName').textContent=eliteOrBoss.type==='elite'?'IRON MASK / 철가면 추적자':'HUNTER / 붉은 집행자';$('bossFill').style.width=`${clamp(100*eliteOrBoss.hp/eliteOrBoss.maxHp,0,100)}%`;$('bossPhase').textContent=String(eliteOrBoss.phase).padStart(2,'0')} }
+ $('enemyProgress').setAttribute?.('aria-valuenow',String(percent));$('level').textContent=String(level).padStart(2,'0');const eliteOrBoss=enemies.find(e=>!e.dead&&e.type==='boss'&&Math.abs(e.x-p.x)<1050)||
+  enemies.find(e=>!e.dead&&e.type==='elite'&&Math.abs(e.x-p.x)<850)||
+  enemies.find(e=>!e.dead&&e.type==='intruder'&&Math.abs(e.x-p.x)<950);
+ $('bossHud').hidden=gameState!=='playing'||!eliteOrBoss;
+ if(eliteOrBoss){
+  const group=eliteOrBoss.type==='intruder'?enemies.filter(e=>e.type==='intruder'&&
+   e.supportGroup===eliteOrBoss.supportGroup):[eliteOrBoss];
+  const hp=group.reduce((sum,e)=>sum+(e.dead?0:Math.max(0,e.hp)),0);
+  const maxHp=group.reduce((sum,e)=>sum+e.maxHp,0);
+  $('bossName').textContent=eliteOrBoss.type==='boss'?'HUNTER / 붉은 집행자':
+   eliteOrBoss.type==='elite'?'IRON MASK / 철가면 추적자':
+   'CRIMSON SUPPORT / 붉은 후드 지원팀';
+  $('bossFill').style.width=`${clamp(100*hp/Math.max(1,maxHp),0,100)}%`;
+  $('bossPhase').textContent=String(Math.max(...group.map(e=>e.phase))).padStart(2,'0');
+ } }
 function update(dt){
  // Don't decode a full library of 2K sprite sheets while the user fights.
  // Required combat animations are prepared behind the loading screen.
