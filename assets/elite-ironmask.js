@@ -1,73 +1,98 @@
-/* Project Z / Iron Mask elite: a fixed-foot, local 8-frame bitmap material variant. */
+/* Project Z — Iron Mask Elite v2: eight ORIGINAL bitmap animation atlases.
+   Each 4x2 WebP carries 8 pre-cut, fixed-baseline full-body sprites.
+   No palette shift, outline trick, destructive crop, or borrowed assassin sprite.
+*/
 (()=>{'use strict';
-const cache=new WeakMap();
-function colored(f){
- const src=f.canvas;
- if(cache.has(src))return cache.get(src);
- const out=document.createElement('canvas');out.width=src.width;out.height=src.height;
- const ctx=out.getContext('2d',{willReadFrequently:true});
- ctx.drawImage(src,0,0);const pix=ctx.getImageData(0,0,out.width,out.height),d=pix.data;
- for(let i=0;i<d.length;i+=4){
-  if(!d[i+3])continue;
-  const r=d[i],g=d[i+1],b=d[i+2],l=r*.27+g*.55+b*.18;
-  if(r>g*1.18&&r>b*1.20&&r>65){
-   d[i]=Math.min(255,l*1.12+64);d[i+1]=Math.min(255,l*.73+22);d[i+2]=Math.min(255,l*.30+12);
-  }else if(b>r*1.08&&b>g*.93){
-   d[i]=Math.min(255,l*.53+15);d[i+1]=Math.min(255,l*1.15+43);d[i+2]=Math.min(255,l*1.30+50);
-  }else{
-   d[i]=Math.min(255,l*.55+17);d[i+1]=Math.min(255,l*.67+26);d[i+2]=Math.min(255,l*.89+41);
-  }
+const KEYS=['idle','run','attack','hit','menace','death','charge','special'];
+const CW=512,CH=608,FOOT=557,DATA=Object.create(null);
+const ROOT='./assets/ironmask-elite/';
+function load(key){
+ if(!KEYS.includes(key))key='idle';
+ if(!DATA[key]){
+  const entry={ready:false,failed:false,loading:true,frames:8,image:null};
+  const im=new Image();entry.image=im;
+  im.onload=()=>{
+   if(im.naturalWidth!==CW*4||im.naturalHeight!==CH*2){
+    entry.failed=true;entry.error='Iron Mask '+key+' invalid 4x2 bitmap frame size';
+   }else entry.ready=true;
+   entry.loading=false;im.onload=null;im.onerror=null;
+  };
+  im.onerror=()=>{entry.failed=true;entry.loading=false;entry.error='Iron Mask '+key+' image missing'};
+  im.src=ROOT+key+'.webp';
+  DATA[key]=entry;
  }
- ctx.putImageData(pix,0,0);cache.set(src,out);return out;
+ return DATA[key];
 }
-function move(e,getAssassinMove){
- if(e.dead&&e.z>12)return 'hitFly';
- if(e.eliteTell>0||e.eliteRush>0)return 'charge';
- return getAssassinMove(e);
+function preload(){return KEYS.map(load)}
+function move(e){
+ if(e.dead)return e.z>12?'hitFly':'death';
+ if((e.reactionTime||0)>0||(e.proneTime||0)>0||(e.riseTime||0)>0)return 'hit';
+ if(e.eliteTell>0)return 'charge';
+ if(e.eliteRush>0||e.eliteAttack||e.eliteSpecialRecover>0)return 'special';
+ if(e.windup>0||e.attackPoseTime>0)return 'attack';
+ if(e.eliteMenace>0)return 'menace';
+ return e.visualMoving?'run':'idle';
+}
+function frame(e,key){
+ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+ if(key==='death')return clamp(Math.floor((e.collapseAge||0)/.88*8),0,7);
+ if(key==='hitFly')return clamp(Math.floor((e.reactionTime||0)*15),0,7);
+ if(key==='hit'){
+  if((e.reactionTime||0)>0)return clamp(Math.floor((1-e.reactionTime/Math.max(.001,e.reactionDuration||.5))*8),0,7);
+  return Math.floor((e.spriteTime||0)*9)%8;
+ }
+ if(key==='charge')return clamp(Math.floor((1-e.eliteTell/Math.max(.001,e.eliteTellDuration||.9))*8),0,7);
+ if(key==='special')return clamp(Math.floor((e.spriteTime||0)*16.4),0,7);
+ if(key==='attack'){
+  if(e.windup>0)return clamp(Math.floor((1-e.windup/Math.max(.001,e.windupDuration||.42))*5),0,5);
+  return clamp(6+Math.floor((1-(e.attackPoseTime||0)/.23)*2),0,7);
+ }
+ if(key==='menace')return clamp(Math.floor((e.spriteTime||0)*11),0,7);
+ if(key==='run')return Math.floor(Math.max(0,e.spriteDistance||0)/39)%8;
+ return Math.floor(Math.max(0,e.spriteTime||0)*5.9)%8;
 }
 function draw(e,x,y,z,api){
- const {ctx,art,maskedFrame,getAssassinMove,ellipseShadow,clamp,images,time}=api;
- const key=move(e,getAssassinMove);
+ const {ctx,ellipseShadow,clamp,time}=api;
+ const key=move(e),atlasKey=key==='hitFly'?'hit':key;
  if(e.spriteKey!==key){e.spriteKey=key;e.spriteTime=0;e.spriteDistance=0}
- const animation=art.load(key),idle=art.load('idle'),selected=animation.ready?animation:idle;
- const fi=key==='fall'&&e.dead?Math.min(7,Math.floor((e.collapseAge||0)/.7*8)):maskedFrame(e,selected===animation?key:'idle');
- const current=selected.ready?selected.frames[fi]:null;
- if(current)e.lastSprite=current;
- const fr=current||e.lastSprite,alpha=e.dead?clamp(e.fade,0,1):1;
- ellipseShadow(x,y,1.18,.48*alpha/(1+z*.022));
- const tell=e.eliteTell>0;
- if(tell&&images.burst_gold?.complete&&images.burst_gold.naturalWidth){
-  ctx.save();ctx.globalAlpha=.23+.13*Math.sin(time*18);
-  ctx.drawImage(images.burst_gold,x-85,y-z-206,170,160);ctx.restore();
- }
- ctx.save();ctx.translate(x,Math.round(y-z));ctx.scale(e.face>0?-1:1,1);ctx.globalAlpha=alpha;
- if(fr){
-  if(tell){ctx.shadowColor='#f7a44b';ctx.shadowBlur=19}
-  else if(e.eliteRush>0){ctx.shadowColor='#75e1f5';ctx.shadowBlur=14}
-  // Keep 25%+ original illustration visible beneath white sprite overlay.
-  const painted=colored(fr),px=-art.anchorX*1.13,py=-art.anchorY*1.13;
-  const width=fr.canvas.width*1.13,height=fr.canvas.height*1.13;
-  ctx.drawImage(painted,px,py,width,height);
+ const selected=load(atlasKey),fallback=load('idle');
+ const source=selected.ready?selected:fallback.ready?fallback:null;
+ const idx=selected.ready?frame(e,key):0;
+ const alpha=e.dead?clamp(e.fade,0,1):1;
+ ellipseShadow(x,y,1.19,.48*alpha/(1+z*.022));
+ ctx.save();ctx.translate(x,Math.round(y-z));
+ // Original frame faces RIGHT, unlike the earlier borrowed assassin artwork.
+ ctx.scale(e.face>=0?1:-1,1);
+ ctx.globalAlpha=alpha;
+ if(source){
+  const scale=.69;
+  const dx=-CW*scale*.5,dy=-FOOT*scale;
+  ctx.drawImage(source.image,(idx%4)*CW,Math.floor(idx/4)*CH,CW,CH,
+    dx,dy,CW*scale,CH*scale);
   if(e.hitFlash>0){
-   ctx.save();ctx.shadowBlur=0;ctx.filter='brightness(0) invert(1)';
-   ctx.globalAlpha=alpha*.75*Math.min(1,e.hitFlash/.30);
-   ctx.drawImage(painted,px,py,width,height);ctx.restore();
+   ctx.save();ctx.filter='brightness(0) invert(1)';
+   ctx.globalAlpha=alpha*.68*clamp(e.hitFlash/.30,0,1);
+   ctx.drawImage(source.image,(idx%4)*CW,Math.floor(idx/4)*CH,CW,CH,
+     dx,dy,CW*scale,CH*scale);
+   ctx.restore();
   }
  }else{
-  ctx.fillStyle='#254154';ctx.fillRect(-24,-210,48,190);
-  ctx.fillStyle='#bb8b4c';ctx.fillRect(-18,-229,36,26);
+  // Deliberately do NOT briefly draw the old bright casual elite.
+  ctx.fillStyle='#121c23';ctx.fillRect(-24,-204,48,191);
  }
  ctx.restore();
  if(e.dead)return;
- const top=y-z-303,bw=112;
- ctx.fillStyle='#071620ea';ctx.fillRect(x-bw/2-2,top-2,bw+4,12);
- ctx.fillStyle='#d6a258';ctx.fillRect(x-bw/2,top,bw*clamp(e.hp/e.maxHp,0,1),8);
- if(e.poise>0){ctx.fillStyle='#69d9e5';ctx.fillRect(x-bw/2,top+12,bw*clamp(e.poise/e.maxPoise,0,1),3)}
- ctx.fillStyle='#edcfaa';ctx.textAlign='center';ctx.font='900 14px Arial';
- ctx.fillText('IRON MASK / ELITE',x,top-13);
- if(tell){ctx.fillStyle='#f9b15d';ctx.font='900 30px Arial';ctx.fillText('!!',x,top-25)}
- if(e.windup>0){ctx.fillStyle='#f36f7d';ctx.font='900 27px Arial';ctx.fillText('!',x,top-25)}
- if(e.groggy>0){ctx.fillStyle='#a0efff';ctx.font='900 14px Arial';ctx.fillText('처형 가능',x,top-30)}
+ const top=y-z-325,bw=125,tell=e.eliteTell>0;
+ ctx.fillStyle='#090f1aca';ctx.fillRect(x-bw/2-2,top-2,bw+4,13);
+ ctx.fillStyle=e.phase===2?'#ff657d':'#b78088';ctx.fillRect(x-bw/2,top,bw*clamp(e.hp/e.maxHp,0,1),8);
+ if(e.poise>0){ctx.fillStyle='#71d5db';ctx.fillRect(x-bw/2,top+12,bw*clamp(e.poise/e.maxPoise,0,1),3)}
+ ctx.textAlign='center';ctx.font='900 14px Arial';
+ ctx.fillStyle='#e9c4ba';ctx.fillText('IRON MASK / ELITE',x,top-13);
+ if(tell){ctx.fillStyle='#ff5878';ctx.font='900 24px Arial';ctx.fillText('CRIMSON RUSH!',x,top-28)}
+ if(e.windup>0){ctx.fillStyle='#fa647a';ctx.font='900 28px Arial';ctx.fillText('!',x,top-29)}
+ if(e.groggy>0){ctx.fillStyle='#a0efff';ctx.font='900 14px Arial';ctx.fillText('처형 가능',x,top-33)}
 }
-window.RZElite={move,draw,colored};
+function colored(frame){return frame?.canvas||frame} // Legacy Frame Lab compatibility only.
+window.RZElite={KEYS,load,preload,move,frame,draw,colored,CW,CH,FOOT};
+load('idle');
 })();
