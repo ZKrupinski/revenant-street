@@ -386,7 +386,7 @@ test('dash reach and dash speed are two independent six-level upgrade items',()=
 });
 test('jump height and airborne travel speed upgrade independently across six levels',()=>{
  const start=t.jumpMobilityStats(0,0),high=t.jumpMobilityStats(6,0),fast=t.jumpMobilityStats(0,6);
- assert.equal(start.impulse,670);assert.equal(start.moveSpeed,525);
+ assert.equal(start.impulse,670);assert.equal(start.moveSpeed,700);
  assert(high.height>start.height*1.9,'jump height gains strong tiered vertical lift');
  assert.equal(high.moveSpeed,start.moveSpeed,'height upgrade does not magically speed air movement');
  assert(fast.moveSpeed>start.moveSpeed*1.8,'air speed upgrade strongly increases travel');
@@ -1698,6 +1698,52 @@ test('directional JUMP travels farther without automatically kicking on landing'
   assert.equal(t.p.jumpLandingTriggered,false,'no automatic shockwave');
   t.keys.delete(key);
  }
+});
+test('longer jump travels farther while neutral jump still has no drift',()=>{
+ g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2100;t.p.y=570;
+ const start=t.p.x;t.keys.add('d');t.jump();t.keys.delete('d');
+ for(let i=0;i<70;i++)t.control(1/60,{dx:0,dy:0});
+ assert(t.p.x-start>490,'airborne travel extends substantially beyond previous 345px threshold');
+ assert.equal(t.p.jumpLandingTriggered,false,'a longer regular jump never triggers a free attack');
+ g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2100;
+ const neutral=t.p.x;t.jump();
+ for(let i=0;i<70;i++)t.control(1/60,{dx:0,dy:0});
+ assert(Math.abs(t.p.x-neutral)<1,'unsteered neutral jump stays centered');
+});
+test('direction changes immediately in midair on keyboard and gamepad, including neutral launches',()=>{
+ g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2200;
+ t.keys.add('d');t.jump();t.keys.delete('d');
+ for(let i=0;i<8;i++)t.control(1/60,{dx:1,dy:0});
+ const rightX=t.p.x;
+ t.control(1/60,{dx:-1,dy:0});
+ assert(t.p.x<rightX,'left input reverses horizontal world travel in one tick');
+ assert.equal(t.p.facing,-1,'hero rotates to face the new direction before landing');
+ const leftX=t.p.x;
+ t.control(1/60,{dx:1,dy:0});
+ assert(t.p.x>leftX,'gamepad right input reverses again without waiting to land');
+ assert.equal(t.p.facing,1,'hero turns toward right input');
+ g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2200;
+ t.jump();assert.equal(t.p.jumpLeap,false);
+ for(let i=0;i<5;i++)t.control(1/60,{dx:0,dy:0});
+ const start=t.p.x;
+ t.control(1/60,{dx:-1,dy:0});
+ assert(t.p.x<start,'a stationary jump can start moving left after takeoff');
+ assert.equal(t.p.jumpLeap,true);
+ assert.equal(t.p.facing,-1);
+ const prior=t.p.x;
+ t.control(1/60,{dx:0,dy:0});
+ assert(t.p.x<prior,'letting go maintains momentum while airborne');
+});
+test('midair turning remains available during an explicitly requested heel chop',()=>{
+ g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2300;
+ t.keys.add('d');t.jump();t.keys.delete('d');
+ for(let i=0;i<10;i++)t.control(1/60,{dx:1,dy:0});
+ t.startAttack();assert.equal(t.p.airKickPhase,'charge');
+ const previous=t.p.x;t.control(1/60,{dx:-1,dy:0});
+ assert(t.p.x<previous,'player can steer away even during aerial kick charge');
+ assert.equal(t.p.facing,-1);
+ for(let i=0;i<55;i++)t.control(1/60,{dx:-1,dy:0});
+ assert.equal(t.p.jumpLandingTriggered,true,'existing heel slam still occurs exactly once');
 });
 test('explicit aerial ATTACK launches true vertical heel-chop with a single landing blast',()=>{
  g.startRun();t.keys.clear();t.p.x=1600;t.p.y=575;

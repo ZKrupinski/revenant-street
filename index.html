@@ -1238,7 +1238,8 @@ function dashMobilityStats(rangeRank=modRank('dashrange'),speedRank=modRank('das
 }
 function jumpMobilityStats(heightRank=modRank('jumpheight'),speedRank=modRank('jumpspeed')){
  const impulse=670+45*clamp(heightRank,0,MOD_LEVEL_CAP);
- const moveSpeed=Math.round(525*(1+.14*clamp(speedRank,0,MOD_LEVEL_CAP)));
+ // Longer horizontal jumps, without changing vertical height or upgrade scaling.
+ const moveSpeed=Math.round(700*(1+.14*clamp(speedRank,0,MOD_LEVEL_CAP)));
  return {impulse,moveSpeed,height:Math.round(impulse*impulse/(2*1440))};
 }
 function upgradeDescription(id,rank){
@@ -2583,11 +2584,19 @@ function control(dt,pad){
   if(p.counterRush>0){dx=p.facing;dy=0;speed=980;p.counterRush=Math.max(0,p.counterRush-dt)}
   if(p.attack>0&&!p.airAttack&&p.counterRush<=0)speed*=.28;
   if(p.jumpActive&&p.z>0&&p.stun<=0){
-   // Momentum is committed when jumping; release of the stick does not
-   // abruptly stop the leap. No auto-travel for a neutral standing jump.
-   const glide=p.vz>0?1.06:p.z>105?.90:.70;
+   // Full midair steering on WASD, drag stick or gamepad: current direction
+   // takes over immediately, even when the jump began neutral or reversed.
+   // Neutral input keeps the last leap momentum; no-input standing jumps
+   // remain stationary. The free turn also updates the character silhouette.
+   const airInput=Math.hypot(dx,dy);
+   if(airInput>.16){
+    p.jumpLeap=true;
+    p.jumpLaunchX=dx;p.jumpLaunchY=dy;
+    if(Math.abs(dx)>.16)p.facing=dx>0?1:-1;
+   }
+   const glide=p.vz>0?1.08:p.z>105?1.00:.88;
    dx=p.jumpLaunchX;dy=p.jumpLaunchY;
-   speed=p.jumpLeap?(p.airAttack&&p.airKickPhase==='dive'?650:jumpMobilityStats().moveSpeed)*
+   speed=p.jumpLeap?(p.airAttack&&p.airKickPhase==='dive'?750:jumpMobilityStats().moveSpeed)*
      (p.airAttack&&p.airKickPhase==='dive'?(1+.14*modRank('jumpspeed')):1)*glide:0;
   }else if(p.airAttack){
    dx=p.airKickPhase==='charge'?0:p.facing;dy=0;
