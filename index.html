@@ -216,6 +216,35 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  #stageWrap .analog-ring{width:83px;height:83px}
 }
 </style>
+
+<style id="upgrade-bitmap-icons">
+/* One hand-painted bitmap sprite atlas for every upgrade: 6 columns x 4 rows.
+   The player sees the same individual picture in the choice cards and HUD. */
+.upgrade-art{display:block;flex:none;width:60px;height:60px;background-image:url('./assets/ui/upgrade-icons-v2.webp');
+ background-repeat:no-repeat;background-size:600% 400%;image-rendering:auto;
+ filter:drop-shadow(0 2px 3px #0009)}
+.upgrade-btn .sym{display:flex;flex-direction:column;align-items:flex-start;gap:0;
+ width:100%;font-size:12px;line-height:1;font-weight:900}
+.upgrade-btn .sym .up-lvl{font:900 10px Arial,sans-serif;color:#ffe09c;letter-spacing:.3px}
+.upgrade-btn strong{margin:8px 0 5px}
+#modStrip .mod-chip.compact .icon{display:inline-flex;align-items:center;justify-content:center;font-size:0}
+#modStrip .mod-chip.compact .icon .upgrade-art{width:19px;height:19px;filter:none}
+#modStrip .mod-chip.compact{gap:2px}
+@media(max-width:790px){
+ .upgrade-btn .upgrade-art{width:45px;height:45px}
+ .upgrade-btn strong{margin:5px 0 3px}
+ #modStrip .mod-chip.compact .icon .upgrade-art{width:16px;height:16px}
+}
+@media(max-width:590px) and (orientation:portrait){
+ /* Prior mobile CSS hid the artwork completely: keep icons visible. */
+ .choice-grid .upgrade-btn{display:grid;grid-template-columns:54px minmax(0,1fr);
+  grid-template-rows:auto 1fr;column-gap:10px;min-height:84px;align-items:center}
+ .choice-grid .upgrade-btn .sym{display:flex!important;grid-column:1;grid-row:1/span 2;align-items:center}
+ .choice-grid .upgrade-btn .upgrade-art{width:51px;height:51px}
+ .choice-grid .upgrade-btn strong{grid-column:2;grid-row:1;margin:0;font-size:13px}
+ .choice-grid .upgrade-btn>small{grid-column:2;grid-row:2;line-height:1.3}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -1001,6 +1030,17 @@ const MOD_META={
 const modRank=id=>p.mods.reduce((n,m)=>n+(m===id?1:0),0);
 const MOD_LEVEL_CAP=6;
 const MOD_UI_ORDER=['dashrange','dashspeed','jumpheight','jumpspeed','counter','fire','shock','bleed','ice','power','crit','rush','impact','momentum','chain','nova','vital','regen','leech','guard','haste'];
+
+const MOD_ICON_ORDER=[...MOD_UI_ORDER,'neuro'];
+const MOD_ICON_INDEX=Object.fromEntries(MOD_ICON_ORDER.map((id,i)=>[id,i]));
+function modIconMarkup(id){
+ const idx=MOD_ICON_INDEX[id];
+ if(idx===undefined)return '';
+ const column=idx%6,row=Math.floor(idx/6);
+ return '<span class="upgrade-art" aria-hidden="true" style="background-position:'+
+   (column*20)+'% '+(row*100/3).toFixed(4)+'%"></span>';
+}
+
 // Retain legacy lookup aliases for testing/compatibility, but these skills
 // now derive their level exclusively from the corresponding overdrive item.
 function specialStats(id,rank=modRank(id==='slam'?'jumpspeed':id==='dashpower'?'dashspeed':id)){
@@ -2794,8 +2834,8 @@ function updateHudThrottled(dt){
 }
 function updateHud(){
  const active=activeModStacks();
- const badges=active.map(({id,n,meta})=>'<span class="mod-chip compact '+id+'" title="'+meta.title+' : '+(meta.desc||meta.short)+'" aria-label="'+meta.short+' '+n+'중첩"><span class="icon">'+meta.icon+'</span><b>x'+n+'</b></span>').join('')+
-  (p.mod==='neuro'?'<span class="mod-chip compact neuro" title="NEURO · 전격과 출혈의 복합 효과" aria-label="NEURO 발동"><span class="icon">🟣</span><b>x1</b></span>':'');
+ const badges=active.map(({id,n,meta})=>'<span class="mod-chip compact '+id+'" title="'+meta.title+' : '+(meta.desc||meta.short)+'" aria-label="'+meta.short+' '+n+'중첩"><span class="icon">'+modIconMarkup(id)+'</span><b>x'+n+'</b></span>').join('')+
+  (p.mod==='neuro'?'<span class="mod-chip compact neuro" title="NEURO · 전격과 출혈의 복합 효과" aria-label="NEURO 발동"><span class="icon">'+modIconMarkup('neuro')+'</span><b>x1</b></span>':'');
  const markup=badges||'<span class="empty-mod">효과 없음</span>';
  if(modStripCache!==markup){$('modStrip').innerHTML=markup;modStripCache=markup}
  updateModToggle(active.length+(p.mod==='neuro'?1:0));
@@ -3157,7 +3197,7 @@ function rewardMenu(reason='wave'){
  for(const pick of [...owned.slice(1),...fresh])if(cardsOffered.length<3&&!cardsOffered.some(p=>p.id===pick.id))cardsOffered.push(pick);
  const cards=cardsOffered.map(({id,meta})=>{
   const level=modRank(id),stack=level?'Lv.'+level+' → '+(level+1):'NEW → Lv.1';
-  return `<button class="upgrade-btn" data-mod="${id}"><span class="sym">${meta.icon} Lv.${level+1}</span><strong>${meta.title} <small>${stack}</small></strong><small>${upgradeDescription(id,level)} / 최대 Lv.${MOD_LEVEL_CAP}</small></button>`;
+  return `<button class="upgrade-btn" data-mod="${id}"><span class="sym">${modIconMarkup(id)}<small class="up-lvl">Lv.${level+1}</small></span><strong>${meta.title} <small>${stack}</small></strong><small>${upgradeDescription(id,level)} / 최대 Lv.${MOD_LEVEL_CAP}</small></button>`;
  }).join('');
  const headline=reason==='mid'?'전투 중 파워업':'구역 클리어 파워업';
  const explanation=reason==='mid'?'재화 없이 1개 선택하면 전투가 이어집니다. 기존 강화도 중첩 가능.':
