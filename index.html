@@ -1717,7 +1717,9 @@ function startAttack(){
  if(p.stamina<cost)return;
  p.stamina-=cost;p.comboIdx=step;p.moveName=move;p.attackQueued=false;p.airAttack=false;p.counterBoost=false;recordComboMove(move);
  const durations={jab:.31,cross:.37,hook:.41,uppercut:.44,backfist:.39,hammerfist:.50,spinning_elbow:.52,rising_elbow:.42,superman_punch:.56,shovel_hook:.41,frontkick:.48,lowkick:.40,roundkick:.54,axe_kick:.59,sidekick:.48,spinning_heel:.57,crescent_kick:.53,diagonal_airkick:.58,rising_headbutt:.45,forward_headbutt:.40};
- p.attackDuration=Math.max(.39,(durations[move]||.40)*1.14/(1+modRank('haste')*.075)); // 8 clear frames
+ // Restore authored eight-frame attack speed instead of the slowed 1.14x
+ // duration and forced .39s floor. Keep haste and all 19 move variants.
+ p.attackDuration=Math.max(.29,(durations[move]||.40)/(1+modRank('haste')*.075));
  const advance={jab:23,cross:43,hook:31,uppercut:22,backfist:29,hammerfist:46,
   spinning_elbow:53,rising_elbow:30,superman_punch:100,shovel_hook:34,
   frontkick:45,lowkick:32,roundkick:48,axe_kick:37,sidekick:66,
@@ -2206,12 +2208,12 @@ function control(dt,pad){
   p.y=groundY(p.y+dy*speed*.52*dt);
   if(p.attack>0&&p.attackDriveRemaining>0&&!p.airAttack&&p.counterRush<=0){
    const phase=1-p.attack/Math.max(.001,p.attackDuration);
-   if(phase<.75){
-    // A short preload and explosive drive at the strike frame. Do not
-    // teleport on slow/uneven device frame rates.
-    const burstRate=phase<.085?.82:phase<.48?1.57:.95;
-    const desired=p.attackDriveTotal*dt/(p.attackDuration*.62)*burstRate;
-    const burst=Math.min(p.attackDriveRemaining,Math.min(35,desired));
+   if(phase<.80){
+    // Spend the SAME lunge distance faster: an earlier, sharper burst.
+    // Keep a <=38px step and the collision stop against target footprints.
+    const burstRate=phase<.085?1.16:phase<.48?2.08:1.24;
+    const desired=p.attackDriveTotal*dt/(p.attackDuration*.52)*burstRate;
+    const burst=Math.min(p.attackDriveRemaining,Math.min(38,desired));
     const before=p.x;
     let nextX=clamp(p.x+p.attackDriveX*burst,64,STAGE_WIDTH-64);
     // Closing distance cannot cross the next target before the attack's
@@ -2308,7 +2310,17 @@ function control(dt,pad){
  }
  // Holding attack before jumping never starts a free dive; in the air,
  // only a newly pressed attack event can call startAttack().
- if((p.attackQueued||(!p.jumpActive&&p.z<=0&&(keys.has('j')||padPrev.attack)))&&p.attack===0&&p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){p.attackQueued=false;startAttack()}
+ const wantsCombo=p.attackQueued||(!p.jumpActive&&p.z<=0&&(keys.has('j')||padPrev.attack));
+ const canCombo=p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0;
+ // Once the hit lands, a buffered ground combo can link on the last
+ // visible (eighth) sprite frame, not after a separate recovery pause.
+ // Never cancel dash finisher, dive slam or parry chase.
+ const canChainTail=p.attack>0&&p.hitDone&&!p.airAttack&&!p.dashSmash&&
+  !p.counterBoost&&!p.riposteStrikeTarget&&!p.airKickPhase&&p.z<=0&&
+  p.attack<=p.attackDuration*.10;
+ if(wantsCombo&&canCombo&&(p.attack===0||canChainTail)){
+  p.attack=0;p.attackQueued=false;startAttack();
+ }
 }
 // Visual-footprint spacing in world pixels (X = silhouette width, Y = lane depth).
 // Wider than damage hitboxes: ground actors, including enemy pairs, cannot stack.
