@@ -38,3 +38,16 @@ The following **nonverbal** sound effects were newly generated with Higgsfield M
 | `hero-mech-power.mp3` | Strong heavy rifle-bolt mechanical cycling, power strike | `b6436109-1ee0-4bfb-b299-fda5464d263e` |
 
 The protagonist's previous `hero-kiai-*.mp3` voice assets are retained as archival game resources only; **no runtime voice mapping references them**. Protagonist hit and death vocal events are muted. Enemy human voices remain unchanged. Metal clicks use the accent bus; original impact transients and BGM each stay on their own bus.
+
+## Firearm gunshot reports added October 31, 2026
+
+Four original AI-generated gunshot Foley samples (Higgsfield Mirelo Text to Audio) are bundled locally. Each of the 19 basic attack animation labels maps to one of the four gunshot families, plus a slightly distinct playback rate, to avoid hearing the exact same report for every combo hit:
+
+| Local file | Sound | Generation job |
+| --- | --- | --- |
+| `shot-pistol.mp3` | Sharp compact pistol discharge | `70287d73-35e1-4d9f-a228-c3c6fe028edb` |
+| `shot-revolver.mp3` | Deep revolver discharge | `9f48608d-f582-4fde-bae1-ffbeb0d83f41` |
+| `shot-rifle.mp3` | Bright metallic rifle discharge | `76b80d05-7cb8-43ac-950b-7bad7561f989` |
+| `shot-heavy.mp3` | Heavy shotgun discharge and pump rattle | `8dd15581-9f0e-4ba8-a794-cd33687913c1` |
+
+Gunshot recordings play on a separate foreground gunfire bus with onset-silence trimming; all samples are predecoded at start. Original punch impact SFX, BGM, CC0 enemy vocals, and short slide/bolt Foley remain independent. Dashes, jump starts, parries, pursuit, ordinary walking and running also have mechanical accents. No voice clips are used for the protagonist.
