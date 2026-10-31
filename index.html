@@ -1975,6 +1975,18 @@ function prepareIntruderSpriteCrops(){
    throw Error('빨간 후드 스프라이트 '+name+'의 커팅 영역을 확인해주세요.');
   diagnostic.atlases++;
   if(name==='난입')continue;
+  if(name==='hit'){
+   // All 8 original hit poses retain two complete boots, and none touch
+   // their cell borders. Eroded-core cleanup can mistake a detached shin
+   // for neighbouring-frame junk, visibly amputating the lower leg.
+   // Keep every original hit pixel; untouched per-frame bbox crop is safe.
+   diagnostic.frames+=cuts.length;
+   diagnostic.byAtlas.hit=cuts.map((crop,index)=>({
+    frame:index+1,removedPixels:0,recoveredPixels:0,sourcePreserved:true,
+    coverage:+(crop.sw*crop.sh/(crop.cellW*crop.cellH)).toFixed(3)
+   }));
+   continue;
+  }
   const result=isolateIntruderFrames(image,cuts,name);
   diagnostic.frames+=result.corrected;
   diagnostic.removedPixels+=result.discarded;
@@ -1991,7 +2003,7 @@ const INTRUDER_FRAME_FOOT={
  idle:[439,439,439,439,432,432,432,432],
  run:[433,433,432,433,415,414,416,415],
  attack:[438,438,438,438,415,415,415,415],
- hit:[440,440,442,440,419,420,420,420],
+ hit:[439,440,441,440,419,421,421,419],
  death:[444,444,444,444,377,379,375,376],
  special:[440,443,409,436,410,418,407,417]
 };

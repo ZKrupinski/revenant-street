@@ -1497,6 +1497,18 @@ test('Crimson intruder drops into an ongoing squad as reinforcements and joins t
  assert.equal(enemy.entryLandingPlayed,true,'landing is signaled once');
  assert.equal(enemy.brain,'support_elite','elite fighter retains its own special attack AI');
 });
+test('redhood hit keeps original full-length boots and audited ground anchors',()=>{
+ // Source 1774x887 bitmap audit: eight original poses show both complete feet,
+ // and none touches a cell border. Disable destructive isolation ONLY for hit.
+ assert(html.includes("if(name==='hit'){"),'hit motion must have its own non-destructive crop path');
+ assert(html.includes('sourcePreserved:true'),'diagnostic records uncut original hit alpha');
+ const isolated=html.slice(html.indexOf("if(name==='hit'){"),html.indexOf("const result=isolateIntruderFrames(image,cuts,name);"));
+ assert(isolated.includes('continue;'),'original hit poses must skip eroded-core alpha pruning');
+ assert.deepEqual(Array.from(t.INTRUDER_FRAME_FOOT.hit),[439,440,441,440,419,421,421,419],
+  'all eight floor anchors match original source boot-tip pixels');
+ for(const kind of ['attack','death','idle','run','special'])
+  assert.equal(t.INTRUDER_FRAME_FOOT[kind].length,8,kind+' retains existing ground alignment');
+});
 test('Crimson support enemies are separate from regular wave rosters and keep distinct eight-frame art',()=>{
  for(let w=1;w<=2;w++)for(let i=0;i<11;i++){
   const roster=t.encounterRoster(w,i);
