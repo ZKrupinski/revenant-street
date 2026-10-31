@@ -1,0 +1,44 @@
+name: Import Project Z firearm discharge SFX
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/import-z-gunshots.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Import four original gunshot variants
+        env:
+          SHOT_PISTOL: https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261031_002933_70287d73-35e1-4d9f-a228-c3c6fe028edb.mp3
+          SHOT_REVOLVER: https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261031_002933_9f48608d-f582-4fde-bae1-ffbeb0d83f41.mp3
+          SHOT_RIFLE: https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261031_002933_76b80d05-7cb8-43ac-950b-7bad7561f989.mp3
+          SHOT_HEAVY: https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261031_002932_8dd15581-9f0e-4ba8-a794-cd33687913c1.mp3
+        run: |
+          set -euo pipefail
+          mkdir -p assets/voice
+          for spec in "pistol:$SHOT_PISTOL" "revolver:$SHOT_REVOLVER" "rifle:$SHOT_RIFLE" "heavy:$SHOT_HEAVY"; do
+            key="${spec%%:*}";url="${spec#*:}"
+            dst="assets/voice/shot-${key}.mp3"
+            curl -fLsS --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 "$url" -o "$dst"
+            test "$(wc -c < "$dst")" -gt 6000
+            file "$dst"
+          done
+      - name: Commit gunfire samples
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/voice/shot-*.mp3
+          if ! git diff --cached --quiet; then
+            git commit -m "Audio: import four gunshot families for varied Z combat"
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi
