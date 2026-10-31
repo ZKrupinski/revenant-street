@@ -4459,6 +4459,31 @@ function hurtEnemy(e,dmg,poise){
  if(e.hp<=0){if(e.type==='boss'||e.type==='elite'||Math.random()<.48)playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e)}
  else if(Math.random()<.75)playCombatVoice('enemyHurt',e);
  e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:(e.type==='elite'||e.type==='intruder')?.80:1),0,e.maxPoise);
+
+ // The newly illustrated hooded IRON MASK must be allowed to show its special.
+ // Previously EVERY regular combo hit cleared eliteTell / eliteRush / special,
+ // so the 8-frame animation was never seen during actual button mashing.
+ // Normal damage and poise still apply; the special remains parryable and a
+ // sufficiently heavy/staggering strike can interrupt the animation.
+ const ironSpecialArmor=e.type==='elite'&&e.hp>0&&e.groggy<=0&&
+  (e.eliteTell>0||e.eliteRush>0||e.eliteSpecialPlaying)&&
+  e.poise<e.maxPoise*.90&&
+  dmg<85&&!p.counterBoost&&!p.dashSmash&&!p.airAttack;
+ if(ironSpecialArmor){
+  e.hitFlash=Math.max(e.hitFlash,.17);
+  fxBurst(e.x,e.y-118,'red',.75);
+  floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');
+  p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
+  // Do not replace the painted charge/rush/impact poses with hit reactions.
+  // Armor isn't invulnerability: health, poise and phase are still affected.
+  if(e.hp<e.maxHp*.45&&e.phase===1){
+   e.phase=2;e.speed*=1.14;
+   fxBurst(e.x,e.y-150,'red',1.8);
+   floatText('CRIMSON OVERDRIVE',e.x,e.y-255,'#ff8494');
+  }
+  return;
+ }
+
  // Twelve distinct impacts: head snaps, gut folds, ankle buckles, spins,
  // side stumbles and aerial knockdowns. Keep the existing enemy bitmap.
  const smash=Z_KICK_MOVES.has(p.moveName)||Z_HEAD_MOVES.has(p.moveName)||p.moveName==='uppercut'||dmg>=60;
