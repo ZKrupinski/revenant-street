@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('opening battle spawns one small squad just beyond the screen',()=>{
@@ -821,14 +821,23 @@ test('guard animation braces in 0.17s without shortening the active parry window
  t.p.parry=Math.max(t.p.parry,.30);
  assert.equal(t.currentZFrameIndex('guard'),last,'parry success hold must not rewind the animation');
 });
-test('offscreen direction hints use an animated two-way red bitmap without the old rectangle UI',()=>{
- assert(html.includes("offscreenArrow.src='./assets/ui/edge-arrows.webp'"));
+test('offscreen arrows ping-pong across eight hand-painted frames at 8 fps',()=>{
+ const atlas=fs.readFileSync(path.join(__dirname,'../assets/ui/edge-arrows-animated.webp'));
+ assert.equal(atlas.toString('ascii',0,4),'RIFF','WebP signature');
+ assert.equal(atlas.toString('ascii',8,12),'WEBP');
+ assert.equal(atlas.toString('ascii',12,16),'VP8X');
+ assert.equal(atlas.readUIntLE(24,3)+1,640,'four 160px columns');
+ assert.equal(atlas.readUIntLE(27,3)+1,256,'two 128px rows');
+ assert.deepEqual(Array.from({length:12},(_,i)=>t.offscreenArrowFrameAt(i/8)),
+ [0,1,2,3,2,1,0,1,2,3,2,1],'8fps back-and-forth frames');
+ assert(html.includes("offscreenArrow.src='./assets/ui/edge-arrows-animated.webp'"));
  const section=html.slice(html.indexOf('function drawOffscreenEnemyIndicator(){'),html.indexOf('function drawTravelMeter(){'));
- assert(section.includes("left?96:0,0,96,74"),'right and left are separate bitmap atlas cells');
+ assert(section.includes('const frame=offscreenArrowFrameAt(time)')&&
+  section.includes('frame*cellW,left?cellH:0,cellW,cellH'),
+  'left and right directions select correct source row and animated column');
  assert(section.includes('Math.sin(time*11.5)')&&section.includes('ctx.globalAlpha=blink'),
- 'sprite flashes continuously with an animation clock');
- assert(!/fillRect|strokeRect|fillStyle='rgba\(7,15,28/.test(section),
- 'box-shaped vector backdrop is removed');
+  'previous blink and glow are preserved');
+ assert(!section.includes('fillRect')&&!section.includes('strokeRect'),'no vector rectangle around arrows');
 });
 test('rear-side enemy attacks are caught by parry and hero immediately turns',()=>{
  g.startRun();

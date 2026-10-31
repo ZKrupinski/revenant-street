@@ -350,8 +350,11 @@ const img={};
 assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
 // Both keys reference exactly the same embedded panorama; decode only once.
 img.street_pano=img.street;
-// Two transparent, hand-painted metal arrow tiles: right then left.
-const offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows.webp';
+// Eight hand-painted bitmap frames: top row points right, bottom row points left.
+const offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows-animated.webp';
+// 8 fps ping-pong keeps the peak flash from harshly jumping back to the dim pose.
+const OFFSCREEN_ARROW_SEQUENCE=[0,1,2,3,2,1];
+function offscreenArrowFrameAt(seconds){return OFFSCREEN_ARROW_SEQUENCE[Math.floor(Math.max(0,seconds)*8)%OFFSCREEN_ARROW_SEQUENCE.length]}
 // 4x2 real transparent PNG sprite sheet: spark-filled metal shield impact.
 const parryShieldImage=new Image();parryShieldImage.src='./assets/fx/parry-shield.png';
 const keys=new Set(), padPrev={}, touchKey={};
@@ -2974,9 +2977,9 @@ function offscreenEnemyTarget(){
 function drawOffscreenEnemyIndicator(){
  if(gameState!=='playing')return;
  const target=offscreenEnemyTarget();if(!target)return;
- // No vector/box panel. The imported red-and-black bitmap is two horizontal
- // sprite cells (right at 0, left at 96) on a transparent WebP atlas.
- if(!offscreenArrow.complete||offscreenArrow.naturalWidth<192)return;
+ // No vector or box: the hand-painted atlas is four columns by two rows.
+ // Row 0 points right and row 1 left, with four distinct frame drawings each.
+ if(!offscreenArrow.complete||offscreenArrow.naturalWidth<4||offscreenArrow.naturalHeight<2)return;
  const left=target.side==='left',x=left?12:W-154,y=238;
  // Crisp warning pulse plus a small forward lean; bitmap gets brighter
  // on each peak, never disappears completely or obstructs combat.
@@ -2986,7 +2989,9 @@ function drawOffscreenEnemyIndicator(){
  ctx.save();
  ctx.globalAlpha=blink;
  ctx.filter='brightness('+(0.76+wave*.92).toFixed(2)+') drop-shadow(0px 0px 9px rgba(255,38,36,0.9))';
- ctx.drawImage(offscreenArrow,left?96:0,0,96,74,x+sway,y-5,130,100);
+ const cellW=offscreenArrow.naturalWidth/4,cellH=offscreenArrow.naturalHeight/2;
+ const frame=offscreenArrowFrameAt(time);
+ ctx.drawImage(offscreenArrow,frame*cellW,left?cellH:0,cellW,cellH,x+sway,y-5,130,100);
  ctx.filter='none';
  // The only supplemental information is compact, shadowed type; no boxes,
  // borders, gradients or vector polygons around the direction marker.
