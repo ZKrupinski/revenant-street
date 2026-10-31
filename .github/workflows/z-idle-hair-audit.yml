@@ -1,0 +1,34 @@
+name: Inspect original Z idle hair clipping
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/z-idle-hair-audit.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --quiet Pillow
+      - name: Download original approved protagonist idle art
+        run: |
+          mkdir -p assets/project-z-hero
+          curl --fail --location --retry 3 --connect-timeout 25 'https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261028_143200_f1006789-348e-44e8-b4b0-cd62c4ecf489.png' -o assets/project-z-hero/idle-source.png
+          test "$(stat -c%s assets/project-z-hero/idle-source.png)" -gt 30000
+      - name: Audit eight frame boundaries and generate source contact sheet
+        run: python scripts/audit-z-idle-hair.py
+      - name: Publish imported original idle source and inspection preview
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/project-z-hero/idle-source.png assets/project-z-hero/idle-source-audit.webp
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Cache original protagonist idle sprite and eight-frame hair inspection'
+          git push origin HEAD:main
