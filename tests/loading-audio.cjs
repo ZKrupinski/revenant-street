@@ -40,6 +40,7 @@ async function audio(){
  const combatLevel=bgm.getState().volume;
  for(let i=0;i<10;i++){now+=50;tick()}
  assert.equal(bgm.getState().volume,combatLevel,'playing combat BGM remains constant');
+ assert(!fs.readFileSync(path.join(root,'assets/industrial-combat-bgm.js'),'utf8').includes('NON_BGM_SFX_LEVEL'),'effect mix factor must never enter soundtrack engine');
  assert(!html.includes('__revenantBgm?.duckImpact'),'impact sounds must never touch BGM volume');
  state='reward';for(let i=0;i<8;i++){now+=180;tick()}
  assert(Math.abs(bgm.getState().volume-.21)<.001);assert.equal(plays,1,'upgrade must preserve playback');
@@ -67,7 +68,7 @@ async function combatVoices(){
  await voices.prepare(ctx);assert.equal(fetches,11,'gunfire and vocals decode only once');
  const hero={x:300,y:560},foe={x:420,y:560,type:'raider'},boss={x:560,y:560,type:'boss'};
  assert.equal(voices.play('heroStrike',hero,hero),true);
- assert.equal(voiceGains[0].gain.value,.58,'voice master should be only slightly quieter and separate from SFX');
+ assert.equal(voiceGains[0].gain.value,.58*.70,'enemy and metal voice master must output 70% of prior amplitude');
  assert(/hero-mech-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero first attack must use a slide/bolt sound, not any voice');
  assert.equal(voices.play('heroStrike',hero,hero),false,'one hero cannot stack grunts');
  ctx.currentTime=.06;
@@ -136,7 +137,8 @@ async function combatVoices(){
   ctx.currentTime+=.25;
   assert.equal(voices.fire(kind,'uppercut'),true,kind+' strong fire must never be crowded out');
  }
- assert(voiceGains.some(x=>x.gain.value>=1.05),'gunfire bus is louder than vocal bus');
+ assert(voiceGains.some(x=>Math.abs(x.gain.value-1.05*.70)<.000001),'independent gunfire bus must output 70% of prior amplitude');
+ assert(1.05*.70>.58*.70,'original relative gunfire-over-vocal mix is retained');
  ctx.currentTime+=1.5;
  for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
  assert.equal(voices.play('heroMove',hero,hero),true,'walk and run occasionally rack a slide');
