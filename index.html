@@ -1624,6 +1624,229 @@ body{position:fixed;inset:0;touch-action:manipulation}
  #stageWrap #menu.hub-dialog .hub-emblem{width:37px!important;height:37px!important}
 }
 </style>
+
+<style id="hub-horizontal-cards-footer-v5">
+/* APPROVED HUB LAYOUT: one complete square icon LEFT, all text/actions RIGHT.
+   This stylesheet is last intentionally: older 2026 experimental card selectors
+   used column layouts and oversized height rules that cropped the icons. */
+#stageWrap #menu.hub-dialog .hub-screen{
+ display:flex!important;
+ flex-direction:column!important;
+ min-height:0!important;
+ height:100%!important;
+ overflow:hidden!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules{
+ min-height:0!important;
+ flex:1 1 auto!important;
+ grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ grid-template-rows:minmax(0,1fr)!important;
+ overflow:hidden!important;
+ padding:clamp(4px,.9cqh,9px) clamp(7px,1.05cqw,12px)!important;
+ gap:clamp(5px,.8cqw,13px)!important;
+}
+#stageWrap #menu.hub-dialog .hub-module{
+ box-sizing:border-box!important;
+ display:grid!important;
+ grid-template-columns:minmax(0,clamp(63px,8.6cqw,102px)) minmax(0,1fr)!important;
+ grid-template-rows:minmax(0,1fr)!important;
+ align-content:center!important;
+ align-items:center!important;
+ justify-items:stretch!important;
+ column-gap:clamp(7px,.9cqw,13px)!important;
+ width:100%!important;min-width:0!important;
+ height:100%!important;min-height:0!important;max-height:100%!important;
+ overflow:hidden!important;
+ padding:clamp(6px,1.25cqh,13px) clamp(6px,1.0cqw,12px)!important;
+}
+/* Image slot never participates in the text's vertical flow; no clipping. */
+#stageWrap #menu.hub-dialog .hub-art-slot{
+ display:flex!important;
+ grid-column:1!important;grid-row:1!important;
+ width:100%!important;min-width:0!important;
+ height:100%!important;min-height:0!important;
+ justify-content:center!important;align-items:center!important;
+ align-self:center!important;
+ border-right:1px solid #7094ae8f!important;
+ padding-right:clamp(4px,.5cqw,8px)!important;
+ box-sizing:border-box!important;
+ overflow:visible!important;
+}
+#stageWrap #menu.hub-dialog .hub-art-slot .hub-emblem{
+ display:block!important;position:relative!important;
+ align-self:center!important;flex:0 1 auto!important;
+ width:min(100%,clamp(52px,13.8cqh,100px))!important;
+ height:auto!important;aspect-ratio:1 / 1!important;
+ min-width:0!important;min-height:0!important;
+ margin:0!important;padding:0!important;
+ border:none!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;
+ overflow:visible!important;
+}
+#stageWrap #menu.hub-dialog .hub-art-slot .hub-emblem .upgrade-art{
+ display:block!important;
+ position:relative!important;
+ width:100%!important;height:auto!important;
+ aspect-ratio:1 / 1!important;
+ max-width:none!important;max-height:none!important;
+ margin:0!important;padding:0!important;
+ border:0!important;border-radius:0!important;
+ background-color:transparent!important;
+ box-shadow:none!important;
+ background-size:500% 500%!important;background-repeat:no-repeat!important;
+ /* The PNG/WebP 25-cell atlas contains the complete neon frame already. */
+ filter:drop-shadow(0 0 3px #40a8d744)!important;
+}
+#stageWrap #menu.hub-dialog .hub-card-info{
+ grid-column:2!important;grid-row:1!important;
+ display:flex!important;flex-direction:column!important;
+ justify-content:center!important;align-items:stretch!important;
+ gap:clamp(3px,.52cqh,7px)!important;
+ min-width:0!important;min-height:0!important;
+ width:100%!important;overflow:hidden!important;
+}
+#stageWrap #menu.hub-dialog .hub-card-info .hub-module-name{
+ position:static!important;display:flex!important;flex-wrap:wrap!important;
+ align-items:baseline!important;justify-content:space-between!important;
+ gap:1px 7px!important;
+ min-width:0!important;max-width:100%!important;
+ line-height:1.1!important;
+ font-size:clamp(11px,1.7cqh,15px)!important;
+ white-space:normal!important;
+}
+#stageWrap #menu.hub-dialog .hub-card-info .hub-module-name small{
+ display:inline!important;margin:0!important;
+ font-size:clamp(9px,1.3cqh,12px)!important;
+ line-height:1.1!important;white-space:nowrap!important;
+}
+#stageWrap #menu.hub-dialog .hub-card-info .hub-forecast{
+ display:flex!important;align-items:baseline!important;
+ flex-wrap:wrap!important;
+ grid-column:auto!important;grid-row:auto!important;
+ min-height:0!important;
+ padding:0!important;margin:0!important;
+ border:0!important;
+ font-size:clamp(12px,2cqh,17px)!important;
+ font-weight:900!important;
+ line-height:1.13!important;
+ white-space:normal!important;
+ overflow:visible!important;
+ gap:clamp(3px,.45cqw,7px)!important;
+}
+#stageWrap #menu.hub-dialog .hub-card-info .hub-desc{
+ display:block!important;
+ flex:0 1 auto!important;
+ margin:0!important;min-height:0!important;
+ color:#a8c2d4!important;
+ font-size:clamp(9px,1.2cqh,11px)!important;
+ line-height:1.12!important;
+ white-space:nowrap!important;text-overflow:ellipsis!important;
+ overflow:hidden!important;
+}
+#stageWrap #menu.hub-dialog .hub-card-info .hub-buy{
+ display:flex!important;grid-column:auto!important;grid-row:auto!important;
+ width:100%!important;
+ box-sizing:border-box!important;
+ flex:0 0 auto!important;
+ margin:0!important;margin-top:clamp(1px,.35cqh,4px)!important;
+ min-height:clamp(23px,3.9cqh,35px)!important;
+ padding:clamp(3px,.6cqh,7px) clamp(5px,.8cqw,10px)!important;
+ gap:4px!important;
+ flex-direction:row!important;justify-content:space-between!important;align-items:center!important;
+ font-size:clamp(10px,1.7cqh,14px)!important;
+ line-height:1.15!important;white-space:nowrap!important;
+}
+#stageWrap #menu.hub-dialog .hub-bottom{
+ flex:0 0 auto!important;
+ min-height:0!important;
+ margin:0!important;
+}
+/* Footer belongs INSIDE the bottom neon chrome, never as a loose menu paragraph. */
+#stageWrap #menu.hub-dialog .hub-footer-guide{
+ box-sizing:border-box!important;
+ display:flex!important;flex:0 0 clamp(24px,3.6cqh,34px)!important;
+ width:100%!important;min-width:0!important;min-height:0!important;
+ margin:0!important;
+ padding:0 clamp(10px,1.5cqw,20px)!important;
+ background:#081221ed!important;
+ border-top:1px solid #5b79916e!important;
+ align-items:center!important;justify-content:center!important;
+ position:relative!important;
+}
+#stageWrap #menu.hub-dialog .hub-footer-guide::before,
+#stageWrap #menu.hub-dialog .hub-footer-guide::after{
+ content:'';position:absolute;bottom:8px;
+ width:clamp(18px,8%,82px);height:2px;
+ background:#ff458e;box-shadow:0 0 7px #ff458eaa;
+ pointer-events:none;
+}
+#stageWrap #menu.hub-dialog .hub-footer-guide::before{left:clamp(7px,1.3cqw,18px)}
+#stageWrap #menu.hub-dialog .hub-footer-guide::after{right:clamp(7px,1.3cqw,18px)}
+#stageWrap #menu.hub-dialog .hub-footer-guide-text{
+ color:#e5f0ff!important;
+ display:block!important;
+ min-width:0!important;
+ text-align:center!important;
+ font:800 clamp(9px,1.6cqh,14px)/1.2 Arial,'Malgun Gothic',sans-serif!important;
+ white-space:nowrap!important;
+ text-overflow:ellipsis!important;
+ overflow:hidden!important;
+ padding:0 clamp(10px,8cqw,95px)!important;
+}
+/* Old generated duplicate guide beneath the dialog must never reappear. */
+#stageWrap #menu.hub-dialog>.all-face-confirm-hint{display:none!important}
+/* Letterboxed stages: preserve icon visibility before decorative labels. */
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-module{
+ grid-template-columns:minmax(0,clamp(40px,6.5cqw,65px)) minmax(0,1fr)!important;
+ padding:4px 5px!important;
+ column-gap:5px!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-art-slot .hub-emblem{
+ width:min(100%,clamp(34px,9.8cqh,67px))!important;height:auto!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-card-info .hub-module-name small,
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-card-info .hub-desc{display:none!important}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-card-info .hub-forecast{
+ font-size:clamp(10px,1.8cqh,14px)!important;
+}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-module{
+ grid-template-columns:minmax(0,clamp(22px,5cqw,38px)) minmax(0,1fr)!important;
+ padding:2px 3px!important;
+ column-gap:3px!important;
+}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-art-slot{
+ padding-right:2px!important;
+}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-art-slot .hub-emblem{
+ width:min(100%,clamp(21px,7cqh,34px))!important;height:auto!important;
+}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-card-info{
+ gap:1px!important;
+}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-card-info .hub-module-name,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-card-info .hub-desc{
+ display:none!important;
+}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-card-info .hub-forecast{
+ font-size:clamp(8px,1.9cqh,11px)!important;
+}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-card-info .hub-buy{
+ min-height:16px!important;
+ font-size:8px!important;
+ padding:2px!important;
+}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-footer-guide{
+ flex-basis:16px!important;
+}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-footer-guide-text{
+ font-size:8px!important;
+}
+/* Physical 16:9 display with small canvas height and scaled UI. */
+@media (max-height:580px){
+ #stageWrap #menu.hub-dialog .hub-card-info .hub-desc{display:none!important}
+ #stageWrap #menu.hub-dialog .hub-art-slot .hub-emblem{width:min(100%,clamp(38px,12cqh,78px))!important}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -3520,7 +3743,7 @@ function showMenu(html){
  $('menu').classList.remove('title-dialog');$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
  // Four face buttons are equivalent CONFIRM on title, REBEL HUB,
  // pause, defeat, and upgrade panels; movement still picks the focus.
- if(['menu','hub','dead','paused'].includes(gameState)){
+ if(['menu','dead','paused'].includes(gameState)){
   const note=document.createElement('p');note.className='all-face-confirm-hint';
   note.textContent='패드 스틱·십자키 / WASD 이동  ·  X/Y/A/B 아무 버튼으로 선택';
   $('menu').appendChild(note);
@@ -5808,12 +6031,14 @@ function hubMenu(upgraded=''){
   const lv=perma[m.id];
   return `<button type="button" class="hub-module hub-${m.id}${hubSelected===m.id?' selected':''}${upgraded===m.id?' installed':''}"
    data-perma="${m.id}" aria-pressed="${hubSelected===m.id}">
-   <span class="hub-row-head"><span class="hub-emblem">${modIconMarkup(m.art)}</span>
-   <span class="hub-module-name">${m.title}<small>Lv.${lv} → ${lv+1}</small></span></span>
-   <span class="hub-forecast"><span class="hub-from">${m.format(lv)}</span>
-   <span class="hub-arrow">→</span><span class="hub-to">${m.format(lv+1)}</span></span>
-   <span class="hub-desc">${m.detail}</span>
-   <span class="hub-buy"><span>${upgraded===m.id?'적용 완료':hubSelected===m.id?'선택됨':'선택'}</span><span>◆ ${HUB_COST}</span></span>
+   <span class="hub-art-slot"><span class="hub-emblem">${modIconMarkup(m.art)}</span></span>
+   <span class="hub-card-info">
+    <span class="hub-module-name">${m.title}<small>Lv.${lv} → ${lv+1}</small></span>
+    <span class="hub-forecast"><span class="hub-from">${m.format(lv)}</span>
+     <span class="hub-arrow">→</span><span class="hub-to">${m.format(lv+1)}</span></span>
+    <span class="hub-desc">${m.detail}</span>
+    <span class="hub-buy"><span>${upgraded===m.id?'적용 완료':hubSelected===m.id?'선택됨':'선택'}</span><span>◆ ${HUB_COST}</span></span>
+   </span>
   </button>`;
  }).join('');
  const refund=HUB_COST*HUB_MODULES.reduce((n,m)=>n+perma[m.id],0);
@@ -5838,7 +6063,9 @@ function hubMenu(upgraded=''){
      `이 기기에 자동 저장 · 강화 초기화 시 투자 파편 ◆${refund} 반환`}</div>
    <div class="hub-buttons"><button type="button" class="main-btn" data-action="start">▶ 재출격</button>
     <button type="button" class="secondary-btn" data-action="title">타이틀</button></div>
-  </div></div>`);
+  </div>
+  <div class="hub-footer-guide" role="note"><span class="hub-footer-guide-text">패드 스틱·십자키 / WASD 이동 · X/Y/A/B 아무 버튼으로 선택</span></div>
+  </div>`);
 }
 function buyUpgrade(key=hubSelected){
  if(gameState!=='hub'||hubResetArmed||key!==hubSelected||!HUB_MODULES.some(m=>m.id===key)||perma.shards<HUB_COST)return false;
