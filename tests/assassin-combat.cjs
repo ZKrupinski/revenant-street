@@ -58,6 +58,10 @@ test('new HUD distinguishes live squad from unspawned remaining wave enemies',()
  t.setEnemies([]);t.updateHud();
  assert(node('enemyCount').textContent.includes('다음 무리 대기'),'zero active enemies must not imply wave is over');
  assert(node('enemyStatus').textContent.includes('오른쪽으로 전진'));
+ t.spawnWave();t.updateHud();
+ assert.equal(t.waveEnemyTotals().current,0,'new wave has not yet spawned its first troop');
+ assert(node('enemyCount').textContent.includes('첫 무리 출현 전'),'new wave must not claim a nonexistent squad was defeated');
+ assert(node('enemyStatus').textContent.includes('다음 적 무리 지점으로 전진'));
  assert(html.includes('role="progressbar"')&&html.includes('id="enemyProgressFill"'),'progress bar accessible to mobile and desktop');
 });
 test('tactical AI briefly retreats, flanks, and enters a telegraphed berserk rush',()=>{
