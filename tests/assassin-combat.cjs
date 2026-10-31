@@ -264,7 +264,7 @@ test('elite overdrive at critical health and independent sprite module',()=>{
  const art=fs.readFileSync(path.join(__dirname,'../assets/elite-ironmask.js'),'utf8');
  new vm.Script(art);
  vm.runInContext(art,world);
- const enemy={...e,dead:false,z:0,eliteTell:.5,eliteRush:0};
+ const enemy={...e,dead:false,z:0,reactionTime:0,proneTime:0,riseTime:0,eliteTell:.5,eliteRush:0};
  assert.equal(world.RZElite.move(enemy,()=> 'idle'),'charge');
  enemy.eliteTell=0;enemy.dead=true;enemy.z=20;
  assert.equal(world.RZElite.move(enemy,()=> 'idle'),'hitFly');
