@@ -2306,7 +2306,7 @@ function selectMenuItem(step=0){
  for(let i=0;i<items.length;i++)items[i].classList.toggle('pad-selected',i===menuPad.index);
  const selected=items[menuPad.index];
  selected.focus?.({preventScroll:true});
- selected.scrollIntoView?.({block:'nearest',inline:'nearest'});
+ if(!$('menu').classList.contains('title-dialog'))selected.scrollIntoView?.({block:'nearest',inline:'nearest'});
  return selected;
 }
 function menuConfirm(){if(!menuReady()){menuPad.readyAt=Math.max(menuPad.readyAt,Date.now()+250);return false;}const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
@@ -2315,7 +2315,7 @@ function showMenu(html){
  $('overlay').classList.remove('reward-confirming');
  menuPad.readyAt=Date.now()+(gameState==='reward'?700:180);menuPad.armed=false;menuPad.neutralAt=Date.now();
  menuBlockedKeys.clear();for(const key of heldKeyboard)menuBlockedKeys.add(key);
- canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;if(gameState==='hub')$('menu').classList.add('hub-dialog');else $('menu').classList.remove('hub-dialog');$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
+ canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;if(gameState==='hub')$('menu').classList.add('hub-dialog');else $('menu').classList.remove('hub-dialog');$('menu').classList.remove('title-dialog');$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
  // Reward cards begin visually neutral; only a real navigation/focus action
  // can light a card border. Keep the existing directional selection order.
  if(gameState!=='reward')selectMenuItem(0)}
@@ -2330,6 +2330,7 @@ function titleMenu(){
  <button class="secondary-btn" data-action="hub">◆ REBEL HUB · 기본 스탯 강화</button>
  <button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div>
  <p class="micro">가로 10화면 · 마스크 잡몹 A + 신규 난입자 + 쌍단검 암살자 B + 철가면 엘리트 / 키보드·게임패드·드래그 조이스틱</p>`);
+ $('menu').classList.add('title-dialog');
 }
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>지상 연속타격 · 점프 후 새로 누르면 수직 내려차기와 착지 광역타</div><div><kbd>↑ / K / Y / △</kbd>점프 · 이동 도약 / 자동 착지 공격 없음</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링 성공으로 적을 멀리 날려 보낸 직후 <b class="key">공격 버튼을 한 번</b> 누르면 자동 대쉬 추격과 빈사 강타가 이어집니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
 function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
@@ -2439,6 +2440,7 @@ function waitSceneArt(preview,onProgress){
 }
 async function requestRunStart(){
  if(loadingRun)return;
+ requestGameFullscreen(); // User's START action, before the first await.
  loadingRun=true;gameState='loading';resetFailedSceneArt();resetFailedUiBitmaps();
  const preview=/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'');
  showMenu(`<div class="eyebrow">PROJECT Z / RESOURCE PREPARATION</div><h2>게임 리소스 준비 중</h2><p id="loadStatus">음악·음성·캐릭터·업그레이드 아이콘·화살표·아케이드 버튼 디코딩이 끝난 뒤 시작합니다.</p><div class="bar hp"><div class="bar-fill" id="loadBar" style="width:0%"></div></div><p class="micro">고해상도 비트맵 압축 해제 · 프레임 8장 정렬 중</p>`);
@@ -4026,7 +4028,9 @@ function drawOffscreenEnemyIndicator(){
  }
 }
 function drawTravelMeter(){
- const x0=407,y0=30,w=466,h=6;
+ // Don't clip large desktop progress bar into a narrow portrait viewport.
+ if(W<760)return;
+ const w=Math.min(466,W*.37),x0=Math.round((W-w)/2),y0=30,h=6;
  ctx.save();ctx.globalAlpha=.92;ctx.fillStyle='rgba(4,8,15,.75)';ctx.fillRect(x0-7,y0-9,w+14,26);
  ctx.fillStyle='#343f55';ctx.fillRect(x0,y0,w,h);
  const prog=clamp(p.x/STAGE_WIDTH,0,1);ctx.fillStyle=prog<.7?'#5ac7e8':'#ff3b56';ctx.fillRect(x0,y0,Math.max(3,w*prog),h);
@@ -4551,7 +4555,7 @@ $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('
 for(const b of document.querySelectorAll('.touch-controls button')){const k=b.dataset.key.toLowerCase();const press=e=>{e.preventDefault();if(gameState!=='playing')return;b.setPointerCapture(e.pointerId);keys.add(k);b.classList.add('pressed');if(k==='j')startAttack();else if(k==='k')jump();else if(k==='l')parry();else if(k==='shift')dodge()};const release=e=>{e.preventDefault();keys.delete(k);b.classList.remove('pressed')};b.addEventListener('pointerdown',press);b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release)}
 for(let i=0;i<(window.matchMedia?.('(pointer: coarse)').matches?65:110);i++)rain.push({x:rnd(0,1280),y:rnd(0,720),s:rnd(220,590),len:rnd(5,18)});
 window.__revenant={getMusicState:()=>gameState,getPerformance:()=>({...runtimePerf,liveEnemies:enemies.filter(e=>!e.dead).length,activeEffects:fx.length+attributeFx.length+floating.length,heroAfterimages:heroAfterimages.length,heroAfterimageLimit:MAX_HERO_GHOSTS,uniqueHeroAtlases:zArtFrameShared.size}),getState:()=>({gameState,wave,player:{x:p.x,y:p.y,z:p.z,hp:p.hp,stamina:p.stamina,weapon:p.weapon,mod:p.mod,mods:[...p.mods]},enemies:enemies.map(e=>({type:e.type,x:e.x,y:e.y,hp:e.hp,poise:e.poise,groggy:e.groggy})),perma}),startRun,attack:startAttack,parry,execute,selectMod,buyUpgrade,forceClear:()=>{enemies=[];updateEnemies(0)},getWorld:()=>({x:p.x,cameraX,wave,stageWidth:STAGE_WIDTH,enemyPositions:enemies.filter(e=>!e.dead).map(e=>e.x)}),getAnalog:()=>({...analog}),getAssassinArtStatus:()=>RZAssassinArt.status(),getArtStatus:(key)=>{const v=loadZMove(key||'idle');return{ready:v.ready,failed:v.failed,loading:v.loading,frames:v.frames?.length,error:v.error,attempts:v.attempts}}};
-canvas.style.visibility='hidden';titleMenu();requestAnimationFrame(loop);
+canvas.style.visibility='hidden';syncGameViewport();titleMenu();requestAnimationFrame(loop);
 })();
 
 </script>
