@@ -21,6 +21,9 @@
   shotHeavy:'./assets/voice/shot-heavy.mp3'
  };
  const buffers=Object.create(null),active=new Set(),activeShots=new Set();
+ // Match the game's global SFX 70% mix; this is post-compressor and
+ // never touches the separate HTMLAudioElement background soundtrack.
+ const NON_BGM_SFX_LEVEL=.70;
  let context=null,loading=null,master=null,gunBus=null,lastCrowd=-99;
  const SHOT_FAMILIES=['shotPistol','shotRevolver','shotRifle','shotHeavy'];
  // Attack motions deterministically choose their own timbre and pitch;
@@ -73,7 +76,7 @@
     const comp=context.createDynamicsCompressor(),out=context.createGain();
     comp.threshold.value=-10;comp.knee.value=5;comp.ratio.value=3.5;
     comp.attack.value=.002;comp.release.value=.13;
-    out.gain.value=1.05;comp.connect(out).connect(context.destination);
+    out.gain.value=1.05*NON_BGM_SFX_LEVEL;comp.connect(out).connect(context.destination);
     gunBus=comp;
    }
    // Never mute a shot because three enemies are simultaneously groaning.
@@ -140,7 +143,7 @@
     limiter.threshold.value=-14;limiter.knee.value=6;limiter.ratio.value=4;
     limiter.attack.value=.003;limiter.release.value=.14;
     // Independent accent bus; impact transients remain foreground and loudest.
-    output.gain.value=.58;limiter.connect(output).connect(context.destination);
+    output.gain.value=.58*NON_BGM_SFX_LEVEL;limiter.connect(output).connect(context.destination);
     master=limiter;
    }
    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
