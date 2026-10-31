@@ -2345,6 +2345,8 @@ if(Z_HOODIE_HERO){
   Z_REMOTE_ATLAS[key]='./assets/new-hero/'+motion+'.png';
  }
 }
+// A pre-matted, hair-safe original Z Idle atlas preserves the full hairstyle and foot plane.
+if(!Z_HOODIE_HERO)Z_REMOTE_ATLAS.idle='./assets/project-z-hero/z-idle-hair-safe.webp';
 // Both standard speeds now show the already approved eight-frame RUN art.
 // The separate prior walk art remains reachable through ?gait=previous.
 if(!zUsePreviousGait)Z_REMOTE_ATLAS.walk=Z_REMOTE_ATLAS.run;
@@ -2917,6 +2919,15 @@ function preparePremattedGaitCells(im){
   return {canvas:sprite,bounds:{x:0,y:0,w:outW,h:outH},unitScale:1};
  });
 }
+function preparePremattedIdleCells(im){
+ const cw=Math.floor(im.naturalWidth/4),ch=Math.floor(im.naturalHeight/2);
+ if(cw!==240||ch!==254)throw Error('Original Z Idle 8-frame dimensions changed');
+ return Array.from({length:8},(_,i)=>{
+  const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+  cv.getContext('2d').drawImage(im,(i%4)*cw,Math.floor(i/4)*ch,cw,ch,0,0,cw,ch);
+  return {canvas:cv,bounds:{x:0,y:0,w:cw,h:ch},unitScale:1};
+ });
+}
 function loadZMove(key){
  if(!Z_REMOTE_ATLAS[key])key='idle';
  const url=Z_REMOTE_ATLAS[key];
@@ -2938,7 +2949,11 @@ function loadZMove(key){
  im.onload=()=>{
   try{
    const localSidekickFootFix=key==='sidekick'&&url==='./assets/z-attacks-20/sidekick.webp';
-   const frames=Z_HOODIE_HERO?prepareTransparentHeroCells(im):(Z_HF_ART&&(zGaitChoice==='v3'||zGaitChoice==='v4')&&(key==='walk'||key==='run'||key==='backwalk')?preparePremattedGaitCells(im):prepareZCells(im,localSidekickFootFix?'sidekick-local':''));
+   let frames;
+   if(Z_HOODIE_HERO)frames=prepareTransparentHeroCells(im);
+   else if(key==='idle'&&url==='./assets/project-z-hero/z-idle-hair-safe.webp')frames=preparePremattedIdleCells(im);
+   else if(Z_HF_ART&&(zGaitChoice==='v3'||zGaitChoice==='v4')&&(key==='walk'||key==='run'||key==='backwalk'))frames=preparePremattedGaitCells(im);
+   else frames=prepareZCells(im,localSidekickFootFix?'sidekick-local':'');
    if(frames.length!==8)throw Error('Expected eight frames');
    obj.frames=frames;obj.ready=true;obj.failed=false;obj.error=null;cleanup();
   }catch(err){fail(err)}
