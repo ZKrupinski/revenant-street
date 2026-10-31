@@ -287,7 +287,9 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 /* Original hand-painted arcade caps: 4 columns (ATTACK/PARRY/DASH/JUMP)
    x 2 rows (raised/physically depressed). Zero vector decoration. */
 #stageWrap .touch-controls .touch-actions{
- --face-btn:clamp(62px,18cqw,92px);
+ /* Reduce the pictured buttons by ~25% (photo QA: they obscured the fight).
+    Keep each square touch target >=50 CSS pixels wide. */
+ --face-btn:clamp(50px,13.5cqw,70px);
  position:relative;isolation:isolate;
  display:block!important;pointer-events:none;
  flex:0 0 calc(var(--face-btn)*2.5);
@@ -339,10 +341,10 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  outline:3px solid #dffaff!important;outline-offset:0px;
 }
 @media (max-height:490px) and (orientation:landscape){
- #stageWrap .touch-controls .touch-actions{--face-btn:clamp(58px,15vh,80px)}
+ #stageWrap .touch-controls .touch-actions{--face-btn:clamp(50px,11.25vh,60px)}
 }
 @media (max-width:350px){
- #stageWrap .touch-controls .touch-actions{--face-btn:62px}
+ #stageWrap .touch-controls .touch-actions{--face-btn:50px}
 }
 </style>
 </head>

@@ -821,7 +821,7 @@ test('guard animation braces in 0.17s without shortening the active parry window
  t.p.parry=Math.max(t.p.parry,.30);
  assert.equal(t.currentZFrameIndex('guard'),last,'parry success hold must not rewind the animation');
 });
-test('four physical bitmap arcade controls show distinct colors and pressed art with large touch surfaces',()=>{
+test('four smaller bitmap arcade controls retain large touch surfaces and pressed sprite art',()=>{
  const atlas=fs.readFileSync(path.join(__dirname,'../assets/ui/arcade-action-buttons-v1.webp'));
  assert.equal(atlas.toString('ascii',0,4),'RIFF','arcade art is real transparent WebP bitmap');
  assert.equal(atlas.toString('ascii',8,12),'WEBP');
@@ -835,7 +835,12 @@ test('four physical bitmap arcade controls show distinct colors and pressed art 
  assert(css.includes('background-position:var(--arcade-x) 100%!important;'),
  'press should switch to the real recessed button sprite');
  assert(css.includes('translate3d(0,4px,0) scale(.965)'),'press should physically sink');
- assert(css.includes('--face-btn:clamp(62px,18cqw,92px)'),'enlarged arcade touch targets');
+ assert(css.includes('--face-btn:clamp(50px,13.5cqw,70px)'),
+ 'face buttons shrink about 25% while retaining at least a 50px tap target');
+ assert(css.includes('--face-btn:clamp(50px,11.25vh,60px)'),
+ 'landscape also uses a reduced physical footprint');
+ assert(css.includes('--face-btn:50px'),
+ 'narrow screens keep 50px minimum touch surfaces');
  assert(css.includes('calc(var(--face-btn)*.75)'),'adjacent buttons cluster into a tight diamond');
  const ctl=html.slice(html.indexOf('<div class="touch-actions"'),html.indexOf('</div>',html.indexOf('<div class="touch-actions"')));
  for(const [action,face,key] of [['attack','left','j'],['parry','right','l'],['dash','bottom','Shift'],['jump','top','k']]){
