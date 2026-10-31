@@ -673,6 +673,189 @@ body{position:fixed;inset:0;touch-action:manipulation}
 #menu.title-dialog .all-face-confirm-hint{font-size:clamp(8px,1.3vh,11px)}
 #app.compact-game-stage #menu .all-face-confirm-hint{display:none}
 </style>
+
+<style id="rebel-hub-no-scroll-v3">
+/* Compact workshop: three complete, readable modules without inner scrolling.
+   A colored frame always has a meaning: muted blue = available,
+   amber = selected for preview, green = just applied. */
+#menu.hub-dialog{
+ width:min(1040px,calc(100% - 4px))!important;
+ height:min(642px,calc(100% - 8px))!important;
+ max-height:calc(100% - 8px)!important;
+ padding:0!important;overflow:hidden!important;
+ border:1px solid #627d92!important;
+}
+#menu.hub-dialog .hub-screen{min-height:0;overflow:hidden}
+#menu.hub-dialog .hub-header{
+ min-height:42px;padding:5px 12px 4px!important;gap:8px;
+}
+#menu.hub-dialog .hub-kicker{font-size:8px;line-height:1.05;letter-spacing:1px}
+#menu.hub-dialog .hub-title{
+ font-size:clamp(20px,2.2cqw,26px);line-height:1.02;margin-top:1px
+}
+#menu.hub-dialog .hub-wallet{padding:3px 7px;gap:5px}
+#menu.hub-dialog .hub-wallet small{font-size:9px}
+#menu.hub-dialog .hub-wallet strong{font-size:19px}
+#menu.hub-dialog .hub-intro{
+ min-height:20px;padding:3px 11px!important;
+ font-size:10px;line-height:1.2;align-items:center;
+ white-space:nowrap;overflow:hidden;
+}
+#menu.hub-dialog .hub-color-legend{display:inline-flex;align-items:center;gap:10px;min-width:0;color:#bbcfdd}
+#menu.hub-dialog .hub-color-legend>span{white-space:nowrap}
+#menu.hub-dialog .hub-color-legend b{display:inline-block;width:7px;height:7px;vertical-align:middle;border-radius:2px;margin-right:4px}
+#menu.hub-dialog .hub-color-legend .neutral{background:#7792a9}
+#menu.hub-dialog .hub-color-legend .selected{background:#ffde96}
+#menu.hub-dialog .hub-color-legend .applied{background:#73dca6}
+#menu.hub-dialog .hub-stat-board{flex:0 0 auto;padding:4px 10px 5px!important}
+#menu.hub-dialog .hub-stat-board>b{font-size:10px}
+#menu.hub-dialog .hub-stat-board>small{font-size:9px}
+#menu.hub-dialog .hub-stat-grid{
+ grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;margin-top:4px
+}
+#menu.hub-dialog .hub-stat-tile{
+ display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+ gap:2px;min-height:43px;padding:3px 5px!important;overflow:hidden
+}
+#menu.hub-dialog .hub-stat-tile small{font-size:9px;line-height:1.05;white-space:nowrap}
+#menu.hub-dialog .hub-stat-tile b{font-size:10px;line-height:1.05}
+#menu.hub-dialog .hub-stat-tile strong{font-size:9px;line-height:1.05;white-space:nowrap}
+#menu.hub-dialog .hub-stat-tile i{font-size:9px;line-height:1.05}
+#menu.hub-dialog .hub-stat-tile.modified{border-color:#eac276;background:#332b26}
+#menu.hub-dialog .hub-modules{
+ flex:1 1 0;min-height:0!important;max-height:none!important;
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ grid-template-rows:minmax(0,1fr);align-content:stretch;
+ gap:7px!important;padding:5px 10px!important;
+ overflow:hidden!important;scrollbar-width:none!important;
+}
+#menu.hub-dialog .hub-module{
+ box-sizing:border-box;min-width:0!important;min-height:0!important;
+ height:100%;max-height:100%;
+ display:grid;grid-template-columns:minmax(0,1fr);
+ grid-template-rows:auto auto minmax(0,1fr) auto;
+ align-content:stretch;align-items:stretch;justify-items:stretch;
+ gap:4px!important;padding:8px 9px!important;overflow:hidden;
+ border:2px solid #58758b!important;border-radius:7px;
+ background:linear-gradient(150deg,#1e2d3c,#101c2a 78%);
+ box-shadow:inset 0 1px #ffffff1c!important;
+}
+#menu.hub-dialog .hub-core,
+#menu.hub-dialog .hub-servo,
+#menu.hub-dialog .hub-reflex{border-top-color:#58758b!important}
+#menu.hub-dialog .hub-module.selected{
+ border:2px solid #ffdc95!important;
+ background:linear-gradient(145deg,#33414c,#282a31 83%)!important;
+ box-shadow:inset 0 0 0 1px #ffdfa133!important
+}
+#menu.hub-dialog .hub-module.installed{
+ border:2px solid #73dda7!important;
+ box-shadow:inset 0 0 0 1px #84eab74a,0 0 12px #57be8f44!important
+}
+#menu.hub-dialog .hub-row-head{
+ grid-row:1;grid-column:1;display:flex;align-items:center;gap:7px;
+ min-width:0;overflow:hidden
+}
+#menu.hub-dialog .hub-emblem{width:44px;height:44px;flex:0 0 44px}
+#menu.hub-dialog .hub-emblem .upgrade-art{width:40px;height:40px}
+#menu.hub-dialog .hub-module-name{
+ min-width:0;position:static;font-size:clamp(12px,1.25cqw,16px);
+ line-height:1.1
+}
+#menu.hub-dialog .hub-module-name small{
+ display:block;margin-left:0;font-size:10px;line-height:1.25
+}
+#menu.hub-dialog .hub-forecast{
+ grid-row:2;grid-column:1;display:flex;flex-wrap:wrap;
+ margin:0;font-size:clamp(11px,1.23cqw,15px);gap:5px;line-height:1.2;
+}
+#menu.hub-dialog .hub-desc{
+ grid-row:3;grid-column:1;min-height:0;max-height:100%;
+ display:-webkit-box;overflow:hidden;
+ -webkit-line-clamp:2;-webkit-box-orient:vertical;
+ font-size:10px;line-height:1.25;align-self:start
+}
+#menu.hub-dialog .hub-buy{
+ grid-row:4;grid-column:1;min-height:26px;padding:4px 6px;
+ margin-top:auto;gap:4px;font-size:11px;
+ background:#294054;border:1px solid #587c97;
+}
+#menu.hub-dialog .hub-module.selected .hub-buy{
+ background:#5c462c;border-color:#be9964;color:#ffe5aa
+}
+#menu.hub-dialog .hub-module.installed .hub-buy{
+ background:#1d4639;border-color:#69c79b;color:#baf8d5
+}
+#menu.hub-dialog .hub-bottom{
+ flex:0 0 auto;display:grid;grid-template-columns:minmax(0,1fr) auto;
+ gap:3px 8px;padding:5px 10px 6px!important;align-items:center;
+}
+#menu.hub-dialog .hub-feedback{font-size:10px;line-height:1.1}
+#menu.hub-dialog .hub-action-row,
+#menu.hub-dialog .hub-buttons{gap:5px}
+#menu.hub-dialog .hub-action-row button,
+#menu.hub-dialog .hub-buttons button{
+ min-height:34px!important;padding:4px 9px!important;font-size:11px!important
+}
+#menu.hub-dialog .hub-saved-note{font-size:9px;line-height:1.1}
+#menu.hub-dialog .all-face-confirm-hint{
+ flex:0 0 auto;padding:3px 7px;margin:0!important;
+ min-height:18px;line-height:1.1;font-size:9px
+}
+/* 16:9 phone landscape / a short stage: preserve the cards and action row.
+   Remove auxiliary copy before shrinking the selectable card hit targets. */
+#app.tight-hub-stage #menu.hub-dialog .hub-header{min-height:31px;padding:2px 8px!important}
+#app.tight-hub-stage #menu.hub-dialog .hub-kicker{display:none}
+#app.tight-hub-stage #menu.hub-dialog .hub-title{font-size:19px}
+#app.tight-hub-stage #menu.hub-dialog .hub-intro{padding:2px 8px!important;font-size:9px}
+#app.tight-hub-stage #menu.hub-dialog .hub-stat-board{padding:2px 7px!important}
+#app.tight-hub-stage #menu.hub-dialog .hub-stat-grid{margin-top:2px}
+#app.tight-hub-stage #menu.hub-dialog .hub-stat-tile{min-height:31px;gap:0;padding:1px 3px!important}
+#app.tight-hub-stage #menu.hub-dialog .hub-stat-board>small{display:none}
+#app.tight-hub-stage #menu.hub-dialog .hub-desc{display:none}
+#app.tight-hub-stage #menu.hub-dialog .hub-module{padding:4px 5px!important;gap:2px!important}
+#app.tight-hub-stage #menu.hub-dialog .hub-emblem{width:32px;height:32px;flex-basis:32px}
+#app.tight-hub-stage #menu.hub-dialog .hub-emblem .upgrade-art{width:30px;height:30px}
+#app.tight-hub-stage #menu.hub-dialog .hub-buy{min-height:22px;padding:2px 4px}
+#app.tight-hub-stage #menu.hub-dialog .hub-bottom{gap:2px 4px;padding:3px 6px!important}
+#app.tight-hub-stage #menu.hub-dialog .hub-feedback,
+#app.tight-hub-stage #menu.hub-dialog .hub-saved-note{font-size:8px}
+#app.tight-hub-stage #menu.hub-dialog .hub-action-row button,
+#app.tight-hub-stage #menu.hub-dialog .hub-buttons button{min-height:27px!important;padding:2px 5px!important;font-size:9px!important}
+#app.compact-game-stage #menu.hub-dialog .hub-header{min-height:25px}
+#app.compact-game-stage #menu.hub-dialog .hub-wallet strong{font-size:13px}
+#app.compact-game-stage #menu.hub-dialog .hub-wallet small{font-size:8px}
+#app.compact-game-stage #menu.hub-dialog .hub-intro,
+#app.compact-game-stage #menu.hub-dialog .hub-stat-board,
+#app.compact-game-stage #menu.hub-dialog .hub-feedback,
+#app.compact-game-stage #menu.hub-dialog .hub-saved-note,
+#app.compact-game-stage #menu.hub-dialog .all-face-confirm-hint{display:none!important}
+#app.compact-game-stage #menu.hub-dialog .hub-module{
+ grid-template-rows:auto minmax(0,1fr) auto;gap:2px!important
+}
+#app.compact-game-stage #menu.hub-dialog .hub-row-head{gap:2px}
+#app.compact-game-stage #menu.hub-dialog .hub-module-name{font-size:9px}
+#app.compact-game-stage #menu.hub-dialog .hub-module-name small{font-size:8px}
+#app.compact-game-stage #menu.hub-dialog .hub-forecast{font-size:9px}
+#app.compact-game-stage #menu.hub-dialog .hub-buy{min-height:17px;font-size:9px}
+@media (max-width:650px){
+ #menu.hub-dialog .hub-stat-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+ #menu.hub-dialog .hub-color-legend{gap:4px;font-size:8px}
+ #menu.hub-dialog .hub-modules{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:3px!important;padding:3px!important}
+ #menu.hub-dialog .hub-module{padding:4px!important;gap:2px!important}
+ #menu.hub-dialog .hub-row-head{gap:3px}
+ #menu.hub-dialog .hub-emblem{width:30px;height:30px;flex-basis:30px}
+ #menu.hub-dialog .hub-emblem .upgrade-art{width:29px;height:29px}
+ #menu.hub-dialog .hub-module-name{font-size:10px}
+ #menu.hub-dialog .hub-module-name small{font-size:8px}
+ #menu.hub-dialog .hub-forecast{font-size:9px}
+ #menu.hub-dialog .hub-desc{display:none}
+ #menu.hub-dialog .hub-buy{font-size:9px}
+ #menu.hub-dialog .hub-color-legend>span:last-child{display:none}
+ #menu.hub-dialog .hub-action-row button,
+ #menu.hub-dialog .hub-buttons button{font-size:9px!important;padding:3px!important}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -739,6 +922,7 @@ function syncGameViewport(){
  const stageH=Math.min(outerH,outerW/MIN_GAME_ASPECT);
  stageWrap.style.setProperty('--game-stage-height',stageH+'px');
  viewportHost.classList.toggle('compact-game-stage',stageH<310);
+ viewportHost.classList.toggle('tight-hub-stage',stageH<480);
  const target=Math.max(1280,Math.round(H*outerW/stageH));
  if(W!==target||canvas.width!==target||canvas.height!==H){
   W=target;canvas.width=W;canvas.height=H;
@@ -4597,7 +4781,7 @@ function hubMenu(upgraded=''){
    <span class="hub-forecast"><span class="hub-from">${m.format(lv)}</span>
    <span class="hub-arrow">→</span><span class="hub-to">${m.format(lv+1)}</span></span>
    <span class="hub-desc">${m.detail}</span>
-   <span class="hub-buy"><span>${hubSelected===m.id?'선택됨':'선택'}</span><span>◆ ${HUB_COST}</span></span>
+   <span class="hub-buy"><span>${upgraded===m.id?'적용 완료':hubSelected===m.id?'선택됨':'선택'}</span><span>◆ ${HUB_COST}</span></span>
   </button>`;
  }).join('');
  const refund=HUB_COST*HUB_MODULES.reduce((n,m)=>n+perma[m.id],0);
@@ -4608,7 +4792,7 @@ function hubMenu(upgraded=''){
  showMenu(`<div class="hub-screen">
   <div class="hub-header"><div><div class="hub-kicker">SAVED PERMANENT PROGRESSION</div><div class="hub-title">REBEL <em>HUB</em></div></div>
   <div class="hub-wallet"><small>보유 파편</small><strong>◆ ${perma.shards}</strong></div></div>
-  <div class="hub-intro"><span>① 강화 선택 ② 스탯 비교 ③ 강화 적용</span><span>모듈당 ◆ ${HUB_COST}</span></div>
+  <div class="hub-intro"><span class="hub-color-legend" aria-label="카드 테두리 색상 의미"><span><b class="neutral"></b>선택 가능</span><span><b class="selected"></b>선택 중</span><span><b class="applied"></b>적용 완료</span></span><span>모듈당 ◆ ${HUB_COST}</span></div>
   ${hubStatsMarkup()}
   <div class="hub-modules" role="group" aria-label="영구 강화 선택">${cards}</div>
   <div class="hub-bottom">
