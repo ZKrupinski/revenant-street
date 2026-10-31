@@ -119,8 +119,11 @@ test('Frame Lab exposes all twelve elite animations without sharing original cac
 test('animation loops advance slower than Alpha 1.13 at the same travel distance',()=>{
  g.startRun();
  t.p.gaitDistance=25;t.p.motionTime=0;
- assert.equal(t.currentZFrameIndex('walk'),1);
- assert.equal(t.currentZFrameIndex('run'),0,'run should advance more slowly after stride tuning');
+ assert.equal(t.currentZFrameIndex('walk'),0,'both modes now share the current run motion and its 32px stride');
+ assert.equal(t.currentZFrameIndex('run'),0,'same travel distance has the same full-body pose');
+ t.p.gaitDistance=40;
+ assert.equal(t.currentZFrameIndex('walk'),1,'walking takes the full former running step');
+ assert.equal(t.currentZFrameIndex('run'),1,'running uses exactly the same eight-frame running cycle');
  t.p.gaitDistance=0;t.p.motionTime=1;
  assert.equal(t.currentZFrameIndex('idle'),4,'idle cycle should advance at 78% original cadence');
  const e=t.makeEnemy('raider',400,570,0);
@@ -207,6 +210,52 @@ test('ground combos now lunge decisively even with a neutral joystick',()=>{
  assert(t.p.x-atStart>=34,'first punch must visibly advance without joystick input');
  assert(t.p.attackDriveRemaining<total,'distance budget should be used on forward movement');
  assert(t.p.x<=t.STAGE_WIDTH-64,'world bounds remain enforced');
+});
+test('walking takes the old run 395px speed and exactly the former running eight-frame atlas',()=>{
+ const main=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ assert(main.includes('Z_REMOTE_ATLAS.walk=Z_REMOTE_ATLAS.run'),'both locomotion modes share the exact running spritesheet');
+ assert.equal(t.zArtState.walk,t.zArtState.run,'decoded 8-frame atlas must be shared, with no duplicated resource load');
+ g.startRun();t.setEnemies([]);t.keys.clear();t.p.x=2600;t.p.y=570;
+ const start=t.p.x;t.keys.add('d');
+ for(let i=0;i<60;i++)t.control(1/60,{dx:0,dy:0});
+ t.keys.delete('d');
+ const dx=t.p.x-start;
+ assert(Math.abs(dx-395)<3,'WASD walk must move at the previous 395px/sec run speed; actual '+dx);
+ assert.equal(t.p.running,false,'keyboard movement still selects walking speed');
+ assert.equal(t.getZMove(),'walk','normal walking retains its own gait state for footsteps');
+});
+test('full-tilt analog run shares walk artwork but advances substantially farther',()=>{
+ g.startRun();t.setEnemies([]);t.keys.clear();t.p.x=2600;t.p.y=570;
+ const x=t.p.x;
+ for(let i=0;i<60;i++)t.control(1/60,{dx:1,dy:0});
+ const dx=t.p.x-x;
+ assert.equal(t.p.running,true,'full tilt must set run mode');
+ assert.equal(t.getZMove(),'run','running state stays distinct from walking state');
+ assert(Math.abs(dx-690)<3,'full-tilt run must travel about 690px/sec; actual '+dx);
+ assert(dx>395*1.7,'run covers significantly more world distance than walking');
+ assert.equal(t.zArtState.walk,t.zArtState.run,'full-speed run and walk render same eight poses');
+ t.p.gaitDistance=120;
+ assert.equal(t.currentZFrameIndex('walk'),t.currentZFrameIndex('run'),'shared atlas remains synchronized per distance');
+});
+test('dash crosses almost a screen in 0.3s without skipping its eight-frame animation or leaving map',()=>{
+ g.startRun();t.setEnemies([]);t.keys.clear();t.p.x=3000;t.p.y=570;t.p.facing=1;t.p.moveDX=0;t.p.stamina=100;
+ const origin=t.p.x;t.dodge();
+ assert(t.p.dodge>.29);
+ const seen=new Set([t.currentZFrameIndex('dash')]);
+ for(let i=0;i<18;i++){
+  t.control(1/60,{dx:0,dy:0});
+  if(t.p.dodge>0)seen.add(t.currentZFrameIndex('dash'));
+ }
+ const dist=t.p.x-origin;
+ assert(dist>970&&dist<1120,'dash should travel about 1080px, almost a 1280px camera; '+dist);
+ assert(seen.size>=7,'fast dash retains nearly every visible eight-frame dash pose');
+ assert(t.p.x<=32000-64,'dash must remain within stage bounds');
+ g.startRun();t.setEnemies([]);t.keys.clear();t.p.x=31950;t.p.facing=1;t.p.moveDX=0;t.p.stamina=100;
+ t.dodge();for(let i=0;i<18;i++)t.control(1/60,{dx:0,dy:0});
+ assert.equal(t.p.x,32000-64,'rightward dash clamps at final world edge');
+ g.startRun();t.setEnemies([]);t.keys.clear();t.p.x=200;t.p.facing=-1;t.p.moveDX=0;t.p.stamina=100;
+ t.dodge();for(let i=0;i<18;i++)t.control(1/60,{dx:0,dy:0});
+ assert.equal(t.p.x,64,'leftward dash clamps at start of world');
 });
 test('original eight-frame punches run at authored speed and a buffered combo links after the eighth frame',()=>{
  g.startRun();t.setEnemies([]);
