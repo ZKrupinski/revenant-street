@@ -941,10 +941,20 @@ function updateComboCamera(dt){
  comboCameraPulse=Math.max(0,comboCameraPulse-dt*.12);
  updatePeriodicCamera(dt);
 }
+// Keep the existing look-ahead lead, but mirror it when the hero faces
+// left. Normalize the combo-hit focus to the forward direction first, then
+// reflect the screen anchor; this keeps both ordinary and combo cameras
+// perfectly symmetric instead of reverting to the right-facing framing.
+function normalCameraTargetX(){
+ const facing=p.facing<0?-1:1;
+ const focusAhead=(comboCameraFocusX-p.x)*facing;
+ const rightX=comboCameraLock>0?
+  clamp(p.x+focusAhead-540,p.x-555,p.x-372):p.x-465;
+ return facing>0?rightX:2*p.x-W-rightX;
+}
 function followComboCamera(dt){
  const striking=strikeCameraTime>0;
- const normalX=comboCameraLock>0?
-  clamp(comboCameraFocusX-540,p.x-555,p.x-372):p.x-465;
+ const normalX=normalCameraTargetX();
  const x=striking?p.x-W*.52:
   normalX+((p.x-W*.5)-normalX)*cameraRecenterBlend;
  const target=clamp(x,0,STAGE_WIDTH-W);
