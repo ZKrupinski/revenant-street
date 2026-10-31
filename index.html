@@ -830,7 +830,7 @@ function currentZFrameIndex(key){
  if(key==='knockdown')return oneshot(1-p.downTimer/.83);
  if(key==='getup')return Z_HOODIE_HERO?7-oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64)):oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64));
  if(key==='hit'||key==='heavyhit')return oneshot(1-p.stun/Math.max(.001,p.hitDuration||.4));
- if(key==='dash'||key==='dodge')return oneshot(1-p.dodge/.30);
+ if(key==='dash'||key==='dodge')return oneshot(1-p.dodge/Math.max(.001,p.dodgeDuration||.30));
  if(key==='guard')return oneshot(1-p.parry/Math.max(.001,p.parryDuration||.34));
  if(p.jumpLandingVisual>0&&p.jumpLandingTriggered&&key==='axe_kick')
   return p.jumpLandingVisual>.125?6:7;
@@ -1502,7 +1502,7 @@ function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
  comboCameraFocusX=0;comboCameraPulse=0;comboCameraLastSnap=-99;
  strikeCameraTime=0;strikeCameraTarget=1;
  cameraRecenterClock=0;cameraRecenterHold=0;cameraRecenterBlend=0;
- resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p._voiceAt=-99;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
+ resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p._voiceAt=-99;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.dodgeDuration=.30;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
  p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
  p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.comboMoveCycle=[];p.comboMoveCursor=0;p.comboMoveCount=0;p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
@@ -1836,8 +1836,11 @@ function dodge(){
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.attackDriveRemaining=0;p.parry=0;
  p.dashSmash=false;p.dashFollowWindow=0;
  const backInput=p.moveDX*p.facing<-.42||analog.dx*p.facing<-.42||(keys.has('a')&&p.facing>0)||(keys.has('d')&&p.facing<0);
- p.evadeBackstep=backInput;p.dodge=.30;p.inv=.34;p.dodgeX=backInput?-p.facing:p.facing;p.stamina-=19;
- p.dashFollowWindow=backInput?0:.63;
+ const dash=backInput?{duration:.30}:dashMobilityStats();
+ p.evadeBackstep=backInput;p.dodge=p.dodgeDuration=dash.duration;
+ p.inv=backInput?.34:Math.min(.44,dash.duration+.055);
+ p.dodgeX=backInput?-p.facing:p.facing;p.stamina-=19;
+ p.dashFollowWindow=backInput?0:Math.max(.63,dash.duration+.30);
  fxBurst(p.x-p.facing*22,p.y-24,'blue',.42);sound('attack');playCombatVoice('heroPower');
 }
 function jump(){
@@ -1857,7 +1860,7 @@ function jump(){
  p.jumpActive=true;p.jumpLandingTriggered=false;p.jumpLandingVisual=0;
  p.dashSmash=false;p.dashFollowWindow=0;
  p.jumpTime=0;p.moveName='jumpstart';
- p.vz=760;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;
+ p.vz=jumpMobilityStats().impulse;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;
  p.airKickUsed=false;sound('attack');playCombatVoice('heroStrike');
 }
 function execute(target){
@@ -2276,7 +2279,7 @@ function control(dt,pad){
  if(p.parryRecoilTime>0){dx=0;dy=0}
  if(p.stun<=0&&p.downTimer<=0&&p.getupTimer<=0){
   let speed=p.running?PLAYER_RUN_SPEED:PLAYER_WALK_SPEED;
-  if(p.dodge>0){dx=p.dodgeX;dy=0;speed=PLAYER_DASH_SPEED}
+  if(p.dodge>0){dx=p.dodgeX;dy=0;speed=p.evadeBackstep?880:dashMobilityStats().speed}
   if(p.counterRush>0){dx=p.facing;dy=0;speed=980;p.counterRush=Math.max(0,p.counterRush-dt)}
   if(p.attack>0&&!p.airAttack&&p.counterRush<=0)speed*=.28;
   if(p.jumpActive&&p.z>0&&p.stun<=0){
@@ -2284,7 +2287,8 @@ function control(dt,pad){
    // abruptly stop the leap. No auto-travel for a neutral standing jump.
    const glide=p.vz>0?1.06:p.z>105?.90:.70;
    dx=p.jumpLaunchX;dy=p.jumpLaunchY;
-   speed=p.jumpLeap?(p.airAttack&&p.airKickPhase==='dive'?790:655)*glide:0;
+   speed=p.jumpLeap?(p.airAttack&&p.airKickPhase==='dive'?650:jumpMobilityStats().moveSpeed)*
+     (p.airAttack&&p.airKickPhase==='dive'?(1+.14*modRank('jumpspeed')):1)*glide:0;
   }else if(p.airAttack){
    dx=p.airKickPhase==='charge'?0:p.facing;dy=0;
    speed=p.airKickPhase==='charge'?0:330;
@@ -3108,7 +3112,9 @@ function rewardMenu(reason='wave'){
  const fresh=shuffle(pool.filter(o=>modRank(o.id)===0));
  const cardsOffered=[];
  const special=shuffle(pool.filter(o=>['slam','dashpower','counter'].includes(o.id)))[0];
+ const mobility=shuffle(pool.filter(o=>['dashrange','dashspeed','jumpheight','jumpspeed'].includes(o.id)))[0];
  if(special)cardsOffered.push(special);
+ if(mobility&&!cardsOffered.some(o=>o.id===mobility.id))cardsOffered.push(mobility);
  if(owned.length&&!cardsOffered.some(o=>o.id===owned[0].id))cardsOffered.push(owned[0]);
  for(const pick of fresh)if(cardsOffered.length<3&&!cardsOffered.some(o=>o.id===pick.id))cardsOffered.push(pick);
  for(const pick of [...owned.slice(1),...fresh])if(cardsOffered.length<3&&!cardsOffered.some(p=>p.id===pick.id))cardsOffered.push(pick);
