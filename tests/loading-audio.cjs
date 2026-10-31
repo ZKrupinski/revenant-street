@@ -7,7 +7,7 @@ async function startup(fail=false){
  const music=deferred(),art=deferred(),voices=deferred();let starts=0,prepared=0,menu='';
  const nodes=new Map();const world={loadingRun:false,gameState:'title',setTimeout,Error,Promise,
  $:id=>{if(!nodes.has(id))nodes.set(id,{style:{}});return nodes.get(id)},
- resetFailedSceneArt(){},showMenu:s=>menu=s,waitSceneArt:()=>art.promise,depthBackdrop:()=>prepared++,img:{street_pano:{}},startRun:()=>starts++,prepareCombatVoices:()=>voices.promise,
+ resetFailedSceneArt(){},resetFailedUiBitmaps(){},showMenu:s=>menu=s,waitSceneArt:()=>art.promise,depthBackdrop:()=>prepared++,img:{street_pano:{}},startRun:()=>starts++,prepareCombatVoices:()=>voices.promise,
  window:{location:{search:''},__revenantBgm:{prepare:()=>music.promise,beginPlayback:()=>Promise.resolve()}}};
  vm.createContext(world);vm.runInContext(code,world);
  const run=world.requestRunStart();await world.requestRunStart();
