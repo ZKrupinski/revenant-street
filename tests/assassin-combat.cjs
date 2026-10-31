@@ -5,9 +5,54 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={hubMenu,buyUpgrade,HUB_COST,HUB_MODULES,offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
+test('Rebel Hub is a compact permanent-upgrade workshop with always-visible navigation',()=>{
+ const css=html.slice(html.indexOf('<style id="rebel-hub-workshop">'),html.indexOf('</style>',html.indexOf('<style id="rebel-hub-workshop">')));
+ assert(css.includes('#menu.hub-dialog')&&css.includes('overflow:hidden')&&css.includes('display:flex;flex-direction:column'),
+  'Hub has its own full-height non-scrolling frame');
+ assert(css.includes('.hub-modules')&&css.includes('overflow-y:auto'),
+  'only the modules panel scrolls when a phone has very little vertical space');
+ assert(css.includes('.hub-bottom')&&css.includes('flex-shrink:0'),
+  'replay and title buttons remain docked below the list');
+ assert(css.includes('@container(max-width:610px)'),
+  'compact devices show legible horizontal module cards');
+ assert(html.includes("classList.toggle('hub-dialog',gameState==='hub')"),
+  'workshop-only styles do not leak into battle upgrades');
+ t.hubMenu();
+ const screen=node('menu').innerHTML;
+ for(const key of ['core','servo','reflex'])
+  assert(screen.includes('data-perma="'+key+'"'),'each real permanent perk has one large purchase target');
+ assert(screen.includes('100 HP')&&screen.includes('120 HP'),'health previews real permanent stats');
+ assert(screen.includes('+0 DMG')&&screen.includes('+2 DMG'),'damage shows cumulative added attack power');
+ assert(screen.includes('0.340초')&&screen.includes('0.375초'),'parry shows a precise timing improvement');
+ assert(screen.includes('data-action="start"')&&screen.includes('data-action="title"'),
+  'return and replay actions stay visible');
+ assert(screen.includes('◆ 2'),'consistent shard cost is obvious');
+});
+test('Hub spending validates resources and preserves permanent progression',()=>{
+ t.hubMenu();assert.equal(t.buyUpgrade('made-up'),false,'invalid module cannot spend shards');
+ const p=g.getState().perma;
+ const saved={...p};
+ try{
+  p.shards=5;t.hubMenu();
+  const before=p.servo;
+  assert.equal(t.buyUpgrade('servo'),true);
+  assert.equal(p.shards,3);
+  assert.equal(p.servo,before+1);
+  const updated=node('menu').innerHTML;
+  assert(updated.includes('파워 서보 Lv.'+(before+1)+' 설치 완료!'),
+   'purchased module confirms exactly which perk was upgraded');
+  assert(updated.includes('hub-servo installed'),
+   'chosen permanent module flashes on application');
+  assert.equal(t.buyUpgrade('reflex'),true);
+  assert.equal(p.shards,1);
+  assert.equal(t.buyUpgrade('core'),false,'cannot overspend remaining shards');
+  assert.equal(p.core,saved.core);
+  assert.equal(t.buyUpgrade('__proto__'),false,'prototype property is not purchasable');
+ }finally{Object.assign(p,saved);t.hubMenu()}
+});
 test('opening battle spawns one small squad just beyond the screen',()=>{
  g.startRun();
  const live=t.getEnemies().filter(e=>!e.dead);

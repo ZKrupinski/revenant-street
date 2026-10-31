@@ -413,6 +413,128 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  filter:brightness(1.1) drop-shadow(0 1px 2px #0008);
 }
 </style>
+
+<style id="rebel-hub-workshop">
+/* Separate permanent-upgrade workshop. Primary navigation is always docked,
+   and each module is ONE large actionable touch/gamepad button. */
+#menu.hub-dialog{
+ width:min(840px,100%);height:min(448px,100%);max-height:100%;
+ overflow:hidden;padding:0;display:flex;flex-direction:column;
+ border-color:#728da5;box-shadow:0 18px 58px #000e,0 0 0 1px #1b4b68;
+}
+#menu.hub-dialog .hub-screen{display:flex;flex-direction:column;flex:1;min-height:0}
+#menu.hub-dialog .hub-header{
+ flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+ gap:10px;padding:13px 18px 8px;border-bottom:1px solid #3f647a;
+ background:linear-gradient(110deg,#172b3d,#0b131d);
+}
+#menu.hub-dialog .hub-kicker{font:900 9px/1.25 Arial,'Malgun Gothic',sans-serif;
+ color:#8bd9ec;letter-spacing:1.6px}
+#menu.hub-dialog .hub-title{font:900 clamp(20px,3.2cqw,30px)/1 Impact,'Arial Black',sans-serif;
+ color:#fff3e0;letter-spacing:1px;margin-top:2px}
+#menu.hub-dialog .hub-title em{font-style:normal;color:#ffbf69}
+#menu.hub-dialog .hub-wallet{display:flex;align-items:center;gap:7px;
+ padding:6px 10px;background:#101e2b;border:1px solid #657f86;border-radius:5px;
+ white-space:nowrap}
+#menu.hub-dialog .hub-wallet small{font-size:10px;font-weight:800;color:#a8c7d6}
+#menu.hub-dialog .hub-wallet strong{font:900 22px Impact,Arial,sans-serif;color:#ffe39c}
+#menu.hub-dialog .hub-intro{
+ flex-shrink:0;margin:0!important;padding:5px 18px!important;
+ background:#0a1420;color:#bacedd;font:800 10px/1.4 Arial,'Malgun Gothic',sans-serif;
+ display:flex;justify-content:space-between;gap:9px;
+}
+#menu.hub-dialog .hub-intro span:last-child{white-space:nowrap;color:#f8d48c}
+#menu.hub-dialog .hub-modules{
+ flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ align-content:start;gap:9px;padding:10px 14px;
+ scrollbar-width:thin;scrollbar-color:#54839b #0b1927;
+}
+#menu.hub-dialog .hub-module{
+ display:flex;flex-direction:column;align-items:stretch;
+ gap:5px;text-align:left;min-width:0;min-height:185px;
+ border:1px solid #5a7e98;border-radius:8px;padding:10px;
+ background:linear-gradient(156deg,#243648,#111a28 74%);
+ color:#eff6ff;position:relative;box-shadow:inset 0 1px #ffffff1f,0 5px 12px #0008;
+ transition:background .12s,filter .12s;touch-action:manipulation;
+}
+#menu.hub-dialog .hub-module:focus-visible,#menu.hub-dialog .hub-module.pad-selected{
+ outline:2px solid #8ce7ff;outline-offset:-2px;filter:brightness(1.18);
+ box-shadow:inset 0 1px #ffffff4a,0 0 13px #74e7ff84!important;
+}
+#menu.hub-dialog .hub-module:disabled{opacity:.78;cursor:default}
+#menu.hub-dialog .hub-module:disabled .hub-buy{color:#b1b6bd;border-color:#5f6673}
+#menu.hub-dialog .hub-module.installed{
+ animation:hub-install-flash .65s ease-out;
+ border-color:#ffe2a0;box-shadow:0 0 19px #f3c26b8c,inset 0 0 20px #ffd88726;
+}
+#menu.hub-dialog .hub-row-head{display:flex;align-items:center;gap:9px}
+#menu.hub-dialog .hub-emblem{flex:none;display:grid;place-items:center;
+ width:55px;height:55px;background:#09121d;border:1px solid #56768a;border-radius:6px}
+#menu.hub-dialog .hub-emblem .upgrade-art{width:49px;height:49px}
+#menu.hub-dialog .hub-module-name{font:900 15px/1.18 Arial,'Malgun Gothic',sans-serif}
+#menu.hub-dialog .hub-module-name small{display:block;font:900 10px/1.6 Arial,sans-serif;color:#f7c47c}
+#menu.hub-dialog .hub-forecast{display:flex;align-items:center;gap:5px;flex-wrap:wrap;
+ font:900 15px/1.15 Arial,'Malgun Gothic',sans-serif;letter-spacing:-.3px;margin-top:4px}
+#menu.hub-dialog .hub-from{color:#9eb2c0}
+#menu.hub-dialog .hub-arrow{color:#68c6da}
+#menu.hub-dialog .hub-to{color:#ffe3a3}
+#menu.hub-dialog .hub-desc{font:700 10px/1.35 Arial,'Malgun Gothic',sans-serif;
+ color:#c1d2e3;flex:1;min-height:14px}
+#menu.hub-dialog .hub-buy{display:flex;align-items:center;justify-content:space-between;
+ gap:6px;background:#283c51;border:1px solid #6686a0;
+ border-radius:4px;padding:6px 8px;color:#ffdf91;
+ font:900 11px/1.1 Arial,'Malgun Gothic',sans-serif}
+#menu.hub-dialog .hub-core{border-top:3px solid #e8b15e}
+#menu.hub-dialog .hub-servo{border-top:3px solid #ed7775}
+#menu.hub-dialog .hub-reflex{border-top:3px solid #74cde6}
+#menu.hub-dialog .hub-bottom{
+ flex-shrink:0;background:#101b28;border-top:1px solid #46647b;
+ padding:8px 13px 10px;display:flex;align-items:center;gap:9px;
+}
+#menu.hub-dialog .hub-feedback{
+ flex:1;min-width:0;color:#aec1ce;font:800 10px/1.4 Arial,'Malgun Gothic',sans-serif;
+}
+#menu.hub-dialog .hub-feedback strong{color:#ffdf91}
+#menu.hub-dialog .hub-buttons{display:flex;flex:none;gap:7px;margin:0}
+#menu.hub-dialog .hub-buttons button{
+ min-height:42px!important;padding:7px 12px!important;border-radius:4px;
+ font:900 12px/1.1 Arial,'Malgun Gothic',sans-serif;letter-spacing:0;white-space:nowrap;
+}
+#menu.hub-dialog .hub-buttons .main-btn{background:#d63b4a;border-color:#ff8b89}
+#menu.hub-dialog .hub-buttons .secondary-btn{background:#23384b;border-color:#6d8ea2}
+@keyframes hub-install-flash{0%{filter:brightness(1.7)}100%{filter:brightness(1)}}
+@container(max-width:610px){
+ #menu.hub-dialog .hub-modules{grid-template-columns:1fr;gap:4px;padding:5px 8px}
+ #menu.hub-dialog .hub-module{
+  display:grid;grid-template-columns:40px minmax(0,1fr) auto;
+  grid-template-rows:auto auto;align-items:center;column-gap:8px;row-gap:2px;
+  min-height:69px;padding:5px 8px;
+ }
+ #menu.hub-dialog .hub-row-head{grid-row:1 / 3;grid-column:1;gap:0}
+ #menu.hub-dialog .hub-emblem{width:39px;height:43px}
+ #menu.hub-dialog .hub-emblem .upgrade-art{width:37px;height:37px}
+ #menu.hub-dialog .hub-module-name{position:absolute;left:55px;top:7px;font-size:12px}
+ #menu.hub-dialog .hub-module-name small{display:inline;margin-left:5px;font-size:9px}
+ #menu.hub-dialog .hub-forecast{grid-column:2;grid-row:2;font-size:11px;margin:6px 0 0}
+ #menu.hub-dialog .hub-desc{display:none}
+ #menu.hub-dialog .hub-buy{grid-column:3;grid-row:1 / 3;
+  display:flex;flex-direction:column;justify-content:center;min-width:59px;
+  min-height:43px;gap:4px;padding:4px 6px;font-size:9px}
+ #menu.hub-dialog .hub-header{padding:7px 10px 5px}
+ #menu.hub-dialog .hub-wallet strong{font-size:19px}
+ #menu.hub-dialog .hub-intro{padding:3px 10px!important;font-size:9px}
+ #menu.hub-dialog .hub-bottom{padding:5px 7px;gap:4px}
+ #menu.hub-dialog .hub-feedback{font-size:9px}
+ #menu.hub-dialog .hub-buttons{gap:4px}
+ #menu.hub-dialog .hub-buttons button{min-height:37px!important;padding:4px 7px!important;font-size:10px}
+}
+@media (max-height:440px){
+ #menu.hub-dialog{height:100%}
+ #menu.hub-dialog .hub-header{padding-top:5px;padding-bottom:5px}
+ #menu.hub-dialog .hub-intro{padding-top:2px!important;padding-bottom:2px!important}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -1718,7 +1840,7 @@ function showMenu(html){
  $('overlay').classList.remove('reward-confirming');
  menuPad.readyAt=Date.now()+(gameState==='reward'?700:180);menuPad.armed=false;menuPad.neutralAt=Date.now();
  menuBlockedKeys.clear();for(const key of heldKeyboard)menuBlockedKeys.add(key);
- canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
+ canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;$('menu').classList.toggle('hub-dialog',gameState==='hub');$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
  // Reward cards begin visually neutral; only a real navigation/focus action
  // can light a card border. Keep the existing directional selection order.
  if(gameState!=='reward')selectMenuItem(0)}
@@ -3557,8 +3679,49 @@ function selectMod(m){
 }
 function completeMenu(){gameState='complete';setStatus('RUN COMPLETE');perma.shards+=4;save();$('bossHud').hidden=true;showMenu(`<div class="eyebrow">OBJECTIVE COMPLETE / REBEL SIGNAL ONLINE</div><h1>ZONE <span>CLEARED</span></h1><p>엘리트 헌터를 격파했습니다. 사이버네틱 지하 기지 <b class="key">REBEL HUB</b>로 귀환합니다.</p><div class="hub-stat"><span>처치 ${runKills}명 / 전리품 ₩${p.credits}</span><strong>영구 자원 +4</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB로 귀환</button><button class="secondary-btn" data-action="start">새로운 런 시작</button></div>`)}
 function deadMenu(){if(gameState==='dead')return;gameState='dead';setStatus('SIGNAL LOST');perma.shards+=1;save();$('hint').hidden=true;showMenu(`<div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1><p>기계 신체가 파괴됐습니다. 영구 자원 <b class="key">+1</b>을 회수했습니다.</p><div class="hub-stat"><span>이번 런의 처치 ${runKills}명</span><strong>SHARDS +1</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB</button><button class="secondary-btn" data-action="start">즉시 재시작</button></div>`)}
-function hubMenu(){gameState='hub';$('bossHud').hidden=true;setStatus('REBEL HUB');const opts=[['core','외골격 증설','최대 체력 +20','20 HP'],['servo','동력 관절 보정','모든 공격 피해 +2','ATK +2'],['reflex','인공 반사신경','패링 유효시간 +0.035초','PARRY +']];const html=opts.map(([id,title,txt,short])=>`<button class="upgrade-btn" data-perma="${id}" ${perma.shards<2?'disabled':''}><span class="sym">${short}</span><strong>${title} <small>Lv.${perma[id]}</small></strong><small>${txt} / 비용 2 파편</small></button>`).join('');showMenu(`<div class="eyebrow">SAFE ZONE / CYBERNETIC UNDERGROUND</div><h2>REBEL HUB</h2><p>전투에서 획득한 <b class='key'>◆ 파편</b>으로 영구 강화합니다. 일반 적 4명 처치마다 1개, 방패병 1개, 엘리트 2개, 보스 4개. <b>₩ 크레딧은 전투 점수</b>이며 구매 재화가 아닙니다.</p><div class="hub-stat"><span>영구 강화 자원</span><strong>${perma.shards} SHARDS</strong></div><div class="choice-grid">${html}</div><div class="buttons"><button class="main-btn" data-action="start">다시 거리로</button><button class="secondary-btn" data-action="title">타이틀로</button></div>`)}
-function buyUpgrade(k){if(perma.shards<2)return;perma.shards-=2;perma[k]++;save();hubMenu();sound('parry')}
+const HUB_COST=2;
+const HUB_MODULES=[
+ {id:'core',title:'외골격 강화',art:'vital',stat:'최대 체력',detail:'다음 출격부터 영구 최대 체력 +20',format:n=>(100+n*20)+' HP'},
+ {id:'servo',title:'파워 서보',art:'power',stat:'추가 타격 피해',detail:'모든 주먹·킥·특수타격에 피해 +2',format:n=>'+'+(n*2)+' DMG'},
+ {id:'reflex',title:'패링 신경망',art:'guard',stat:'패링 유효시간',detail:'패링 판정 여유가 매번 +0.035초 증가',format:n=>(.34+n*.035).toFixed(3)+'초'}
+];
+function hubMenu(upgraded=''){
+ gameState='hub';$('bossHud').hidden=true;setStatus('REBEL HUB');
+ const cards=HUB_MODULES.map(info=>{
+  const level=perma[info.id]||0;
+  const canBuy=perma.shards>=HUB_COST;
+  return `<button type="button" class="hub-module hub-${info.id}${upgraded===info.id?' installed':''}"
+    data-perma="${info.id}" ${canBuy?'':'disabled'} aria-label="${info.title} 레벨 ${level}에서 ${level+1}로 영구 강화, 비용 파편 ${HUB_COST}">
+    <span class="hub-row-head"><span class="hub-emblem">${modIconMarkup(info.art)}</span>
+      <span class="hub-module-name">${info.title}<small>Lv.${level} → ${level+1}</small></span></span>
+    <span class="hub-forecast"><span class="hub-from">${info.format(level)}</span>
+      <span class="hub-arrow">→</span><span class="hub-to">${info.format(level+1)}</span></span>
+    <span class="hub-desc">${info.stat} · ${info.detail}</span>
+    <span class="hub-buy"><span>◆ ${HUB_COST}</span><span>${canBuy?'강화하기':'파편 부족'}</span></span>
+  </button>`}).join('');
+ const selected=HUB_MODULES.find(x=>x.id===upgraded);
+ const confirm=selected?
+  `<strong>${selected.title} Lv.${perma[upgraded]} 설치 완료!</strong> 다음 출격에 적용됩니다.`:
+  '강화는 런이 끝나도 유지됩니다. 카드를 눌러 바로 설치하세요.';
+ showMenu(`<div class="hub-screen"><div class="hub-header">
+   <div><div class="hub-kicker">PERMANENT CYBERNETIC WORKSHOP</div>
+   <div class="hub-title">REBEL <em>HUB</em></div></div>
+   <div class="hub-wallet"><small>보유 파편</small><strong>◆ ${perma.shards}</strong></div>
+  </div>
+  <div class="hub-intro"><span>영구 강화 · 현재 → 강화 후 능력치</span><span>모듈당 ◆ ${HUB_COST}</span></div>
+  <div class="hub-modules" role="group" aria-label="영구 강화 모듈 3종">${cards}</div>
+  <div class="hub-bottom">
+    <div class="hub-feedback" aria-live="polite">${confirm}</div>
+    <div class="hub-buttons"><button type="button" class="main-btn" data-action="start">▶ 재출격</button>
+      <button type="button" class="secondary-btn" data-action="title">타이틀</button></div>
+  </div></div>`);
+}
+function buyUpgrade(k){
+ // Never spend shards outside the Hub or on malformed/disabled keys.
+ if(gameState!=='hub'||!HUB_MODULES.some(x=>x.id===k)||perma.shards<HUB_COST)return false;
+ perma.shards-=HUB_COST;perma[k]++;save();hubMenu(k);
+ sound('parry');vibrateImpact('heavy',true);return true;
+}
 function pauseToggle(){if(gameState==='playing'){gameState='paused';stopGamepadRumble();setStatus('PAUSED');showMenu(`<div class="eyebrow">SYSTEM SUSPENDED</div><h2>일시 정지</h2><p>전투가 일시 정지되었습니다.</p><div class="buttons"><button class="main-btn" data-action="resume">▶ 계속 플레이</button><button class="secondary-btn" data-action="rumbleTest">🎮 패드 진동 테스트</button><button class="secondary-btn" data-action="guideResume">조작 안내</button><button class="secondary-btn" data-action="title">타이틀로</button></div><p class="micro" id="rumbleStatus">연결된 패드의 진동 API를 확인 중입니다.</p>`);updateRumbleDiagnostics()}else if(gameState==='paused'){gameState='playing';setStatus('COMBAT LIVE');hideMenu()}}
 function keyDown(ev){
  const k=ev.key.toLowerCase();
