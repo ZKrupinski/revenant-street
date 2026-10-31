@@ -32,7 +32,7 @@ dialog button{background:#254358;border:1px solid #7799b1;border-radius:5px;colo
 <body>
 <header><h1>PROJECT Z / 빨간 후드 프레임 정밀 검수실</h1><a href="./index.html">게임으로 돌아가기</a></header>
 <main><p class="info">각 동작의 <strong>원본 4×2 프레임</strong>과 <strong>게임에서 실제 사용하는 분리·커팅된 프레임</strong>을 나란히 비교합니다. 프레임을 누르면 크게 확인할 수 있습니다. 난입은 1~4번만 사용합니다. 원본 이미지 자체는 변경하지 않습니다.</p><p id="status">원본 스프라이트 디코딩 및 커팅 분석 준비 중...</p><div id="gallery"></div></main>
-<iframe id="game-source" src="./index.html?v=redhood-qa-20261031-3" title="게임 원본 에셋 로더" style="position:absolute;width:1px;height:1px;border:0;opacity:0;pointer-events:none" aria-hidden="true" tabindex="-1"></iframe>
+<iframe id="game-source" src="./index.html?v=redhood-qa-20261101-gloves-boots" title="게임 원본 에셋 로더" style="position:absolute;width:1px;height:1px;border:0;opacity:0;pointer-events:none" aria-hidden="true" tabindex="-1"></iframe>
 <dialog id="viewer"><h3 id="viewer-title"></h3><canvas id="viewer-canvas" width="512" height="544"></canvas><p><button id="close-viewer">닫기</button></p></dialog>
 <script>
 'use strict';
@@ -74,7 +74,7 @@ function renderAtlas(item,metrics){
    const txt=document.createElement('strong');txt.textContent='F'+(n+1)+(name==='난입'&&n>=4?' (미사용)':'');tile.appendChild(txt);
    const canvas=document.createElement('canvas');drawComparison(canvas,image,cut,n,processed);tile.appendChild(canvas);
    const meta=document.createElement('small');
-   meta.textContent=processed?('제거 '+(cut.removedPixels||0)+'px'):'원본';
+   meta.textContent=processed?('제거 '+(cut.removedPixels||0)+'px / 팔다리 복원 '+(cut.recoveredPixels||0)+'px'):'원본';
    tile.appendChild(meta);
    tile.addEventListener('click',()=>zoomFrame(name,image,cut,n,processed));
    row.appendChild(tile);
