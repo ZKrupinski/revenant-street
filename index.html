@@ -1652,8 +1652,13 @@ function currentZFrameIndex(key){
  if(key==='getup')return Z_HOODIE_HERO?7-oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64)):oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64));
  if(key==='hit'||key==='heavyhit')return oneshot(1-p.stun/Math.max(.001,p.hitDuration||.4));
  if(key==='dash'||key==='dodge')return oneshot(1-p.dodge/Math.max(.001,p.dodgeDuration||.30));
- // Full 8-frame guard snaps into pose in 0.17s; collision window remains 0.34s+reflex.
- if(key==='guard')return oneshot(Math.min(1,(p.parryAnimAge||0)/.17));
+ // The first half visibly BRACES, the second half recovers instead of
+ // freezing on the last painted guard frame until the parry timer expires.
+ // Keep the entire original eight-frame bitmap action, with no idle substitute.
+ if(key==='guard'){
+  const phase=clamp((p.parryAnimAge||0)/Math.max(.001,p.parryDuration||.34),0,.9999);
+  return [0,2,4,6,7,6,4,2][Math.min(7,Math.floor(phase*8))];
+ }
  if(p.jumpLandingVisual>0&&p.jumpLandingTriggered&&key==='axe_kick')
   return p.jumpLandingVisual>.125?6:7;
  if(key==='jumpstart')return oneshot(1-p.jumpStartTimer/.23);
@@ -1691,6 +1696,17 @@ function paintZ(x,y,z){
  const fr=atlas&&atlas.ready?atlas.frames[currentZFrameIndex(key)]:(zLastGoodFrame||zArtState.idle?.frames[0]||null);
  if(fr){zLastGoodFrame=fr;captureHeroAfterimage(fr,key)}
  ctx.save();ctx.translate(x,Math.round(y-z+8));ctx.scale(p.facing<0?-1:1,1);
+ // Parry is a MOVING full-body image stance, not the default idle pose.
+ // A short forward brace and sinking guard are visible even with no attacker;
+ // success-only shield flash remains exclusively in enemyAttack().
+ if(key==='guard'&&p.parry>0){
+  const u=clamp((p.parryAnimAge||0)/Math.max(.001,p.parryDuration||.34),0,1);
+  const brace=Math.sin(Math.PI*Math.min(1,u*1.15));
+  const turn=Math.sin(Math.PI*Math.min(1,u*1.75));
+  ctx.translate(13*brace,-15*brace+4*Math.sin(Math.PI*u*2));
+  ctx.rotate(-.13*turn);
+  ctx.scale(1+.075*brace,1-.095*brace);
+ }
  // Visually compress and tilt only after an actual successful parry.
  const recoil=p.parryRecoilTime>0?clamp(p.parryRecoilTime/Math.max(.001,p.parryRecoilDuration),0,1):0;
  if(recoil){ctx.rotate(-.10*recoil);ctx.scale(1+.04*recoil,1-.14*recoil)}
@@ -2785,7 +2801,9 @@ function parry(){
  if(gameState!=='playing'||p.stun>0||p.parry>0||p.downTimer>0||p.getupTimer>0||p.stamina<7)return;
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.attackDriveRemaining=0;p.counterRush=0;
  p.dashSmash=false;p.dashFollowWindow=0;
- p.parryDuration=.34+perma.reflex*.035;p.parry=p.parryDuration;p.parryAnimAge=0;
+ p.parryDuration=.34+perma.reflex*.035;p.parry=p.parryDuration;p.parryAnimAge=.03;
+ p.motionKey='';p.motionTime=0; // Restart guard clip immediately; no previous idle hold.
+ loadZMove('guard');
  // Immediately face the most imminent attacker, including enemies behind.
  // Selecting a target NEVER triggers parry automatically; the player still
  // must press their parry button within the ordinary parry window.
@@ -3372,7 +3390,7 @@ function control(dt,pad){
   if(p.downTimer===0){p.getupTimer=p.recoveryDuration||.64;p.stun=0;p.inv=Math.max(p.inv,p.getupTimer)}
  }else if(p.getupTimer>0)p.getupTimer=Math.max(0,p.getupTimer-dt);
  p.stun=Math.max(0,p.stun-dt);p.inv=Math.max(0,p.inv-dt);
- if(p.parry>0)p.parryAnimAge=Math.min(.25,(p.parryAnimAge||0)+dt);
+ if(p.parry>0)p.parryAnimAge=Math.min(p.parryDuration||.50,(p.parryAnimAge||0)+dt);
  p.parry=Math.max(0,p.parry-dt);p.dodge=Math.max(0,p.dodge-dt);
  p.dashFollowWindow=Math.max(0,(p.dashFollowWindow||0)-dt);
  p.riposteWindow=Math.max(0,p.riposteWindow-dt);
