@@ -245,6 +245,44 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  .choice-grid .upgrade-btn>small{grid-column:2;grid-row:2;line-height:1.3}
 }
 </style>
+
+<style id="reward-acquisition-cinematic">
+#stageWrap .overlay.reward-confirming .overlay-shade{animation:reward-reveal-world .82s ease-out both}
+#stageWrap .overlay.reward-confirming .menu{animation:reward-fade-menu .82s ease-out both;pointer-events:none}
+#stageWrap .overlay.reward-confirming .choice-grid .upgrade-btn{transition:opacity .18s,filter .18s,transform .18s}
+#stageWrap .overlay.reward-confirming .choice-grid .upgrade-btn:not(.reward-chosen){opacity:.18;filter:grayscale(1) brightness(.45);transform:scale(.93)}
+#stageWrap .overlay.reward-confirming .choice-grid .upgrade-btn.reward-chosen{
+ position:relative;z-index:2;border-color:#fff2bb;background:#233b4e;
+ box-shadow:0 0 0 3px #ffdf83,0 0 25px #ffd979,0 0 55px #65e8ffb9;
+ animation:reward-selected-glow .65s ease-out both}
+#stageWrap .overlay.reward-confirming .choice-grid .upgrade-btn.reward-chosen::after{
+ content:"획득!  APPLIED";position:absolute;right:5px;top:5px;
+ padding:5px 7px;color:#142435;background:#ffda83;border-radius:3px;
+ font:900 11px Arial,'Malgun Gothic',sans-serif;box-shadow:0 0 10px #ffda83b9}
+#stageWrap .reward-fly-icon{position:absolute;z-index:20;pointer-events:none;
+ display:grid;place-items:center;width:70px;height:70px;filter:drop-shadow(0 0 11px #fff19b);
+ animation:reward-fly-to-hud .82s cubic-bezier(.17,.68,.2,1) both}
+#stageWrap .reward-fly-icon .upgrade-art{width:70px;height:70px}
+#hud #modStrip .reward-preview{min-width:39px;border-color:#ffeeb5;
+ box-shadow:0 0 13px #ffda7c;animation:reward-hud-flash .82s both}
+#hud #modStrip .reward-preview .icon{font-size:0}
+#hud #modStrip .reward-preview .upgrade-art{width:19px;height:19px}
+@keyframes reward-reveal-world{0%,17%{opacity:1}100%{opacity:.12}}
+@keyframes reward-fade-menu{0%,45%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.95)}}
+@keyframes reward-selected-glow{0%{transform:scale(1)}
+ 28%{transform:scale(1.09);filter:brightness(1.65)}
+ 70%{transform:scale(1.05);filter:brightness(1.3)}
+ 100%{transform:scale(1.035);filter:brightness(1.25)}}
+@keyframes reward-fly-to-hud{
+ 0%,13%{opacity:0;transform:translate(0,0) scale(.78)}
+ 22%{opacity:1;transform:translate(0,-12px) scale(1.23)}
+ 76%{opacity:1;transform:translate(calc(var(--reward-dx)*.9),calc(var(--reward-dy)*.9)) scale(.42)}
+ 90%{opacity:1;transform:translate(var(--reward-dx),var(--reward-dy)) scale(.29)}
+ 100%{opacity:0;transform:translate(var(--reward-dx),var(--reward-dy)) scale(.29)}}
+@keyframes reward-hud-flash{0%,40%{filter:brightness(1)}
+ 70%{filter:brightness(1.85);box-shadow:0 0 15px #fff4b8,0 0 0 2px #ffd875}
+ 100%{filter:brightness(1.1);box-shadow:0 0 10px #ffda7c}}
+</style>
 </head>
 <body>
 <div id="app">
@@ -1087,7 +1125,7 @@ function upgradeDescription(id,rank){
 }
 function activeModStacks(){const counts=new Map();for(const id of p.mods)counts.set(id,(counts.get(id)||0)+1);return MOD_UI_ORDER.filter(id=>counts.has(id)).map(id=>({id,n:counts.get(id),meta:MOD_META[id]}))}
 
-let upgradeReason='wave',nextUpgradeMilestone=0;
+let upgradeReason='wave',nextUpgradeMilestone=0,rewardSelection=null;
 const UPGRADE_MILESTONES=[5,11,17,23,31,39];
 let attributeFx=[];
 // Only sprite-based VFX: use the existing hand-painted burst PNGs and
@@ -1519,9 +1557,10 @@ function setStatus(s){$('statusLabel').textContent=s}function flash(text,duratio
 const menuPad={index:0,nav:0,confirm:false,back:false,armed:false,readyAt:0,neutralAt:0};
 const heldKeyboard=new Set();
 const menuBlockedKeys=new Set();
-function menuReady(){return Date.now()>=menuPad.readyAt}
+function menuReady(){return !rewardSelection&&Date.now()>=menuPad.readyAt}
 function menuButtons(){return Array.from($('menu').querySelectorAll('button')).filter(b=>!b.disabled)}
 function selectMenuItem(step=0){
+ if(rewardSelection)return null;
  const items=menuButtons();if(!items.length){menuPad.index=0;return null}
  menuPad.index=(menuPad.index+step+items.length*4)%items.length;
  for(let i=0;i<items.length;i++)items[i].classList.toggle('pad-selected',i===menuPad.index);
@@ -1531,15 +1570,16 @@ function selectMenuItem(step=0){
  return selected;
 }
 function menuConfirm(){if(!menuReady()){menuPad.readyAt=Math.max(menuPad.readyAt,Date.now()+250);return false;}const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
-function menuBack(){const items=menuButtons();const back=items.find(b=>['resume','title','pauseMenu','hub'].includes(b.dataset.action));if(back){back.click();return true}return false}
+function menuBack(){if(rewardSelection)return false;const items=menuButtons();const back=items.find(b=>['resume','title','pauseMenu','hub'].includes(b.dataset.action));if(back){back.click();return true}return false}
 function showMenu(html){
+ $('overlay').classList.remove('reward-confirming');
  menuPad.readyAt=Date.now()+(gameState==='reward'?700:180);menuPad.armed=false;menuPad.neutralAt=Date.now();
  menuBlockedKeys.clear();for(const key of heldKeyboard)menuBlockedKeys.add(key);
  canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
  // Reward cards begin visually neutral; only a real navigation/focus action
  // can light a card border. Keep the existing directional selection order.
  if(gameState!=='reward')selectMenuItem(0)}
-function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
+function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('reward-confirming');$('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1><p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p><div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div><div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button><button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div><p class="micro">가로 10화면 · 마스크 잡몹 A + 쌍단검 암살자 B + 철가면 엘리트 / 키보드·게임패드·드래그 조이스틱</p>`)}
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>지상 연속타격 · 점프 후 새로 누르면 수직 내려차기와 착지 광역타</div><div><kbd>↑ / K / Y / △</kbd>점프 · 이동 도약 / 자동 착지 공격 없음</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링 성공으로 적을 멀리 날려 보낸 직후 <b class="key">공격 버튼을 한 번</b> 누르면 자동 대쉬 추격과 빈사 강타가 이어집니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
 function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
@@ -2253,6 +2293,7 @@ function pollPad(){
  dy+=(g.buttons[13]?.pressed?1:0)-(g.buttons[12]?.pressed?1:0);
  // X/square (attack) confirms only after the opening guard and input release.
  if(gameState!=='playing'){
+  if(rewardSelection){menuPad.nav=0;menuPad.confirm=!!g.buttons[2]?.pressed;return{dx:0,dy:0}}
   const direction=Math.abs(dx)>.52?Math.sign(dx):Math.abs(dy)>.52?Math.sign(dy):0;
   if(direction&&direction!==menuPad.nav)selectMenuItem(direction);
   menuPad.nav=direction;
@@ -2858,7 +2899,9 @@ function updateHud(){
 function update(dt){
  // Don't decode a full library of 2K sprite sheets while the user fights.
  // Required combat animations are prepared behind the loading screen.
-const pad=pollPad();if(gameState!=='playing')return;
+const pad=pollPad();
+if(gameState==='reward'&&rewardSelection){updateRewardSelection(dt);return}
+if(gameState!=='playing')return;
  // Time domains: background, camera, particles and general mobs slow to 33%.
  // Hero actions run at 20%; the parried enemy at 15%, with independent
  // animation/physics clocks. Input polling stays real-time for the counter.
@@ -3149,7 +3192,7 @@ function drawEffects(){drawModEnergy();const left=cameraX-320,right=cameraX+W+32
  let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}for(const f of floating){if(f.x<left||f.x>right)continue;ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;ctx.lineWidth=4;ctx.strokeStyle='#10131c';ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);ctx.restore()}}
 const visibleActors=[];
 function draw(){
- if(gameState!=='playing')return;
+ if(gameState!=='playing'&&!rewardSelection)return;
  ctx.clearRect(0,0,W,H);ctx.save();
  if(screenShake>0)ctx.translate(rnd(-screenShake,screenShake),rnd(-screenShake*.65,screenShake*.65));
  const zoom=clamp(cameraZoom,1,1.36);
@@ -3207,7 +3250,7 @@ function rewardMenu(reason='wave'){
  '무료 선택 · 체력 +20 회복 · 다음 지역으로 이동. 모든 강화는 최대 6레벨까지 중첩됩니다.';
  showMenu(`<div class="eyebrow">PROJECT Z / CYBERNETIC GROWTH</div><h2>${headline}</h2><p>${explanation}</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT GROWTH — ${p.mods.length} STACKS · LEVEL ${level}</div><div class="pad-hint">WASD / 패드 십자키·스틱 이동　 ← / 패드 X(공격) 선택 · 창이 뜨면 입력을 놓고 다시 눌러주세요</div>`);
 }
-function requestSelectMod(m){
+function finishRewardSelection(m){
  if(wave!==2||upgradeReason==='mid'){selectMod(m);return}
  if(loadingRun)return;
  loadingRun=true;gameState='loading';
@@ -3219,6 +3262,60 @@ function requestSelectMod(m){
  }).then(()=>{loadingRun=false;selectMod(m)}).catch(err=>{
   loadingRun=false;showMenu(`<div class="eyebrow">RESOURCE ERROR</div><h2>보스 리소스 로딩 중단</h2><p>${String(err.message).replace(/[<>]/g,'')}</p><div class="buttons"><button class="main-btn" data-mod="${m}">다시 불러오기</button></div>`);
  });
+}
+
+// A selected card gets a short, exclusive acquisition cinematic. No button
+// can grant another level until that animation has completed.
+function requestSelectMod(m){
+ if(rewardSelection||gameState!=='reward'||!MOD_META[m]||modRank(m)>=MOD_LEVEL_CAP)return false;
+ rewardSelection={id:m,elapsed:0,duration:.82};
+ const menu=$('menu'),cards=menu.querySelectorAll?.('[data-mod]')||[];
+ let chosen=null;
+ for(const card of cards){
+  if(card.dataset.mod===m){chosen=card;card.classList.add('reward-chosen')}
+  else card.classList.add('reward-muted');
+ }
+ $('overlay').classList.add('reward-confirming');
+ $('hud').hidden=false;canvas.style.visibility='visible';
+ setStatus('UPGRADE ACQUIRED');
+ // Preview the incoming rank on the HUD before the original gameplay
+ // upgrade function commits the level after this presentation.
+ const rank=modRank(m)+1,strip=$('modStrip');
+ const preview='<span class="mod-chip compact reward-preview" title="'+MOD_META[m].title+
+  ' 획득"><span class="icon">'+modIconMarkup(m)+'</span><b>x'+rank+'</b></span>';
+ strip.innerHTML+=preview;
+ const stage=$('stageWrap'),hudTarget=strip.querySelector?.('.reward-preview');
+ const start=chosen?.getBoundingClientRect?.(),end=hudTarget?.getBoundingClientRect?.(),
+  area=stage.getBoundingClientRect?.();
+ if(start&&end&&area){
+  const fly=document.createElement('span');fly.className='reward-fly-icon';
+  fly.innerHTML=modIconMarkup(m);
+  const sx=start.left+start.width*.5-area.left,sy=start.top+start.height*.5-area.top;
+  const tx=end.left+end.width*.5-area.left,ty=end.top+end.height*.5-area.top;
+  fly.style.left=(sx-35)+'px';fly.style.top=(sy-35)+'px';
+  fly.style.setProperty('--reward-dx',(tx-sx)+'px');
+  fly.style.setProperty('--reward-dy',(ty-sy)+'px');
+  stage.appendChild?.(fly);rewardSelection.fly=fly;
+ }
+ const colour=['dashrange','dashspeed','rush','ice','shock','counter','guard','haste'].includes(m)?'blue':
+  ['bleed','leech','fire','crit'].includes(m)?'red':'gold';
+ const x=p.x+(['dashrange','dashspeed','rush'].includes(m)?p.facing*80:0);
+ const y=p.y-(['jumpheight','jumpspeed'].includes(m)?55:130);
+ spawnModBitmap(colour,x,y,1.55,'brightness(1.5) saturate(1.25)',.82);
+ if(['guard','counter'].includes(m))spawnParryShieldFx(p.x+p.facing*45,p.y-140,p.facing,.56);
+ if(['dashrange','dashspeed','rush'].includes(m))fxBurst(p.x-p.facing*48,p.y-90,'blue',1.32);
+ if(['jumpheight','jumpspeed'].includes(m))fxBurst(p.x,p.y-30,'gold',1.38);
+ sound('parry');playImpactSound('heavy',.83);vibrateImpact('heavy',true);
+ return true;
+}
+function updateRewardSelection(dt){
+ if(!rewardSelection)return;
+ // Animate world and bitmap VFX while all enemies and controls remain paused.
+ time+=dt*.55;updateEffects(dt*.9);
+ rewardSelection.elapsed+=dt;
+ if(rewardSelection.elapsed<rewardSelection.duration)return;
+ const completed=rewardSelection;rewardSelection=null;completed.fly?.remove?.();
+ finishRewardSelection(completed.id);
 }
 function selectMod(m){
  if(!MOD_META[m]||modRank(m)>=MOD_LEVEL_CAP)return;
@@ -3252,7 +3349,7 @@ function keyDown(ev){
  if([' ','enter','arrowup','arrowdown','arrowleft','arrowright'].includes(k))ev.preventDefault();
  if(gameState!=='playing'){
   // Consume menu input entirely: no native focused-button click or combat fallthrough.
-  if(menuBlockedKeys.has(k)||ev.repeat||held)return;
+  if(rewardSelection||menuBlockedKeys.has(k)||ev.repeat||held)return;
   if(k==='a'||k==='w'){selectMenuItem(-1);return}
   if(k==='d'||k==='s'){selectMenuItem(1);return}
   if(k==='arrowleft'){menuConfirm();return}
