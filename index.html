@@ -2741,10 +2741,10 @@ function updateHud(){
  const clear=progress.current===0;
  $('enemyCount').textContent=wave===3?
   (progress.current?'최종 보스 전투 중':'보스 격파!'):
-  clear?(progress.future?'현재 0명 · 다음 무리 대기':'이번 턴 적 전멸!'):
+  clear?(progress.future?(squadIndex===0?'첫 무리 출현 전':'현재 0명 · 다음 무리 대기'):'이번 턴 적 전멸!'):
   `현재 ${progress.current}명  ·  턴 잔여 ${progress.remaining}명`;
  $('enemyStatus').textContent=wave===3?'최종 결전':clear&&progress.future?
-  `무리 ${squadIndex}/${squads} 격파 · 오른쪽으로 전진`:
+  (squadIndex===0?'다음 적 무리 지점으로 전진':`무리 ${squadIndex}/${squads} 격파 · 오른쪽으로 전진`):
   clear?'구역 확보 · 다음 구역으로 전진':
   `무리 ${squadIndex}/${squads}  ·  턴 처치 ${progress.defeated}/${progress.total}`;
  const percent=progress.total?Math.round(progress.defeated/progress.total*100):0;
