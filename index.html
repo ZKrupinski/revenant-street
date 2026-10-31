@@ -837,7 +837,9 @@ function isolateIntruderFrames(image,frames,mode){
  source.width=image.naturalWidth;source.height=image.naturalHeight;
  const sourceCtx=source.getContext('2d',{willReadFrequently:true});
  sourceCtx.drawImage(image,0,0);
- const strict=mode==='attack'||mode==='death'||mode==='hit';
+ const strict=['attack','death','hit','special'].includes(mode);
+ // Core threshold severs thin antialiasing bridges to a neighboring frame.
+ const coreAlpha=strict?104:70;
  let corrected=0,discarded=0;
  for(let frame=0;frame<frames.length;frame++){
   const crop=frames[frame];
@@ -849,7 +851,7 @@ function isolateIntruderFrames(image,frames,mode){
   const labels=new Uint16Array(size),queue=new Int32Array(size),groups=[];
   let nextId=1;
   for(let at=0;at<size;at++){
-   if(labels[at]||data[at*4+3]<24)continue;
+   if(labels[at]||data[at*4+3]<coreAlpha)continue;
    let start=0,end=0;queue[end++]=at;labels[at]=nextId;
    let n=0,sumX=0,minX=cw,maxX=-1,minY=ch,maxY=-1;
    while(start<end){
@@ -859,7 +861,7 @@ function isolateIntruderFrames(image,frames,mode){
     for(let yy=Math.max(0,y-1);yy<=Math.min(ch-1,y+1);yy++)
      for(let xx=Math.max(0,x-1);xx<=Math.min(cw-1,x+1);xx++){
       const neighbor=yy*cw+xx;
-      if(!labels[neighbor]&&data[neighbor*4+3]>=24){
+      if(!labels[neighbor]&&data[neighbor*4+3]>=coreAlpha){
        labels[neighbor]=nextId;queue[end++]=neighbor;
       }
      }
@@ -881,9 +883,12 @@ function isolateIntruderFrames(image,frames,mode){
    if(part===best)continue;
    const overlap=Math.max(0,Math.min(part.maxX,best.maxX)-Math.max(part.minX,best.minX));
    const adjacent=Math.max(0,Math.max(part.minX-best.maxX,best.minX-part.maxX));
-   const close=Math.abs(part.x-best.x)<cw*(strict?.28:.42);
-   const meaningful=part.size>=Math.max(75,best.size*(strict?.018:.009));
-   if(meaningful&&close&&(overlap>0||adjacent<cw*.065))
+   const close=Math.abs(part.x-best.x)<cw*(strict?.225:.34);
+   const meaningful=part.size>=Math.max(strict?110:85,best.size*(strict?.038:.020));
+   const seamFragment=part.minX<=cw*.045||part.maxX>=cw*.955;
+   // A separate island touching an atlas cell edge most often belongs to
+   // an adjacent animation's boot or cloak, so never reattach it to this frame.
+   if(meaningful&&close&&(overlap>0||adjacent<cw*.055)&&!seamFragment)
     selected[part.id]=1;
   }
   const keep=new Uint8Array(size);
@@ -931,7 +936,7 @@ function isolateIntruderFrames(image,frames,mode){
  return {corrected,discarded};
 }
 function prepareIntruderSpriteCrops(){
- const diagnostic={atlases:0,frames:0,removedPixels:0};
+ const diagnostic={atlases:0,frames:0,removedPixels:0,byAtlas:{},suspicious:[]};
  for(const [name,image] of [['난입',intruderEntryImage],...INTRUDER_MOTION_KEYS.map(k=>[k,intruderMotionImages[k]])]){
   const cuts=getIntruderCrops(image);
   if(!cuts||cuts.length!==8||cuts.some(c=>c.empty||c.sw<1||c.sh<1))
@@ -941,6 +946,12 @@ function prepareIntruderSpriteCrops(){
   const result=isolateIntruderFrames(image,cuts,name);
   diagnostic.frames+=result.corrected;
   diagnostic.removedPixels+=result.discarded;
+  diagnostic.byAtlas[name]=cuts.map((crop,index)=>{
+   const fraction=crop.sw*crop.sh/(crop.cellW*crop.cellH);
+   const item={frame:index+1,removedPixels:crop.removedPixels||0,coverage:+fraction.toFixed(3)};
+   if(fraction>.96||fraction<.10)diagnostic.suspicious.push({atlas:name,...item});
+   return item;
+  });
  }
  window.__redhoodCutQA=diagnostic;
 }
