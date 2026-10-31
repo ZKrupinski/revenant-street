@@ -1893,7 +1893,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 <script src="./assets/alpha10/sprites7.js"></script>
 <script>window.RZ_ASSETS.street=window.RZ_BG;window.RZ_ASSETS.street_pano=window.RZ_BG;delete window.RZ_BG;</script>
 <script src="./assets/assassin-b.js"></script>
-<script src="./assets/elite-ironmask.js?v=914e0e7a"></script>
+<script src="./assets/elite-ironmask.js?v=7dcd1ae06"></script>
 <script src="./assets/boss-hunter.js?v=fe00bed9"></script>
 <script src="./assets/attacks-20.js?v=923cd5b7"></script>
 <script src="./assets/voice/voice-engine.js?v=20261031-all-sfx70"></script>
@@ -3858,7 +3858,8 @@ function requiredSceneArt(preview=false){
   ...Object.keys(Z_REMOTE_ATLAS).map(k=>['Z '+k,()=>loadZMove(k)]),
   ...Object.keys(MASKED_GRUNT_ATLAS).map(k=>['잡몹 '+k,()=>loadMaskedMove(k)]),
   ...RZAssassinArt.keys.map(k=>['암살자 '+k,()=>RZAssassinArt.load(k)]),
-  ...RIOT_GUARD_KEYS.map(k=>['방패 '+k,()=>loadRiotGuard(k)])
+  ...RIOT_GUARD_KEYS.map(k=>['방패 '+k,()=>loadRiotGuard(k)]),
+  ...window.RZElite.KEYS.map(k=>['칠흑 철가면 '+k+' 8프레임',()=>window.RZElite.load(k)])
  ];
  if(window.RZBossHunter?.isEnabled?.())for(const k of ['idle','walk','taunt','dash','slam','death','hit'])checks.push(['보스 '+k,()=>window.RZBossHunter.load(k)]);
  return checks;
@@ -4018,7 +4019,7 @@ function makeEnemy(type,x,y,index){
  // Grunts stay punchy and quick to defeat. Specials gain real durability.
  // Normal enemies gain moderate health/damage each wave, unlike the boss.
  const map={raider:[84,70,128,14,40],intruder:[385,205,169,24,74],assassin:[76,68,177,16,38],
-  elite:[530,260,144,22,66],guard:[165,132,112,20,48],
+  elite:[1120,460,147,26,74],guard:[165,132,112,20,48],
   boss:[3900,920,87,35,92]};
  const difficulty=type==='boss'?1:type==='elite'?(wave===2?1.36:1):
   type==='intruder'?(wave===2?1.24:1):wave===2?1.30:1;
@@ -4038,7 +4039,7 @@ function makeEnemy(type,x,y,index){
   attackPoseTime:0,windupDuration:.45,hitAnimation:'hitHead',proneTime:0,riseTime:0,pendingFall:false,deathAge:0,
   brain:type==='boss'?'boss':type==='elite'?'elite':type==='intruder'?'support_elite':['swarm','feint','charger','swarm','feint','charger'][index%6],
   chargeCooldown:1.6+(index%5)*.48,chargePrep:0,chargeTime:0,
-   eliteCooldown:2.6,eliteTell:0,eliteRush:0,eliteAttack:false,eliteAnnounced:false,
+   eliteCooldown:2.6,eliteTell:0,eliteTellDuration:1,eliteRush:0,eliteRushFace:-1,eliteAttack:false,eliteAnnounced:false,eliteMenace:0,eliteSpecialRecover:0,
   reactionVariant:0,reactionTime:0,reactionDuration:.48,reactionDir:1,bodyShakeTime:0,bodyShakeDuration:0,bodyShakePower:0,
   specialPhase:'',specialTime:0,specialCooldown:type==='intruder'?1.0:0,
   specialTargetX:x,specialTargetY:y,specialStartX:x,specialStartY:y}
@@ -4380,7 +4381,7 @@ function hurtEnemy(e,dmg,poise){
   // Taking a real hit completely interrupts the air special.
   e.specialPhase='';e.specialTime=0;e.specialCooldown=Math.max(e.specialCooldown||0,2.0);
  }
- if(e.type==='elite'){e.eliteTell=0;e.eliteRush=0;e.eliteAttack=false;e.eliteCooldown=Math.max(e.eliteCooldown,1.8)}
+ if(e.type==='elite'){e.eliteTell=0;e.eliteRush=0;e.eliteMenace=0;e.eliteSpecialRecover=0;e.eliteAttack=false;e.eliteCooldown=Math.max(e.eliteCooldown,2.0)}
  // Couple enemy displacement to the attacker's actual forward drive.
  // The hit target receives the same accelerated forward-pressure beat
  // immediately, then flies on through physical knockback and its own hit art.
@@ -4416,7 +4417,7 @@ function hurtEnemy(e,dmg,poise){
  if(basicContact)e.renderX=e.x;
  fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:smash?1.65:1.2);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');applyImpactFeedback(e,smash||p.dashSmash,p.dashSmash?'dashImpact':smash?'heavy':'punch');p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
  if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=e.type==='boss'?1.30:e.type==='elite'?2.4:3.6;e.stun=e.groggy;fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
- if(e.type==='elite'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.14;e.eliteCooldown=Math.min(e.eliteCooldown,1.6);fxBurst(e.x,e.y-150,'gold',1.8);floatText('OVERDRIVE',e.x,e.y-255,'#f9c26a')}
+ if(e.type==='elite'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.14;e.eliteCooldown=Math.min(e.eliteCooldown,1.6);fxBurst(e.x,e.y-150,'red',1.8);floatText('CRIMSON OVERDRIVE',e.x,e.y-255,'#ff8494')}
  if(e.type==='intruder'&&e.hp>0&&e.hp<e.maxHp*.42&&e.phase===1){
   e.phase=2;e.speed*=1.15;e.specialCooldown=Math.min(e.specialCooldown,2.2);
   fxBurst(e.x,e.y-150,'red',1.65);floatText('CRIMSON RAGE!',e.x,e.y-247,'#ff8ca0');
@@ -4593,6 +4594,7 @@ function enemyAttack(e){
   e.stun=Math.max(e.stun,1.50);e.reactionTime=e.reactionDuration=.84;
   if(e.type!=='boss'){e.pendingFall=true;e.hitAnimation='hitFly'}
   e.eliteRush=0;
+  if(e.type==='elite'){e.eliteTell=0;e.eliteMenace=0;e.eliteSpecialRecover=0}
   if(e.type==='intruder'){e.specialPhase='';e.specialTime=0;e.specialCooldown=5.5}
   p.parry=Math.max(p.parry,.30);p.parryDuration=Math.max(p.parryDuration,.34);
   p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteChaseTime=0;
@@ -4613,7 +4615,7 @@ function enemyAttack(e){
   if(e.poise>=e.maxPoise){e.groggy=3.4;e.stun=3.4;floatText('GROGGY',e.x,e.y-185,'#8fe6ff')}
   return;
  }
- if(p.inv>0||p.dodge>0)return;const dmg=e.damage*(eliteCleave?1.42:1)*(e.bossDamageMult||1);
+ if(p.inv>0||p.dodge>0)return;const dmg=e.damage*(eliteCleave?1.65:1)*(e.bossDamageMult||1);
  const damageTaken=dmg*clamp(1-modRank('guard')*.09,.49,1);
  p.hp=Math.max(0,p.hp-damageTaken);p.hitFlash=.19;
  if(modRank('guard')){
@@ -4958,39 +4960,54 @@ function resolveBodyCollisions(dt){
   if(Number.isFinite(actor.renderY))actor.renderY+=actor.y-actor._preSolveY;
  }
 }
-// IRON MASK ELITE: long readable tell -> fast rush -> parryable heavy cleave.
+// IRON MASK ELITE — 8-frame menace -> crimson charge -> dive-slash.
+// The special is parryable and uses unique dark painted bitmap animations.
 function updateEliteAI(e,dt,dx,dy,dist){
  if(e.windup>0)return false;
  e.eliteCooldown=Math.max(0,e.eliteCooldown-dt);
+ e.eliteSpecialRecover=Math.max(0,(e.eliteSpecialRecover||0)-dt);
  if(!e.eliteAnnounced&&dist<650){
   e.eliteAnnounced=true;
-  floatText('IRON MASK!',e.x,e.y-285,'#f3bb79');
+  floatText('IRON MASK — EXECUTIONER',e.x,e.y-290,'#ff9d9b');
+  if(e.eliteCooldown>0){e.eliteMenace=.55;return true}
+ }
+ if(e.eliteMenace>0){
+  e.eliteMenace=Math.max(0,e.eliteMenace-dt);e.visualMoving=false;return true;
  }
  if(e.eliteTell>0){
-  e.eliteTell=Math.max(0,e.eliteTell-dt);
-  e.visualMoving=false;
-  if(e.eliteTell===0){e.eliteRush=.42;fxBurst(e.x,e.y-144,'gold',1.2)}
-  return true;
- }
- if(e.eliteRush>0){
-  e.eliteRush=Math.max(0,e.eliteRush-dt);
-  const startX=e.x,startY=e.y,targetX=p.x-e.face*(bodyHalfX(p)+bodyHalfX(e)+5);
-  const rush=Math.min(Math.abs(targetX-e.x),Math.max(430,e.speed*3.6)*dt);
-  e.x=clamp(e.x+Math.sign(targetX-e.x)*rush,45,STAGE_WIDTH-45);
-  e.y=groundY(e.y+Math.sign(dy)*Math.min(Math.abs(dy),210*dt));
-  const moved=Math.hypot(e.x-startX,(e.y-startY)*1.7);
-  e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
-  if((Math.abs(e.x-p.x)<e.reach+80&&Math.abs(e.y-p.y)<63)||e.eliteRush===0){
-   e.eliteRush=0;e.eliteAttack=true;e.windup=.27;e.windupDuration=.27;playCombatVoice('enemyShout',e);
-   e.cooldown=1.0;
-   fxBurst(e.x+e.face*40,e.y-125,'blue',1.2);
+  e.eliteTell=Math.max(0,e.eliteTell-dt);e.visualMoving=false;
+  if(e.eliteTell===0){
+   e.eliteRush=.55;e.eliteRushFace=e.face;
+   e.spriteKey='';e.spriteTime=0;
+   fxBurst(e.x,e.y-140,'red',1.8);
+   playCombatVoice('enemyShout',e);
   }
   return true;
  }
- if(e.eliteCooldown===0&&dist>130&&dist<390&&Math.abs(dy)<95&&e.z<10){
-  e.eliteTell=e.phase===2?.51:.68;
-  e.eliteCooldown=e.phase===2?4.0:5.7;
+ if(e.eliteRush>0){
+  e.eliteRush=Math.max(0,e.eliteRush-dt);e.face=e.eliteRushFace||e.face;
+  const startX=e.x,startY=e.y,targetX=p.x-e.face*(bodyHalfX(p)+bodyHalfX(e)+9);
+  const rush=Math.min(Math.abs(targetX-e.x),Math.max(750,e.speed*5.2)*dt);
+  e.x=clamp(e.x+Math.sign(targetX-e.x)*rush,45,STAGE_WIDTH-45);
+  e.y=groundY(e.y+Math.sign(dy)*Math.min(Math.abs(dy),235*dt));
+  const moved=Math.hypot(e.x-startX,(e.y-startY)*1.7);
+  e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
+  if((Math.abs(e.x-p.x)<e.reach+99&&Math.abs(e.y-p.y)<70)||e.eliteRush===0){
+   e.eliteRush=0;e.eliteAttack=true;e.eliteSpecialRecover=.67;
+   e.windup=.19;e.windupDuration=.19;e.cooldown=1.2;
+   fxBurst(e.x+e.face*67,e.y-123,'red',2.2);
+   screenShake=Math.max(screenShake,13);
+  }
+  return true;
+ }
+ if(e.eliteCooldown===0&&dist>130&&dist<460&&Math.abs(dy)<95&&e.z<10){
+  e.eliteTell=e.phase===2?.78:1.02;
+  e.eliteTellDuration=e.eliteTell;
+  e.eliteCooldown=e.phase===2?4.25:5.5;
   e.cooldown=Math.max(e.cooldown,1.0);
+  e.spriteKey='';e.spriteTime=0;
+  floatText('CRIMSON EXECUTION!',e.x,e.y-245,'#ff697e');
+  fxBurst(e.x,e.y-147,'red',1.2);
   return true;
  }
  return false;
@@ -5181,7 +5198,7 @@ function updateEnemies(dt,parryVictimScale=1){
   if(!e.encountered)continue;
   // During a committed dash, keep the sprite facing the direction it
   // actually charges; avoid mid-dash left/right art snapping.
-  if(e.type!=='boss'||!e.bossMode)e.face=dx>=0?1:-1;
+  if((e.type!=='boss'||!e.bossMode)&&!(e.type==='elite'&&e.eliteRush>0))e.face=dx>=0?1:-1;
   if(e.type==='intruder'&&updateIntruderSpecial(e,actorDt))continue;
   if(dist>910){
    const boost=clamp(e.speed*1.55+(dist-910)*.25,245,510);
@@ -5410,7 +5427,7 @@ function updateHud(){
   const maxHp=eliteOrBoss.type==='intruder'?eliteOrBoss.supportTeamMaxHp:
    group.reduce((sum,e)=>sum+e.maxHp,0);
   $('bossName').textContent=eliteOrBoss.type==='boss'?'HUNTER / 붉은 집행자':
-   eliteOrBoss.type==='elite'?'IRON MASK / 철가면 추적자':
+   eliteOrBoss.type==='elite'?'IRON MASK / 칠흑의 집행자':
    'CRIMSON SUPPORT / 붉은 후드 지원팀';
   $('bossFill').style.width=`${clamp(100*hp/Math.max(1,maxHp),0,100)}%`;
   $('bossPhase').textContent=String(Math.max(...group.map(e=>e.phase))).padStart(2,'0');
@@ -5742,7 +5759,7 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
   return;
  }
  if(a.type==='assassin'){drawAssassin(a,x,y,z);return;}
- if(a.type==='elite'){window.RZElite.draw(a,x,y,z,{ctx,art:RZAssassinArt,maskedFrame,getAssassinMove,ellipseShadow,clamp,images:img,time});return;}
+ if(a.type==='elite'){window.RZElite.draw(a,x,y,z,{ctx,ellipseShadow,clamp,time});return;}
  if(a.type==='guard'&&USE_HF_SHIELD){drawRiotGuard(a,x,y,z);return;}
  if(a.type==='boss'&&window.RZBossHunter?.draw(a,x,y,z,{ctx,shadow:ellipseShadow}))return;
  const picture=img[a.type];if(!picture?.complete||!picture.naturalWidth)return;const w=isP?128:boss?340:(a.type==='guard'?148:a.type==='assassin'?120:122);const h=isP?260:boss?328:186;ellipseShadow(x,y,boss?2.05:isP?1.06:.85,1/(1+z*.022)*.45);

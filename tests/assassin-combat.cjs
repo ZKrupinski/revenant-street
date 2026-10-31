@@ -204,7 +204,33 @@ test('elite enters in a later encounter, not in the opening troop',()=>{
  const elites=t.getEnemies().filter(e=>e.type==='elite');
  assert.equal(elites.length,1);
  assert(elites[0].maxHp>530,'later elite has squad durability scaling');
- assert.equal(elites[0].maxPoise,260);
+ assert.equal(elites[0].maxPoise,460);
+});
+test('Iron Mask elite uses eight original dark 4x2 painted animation sheets and greater toughness',()=>{
+ const pathRoot=path.join(__dirname,'../assets/ironmask-elite');
+ const variants=['idle','run','attack','hit','menace','death','charge','special'];
+ const files=variants.map(key=>fs.readFileSync(path.join(pathRoot,key+'.webp')));
+ for(let i=0;i<files.length;i++){
+  assert.equal(files[i].toString('ascii',0,4),'RIFF',variants[i]+' is an actual bitmap');
+  assert.equal(files[i].toString('ascii',8,12),'WEBP',variants[i]+' decodes as WebP');
+  assert(files[i].length>85000,variants[i]+' full eight-frame sheet must not be a placeholder');
+ }
+ const e=t.makeEnemy('elite',t.p.x+240,t.p.y,0);
+ assert.equal(e.maxHp,1120,'Elite has >2x the old 530 HP');
+ assert.equal(e.maxPoise,460,'Elite stagger threshold is significantly higher');
+ assert(e.damage>=26,'elite has menacing heavyweight attacks');
+ const src=fs.readFileSync(path.join(__dirname,'../assets/elite-ironmask.js'),'utf8');
+ assert(src.includes("const KEYS=['idle','run','attack','hit','menace','death','charge','special']"));
+ assert(src.includes("ctx.drawImage(source.image,(idx%4)*CW"),'renderer actually draws the new 64 painted frames');
+ assert(!src.includes('ctx.putImageData(pix'),'old turquoise recolor must be removed');
+ assert(src.includes("ctx.scale(e.face>=0?1:-1,1)"),'right-facing source artwork must match direction');
+ assert(html.includes("...window.RZElite.KEYS.map(k=>"),'all eight motions preload before gameplay');
+ vm.runInContext(src,world);
+ const worldElite=world.RZElite;
+ assert.equal(worldElite.move({...e,eliteTell:.7,eliteRush:0,dead:false}),'charge');
+ assert.equal(worldElite.move({...e,eliteTell:0,eliteRush:.3,dead:false}),'special');
+ assert.equal(worldElite.move({...e,eliteTell:0,eliteRush:0,eliteAttack:false,eliteMenace:.4,dead:false}),'menace');
+ assert.equal(worldElite.move({...e,dead:true,z:0}),'death');
 });
 test('elite battle telegraphs and rushes before a strong attack',()=>{
  g.startRun();
@@ -2149,7 +2175,7 @@ test('holding ATTACK across JUMP does not trigger an automatic aerial attack',()
 });
 test('rebalanced mobs need more hits but remain easy to knock airborne',()=>{
  g.startRun();
- for(const [kind,hp] of [['raider',84],['assassin',76],['guard',165],['elite',530],['boss',3900]]){
+ for(const [kind,hp] of [['raider',84],['assassin',76],['guard',165],['elite',1120],['boss',3900]]){
   const enemy=t.makeEnemy(kind,t.p.x+170,t.p.y,0);
   assert.equal(enemy.maxHp,hp,'HP of '+kind+' should reflect crowd durability');
  }
