@@ -399,27 +399,69 @@ test('mobility upgrade cards are always available among 3 random choices',()=>{
   assert.equal((markup.match(/class="upgrade-btn" data-mod/g)||[]).length,3,'upgrade UI keeps three selectable cards');
  }
 });
-test('original eight-frame punches run at authored speed and a buffered combo links after the eighth frame',()=>{
- g.startRun();t.setEnemies([]);
+test('new attack press immediately cancels the prior eight-frame ground pose without a render gap',()=>{
+ g.startRun();t.setEnemies([]);t.keys.clear();
  for(const move of t.COMBO_ROTATION)t.zArtState[move]={ready:true};
  t.p.x=1100;t.p.y=570;t.p.facing=1;t.p.stamina=100;
  t.startAttack();assert.equal(t.p.moveName,'jab');
  const firstDuration=t.p.attackDuration,firstMove=t.p.moveName;
- assert(firstDuration>=.30&&firstDuration<=.33,'jab returns to ~.31s instead of the .39s slowdown floor');
- const seen=new Set([t.currentZFrameIndex(firstMove)]);
- t.startAttack();assert.equal(t.p.attackQueued,true,'a follow-up press should be buffered');
- let elapsed=0,linked=false;
- for(let tick=0;tick<30;tick++){
-  t.control(1/60,{dx:0,dy:0});elapsed+=1/60;
-  if(t.p.moveName!==firstMove){linked=true;break}
-  seen.add(t.currentZFrameIndex(firstMove));
- }
- assert(linked,'buffered follow-up must start promptly');
- assert(elapsed<=firstDuration+1/60,'combo should not wait beyond the authored attack duration');
- assert(elapsed<.36,'chain is faster than the former .39s minimum');
- for(let frame=0;frame<8;frame++)assert(seen.has(frame),'all eight frames stay visible: '+frame);
+ assert(firstDuration>=.23&&firstDuration<.26,'jab animation accelerates to roughly .25 seconds');
+ assert.equal(t.currentZFrameIndex(firstMove),0);
+ // No frame, timeout or control update is allowed between these two presses.
+ t.startAttack();
+ assert.notEqual(t.p.moveName,firstMove,'new press must select another loaded sprite immediately');
+ assert.equal(t.p.attackQueued,false,'regular attacks are never delayed in the old input buffer');
  assert.equal(t.p.comboMoveCount,2);
- assert.notEqual(t.p.moveName,firstMove,'follow-up uses different move artwork');
+ assert.equal(t.currentZFrameIndex(t.p.moveName),0,'new eight-frame animation starts at pose zero instantly');
+ assert.equal(t.p.attack,t.p.attackDuration,'new animation timer must start now');
+ assert(t.p.attackDuration<=.48,'later attacks also animate faster');
+});
+test('interrupting after the contact beat preserves exactly one hit, early repeated taps do not invent hits',()=>{
+ g.startRun();t.keys.clear();t.p.x=1700;t.p.y=570;t.p.facing=1;t.p.stamina=100;
+ for(const move of t.COMBO_ROTATION)t.zArtState[move]={ready:true};
+ const enemy=t.makeEnemy('raider',t.p.x+92,t.p.y,0);
+ enemy.hp=enemy.maxHp=5000;enemy.stun=5;t.setEnemies([enemy]);
+ t.startAttack();const before=enemy.hp;
+ t.p.attack=t.p.attackDuration*.83;
+ t.startAttack();assert(enemy.hp<before,'outgoing strike keeps its impact at the cancel window');
+ assert(t.p.hitDone===false,'incoming strike still gets its own independent hit');
+ const after=enemy.hp;
+ t.startAttack();assert.equal(enemy.hp,after,'a zero-frame next press cannot conjure an unrendered hit');
+ assert.equal(t.p.comboMoveCount,3,'two subsequent presses produce three different visible ground attacks');
+ assert.notEqual(t.p.recentMoves[1],t.p.recentMoves[2],'quick cancels still exhaust diverse artwork');
+});
+test('holding attack automatically chains early and never flashes idle between moves',()=>{
+ g.startRun();t.setEnemies([]);t.keys.clear();
+ for(const move of t.COMBO_ROTATION)t.zArtState[move]={ready:true};
+ t.p.x=1600;t.p.y=570;t.p.stamina=100;
+ t.startAttack();t.keys.add('j');
+ let swapped=false,elapsed=0,previous=t.p.moveName;
+ for(let tick=0;tick<65;tick++){
+  t.control(1/60,{dx:0,dy:0});elapsed+=1/60;
+  assert(t.getZMove()!=='idle','held combo should always remain in an attack pose');
+  if(t.p.moveName!==previous){swapped=true;break}
+ }
+ t.keys.delete('j');
+ assert(swapped,'held attack automatically chains to the next distinct move');
+ assert(elapsed<t.p.attackDuration+.03||elapsed<.25,'holding attack does not wait through a long recovery');
+ assert.equal(t.p.attackQueued,false);
+});
+test('a fresh attack press does not interrupt committed dash-smash or airborne heel slam',()=>{
+ g.startRun();t.keys.clear();t.setEnemies([]);
+ t.p.x=2700;t.p.y=570;t.p.facing=1;t.p.moveDX=0;t.p.stamina=100;
+ t.dodge();t.startAttack();
+ assert.equal(t.p.dashSmash,true);
+ const dashRemaining=t.p.attack,move=t.p.moveName;
+ t.startAttack();
+ assert.equal(t.p.dashSmash,true);assert.equal(t.p.moveName,move);
+ assert.equal(t.p.attack,dashRemaining,'dash finisher is protected from instant cancel');
+ g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2700;
+ t.jump();for(let i=0;i<9;i++)t.control(1/60,{dx:0,dy:0});
+ t.startAttack();assert.equal(t.p.airAttack,true);
+ const phase=t.p.airKickPhase,remaining=t.p.attack;
+ t.startAttack();
+ assert.equal(t.p.airKickPhase,phase);
+ assert.equal(t.p.attack,remaining,'airborne heel slam is committed, not canceled');
 });
 test('faster basic forward rush keeps the original distance cap and respects enemy footprints',()=>{
  g.startRun();t.setEnemies([]);
@@ -1810,7 +1852,7 @@ test('first eight combo strikes display different silhouette families and readab
  const first=[];
  for(let i=0;i<8;i++){
   t.p.attack=0;t.p.stamina=100;t.startAttack();
-  assert(t.p.attackDuration>=.29,'authored eight-frame strikes should retain original quick timing');
+  assert(t.p.attackDuration>=.23&&t.p.attackDuration<=.50,'eight-frame strikes should animate faster without zero-duration poses');
   first.push(t.p.moveName);
  }
  const kicks=new Set(['roundkick','frontkick','lowkick','axe_kick','sidekick','spinning_heel','crescent_kick']);
