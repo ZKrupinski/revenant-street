@@ -1707,9 +1707,9 @@ test('opening squad approaches and kills an idle player without any input',()=>{
  assert(elapsed>5&&elapsed<45,'opening pressure leaves time to react: '+elapsed);
  console.log('Idle defeat after',elapsed.toFixed(1),'seconds');
 });
-test('three special moves improve damage area and shove at every rank',()=>{
+test('both overdrives and counter improve their special attacks at every rank',()=>{
  g.startRun();
- for(const id of ['slam','dashpower','counter']){
+ for(const id of ['jumpspeed','dashspeed','counter']){
   assert(t.MOD_META[id]);
   for(let rank=0;rank<6;rank++){
    const a=t.specialStats(id,rank),b=t.specialStats(id,rank+1);
@@ -1718,10 +1718,50 @@ test('three special moves improve damage area and shove at every rank',()=>{
   }
  }
 });
+test('dash and jump overdrives each replace their standalone attack upgrades in the offer pool',()=>{
+ g.startRun();t.p.mods=[];
+ for(const oldKey of ['slam','dashpower']){
+  assert.equal(t.MOD_META[oldKey],undefined,'old attack-only card must be fully removed');
+  assert(!html.includes('data-mod="'+oldKey+'"'));
+ }
+ assert.equal(t.MOD_META.dashspeed.title,'대쉬 오버드라이브');
+ assert.equal(t.MOD_META.jumpspeed.title,'점프 오버드라이브');
+ for(const [id,oldKey] of [['dashspeed','dashpower'],['jumpspeed','slam']]){
+  for(let rank=0;rank<6;rank++){
+   const a=t.specialStats(id,rank),b=t.specialStats(id,rank+1);
+   assert(b.damage>a.damage&&b.range>a.range&&b.lane>a.lane&&b.push>a.push&&b.visual>a.visual,id+' upgrades every attack effect');
+   assert.equal(t.specialStats(oldKey,rank).damage,a.damage,'legacy internal alias must follow the same new rank');
+   const desc=t.upgradeDescription(id,rank);
+   assert(desc.includes('속도')&&desc.includes('범위')&&desc.includes('넉백'),'upgrade preview must show speed, attack area, and knockback together');
+  }
+ }
+ const before=t.dashMobilityStats(0,0),after=t.dashMobilityStats(0,1);
+ assert(after.speed>before.speed&&t.specialStats('dashspeed',1).damage>t.specialStats('dashspeed',0).damage);
+ const air=t.jumpMobilityStats(0,0),boost=t.jumpMobilityStats(0,1);
+ assert(boost.moveSpeed>air.moveSpeed&&t.specialStats('jumpspeed',1).damage>t.specialStats('jumpspeed',0).damage);
+ for(let i=0;i<15;i++){
+  t.rewardMenu('mid');
+  const offered=node('menu').innerHTML;
+  assert(!offered.includes('data-mod="slam"')&&!offered.includes('data-mod="dashpower"'),'neither obsolete card can appear');
+ }
+});
+test('choosing dash/jump overdrive once upgrades both movement and follow-up impact',()=>{
+ for(const item of ['dashspeed','jumpspeed']){
+  g.startRun();t.p.mods=[];t.setEnemies([]);
+  const movement=item==='dashspeed'?()=>t.dashMobilityStats():()=>t.jumpMobilityStats();
+  const startMove=movement(),startHit=t.specialStats(item);
+  t.rewardMenu('mid');t.selectMod(item);
+  assert.equal(t.modRank(item),1);
+  const moved=movement(),hit=t.specialStats(item);
+  assert((item==='dashspeed'?moved.speed:moved.moveSpeed)>(item==='dashspeed'?startMove.speed:startMove.moveSpeed),'movement improves with one card');
+  assert(hit.damage>startHit.damage&&hit.range>startHit.range&&hit.push>startHit.push,'same card also boosts follow-up attack');
+  assert.equal(t.p.mods.length,1,'one card grants both benefits without separate skill stacks');
+ }
+});
 test('slam upgrade expands actual landing damage and radius',()=>{
  const result=[];
  for(const rank of [0,3,6]){
-  g.startRun();t.p.x=2500;t.p.mods=Array(rank).fill('slam');
+  g.startRun();t.p.x=2500;t.p.mods=Array(rank).fill('jumpspeed');
   const near=t.makeEnemy('raider',t.p.x+80,t.p.y,0),far=t.makeEnemy('raider',t.p.x+300,t.p.y,1);
   near.hp=far.hp=1000;near.maxHp=far.maxHp=1000;t.setEnemies([near,far]);
   t.heelLandingShockwave(true);result.push([1000-near.hp,1000-far.hp,Math.abs(near.knockVX)]);
@@ -1741,7 +1781,7 @@ test('counter upgrade expands actual splash and never grants a free max-HP kill'
 test('dash upgrades expand actual hit range, damage and push',()=>{
  const results=[];
  for(const rank of [0,3,6]){
-  g.startRun();t.p.x=2500;t.p.facing=1;t.p.mods=Array(rank).fill('dashpower');
+  g.startRun();t.p.x=2500;t.p.facing=1;t.p.mods=Array(rank).fill('dashspeed');
   t.p.dashSmash=true;t.p.attack=.3;t.p.moveName='cross';t.p.comboIdx=0;
   const near=t.makeEnemy('raider',t.p.x+100,t.p.y,0),far=t.makeEnemy('raider',t.p.x+265,t.p.y,1);
   near.hp=far.hp=1000;near.maxHp=far.maxHp=1000;t.setEnemies([near,far]);
