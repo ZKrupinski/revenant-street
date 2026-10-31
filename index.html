@@ -764,22 +764,33 @@ function getZMove(){
  if(Math.hypot(p.moveDX||0,p.moveDY||0)>.18)return p.backstepping?'backwalk':p.running?'run':'walk';
  return 'idle';
 }
-// Frame isolation: source atlas -> eight independent transparent canvases.
-// A source tile is NEVER allowed to sample from a neighboring tile.
-// Only transparent frame canvases may render; missing/tainted sources show a single idle still.
-function prepareZCells(im){
+// Source atlas -> eight isolated transparent canvases. All ordinary
+// actions remain strictly confined to their own 4x2 cell.
+// The validated LOCAL sidekick has a boot that extends ~18px beyond cell 6's
+// grid edge; only the two affected poses may read a tiny green-screen bleed.
+// Never apply this to remote/alternate atlases or any other action.
+function zCellSamplingSpec(moveKey,index,cellWidth,inset=1){
+ const core=Math.max(1,Math.floor(cellWidth-2*inset));
+ const reserve=moveKey==='sidekick-local'?Math.ceil(cellWidth*.09):0;
+ const spill=moveKey==='sidekick-local'?(index===5?reserve:index===4?Math.min(8,reserve):0):0;
+ return {canvasWidth:core+reserve,readWidth:core+spill,bleed:spill};
+}
+function prepareZCells(im,moveKey=''){
  const cells=[],cw=im.naturalWidth/4,ch=im.naturalHeight/2;
  if(cw<70||ch<80)throw new Error('Z atlas too small');
  const inset=1; // Preserve hair and limbs up to the frame grid edge
  const raw=[];let globalMaxW=1,globalMaxH=1;
  for(let i=0;i<8;i++){
+  const crop=zCellSamplingSpec(moveKey,i,cw,inset);
   const canvas=document.createElement('canvas');
-  canvas.width=Math.max(1,Math.floor(cw-2*inset));
+  canvas.width=crop.canvasWidth;
   canvas.height=Math.max(1,Math.floor(ch-2*inset));
   const c=canvas.getContext('2d',{willReadFrequently:true});
   const sx=Math.floor((i%4)*cw+inset),sy=Math.floor(Math.floor(i/4)*ch+inset);
   c.clearRect(0,0,canvas.width,canvas.height);
-  c.drawImage(im,sx,sy,canvas.width,canvas.height,0,0,canvas.width,canvas.height);
+  // Copy all foot pixels that overflow the artwork's painted frame grid.
+  // Non-overflow poses retain their original exact source rectangle.
+  c.drawImage(im,sx,sy,crop.readWidth,canvas.height,0,0,crop.readWidth,canvas.height);
   const pixels=c.getImageData(0,0,canvas.width,canvas.height),d=pixels.data,w=canvas.width,h=canvas.height;
   // Sample *inside* a possible black grid stroke; corner-only detection mistakes frame lines for the background.
   const points=[];
@@ -1139,7 +1150,8 @@ function loadZMove(key){
  const timer=setTimeout(()=>{fail('Image request timed out');im.src=''},15000);
  im.onload=()=>{
   try{
-   const frames=Z_HOODIE_HERO?prepareTransparentHeroCells(im):(Z_HF_ART&&(zGaitChoice==='v3'||zGaitChoice==='v4')&&(key==='walk'||key==='run'||key==='backwalk')?preparePremattedGaitCells(im):prepareZCells(im));
+   const localSidekickFootFix=key==='sidekick'&&url==='./assets/z-attacks-20/sidekick.webp';
+   const frames=Z_HOODIE_HERO?prepareTransparentHeroCells(im):(Z_HF_ART&&(zGaitChoice==='v3'||zGaitChoice==='v4')&&(key==='walk'||key==='run'||key==='backwalk')?preparePremattedGaitCells(im):prepareZCells(im,localSidekickFootFix?'sidekick-local':''));
    if(frames.length!==8)throw Error('Expected eight frames');
    obj.frames=frames;obj.ready=true;obj.failed=false;obj.error=null;cleanup();
   }catch(err){fail(err)}

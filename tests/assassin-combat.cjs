@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={hubMenu,buyUpgrade,HUB_COST,HUB_MODULES,offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={zCellSamplingSpec,hubMenu,buyUpgrade,HUB_COST,HUB_MODULES,offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('Rebel Hub is a compact permanent-upgrade workshop with always-visible navigation',()=>{
@@ -932,6 +932,36 @@ test('approved arcade joystick uses bitmap disc and separately movable red ball,
  'fast pressed sprite swapping is preserved');
  assert(compact.includes('background-image:none!important')&&compact.includes('transform:none!important'),
  'outer full square touch target does not shrink');
+});
+test('sidekick boot crossing the source cell grid is recovered with foot-safe sample widths',()=>{
+ const cw=336;
+ const overflow=t.zCellSamplingSpec('sidekick-local',5,cw,1);
+ assert.equal(overflow.canvasWidth,365,'all 8 local sidekick canvases share width');
+ assert.equal(overflow.readWidth,365,'6th sidekick frame reads the boot beyond the original 334px crop');
+ assert(overflow.bleed>=25,'allow enough room for the full extended shoe tip');
+ const neighboring=t.zCellSamplingSpec('sidekick-local',4,cw,1);
+ assert.equal(neighboring.readWidth,342,'5th frame receives only a small toe-safe margin');
+ for(const i of [0,1,2,3,6,7]){
+  const c=t.zCellSamplingSpec('sidekick-local',i,cw,1);
+  assert.equal(c.readWidth,334,'other frames never read their neighbors: '+i);
+  assert.equal(c.canvasWidth,overflow.canvasWidth,'union crop aligns all 8 frames');
+ }
+ for(const k of ['frontkick','roundkick','spinning_heel','sidekick','', 'axe_kick']){
+  for(let i=0;i<8;i++){
+   const c=t.zCellSamplingSpec(k,i,cw,1);
+   assert.equal(c.readWidth,334,'other art sources cannot bleed into adjacent frames: '+k+' '+i);
+   assert.equal(c.canvasWidth,334,'other actions retain their original sprite cell geometry');
+  }
+ }
+ assert(html.includes("key==='sidekick'&&url==='./assets/z-attacks-20/sidekick.webp'"),
+ 'special reading is enabled only on the approved local sidekick atlas');
+ assert(html.includes("prepareZCells(im,localSidekickFootFix?'sidekick-local':'')"),
+ 'the loaded atlas uses the correct frame extraction path');
+ const anchor=html.slice(html.indexOf('function prepareZCells(im,'),html.indexOf('function loadMaskedMove(key)'));
+ assert(anchor.includes("crop.readWidth,canvas.height,0,0,crop.readWidth,canvas.height"),
+ 'drawImage copies the extended source shoe before background removal');
+ assert(anchor.includes('r.canvas,union.x,union.y,union.w,union.h'),
+ 'the same full-body union crop applies to every output frame');
 });
 test('offscreen arrows ping-pong across eight hand-painted frames at 8 fps',()=>{
  const atlas=fs.readFileSync(path.join(__dirname,'../assets/ui/edge-arrows-animated.webp'));
