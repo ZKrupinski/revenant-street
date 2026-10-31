@@ -25,5 +25,6 @@ assert.equal(atlas.subarray(0,4).toString('ascii'),'RIFF','one complete WebP atl
 assert.equal(atlas.subarray(8,12).toString('ascii'),'WEBP','25 icons load as WebP');
 assert(atlas.length>200000,'final atlas retains a crisp painterly icon resolution');
 assert(html.includes("if(src.src.includes('upgrade-icons-v4.webp'))"),'uniform 256px icon frames remain untouched');
+assert(html.includes('sourcePreserved:true'), 'do not downscale the final painted 25-icon atlas');
 assert(css.includes('content:none!important; /* The icon atlas already includes'),'a single neon frame should render, not two overlapping');
 console.log('PASS: bitmap magenta/cyan window rails, hub and reward hierarchy, 3-column 16:9 layout, and NEW rank markers');

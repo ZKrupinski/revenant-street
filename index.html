@@ -2911,12 +2911,23 @@ const MOD_UI_ORDER=['dashrange','dashspeed','jumpheight','jumpspeed','counter','
 const MOD_ICON_ORDER=[...MOD_UI_ORDER,'neuro','hub-core','hub-servo','hub-reflex'];
 const MOD_ICON_INDEX=Object.fromEntries(MOD_ICON_ORDER.map((id,i)=>[id,i]));
 // Shared 5x5 atlas: 21 combat, one composite, three dedicated hub icons.
-// Each 96px cell has an 80px centered artwork and at least 8px padding.
+// Final atlas: 25 matching 256px neon bitmaps. Legacy 96px normalization retained only as fallback.
 let normalizedUpgradeIconAtlas=null;
 function buildSquareUpgradeIconAtlas(){
  if(normalizedUpgradeIconAtlas)return normalizedUpgradeIconAtlas;
  const src=upgradeIconsImage,columns=5,rows=5,iconSize=96;
  if(!src.complete||!src.naturalWidth||!src.naturalHeight)return null;
+ // The final reference art already has 25 equal square frames. Preserve its
+ // full original 256px-per-icon detail instead of downscaling it to 96px and
+ // generating a bulky PNG data URL at every cold start.
+ if(src.src.includes('upgrade-icons-v4.webp')){
+  document.documentElement.style.setProperty('--upgrade-preloaded-url','url("'+src.src+'")');
+  normalizedUpgradeIconAtlas=src;
+  window.__upgradeIconQA={source:[src.naturalWidth,src.naturalHeight],
+   target:[src.naturalWidth,src.naturalHeight],frames:25,cellSize:src.naturalWidth/5,
+   nonSquareArtwork:[],edgeContact:[],empty:[],sourcePreserved:true};
+  return src;
+ }
  const out=document.createElement('canvas');
  out.width=columns*iconSize;out.height=rows*iconSize;
  const outCtx=out.getContext('2d');
@@ -2934,13 +2945,6 @@ function buildSquareUpgradeIconAtlas(){
    right=Math.round((col+1)*src.naturalWidth/columns),
    bottom=Math.round((row+1)*src.naturalHeight/rows),
    sw=Math.max(1,right-left),sh=Math.max(1,bottom-top);
-  // All 25 final icon cells already share a square format and matching
-  // painted neon frame. Do not crop or shrink them another 16%.
-  if(src.src.includes('upgrade-icons-v4.webp')){
-   outCtx.drawImage(src,left,top,sw,sh,col*iconSize,row*iconSize,iconSize,iconSize);
-   stats.frames++;
-   continue;
-  }
   cell.width=sw;cell.height=sh;
   cellCtx.clearRect(0,0,sw,sh);
   cellCtx.drawImage(src,left,top,sw,sh,0,0,sw,sh);
