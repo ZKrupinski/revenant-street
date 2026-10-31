@@ -208,6 +208,49 @@ test('ground combos now lunge decisively even with a neutral joystick',()=>{
  assert(t.p.attackDriveRemaining<total,'distance budget should be used on forward movement');
  assert(t.p.x<=t.STAGE_WIDTH-64,'world bounds remain enforced');
 });
+test('original eight-frame punches run at authored speed and a buffered combo links after the eighth frame',()=>{
+ g.startRun();t.setEnemies([]);
+ for(const move of t.COMBO_ROTATION)t.zArtState[move]={ready:true};
+ t.p.x=1100;t.p.y=570;t.p.facing=1;t.p.stamina=100;
+ t.startAttack();assert.equal(t.p.moveName,'jab');
+ const firstDuration=t.p.attackDuration,firstMove=t.p.moveName;
+ assert(firstDuration>=.30&&firstDuration<=.33,'jab returns to ~.31s instead of the .39s slowdown floor');
+ const seen=new Set([t.currentZFrameIndex(firstMove)]);
+ t.startAttack();assert.equal(t.p.attackQueued,true,'a follow-up press should be buffered');
+ let elapsed=0,linked=false;
+ for(let tick=0;tick<30;tick++){
+  t.control(1/60,{dx:0,dy:0});elapsed+=1/60;
+  if(t.p.moveName!==firstMove){linked=true;break}
+  seen.add(t.currentZFrameIndex(firstMove));
+ }
+ assert(linked,'buffered follow-up must start promptly');
+ assert(elapsed<=firstDuration+1/60,'combo should not wait beyond the authored attack duration');
+ assert(elapsed<.36,'chain is faster than the former .39s minimum');
+ for(let frame=0;frame<8;frame++)assert(seen.has(frame),'all eight frames stay visible: '+frame);
+ assert.equal(t.p.comboMoveCount,2);
+ assert.notEqual(t.p.moveName,firstMove,'follow-up uses different move artwork');
+});
+test('faster basic forward rush keeps the original distance cap and respects enemy footprints',()=>{
+ g.startRun();t.setEnemies([]);
+ for(const move of t.COMBO_ROTATION)t.zArtState[move]={ready:move==='jab'};
+ t.p.x=1100;t.p.y=570;t.p.facing=1;t.p.stamina=100;
+ t.startAttack();const total=t.p.attackDriveTotal,start=t.p.x;
+ assert(total>=50,'neutral punch must keep a meaningful forward lunge');
+ for(let i=0;i<6;i++)t.control(1/60,{dx:0,dy:0});
+ assert(t.p.x-start>29,'forward rush should get visibly ahead within 0.10 seconds');
+ assert(t.p.x-start<=total+1,'no extra distance from the faster profile');
+ g.startRun();t.p.x=1200;t.p.y=570;t.p.stamina=100;
+ const e=t.makeEnemy('raider',t.p.x+130,t.p.y,0);e.stun=3;e.hp=e.maxHp=2000;t.setEnemies([e]);
+ for(const move of t.COMBO_ROTATION)t.zArtState[move]={ready:move==='jab'};
+ t.startAttack();let maxMove=0,minGap=Infinity;
+ for(let i=0;i<14;i++){
+  const previous=t.p.x;t.control(1/60,{dx:0,dy:0});
+  maxMove=Math.max(maxMove,Math.abs(t.p.x-previous));
+  minGap=Math.min(minGap,e.x-t.p.x);
+ }
+ assert(maxMove<40,'burst movement must stay below 40px/frame at 60fps');
+ assert(minGap>=100,'hero cannot pass through the raider collision footprint');
+});
 test('combo lunge respects facing and does not teleport on one frame',()=>{
  g.startRun();t.setEnemies([]);
  t.p.x=750;t.p.y=570;t.p.facing=-1;t.p.moveDX=0;t.p.moveDY=0;t.p.attack=0;t.p.comboWindow=0;t.p.stamina=100;
@@ -1482,7 +1525,7 @@ test('first eight combo strikes display different silhouette families and readab
  const first=[];
  for(let i=0;i<8;i++){
   t.p.attack=0;t.p.stamina=100;t.startAttack();
-  assert(t.p.attackDuration>=.39,'eight-frame strikes must remain readable');
+  assert(t.p.attackDuration>=.29,'authored eight-frame strikes should retain original quick timing');
   first.push(t.p.moveName);
  }
  const kicks=new Set(['roundkick','frontkick','lowkick','axe_kick','sidekick','spinning_heel','crescent_kick']);
