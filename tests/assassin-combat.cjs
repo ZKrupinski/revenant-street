@@ -337,25 +337,29 @@ test('new black-hoodie protagonist maps gameplay motions to eight local original
 });
 
 
-test('each of the 21 upgrade skills and NEURO has a unique bitmap-icon atlas cell',()=>{
- const bytes=fs.readFileSync(path.join(__dirname,'../assets/ui/upgrade-icons-v2.webp'));
+test('all 21 combat upgrades, NEURO and 3 Hub modules have distinct square bitmap-icon cells',()=>{
+ const bytes=fs.readFileSync(path.join(__dirname,'../assets/ui/upgrade-icons-v3.webp'));
  assert.equal(bytes.subarray(0,4).toString('ascii'),'RIFF','sprite is real WebP bitmap');
  assert.equal(bytes.subarray(8,12).toString('ascii'),'WEBP');
- assert(bytes.length>10000&&bytes.length<120000,'optimized art sheet is lightweight enough for mobile');
+ assert(bytes.length>100000&&bytes.length<500000,'complete high resolution 25-cell bitmap exists at the new atlas path');
  assert.equal(t.MOD_UI_ORDER.length,21,'all 21 stackable upgrades are supported');
- const ids=[...t.MOD_UI_ORDER,'neuro'];
- assert.equal(new Set(ids).size,22,'all ability identifiers must be unique');
+ const ids=[...t.MOD_UI_ORDER,'neuro','hub-core','hub-servo','hub-reflex'];
+ assert.equal(new Set(ids).size,25,'all ability identifiers must be unique');
  const cells=ids.map(id=>{
-  assert(t.MOD_META[id]||id==='neuro','unknown upgrade '+id);
+  assert(t.MOD_META[id]||id==='neuro'||id.startsWith('hub-'),'unknown upgrade '+id);
   assert(t.modIconMarkup(id).includes('upgrade-art'),'bitmap is selected for '+id);
   return t.modIconMarkup(id).match(/background-position:([^"]+)/)?.[1];
  });
- assert.equal(new Set(cells).size,22,'no two upgrades may display the same atlas cell');
- assert(html.includes("background-image:var(--upgrade-preloaded-url,url('./assets/ui/upgrade-icons-v2.webp'))"),
+ assert.equal(new Set(cells).size,25,'no two upgrades may display the same atlas cell');
+ assert(html.includes("background-image:var(--upgrade-preloaded-url,url('./assets/ui/upgrade-icons-v3.webp'))"),
   'HUD and power-up cards use the decoded bitmap cache, including failed-download retry');
  assert(html.includes("<span class=\"sym\">${modIconMarkup(id)}"),
   'reward cards show unique imagery instead of repeated Unicode symbols');
  assert(html.includes("modIconMarkup('neuro')"),'hybrid element also has unique picture');
+ assert(html.includes("const src=upgradeIconsImage,columns=5,rows=5,iconSize=96;"),
+  'all 25 icons are normalized into equal 96px square frames');
+ assert(html.includes("art:'hub-core'")&&html.includes("art:'hub-servo'")&&html.includes("art:'hub-reflex'"),
+  'permanent upgrades use independent art rather than reused battle icons');
  assert(html.includes('.choice-grid .upgrade-btn .sym{display:flex!important'),
   'portrait mobile mode must not hide upgrade pictures');
 });
