@@ -1400,6 +1400,7 @@ function drawHeroAfterimages(){
 }
 
 function getZMove(){
+ if(gameState==='dying')return 'knockdown';
  if(p.downTimer>0)return 'knockdown';
  if(p.getupTimer>0)return 'getup';
  if(p.stun>0)return p.hitHeavyTimer>0?'heavyhit':'hit';
@@ -1945,6 +1946,8 @@ function resetFailedSceneArt(){
 
 function currentZFrameIndex(key){
  const oneshot=zOneShotFrame;
+ if(key==='knockdown'&&gameState==='dying')
+  return Math.min(7,Math.floor(Math.min(1,deathCinematic.elapsed/DEATH_COLLAPSE_DURATION)*8));
  if(key==='knockdown')return oneshot(1-p.downTimer/.83);
  if(key==='getup')return Z_HOODIE_HERO?7-oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64)):oneshot(1-p.getupTimer/Math.max(.001,p.recoveryDuration||.64));
  if(key==='hit'||key==='heavyhit')return oneshot(1-p.stun/Math.max(.001,p.hitDuration||.4));
@@ -2021,7 +2024,7 @@ function paintZ(x,y,z){
   }
  } // On missing art do not draw vector body parts; the loading gate hides gameplay.
  ctx.globalAlpha=1;
- if(p.weapon>0&&!(p.attack>0&&(Z_KICK_MOVES.has(p.moveName)||Z_HEAD_MOVES.has(p.moveName)||p.airAttack))){const weapon=img.pipe_charged;
+ if(p.weapon>0&&gameState!=='dying'&&!(p.attack>0&&(Z_KICK_MOVES.has(p.moveName)||Z_HEAD_MOVES.has(p.moveName)||p.airAttack))){const weapon=img.pipe_charged;
   if(weapon&&weapon.complete&&weapon.naturalWidth){ctx.save();ctx.rotate(p.attack>0?-.5:-.8);ctx.drawImage(weapon,15,-135,148,32);ctx.restore()}
  }
  ctx.restore();return true;
@@ -2340,6 +2343,8 @@ function waveEnemyTotals(){
 let squadIndex=0,enemySerial=0,lastEncounterCleared=-1,supportTriggered=true;
 const BOSS_SPAWN_X=30900;
 let enemies=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,parrySlowTarget=null,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
+const DEATH_CINEMATIC_DURATION=2.75,DEATH_COLLAPSE_DURATION=2.15;
+const deathCinematic={elapsed:0,active:false};
 let perma={core:0,servo:0,reflex:0,shards:0};
 try{const stored=JSON.parse(localStorage.getItem('revenant-perma-v1')||'null');if(stored)for(const key of Object.keys(perma)){const value=stored[key];if(Number.isSafeInteger(value)&&value>=0)perma[key]=value}}catch(_){}
 // All WebAudio SFX (gunfire, reloads, impacts, menu and battle tones) play
@@ -2672,7 +2677,8 @@ function titleMenu(){
  $('menu').classList.add('title-dialog');$('menu').scrollTop=0;
 }
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>지상 연속타격 · 점프 후 새로 누르면 수직 내려차기와 착지 광역타</div><div><kbd>↑ / K / Y / △</kbd>점프 · 이동 도약 / 자동 착지 공격 없음</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링 성공으로 적을 멀리 날려 보낸 직후 <b class="key">공격 버튼을 한 번</b> 누르면 자동 대쉬 추격과 빈사 강타가 이어집니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
-function resetPlayer(){cameraX=0;cameraZoom=1;comboCameraLock=0;
+function resetPlayer(){deathCinematic.active=false;deathCinematic.elapsed=0;
+ cameraX=0;cameraZoom=1;comboCameraLock=0;
  footstepRumbleDistance=0;lastFootstepRumbleTime=-99;hapticPriorityUntil=-99;
  comboCameraFocusX=0;comboCameraPulse=0;comboCameraLastSnap=-99;
  strikeCameraTime=0;strikeCameraTarget=1;
@@ -3519,7 +3525,7 @@ function enemyAttack(e){
  }
  p.dashSmash=false;p.dashFollowWindow=0;
  p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteWindow=0;p.riposteTarget=null;
- playCombatVoice(p.hp<=0?'heroDeath':'heroHurt');p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)deadMenu()}
+ playCombatVoice(p.hp<=0?'heroDeath':'heroHurt');p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)startDeathCinematic()}
 function fxBurst(x,y,color='red',scale=1){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8)})}
 function spawnParryShieldFx(x,y,face=1,scale=1){fx.push({kind:'parryShield',x,y,face,scale,life:.52,maxLife:.52})}
 function floatText(text,x,y,color){if(floating.length>=45)floating.splice(0,floating.length-36);floating.push({text,x,y,color,life:1.05})}
@@ -4303,6 +4309,24 @@ function updateHud(){
   $('bossPhase').textContent=String(Math.max(...group.map(e=>e.phase))).padStart(2,'0');
  } }
 function update(dt){
+ // Play the completed eight-frame death collapse with real-clock timing
+ // while enemy AI and hero input remain fully suspended.
+ if(gameState==='dying'){
+  if(!deathCinematic.active)return;
+  deathCinematic.elapsed=Math.min(DEATH_CINEMATIC_DURATION,deathCinematic.elapsed+dt);
+  const t=deathCinematic.elapsed,progress=clamp(t/DEATH_COLLAPSE_DURATION,0,1);
+  time+=dt*.22;messageUpdate(dt*.22);updateEffects(dt*.22);
+  p.z=0;p.vz=0;p.moveDX=0;p.moveDY=0;
+  const focus=clamp(p.x-W*.52,0,Math.max(0,STAGE_WIDTH-W));
+  cameraX+=(focus-cameraX)*Math.min(1,dt*3.2);
+  cameraZoom+=(1.23-cameraZoom)*Math.min(1,dt*2.3);
+  screenShake=Math.max(screenShake,(1-progress)*1.8);
+  updateHudThrottled(dt);
+  if(t>=DEATH_CINEMATIC_DURATION){
+   deathCinematic.active=false;deadMenu();
+  }
+  return;
+ }
  // Don't decode a full library of 2K sprite sheets while the user fights.
  // Required combat animations are prepared behind the loading screen.
 const pad=pollPad();
@@ -4633,7 +4657,7 @@ function drawEffects(){drawModEnergy();const left=cameraX-320,right=cameraX+W+32
  let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}for(const f of floating){if(f.x<left||f.x>right)continue;ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;ctx.lineWidth=4;ctx.strokeStyle='#10131c';ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);ctx.restore()}}
 const visibleActors=[];
 function draw(){
- if(gameState!=='playing'&&!rewardSelection)return;
+ if(gameState!=='playing'&&gameState!=='dying'&&!rewardSelection)return;
  ctx.clearRect(0,0,W,H);ctx.save();
  if(screenShake>0)ctx.translate(rnd(-screenShake,screenShake),rnd(-screenShake*.65,screenShake*.65));
  const zoom=clamp(cameraZoom,1,1.36);
@@ -4651,7 +4675,25 @@ function draw(){
  drawEffects();for(const e of actors)if(e!==p&&!e.dead)drawEnemyStatusIcons(e);
  ctx.restore();syncZSprite();
  if(screenTint>0){ctx.globalAlpha=screenTint*.32;ctx.fillStyle='#ff335d';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}
- ctx.restore();drawTravelMeter();drawOffscreenEnemyIndicator();
+ ctx.restore();
+ if(gameState==='dying'){
+  const u=clamp(deathCinematic.elapsed/DEATH_CINEMATIC_DURATION,0,1);
+  ctx.save();
+  // Whole-screen red surge, crimson vignette and a short exit fade.
+  const red=clamp(.15+.38*Math.sin(Math.min(1,u*1.2)*Math.PI*.78)+.16*u,0,.72);
+  ctx.fillStyle='rgba(170,5,28,'+red.toFixed(3)+')';
+  ctx.fillRect(0,0,W,H);
+  const vignette=ctx.createRadialGradient(W*.5,H*.49,W*.10,W*.5,H*.49,W*.76);
+  vignette.addColorStop(0,'rgba(110,0,16,0)');
+  vignette.addColorStop(.65,'rgba(95,0,16,'+(.20+.19*u).toFixed(3)+')');
+  vignette.addColorStop(1,'rgba(65,0,8,'+(.70+.19*u).toFixed(3)+')');
+  ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
+  const fade=clamp((u-.91)/.09,0,1);
+  if(fade>0){ctx.fillStyle='rgba(8,0,6,'+(fade*.90).toFixed(3)+')';ctx.fillRect(0,0,W,H)}
+  ctx.restore();
+  return;
+ }
+ drawTravelMeter();drawOffscreenEnemyIndicator();
 }
 const runtimePerf={fps:0,frameMs:0};
 let perfFrames=0,perfElapsed=0;
@@ -4781,6 +4823,22 @@ function selectMod(m){
  sound('parry');setStatus('COMBAT LIVE');updateHud();
 }
 function completeMenu(){gameState='complete';setStatus('RUN COMPLETE');perma.shards+=4;save();$('bossHud').hidden=true;showMenu(`<div class="eyebrow">OBJECTIVE COMPLETE / REBEL SIGNAL ONLINE</div><h1>ZONE <span>CLEARED</span></h1><p>엘리트 헌터를 격파했습니다. 사이버네틱 지하 기지 <b class="key">REBEL HUB</b>로 귀환합니다.</p><div class="hub-stat"><span>처치 ${runKills}명 / 전리품 ₩${p.credits}</span><strong>영구 자원 +4</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB로 귀환</button><button class="secondary-btn" data-action="start">새로운 런 시작</button></div>`)}
+function startDeathCinematic(){
+ if(gameState!=='playing'||deathCinematic.active)return false;
+ deathCinematic.active=true;deathCinematic.elapsed=0;
+ gameState='dying';setStatus('BIO-SIGNAL LOST');
+ p.hp=0;p.attack=0;p.attackQueued=false;p.airAttack=false;p.dodge=0;p.parry=0;
+ p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteWindow=0;
+ p.downTimer=0;p.getupTimer=0;p.stun=0;p.hitHeavyTimer=0;
+ p.z=0;p.vz=0;p.moveDX=0;p.moveDY=0;p.running=false;
+ p.motionKey='';p.motionTime=0;p.hitFlash=.24;
+ hitStop=0;slowMotion=0;parrySlowTarget=null;screenTint=.95;
+ screenShake=Math.max(screenShake,14);
+ resetHeroAfterimages();resetInputs();
+ $('touchControls').hidden=true;$('hint').hidden=true;$('bossHud').hidden=true;
+ loadZMove('knockdown');updateHud();
+ return true;
+}
 function deadMenu(){if(gameState==='dead')return;gameState='dead';setStatus('SIGNAL LOST');perma.shards+=1;save();$('hint').hidden=true;showMenu(`<div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1><p>기계 신체가 파괴됐습니다. 영구 자원 <b class="key">+1</b>을 회수했습니다.</p><div class="hub-stat"><span>이번 런의 처치 ${runKills}명</span><strong>SHARDS +1</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB</button><button class="secondary-btn" data-action="start">즉시 재시작</button></div>`)}
 const HUB_COST=2;
 const HUB_MODULES=[
