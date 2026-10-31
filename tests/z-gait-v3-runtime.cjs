@@ -6,7 +6,7 @@ const validation=JSON.parse(fs.readFileSync(path.join(root,'assets/original-z-hf
 assert.ok(index.includes("'./assets/original-z-hf/walk-'+zGaitChoice+'.webp'"));
 assert.ok(index.includes("'./assets/original-z-hf/run-'+zGaitChoice+'.webp'"));
 assert.match(index,/Z_REMOTE_ATLAS\.backwalk=Z_REMOTE_ATLAS\.walk/);
-assert.match(index,/key==='walk'\|\|key==='run'\|\|key==='backwalk'\)\?preparePremattedGaitCells/);
+assert.match(index,/key==='walk'\|\|key==='run'\|\|key==='backwalk'\)\)frames=preparePremattedGaitCells/);
 assert.ok(index.includes("(zGaitChoice==='v3'||zGaitChoice==='v4')?(8-step)%8:step"));
 for(const kind of ['walk','run']){
  const image=fs.readFileSync(path.join(root,'assets/original-z-hf',kind+'-v3.webp'));
