@@ -19,7 +19,7 @@ for key in KEYS:
         if not bb: raise RuntimeError(f"{key} frame {frame+1} is blank")
         x=(CW-piece.width)//2
         y=BASELINE-bb[3]
-        if x<32 or y<12 or y+piece.height>CH:
+        if x<32 or y<12 or y+bb[3]>CH-25:
             raise RuntimeError(f"{key} frame {frame+1} exceeded safe margins: {bb}, {(x,y)}")
         out.alpha_composite(piece,(c*CW+x,r*CH+y))
         check=out.crop((c*CW,r*CH,(c+1)*CW,(r+1)*CH))
