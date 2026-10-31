@@ -1118,6 +1118,176 @@ body{position:fixed;inset:0;touch-action:manipulation}
    independently stretched backgrounds. */
 .upgrade-art{background-size:500% 500%;background-repeat:no-repeat;aspect-ratio:1}
 </style>
+
+<style id="z-art-direction-panel-v1">
+/* PROJECT Z / Rebel Street UI art direction, 2026-11.
+   All visible panel plates, corner rails and controls use PNG BITMAPS.
+   No CSS-drawn fake bezels, vector overlays, or old gradient card skins.
+   This final style block intentionally comes after the compact-layout rules. */
+:root{
+ --z-panel-bitmap:url('./assets/ui/z-panel-grunge-v1.png');
+ --z-frame-cyan:url('./assets/ui/z-frame-cyan-v1.png');
+ --z-frame-red:url('./assets/ui/z-frame-red-v1.png');
+ --z-frame-gold:url('./assets/ui/z-frame-gold-v1.png');
+ --z-frame-green:url('./assets/ui/z-frame-green-v1.png');
+ --z-button-red:url('./assets/ui/z-button-primary-v1.png');
+ --z-button-steel:url('./assets/ui/z-button-secondary-v1.png');
+}
+/* This global replacement includes title, pause/defeat, REBEL HUB, and in-battle rewards. */
+#stageWrap #menu.menu{
+ background:#0c1726 var(--z-panel-bitmap) center / 100% 100% no-repeat!important;
+ border:14px solid transparent!important;
+ border-image:var(--z-frame-cyan) 36 fill / 14px / 0 stretch!important;
+ border-radius:0!important;
+ box-shadow:0 14px 52px #000e,0 0 20px #3bb7d533!important;
+ color:#edf5fb;
+ isolation:isolate;
+}
+#stageWrap #menu.menu:not(.hub-dialog):not(.reward-dialog) {
+ border-image-source:var(--z-frame-red)!important;
+}
+#stageWrap #menu .eyebrow,
+#stageWrap #menu .hub-kicker{
+ color:#f79a9e!important;text-shadow:0 1px 2px #000;
+}
+#stageWrap #menu h1,
+#stageWrap #menu h2,
+#stageWrap #menu .hub-title{
+ color:#f4f8fb;text-shadow:0 3px 5px #05080dbb,1px 1px 0 #53687966;
+}
+#stageWrap #menu .hub-title em{color:#ff8d9b!important}
+/* Real hand-textured chrome/red button artwork. No repeated solid CSS gradients. */
+#stageWrap #menu button.main-btn,
+#stageWrap #menu button.hub-apply,
+#stageWrap #menu button.hub-danger{
+ background:#601b2c var(--z-button-red) center / 100% 100% no-repeat!important;
+ border:6px solid transparent!important;
+ border-image:var(--z-frame-red) 36 fill / 6px / 0 stretch!important;
+ border-radius:0!important;color:#fff7f3!important;
+ text-shadow:0 2px 4px #140812cc!important;
+ box-shadow:0 4px 10px #0009!important;
+}
+#stageWrap #menu button.secondary-btn,
+#stageWrap #menu button.hub-reset,
+#stageWrap #menu button.hub-reset:disabled,
+#stageWrap #menu button.hub-danger + button{
+ background:#15283c var(--z-button-steel) center / 100% 100% no-repeat!important;
+ border:6px solid transparent!important;
+ border-image:var(--z-frame-cyan) 36 fill / 6px / 0 stretch!important;
+ border-radius:0!important;color:#e4f5fc!important;
+ text-shadow:0 2px 3px #06131dcc!important;
+ box-shadow:0 4px 9px #0008!important;
+}
+#stageWrap #menu button:disabled{filter:saturate(.6) brightness(.68)!important;cursor:default}
+#stageWrap #menu button.main-btn:not(:disabled):active,
+#stageWrap #menu button.secondary-btn:not(:disabled):active,
+#stageWrap #menu button.hub-apply:not(:disabled):active,
+#stageWrap #menu button.hub-reset:not(:disabled):active{
+ filter:brightness(1.26)!important;translate:0 2px;
+}
+#stageWrap #menu button.main-btn:focus-visible,
+#stageWrap #menu button.secondary-btn:focus-visible,
+#stageWrap #menu button.hub-apply:focus-visible,
+#stageWrap #menu button.hub-reset:focus-visible{
+ outline:2px solid #ffe4b0!important;outline-offset:1px!important;
+}
+/* Hub body uses the actual textured artwork throughout, not just the icons. */
+#stageWrap #menu.hub-dialog .hub-screen,
+#stageWrap #menu.hub-dialog .hub-modules{
+ background:#0d1928 var(--z-panel-bitmap) center / 100% 100% no-repeat!important;
+}
+#stageWrap #menu.hub-dialog .hub-header{
+ background:#172638 var(--z-panel-bitmap) center / 100% 100% no-repeat!important;
+ border-bottom:2px solid #6eb5c5!important;
+ box-shadow:inset 0 -2px 0 #0a121a;
+}
+#stageWrap #menu.hub-dialog .hub-intro,
+#stageWrap #menu.hub-dialog .hub-stat-board,
+#stageWrap #menu.hub-dialog .hub-bottom{
+ background:#132437 var(--z-panel-bitmap) center / 100% 100% no-repeat!important;
+ border-color:#416b7b!important;
+}
+#stageWrap #menu.hub-dialog .hub-wallet,
+#stageWrap #menu.hub-dialog .hub-stat-tile,
+#stageWrap #menu.hub-dialog .hub-emblem{
+ background:#07131f var(--z-panel-bitmap) center / 100% 100% no-repeat!important;
+ border-color:#7096a2!important;
+ border-radius:0!important;
+ box-shadow:inset 0 0 8px #0008!important;
+}
+#stageWrap #menu.hub-dialog .hub-wallet strong{color:#ffcb9f!important}
+#stageWrap #menu.hub-dialog .hub-module{
+ background:#152436 var(--z-panel-bitmap) center / 100% 100% no-repeat!important;
+ border:8px solid transparent!important;
+ border-image:var(--z-frame-cyan) 36 fill / 8px / 0 stretch!important;
+ border-radius:0!important;
+ box-shadow:0 5px 11px #0009!important;
+}
+#stageWrap #menu.hub-dialog .hub-module.selected{
+ border-image-source:var(--z-frame-gold)!important;
+ box-shadow:0 0 10px #e8b97b77!important;
+}
+#stageWrap #menu.hub-dialog .hub-module.installed{
+ border-image-source:var(--z-frame-green)!important;
+ box-shadow:0 0 13px #74e4b266!important;
+}
+#stageWrap #menu.hub-dialog .hub-module-name{
+ color:#f5f5f3!important;text-shadow:0 1px 3px #000d!important;
+}
+#stageWrap #menu.hub-dialog .hub-module-name small{color:#f0b78e!important}
+#stageWrap #menu.hub-dialog .hub-desc{color:#c6d3dd!important}
+#stageWrap #menu.hub-dialog .hub-forecast .hub-arrow{color:#f6a7a5!important}
+#stageWrap #menu.hub-dialog .hub-forecast .hub-to{color:#ffe0a2!important}
+#stageWrap #menu.hub-dialog .hub-buy{
+ background:#122638 var(--z-button-steel) center / 100% 100% no-repeat!important;
+ border:4px solid transparent!important;
+ border-image:var(--z-frame-cyan) 36 fill / 4px / 0 stretch!important;
+ border-radius:0!important;
+ color:#ffdeb2!important;
+}
+#stageWrap #menu.hub-dialog .hub-module.selected .hub-buy{border-image-source:var(--z-frame-gold)!important}
+#stageWrap #menu.hub-dialog .hub-module.installed .hub-buy{border-image-source:var(--z-frame-green)!important}
+/* Three in-combat choice cards remain unscrolled in the 16:9 stage. */
+#stageWrap #menu.reward-dialog{
+ background:#111d2c var(--z-panel-bitmap) center / 100% 100% no-repeat!important;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn{
+ background:#132337 var(--z-panel-bitmap) center / 100% 100% no-repeat!important;
+ border:9px solid transparent!important;
+ border-image:var(--z-frame-cyan) 36 fill / 9px / 0 stretch!important;
+ border-radius:0!important;
+ box-shadow:inset 0 0 17px #0007,0 5px 10px #0007!important;
+ color:#f8fbff!important;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn.pad-selected,
+#stageWrap #menu.reward-dialog .upgrade-btn:focus-visible,
+#stageWrap #menu.reward-dialog .upgrade-btn:hover{
+ border-image-source:var(--z-frame-gold)!important;
+ box-shadow:0 0 13px #f5bd776b!important;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn.reward-chosen{
+ border-image-source:var(--z-frame-red)!important;
+ box-shadow:0 0 20px #ff6d92a8!important;
+}
+#stageWrap #menu.reward-dialog .upgrade-btn strong{color:#f0f8ff!important;text-shadow:0 2px 3px #000}
+#stageWrap #menu.reward-dialog .upgrade-btn>small{color:#c4d0da!important}
+#stageWrap #menu.reward-dialog .upgrade-btn .up-lvl{color:#ffd0a5!important}
+#stageWrap #menu.reward-dialog .upgrade-btn .sym .upgrade-art{
+ background-color:#0b1724;border:2px solid #7299a5;border-radius:0!important;
+ box-shadow:0 3px 12px #000a,0 0 10px #89cdd327;
+}
+/* Restrict extra frame thickness before shrinking readable input buttons. */
+#app.tight-hub-stage #stageWrap #menu.menu{border-width:8px!important;border-image-width:8px!important}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-module{border-width:5px!important;border-image-width:5px!important}
+#app.tight-hub-stage #stageWrap #menu.reward-dialog .upgrade-btn{border-width:6px!important;border-image-width:6px!important}
+#app.compact-game-stage #stageWrap #menu.menu{border-width:4px!important;border-image-width:4px!important}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-module,
+#app.compact-game-stage #stageWrap #menu.reward-dialog .upgrade-btn{border-width:3px!important;border-image-width:3px!important}
+@media (max-width:650px){
+ #stageWrap #menu.hub-dialog .hub-module{border-width:5px!important;border-image-width:5px!important}
+ #stageWrap #menu.reward-dialog .upgrade-btn{border-width:5px!important;border-image-width:5px!important}
+}
+</style>
 </head>
 <body>
 <div id="app">

@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - index.html
+      - assets/ui/z-*.png
       - assets/industrial-combat-bgm.js
       - assets/voice/**
       - tests/**
@@ -20,6 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Bitmap panel and button artwork QA
+        run: node tests/ui-bitmap-frames.cjs
       - name: Loading and music readiness regression tests
         run: node tests/loading-audio.cjs
       - name: Combat and animation regression tests
