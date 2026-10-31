@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{},classList:{add(){},remove(){}},getContext:()=>ctx,addEventListener(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,COMBO_ROTATION,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={p,COMBO_ROTATION,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,spawnWave,spawnNextEncounter,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('opening battle spawns one small squad just beyond the screen',()=>{
@@ -1370,6 +1370,56 @@ test('periodic camera recenter keeps normal framing, briefly centers hero, then 
  g.startRun();t.setEnemies([]);t.p.x=3000;t.setCameraX(3000-465);
  for(let i=0;i<70;i++){t.updateComboCamera(1/60);t.followComboCamera(1/60)}
  assert(Math.abs(t.getCameraX()-(3000-465))<3,'fresh run resets the recenter timer');
+});
+test('basic camera gives symmetric forward view to both right and left facing',()=>{
+ g.startRun();t.setEnemies([]);t.p.x=3000;t.p.y=570;t.p.facing=1;
+ const right=t.normalCameraTargetX();
+ assert.equal(right,3000-465,'right facing preserves the approved 465px hero anchor');
+ t.p.facing=-1;
+ const left=t.normalCameraTargetX();
+ assert.equal(left,3000-(1280-465),'left facing uses matching 815px hero anchor');
+ assert.equal((3000-right)+(3000-left),1280,'left/right framing must mirror the full stage width');
+ assert(left<right,'camera should move left to expose more world on the left');
+ t.setCameraX(right);
+ t.followComboCamera(1/60);
+ assert(t.getCameraX()<right&&t.getCameraX()>left,'turning must pan smoothly, never snap');
+ for(let i=0;i<100;i++)t.followComboCamera(1/60);
+ assert(Math.abs(t.getCameraX()-left)<2,'left look-ahead settles to the mirrored anchor');
+ t.p.facing=1;
+ for(let i=0;i<100;i++)t.followComboCamera(1/60);
+ assert(Math.abs(t.getCameraX()-right)<2,'reversing to right restores the original anchor');
+});
+test('combo-hit camera focus mirrors in both attack directions',()=>{
+ const targets=[];
+ for(const facing of [1,-1]){
+  g.startRun();t.setEnemies([]);t.p.x=4000;t.p.y=570;t.p.facing=facing;
+  t.p.hits=3;
+  t.registerComboCameraHit({x:t.p.x+facing*145});
+  targets.push(t.normalCameraTargetX());
+ }
+ const [right,left]=targets;
+ assert(right>4000-700&&right<4000,'right combo target stays near hero');
+ assert(left>4000-1280&&left<4000,'left combo target stays near hero');
+ assert(Math.abs((4000-right)+(4000-left)-1280)<.01,'combo camera focus must be symmetrical');
+});
+test('periodic hero recenter still works and returns to left-facing lead',()=>{
+ g.startRun();t.setEnemies([]);t.p.x=3000;t.p.y=570;t.p.facing=-1;
+ const home=t.normalCameraTargetX();t.setCameraX(home);
+ for(let i=0;i<320;i++){t.updateComboCamera(1/60);t.followComboCamera(1/60)}
+ const centered=t.getCameraX();
+ assert(centered>home+115,'left recenter sweeps to screen center in opposite direction');
+ assert(Math.abs(centered-(t.p.x-640))<45,'periodic pass still centers the left-facing hero');
+ for(let i=0;i<165;i++){t.updateComboCamera(1/60);t.followComboCamera(1/60)}
+ assert(Math.abs(t.getCameraX()-home)<30,'camera returns to the left-facing look-ahead afterward');
+});
+test('mirrored camera stops at both world boundaries',()=>{
+ for(const [x,facing] of [[64,-1],[31936,1]]){
+  g.startRun();t.setEnemies([]);t.p.x=x;t.p.facing=facing;
+  t.followComboCamera(1);
+  assert(t.getCameraX()>=0&&t.getCameraX()<=32000-1280,'camera must not leave the 32k street');
+  if(x===64)assert.equal(t.getCameraX(),0);
+  else assert.equal(t.getCameraX(),32000-1280);
+ }
 });
 test('camera snaps into hero focus on dash-punch PRESS and eases back',()=>{
  g.startRun();t.setEnemies([]);t.p.x=2200;t.p.y=570;t.p.facing=1;t.p.moveDX=0;
