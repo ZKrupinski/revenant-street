@@ -982,6 +982,10 @@ const MOD_META={
  ice:{icon:'❄',short:'빙결',title:'CRYO',color:'#b2efff',source:'burst_blue',filter:'hue-rotate(18deg) saturate(.8)',desc:'냉기 둔화·지속시간 강화'},
  slam:{icon:'💥',short:'내려찍기',title:'점프 내려찍기 강화',color:'#ffd48a',desc:'착지 충격파의 범위·피해·밀어내기 증가'},
  dashpower:{icon:'➤',short:'대쉬 강타',title:'대쉬 후 밀어내기 강화',color:'#9deaff',desc:'대쉬 후 공격의 범위·피해·밀어내기 증가'},
+ dashrange:{icon:'➤',short:'대쉬 거리',title:'DASH EXTENDER',color:'#8deeff',desc:'대쉬 지속시간·이동거리 증가 / 중첩'},
+ dashspeed:{icon:'⚡',short:'대쉬 가속',title:'DASH OVERDRIVE',color:'#ffe68b',desc:'대쉬 순간 이동속도 증가 / 중첩'},
+ jumpheight:{icon:'✦',short:'점프 높이',title:'JUMP THRUSTER',color:'#a4e9fc',desc:'도약 높이와 공중 체공시간 증가 / 중첩'},
+ jumpspeed:{icon:'»',short:'점프 속도',title:'AIR DRIVE',color:'#b9a3ff',desc:'도약 중 전진·착지 공격 이동속도 증가 / 중첩'},
  counter:{icon:'✦',short:'패링 반격',title:'패링 후 반격 강화',color:'#ffe098',desc:'추격 반격의 주변 범위·피해·밀어내기 증가'},
  power:{icon:'💥',short:'강타',title:'POWER DRIVE',color:'#ffd48a',desc:'공격 피해 +16%/중첩'},
  crit:{icon:'✦',short:'치명',title:'CRITICAL CODE',color:'#fff1aa',desc:'치명타 확률 +10%/중첩'},
@@ -998,14 +1002,42 @@ const MOD_META={
 };
 const modRank=id=>p.mods.reduce((n,m)=>n+(m===id?1:0),0);
 const MOD_LEVEL_CAP=6;
-const MOD_UI_ORDER=['slam','dashpower','counter','fire','shock','bleed','ice','power','crit','rush','impact','momentum','chain','nova','vital','regen','leech','guard','haste'];
+const MOD_UI_ORDER=['dashrange','dashspeed','jumpheight','jumpspeed','slam','dashpower','counter','fire','shock','bleed','ice','power','crit','rush','impact','momentum','chain','nova','vital','regen','leech','guard','haste'];
 function specialStats(id,rank=modRank(id)){
  const level=clamp(rank,0,MOD_LEVEL_CAP);
  if(id==='slam')return {damage:28+12*level,range:180+36*level,lane:65+10*level,push:420+70*level,visual:1.5+.29*level};
  if(id==='dashpower')return {damage:1.10+.22*level,range:150+25*level,lane:56+6*level,push:520+110*level,visual:1.1+.20*level};
  return {damage:45+30*level,range:100+35*level,lane:58+8*level,push:850+230*level,visual:1.25+.30*level};
 }
+// Mobility upgrades are applied immediately, without modifying combat timing
+// or making the first unupgraded dodge an unearned screen-width teleport.
+function dashMobilityStats(rangeRank=modRank('dashrange'),speedRank=modRank('dashspeed')){
+ const duration=.28+.03*clamp(rangeRank,0,MOD_LEVEL_CAP);
+ const speed=Math.round(2200*(1+.14*clamp(speedRank,0,MOD_LEVEL_CAP)));
+ return {duration,speed,distance:Math.round(duration*speed)};
+}
+function jumpMobilityStats(heightRank=modRank('jumpheight'),speedRank=modRank('jumpspeed')){
+ const impulse=670+45*clamp(heightRank,0,MOD_LEVEL_CAP);
+ const moveSpeed=Math.round(525*(1+.14*clamp(speedRank,0,MOD_LEVEL_CAP)));
+ return {impulse,moveSpeed,height:Math.round(impulse*impulse/(2*1440))};
+}
 function upgradeDescription(id,rank){
+ if(id==='dashrange'){
+  const a=dashMobilityStats(rank),b=dashMobilityStats(rank+1);
+  return `대쉬 거리 ${a.distance} → ${b.distance}px · 지속시간 ${a.duration.toFixed(2)} → ${b.duration.toFixed(2)}초`;
+ }
+ if(id==='dashspeed'){
+  const a=dashMobilityStats(modRank('dashrange'),rank),b=dashMobilityStats(modRank('dashrange'),rank+1);
+  return `대쉬 속도 ${a.speed} → ${b.speed}px/초 · 이동거리 ${a.distance} → ${b.distance}px`;
+ }
+ if(id==='jumpheight'){
+  const a=jumpMobilityStats(rank),b=jumpMobilityStats(rank+1);
+  return `점프 높이 ${a.height} → ${b.height}px · 도약력 ${a.impulse} → ${b.impulse}`;
+ }
+ if(id==='jumpspeed'){
+  const a=jumpMobilityStats(modRank('jumpheight'),rank),b=jumpMobilityStats(modRank('jumpheight'),rank+1);
+  return `공중 이동속도 ${a.moveSpeed} → ${b.moveSpeed}px/초`;
+ }
  if(!['slam','dashpower','counter'].includes(id))return MOD_META[id].desc||'타격 효과 강화';
  const a=specialStats(id,rank),b=specialStats(id,rank+1);
  const damage=id==='dashpower'?v=>'×'+v.toFixed(2):v=>Math.round(v);
