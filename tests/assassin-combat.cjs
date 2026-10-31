@@ -1384,6 +1384,21 @@ test('air heel kick holds its charge then dives, hits once and recovers at groun
   assert.equal(e.hp,hp,'landing cannot duplicate the hit');assert.equal(t.p.airKickPhase,'');
  }
 });
+test('reward choices open with no prelit first-card focus or outline',()=>{
+ g.startRun();t.heldKeyboard.clear();
+ const fake=Array.from({length:3},()=>({disabled:false,focused:0,selected:false,
+  classList:{toggle(){throw Error('reward must not add a selection on open')}},
+  focus(){this.focused++},scrollIntoView(){}}));
+ const menu=node('menu'),old=menu.querySelectorAll;menu.querySelectorAll=()=>fake;
+ try{
+  t.p.x=t.WAVE_GATES[1]+10;t.setEnemies([]);
+  t.setSquad(t.SQUAD_SPOTS[1].length);t.updateEnemies(0);
+  assert.equal(g.getState().gameState,'reward');
+  assert.equal(t.menuPad.index,0,'navigation order remains unchanged');
+  assert(fake.every(b=>b.focused===0),'no upgrade button auto-focused on reveal');
+  assert(html.includes("if(gameState!=='reward')selectMenuItem(0)"),'reward open omits preset focus');
+ }finally{menu.querySelectorAll=old}
+});
 test('WASD moves reward focus and left arrow confirms only the selected card',()=>{
  g.startRun();t.heldKeyboard.clear();
  const fake=Array.from({length:3},(_,i)=>({disabled:false,dataset:{mod:['fire','ice','shock'][i]},clicked:0,focused:0,
