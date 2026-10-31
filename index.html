@@ -852,9 +852,23 @@ function isolateIntruderFrames(image,frames,mode){
   const input=sourceCtx.getImageData(ox,oy,cw,ch);
   const data=input.data,size=cw*ch;
   const labels=new Uint16Array(size),queue=new Int32Array(size),groups=[];
+  // Erode only high-opacity CORE by one pixel: two separate characters
+  // touching through a narrow 1-2px opaque bridge no longer share a label.
+  // We restore the original painted antialiasing after assigning ownership.
+  const core=new Uint8Array(size);
+  for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){
+   const at=y*cw+x;
+   if(data[at*4+3]<coreAlpha)continue;
+   if(!strict){core[at]=1;continue}
+   let neighbors=0;
+   for(let yy=Math.max(0,y-1);yy<=Math.min(ch-1,y+1);yy++)
+    for(let xx=Math.max(0,x-1);xx<=Math.min(cw-1,x+1);xx++)
+     if(data[(yy*cw+xx)*4+3]>=coreAlpha)neighbors++;
+   if(neighbors>=8)core[at]=1; // full interior body, not a narrow bridge
+  }
   let nextId=1;
   for(let at=0;at<size;at++){
-   if(labels[at]||data[at*4+3]<coreAlpha)continue;
+   if(labels[at]||!core[at])continue;
    let start=0,end=0;queue[end++]=at;labels[at]=nextId;
    let n=0,sumX=0,minX=cw,maxX=-1,minY=ch,maxY=-1;
    while(start<end){
@@ -864,7 +878,7 @@ function isolateIntruderFrames(image,frames,mode){
     for(let yy=Math.max(0,y-1);yy<=Math.min(ch-1,y+1);yy++)
      for(let xx=Math.max(0,x-1);xx<=Math.min(cw-1,x+1);xx++){
       const neighbor=yy*cw+xx;
-      if(!labels[neighbor]&&data[neighbor*4+3]>=coreAlpha){
+      if(!labels[neighbor]&&core[neighbor]){
        labels[neighbor]=nextId;queue[end++]=neighbor;
       }
      }
@@ -875,7 +889,7 @@ function isolateIntruderFrames(image,frames,mode){
   }
   if(!groups.length)continue;
   const best=groups.reduce((a,b)=>{
-   const score=c=>c.size*(1-.22*Math.min(1,Math.abs(c.x-cw*.5)/(cw*.5)));
+   const score=c=>c.size*(1-(strict?.35:.22)*Math.min(1,Math.abs(c.x-cw*.5)/(cw*.5)));
    return score(a)>=score(b)?a:b;
   });
   // Very small side islands are usually the neighbouring animation's
@@ -894,21 +908,26 @@ function isolateIntruderFrames(image,frames,mode){
    if(meaningful&&close&&(overlap>0||adjacent<cw*.055)&&!seamFragment)
     selected[part.id]=1;
   }
-  const keep=new Uint8Array(size);
-  let minX=cw,minY=ch,maxX=-1,maxY=-1;
-  for(let at=0;at<size;at++){
-   if(selected[labels[at]]&&labels[at])keep[at]=1;
+  // A multi-source breadth-first reconstruction labels every real alpha
+  // pixel by the NEAREST eroded component. If an adjacent-frame boot touches
+  // the main silhouette, the thin bridge is divided at the ownership line,
+  // and all pixels owned by the discarded boot are removed.
+  const owner=new Uint16Array(size),keep=new Uint8Array(size);
+  let head=0,tail=0;
+  for(let at=0;at<size;at++)if(labels[at]){
+   owner[at]=labels[at];queue[tail++]=at;
   }
-  // Recover the original soft alpha edge without expanding a neighbour.
-  for(let at=0;at<size;at++){
-   if(keep[at]||!data[at*4+3])continue;
-   const x=at%cw,y=(at/cw)|0;
-   for(let yy=Math.max(0,y-1);yy<=Math.min(ch-1,y+1)&&!keep[at];yy++)
+  while(head<tail){
+   const at=queue[head++],x=at%cw,y=(at/cw)|0,group=owner[at];
+   for(let yy=Math.max(0,y-1);yy<=Math.min(ch-1,y+1);yy++)
     for(let xx=Math.max(0,x-1);xx<=Math.min(cw-1,x+1);xx++){
-     const candidate=yy*cw+xx;
-     if(labels[candidate]&&selected[labels[candidate]]){keep[at]=1;break}
+     const nb=yy*cw+xx;
+     if(owner[nb]||!data[nb*4+3])continue;
+     owner[nb]=group;queue[tail++]=nb;
     }
   }
+  for(let at=0;at<size;at++)if(owner[at]&&selected[owner[at]])keep[at]=1;
+  let minX=cw,minY=ch,maxX=-1,maxY=-1;
   let removed=0;
   for(let at=0;at<size;at++){
    const alpha=data[at*4+3];if(!alpha)continue;
