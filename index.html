@@ -375,9 +375,11 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 #stageWrap .analog-pad .analog-caption{display:none!important}
 #stageWrap .analog-pad .analog-shaft{
  position:absolute;left:50%;top:50%;width:100%;height:100%;
- transform-origin:50% 72%;
+ /* The actual metal tube and base socket now share the exact 50% X axis.
+    The pivot is the socket at 75% Y, not the center of the red ball. */
+ transform-origin:50% 75%;
  transform:translate(-50%,-50%) rotate(0deg) scaleY(1);
- background:var(--joystick-shaft-url,url('./assets/ui/z-arcade-stick-shaft.webp')) center / 100% 100% no-repeat;
+ background:var(--joystick-shaft-url,url('./assets/ui/z-arcade-stick-shaft-centered.webp')) center / 100% 100% no-repeat;
  border:0;border-radius:0;box-shadow:none;
  pointer-events:none;z-index:1;
  filter:drop-shadow(1px 1px 1px #0007);
@@ -628,7 +630,9 @@ let upgradeIconsImage=new Image();upgradeIconsImage.src='./assets/ui/upgrade-ico
 let arcadeButtonsImage=new Image();arcadeButtonsImage.src='./assets/ui/arcade-action-buttons-v1.webp';
 // Predecode both transparent bitmap pieces of the arcade joystick.
 let joystickBaseImage=new Image();joystickBaseImage.src='./assets/ui/z-arcade-stick-base.webp';
-let joystickShaftImage=new Image();joystickShaftImage.src='./assets/ui/z-arcade-stick-shaft.webp';
+// Artwork shaft axis was +10/360px to the right. The centered bitmap fixes
+// the original painted metal tube without adding a separate CSS offset.
+let joystickShaftImage=new Image();joystickShaftImage.src='./assets/ui/z-arcade-stick-shaft-centered.webp';
 let joystickKnobImage=new Image();joystickKnobImage.src='./assets/ui/z-arcade-stick-knob.webp';
 const keys=new Set(), padPrev={}, touchKey={};
 const p={x:270,y:570,z:0,vz:0,facing:1,hp:100,maxHp:100,stamina:100,stagger:0,inv:0,stun:0,attack:0,attackDuration:0,hitDone:false,comboIdx:0,comboWindow:0,parry:0,dodge:0,dodgeX:0,weapon:0,maxWeapon:18,moveDX:0,moveDY:0,moveName:'idle',kickIdx:-1,punchIdx:-1,animAge:0,mod:'none',mods:[],credits:0,hits:0,hitTimeout:0,damageBoost:0,glow:0};
@@ -1915,7 +1919,7 @@ function resetFailedUiBitmaps(){
   {get:()=>upgradeIconsImage,set:im=>{upgradeIconsImage=im},url:'./assets/ui/upgrade-icons-v2.webp',css:true},
   {get:()=>arcadeButtonsImage,set:im=>{arcadeButtonsImage=im},url:'./assets/ui/arcade-action-buttons-v1.webp',css:'arcade'},
   {get:()=>joystickBaseImage,set:im=>{joystickBaseImage=im},url:'./assets/ui/z-arcade-stick-base.webp',css:'joystickBase'},
-  {get:()=>joystickShaftImage,set:im=>{joystickShaftImage=im},url:'./assets/ui/z-arcade-stick-shaft.webp',css:'joystickShaft'},
+  {get:()=>joystickShaftImage,set:im=>{joystickShaftImage=im},url:'./assets/ui/z-arcade-stick-shaft-centered.webp',css:'joystickShaft'},
   {get:()=>joystickKnobImage,set:im=>{joystickKnobImage=im},url:'./assets/ui/z-arcade-stick-knob.webp',css:'joystickKnob'}
  ];
  for(const item of sources){

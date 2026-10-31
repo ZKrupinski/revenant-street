@@ -904,7 +904,7 @@ test('four smaller bitmap arcade controls retain large touch surfaces and presse
 });
 test('approved arcade joystick uses bitmap disc and separately movable red ball, no guide circles',()=>{
  const root=path.join(__dirname,'../assets/ui');
- for(const name of ['z-arcade-stick-base.webp','z-arcade-stick-shaft.webp','z-arcade-stick-knob.webp']){
+ for(const name of ['z-arcade-stick-base.webp','z-arcade-stick-shaft-centered.webp','z-arcade-stick-knob.webp']){
   const bytes=fs.readFileSync(path.join(root,name));
   assert(bytes.length>4000&&bytes.subarray(0,4).toString()==='RIFF',name+' exists as a transparent bitmap');
  }
@@ -912,8 +912,13 @@ test('approved arcade joystick uses bitmap disc and separately movable red ball,
  html.indexOf('</style>',html.indexOf('<style id="joystick-arcade-control">')));
  assert(part.includes('--joystick-base-url')&&part.includes('--joystick-shaft-url')&&part.includes('--joystick-knob-url'),
  'fixed base, angled metal shaft and red ball use three independent bitmap layers');
- assert(part.includes('transform-origin:50% 72%')&&part.includes('z-index:1'),
- 'shaft rotates about the actual lower socket and renders beneath the ball');
+ assert(part.includes('transform-origin:50% 75%')&&part.includes('z-index:1'),
+ 'shaft rotates at fixed 50% X and correct lower socket height below the ball');
+ assert(part.includes("z-arcade-stick-shaft-centered.webp")&&
+ html.includes("joystickShaftImage.src='./assets/ui/z-arcade-stick-shaft-centered.webp'"),
+ 'centered shaft art must be preloaded and visible as the real bitmap, not the offset original');
+ assert(part.includes('position:absolute;left:50%;top:50%;width:100%;height:100%'),
+ 'shaft DOM and stationary base use the same exact visual center without offsets');
  assert(part.includes('clip-path:inset(0 0 31% 0)'),
  'old knob nub is hidden so the separate shaft is not double-painted');
  assert(html.includes('id="analogShaft" aria-hidden="true"')&&
