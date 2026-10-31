@@ -220,8 +220,8 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 <style id="upgrade-bitmap-icons">
 /* One hand-painted bitmap sprite atlas for every upgrade: 6 columns x 4 rows.
    The player sees the same individual picture in the choice cards and HUD. */
-.upgrade-art{display:block;flex:none;width:60px;height:60px;background-image:var(--upgrade-preloaded-url,url('./assets/ui/upgrade-icons-v2.webp'));
- background-repeat:no-repeat;background-size:600% 400%;image-rendering:auto;
+.upgrade-art{display:block;flex:none;width:60px;height:60px;background-image:var(--upgrade-preloaded-url,url('./assets/ui/upgrade-icons-v3.webp'));
+ background-repeat:no-repeat;background-size:500% 500%;image-rendering:auto;
  filter:drop-shadow(0 2px 3px #0009)}
 .upgrade-btn .sym{display:flex;flex-direction:column;align-items:flex-start;gap:0;
  width:100%;font-size:12px;line-height:1;font-weight:900}
@@ -1116,7 +1116,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 /* Reconstructed sprites stay a shared six-by-four SQUARE grid, not
    independently stretched backgrounds. */
-.upgrade-art{background-size:600% 400%;background-repeat:no-repeat;aspect-ratio:1}
+.upgrade-art{background-size:500% 500%;background-repeat:no-repeat;aspect-ratio:1}
 </style>
 </head>
 <body>
@@ -1495,7 +1495,7 @@ function offscreenArrowFrameAt(seconds){return OFFSCREEN_ARROW_SEQUENCE[Math.flo
 // 4x2 real transparent PNG sprite sheet: spark-filled metal shield impact.
 let parryShieldImage=new Image();parryShieldImage.src='./assets/fx/parry-shield.png';
 // Preload the CSS-backed upgrade atlas too; its decoded pixels are reused by the cards/HUD.
-let upgradeIconsImage=new Image();upgradeIconsImage.src='./assets/ui/upgrade-icons-v2.webp';
+let upgradeIconsImage=new Image();upgradeIconsImage.src='./assets/ui/upgrade-icons-v3.webp';
 // Predecode the full four-button raised/pressed bitmap atlas before gameplay.
 let arcadeButtonsImage=new Image();arcadeButtonsImage.src='./assets/ui/arcade-action-buttons-v1.webp';
 // Predecode both transparent bitmap pieces of the arcade joystick.
@@ -2402,17 +2402,14 @@ const modRank=id=>p.mods.reduce((n,m)=>n+(m===id?1:0),0);
 const MOD_LEVEL_CAP=6;
 const MOD_UI_ORDER=['dashrange','dashspeed','jumpheight','jumpspeed','counter','fire','shock','bleed','ice','power','crit','rush','impact','momentum','chain','nova','vital','regen','leech','guard','haste'];
 
-const MOD_ICON_ORDER=[...MOD_UI_ORDER,'neuro'];
+const MOD_ICON_ORDER=[...MOD_UI_ORDER,'neuro','hub-core','hub-servo','hub-reflex'];
 const MOD_ICON_INDEX=Object.fromEntries(MOD_ICON_ORDER.map((id,i)=>[id,i]));
-// Rebuild the original 6x4 sprite atlas as 24 EXACT 96x96 square icons.
-// Source cells are 48x48, but the artwork within them is often off-center,
-// narrow, or reaches its clipping edge. Preserve ALL source pixels inside each
-// cell, detect the real nontransparent silhouette and give every artwork the
-// same square padding, without borrowing pixels from adjacent skill cells.
+// Shared 5x5 atlas: 21 combat, one composite, three dedicated hub icons.
+// Each 96px cell has an 80px centered artwork and at least 8px padding.
 let normalizedUpgradeIconAtlas=null;
 function buildSquareUpgradeIconAtlas(){
  if(normalizedUpgradeIconAtlas)return normalizedUpgradeIconAtlas;
- const src=upgradeIconsImage,columns=6,rows=4,iconSize=96;
+ const src=upgradeIconsImage,columns=5,rows=5,iconSize=96;
  if(!src.complete||!src.naturalWidth||!src.naturalHeight)return null;
  const out=document.createElement('canvas');
  out.width=columns*iconSize;out.height=rows*iconSize;
@@ -2457,7 +2454,7 @@ function buildSquareUpgradeIconAtlas(){
   outCtx.drawImage(cell,x1,y1,bw,bh,x,y,dw,dh);
   stats.frames++;
  }
- // Reuse the same 6x4 background-position code for choice cards, hub
+ // Reuse the same 5x5 background-position code for choice cards, hub
  // upgrades, floating acquisition animation and compact stack HUD.
  const dataUrl=out.toDataURL('image/png');
  if(!dataUrl.startsWith('data:image/png;base64,'))throw Error('정사각 아이콘 시트 생성 실패');
@@ -2475,9 +2472,9 @@ if(upgradeIconsImage.complete&&upgradeIconsImage.naturalWidth){
 function modIconMarkup(id){
  const idx=MOD_ICON_INDEX[id];
  if(idx===undefined)return '';
- const column=idx%6,row=Math.floor(idx/6);
+ const column=idx%5,row=Math.floor(idx/5);
  return '<span class="upgrade-art" aria-hidden="true" style="background-position:'+
-   (column*20)+'% '+(row*100/3).toFixed(4)+'%"></span>';
+   (column*25)+'% '+(row*25).toFixed(4)+'%"></span>';
 }
 
 // Retain legacy lookup aliases for testing/compatibility, but these skills
@@ -3049,7 +3046,7 @@ function resetFailedUiBitmaps(){
  const sources=[
   {get:()=>offscreenArrow,set:im=>{offscreenArrow=im},url:'./assets/ui/edge-arrows-animated.webp'},
   {get:()=>parryShieldImage,set:im=>{parryShieldImage=im},url:'./assets/fx/parry-shield.png'},
-  {get:()=>upgradeIconsImage,set:im=>{upgradeIconsImage=im},url:'./assets/ui/upgrade-icons-v2.webp',css:true},
+  {get:()=>upgradeIconsImage,set:im=>{upgradeIconsImage=im},url:'./assets/ui/upgrade-icons-v3.webp',css:true},
   {get:()=>arcadeButtonsImage,set:im=>{arcadeButtonsImage=im},url:'./assets/ui/arcade-action-buttons-v1.webp',css:'arcade'},
   {get:()=>joystickBaseImage,set:im=>{joystickBaseImage=im},url:'./assets/ui/z-arcade-stick-base-centerhole.webp',css:'joystickBase'},
   {get:()=>joystickShaftImage,set:im=>{joystickShaftImage=im},url:'./assets/ui/z-arcade-stick-shaft-centered.webp',css:'joystickShaft'},
@@ -3077,7 +3074,7 @@ function requiredSceneArt(preview=false){
   ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
   ['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
   ...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임',()=>ensureBitmapDecoded(intruderMotionImages[k])]),
-  ['업그레이드 아이콘 22종',()=>ensureBitmapDecoded(upgradeIconsImage)],
+  ['업그레이드 아이콘 25종',()=>ensureBitmapDecoded(upgradeIconsImage)],
   ['아케이드 조작 버튼 4종·눌림 8프레임',()=>ensureBitmapDecoded(arcadeButtonsImage)],
   ['왼쪽 아케이드 스틱 베이스',()=>ensureBitmapDecoded(joystickBaseImage)],
   ['왼쪽 아케이드 스틱 금속 봉',()=>ensureBitmapDecoded(joystickShaftImage)],
@@ -5228,9 +5225,9 @@ function startDeathCinematic(){
 function deadMenu(){if(gameState==='dead')return;gameState='dead';setStatus('SIGNAL LOST');perma.shards+=1;save();$('hint').hidden=true;showMenu(`<div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1><p>기계 신체가 파괴됐습니다. 영구 자원 <b class="key">+1</b>을 회수했습니다.</p><div class="hub-stat"><span>이번 런의 처치 ${runKills}명</span><strong>SHARDS +1</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB</button><button class="secondary-btn" data-action="start">즉시 재시작</button></div>`)}
 const HUB_COST=2;
 const HUB_MODULES=[
- {id:'core',title:'외골격 강화',art:'vital',stat:'최대 체력',format:n=>(100+20*n)+' HP',detail:'최대 체력 영구 +20'},
- {id:'servo',title:'파워 서보',art:'power',stat:'추가 타격 피해',format:n=>'+'+(2*n)+' DMG',detail:'모든 타격 추가 피해 영구 +2'},
- {id:'reflex',title:'패링 신경망',art:'guard',stat:'패링 지속시간',format:n=>(.34+.035*n).toFixed(3)+'초',detail:'패링 지속시간 영구 +0.035초'}
+ {id:'core',title:'외골격 강화',art:'hub-core',stat:'최대 체력',format:n=>(100+20*n)+' HP',detail:'최대 체력 영구 +20'},
+ {id:'servo',title:'파워 서보',art:'hub-servo',stat:'추가 타격 피해',format:n=>'+'+(2*n)+' DMG',detail:'모든 타격 추가 피해 영구 +2'},
+ {id:'reflex',title:'패링 신경망',art:'hub-reflex',stat:'패링 지속시간',format:n=>(.34+.035*n).toFixed(3)+'초',detail:'패링 지속시간 영구 +0.035초'}
 ];
 const HUB_STAT_INFO=[
  ['hp','최대 체력',v=>v+' HP'],['damage','추가 공격력',v=>'+'+v],
