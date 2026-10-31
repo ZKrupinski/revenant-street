@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Project Z | 빨간 후드 56프레임 원본·커팅 검수실</title>
+<style>
+:root{color-scheme:dark;font-family:Arial,"Malgun Gothic",sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:#0c111a;color:#eff4fa;min-height:100vh}
+header{position:sticky;top:0;z-index:8;background:#111c2cf5;border-bottom:1px solid #3e5268;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+h1{font-size:19px;line-height:1.3;margin:0}header a{color:#a6e4ff}
+main{max-width:1410px;margin:auto;padding:12px}
+.info{font-size:12px;color:#aec4d6;line-height:1.6}
+#status{font-weight:800;color:#c8e8f1}
+.sheet{border:1px solid #31475c;border-radius:9px;margin:16px 0;background:#101827;padding:10px}
+.sheet h2{margin:4px 0 7px;font-size:18px;color:#f9c9c9}
+.original-label{font-size:11px;color:#bacbd7;font-weight:700}
+.columns{display:grid;grid-template-columns:repeat(8,minmax(95px,1fr));gap:5px;overflow-x:auto;padding:5px 2px}
+.frame{padding:3px;background:#1b2734;border:1px solid #455467;border-radius:5px;min-width:0;cursor:zoom-in}
+.frame.problem{border-color:#ed9966}
+.frame strong{display:block;text-align:center;margin-bottom:4px;font-size:11px}
+.frame small{display:block;font-size:9px;color:#bad0da;text-align:center}
+.frame canvas{display:block;width:100%;height:auto;aspect-ratio:1;background-color:#29333c;background-image:linear-gradient(45deg,#34404b 25%,transparent 25%),linear-gradient(-45deg,#34404b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#34404b 75%),linear-gradient(-45deg,transparent 75%,#34404b 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0;border:1px solid #475564}
+.metrics{font-size:11px;color:#93c5a7;margin:6px 0}
+dialog{max-width:96vw;max-height:95vh;padding:12px;background:#131e2b;color:#fff;border:1px solid #7892aa;border-radius:8px}
+dialog canvas{max-width:80vw;max-height:70vh;image-rendering:auto;background:#26303b}
+dialog button{background:#254358;border:1px solid #7799b1;border-radius:5px;color:white;padding:8px 15px;cursor:pointer}
+#viewer-title{margin:0 0 8px;font-size:15px}
+@media(max-width:650px){h1{font-size:14px}.sheet h2{font-size:15px}.columns{grid-template-columns:repeat(8,98px)}}
+</style>
+</head>
+<body>
+<header><h1>PROJECT Z / 빨간 후드 프레임 정밀 검수실</h1><a href="./index.html">게임으로 돌아가기</a></header>
+<main><p class="info">각 동작의 <strong>원본 4×2 프레임</strong>과 <strong>게임에서 실제 사용하는 분리·커팅된 프레임</strong>을 나란히 비교합니다. 프레임을 누르면 크게 확인할 수 있습니다. 난입은 1~4번만 사용합니다. 원본 이미지 자체는 변경하지 않습니다.</p><p id="status">원본 스프라이트 디코딩 및 커팅 분석 준비 중...</p><div id="gallery"></div></main>
+<iframe id="game-source" src="./index.html" title="게임 원본 에셋 로더" style="position:absolute;width:1px;height:1px;border:0;opacity:0;pointer-events:none" aria-hidden="true" tabindex="-1"></iframe>
+<dialog id="viewer"><h3 id="viewer-title"></h3><canvas id="viewer-canvas" width="512" height="544"></canvas><p><button id="close-viewer">닫기</button></p></dialog>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+function cellSource(image,n){
+ const sx=Math.round((n%4)*image.naturalWidth/4),sy=Math.round(Math.floor(n/4)*image.naturalHeight/2);
+ const sw=Math.round(((n%4)+1)*image.naturalWidth/4)-sx;
+ const sh=Math.round((Math.floor(n/4)+1)*image.naturalHeight/2)-sy;
+ return{sx,sy,sw,sh};
+}
+function drawComparison(canvas,image,cut,n,processed){
+ const original=cellSource(image,n);
+ const w=original.sw,h=original.sh,scale=Math.min(1,160/w);
+ canvas.width=Math.max(1,Math.round(w*scale));canvas.height=Math.max(1,Math.round(h*scale));
+ const c=canvas.getContext('2d');c.imageSmoothingQuality='high';
+ if(processed&&cut.bitmap)c.drawImage(cut.bitmap,cut.left*scale,cut.top*scale,cut.sw*scale,cut.sh*scale);
+ else c.drawImage(image,original.sx,original.sy,w,h,0,0,canvas.width,canvas.height);
+}
+function zoomFrame(name,image,cut,n,processed){
+ const canvas=$('viewer-canvas'),source=cellSource(image,n);
+ canvas.width=source.sw;canvas.height=source.sh;
+ const c=canvas.getContext('2d');
+ if(processed&&cut.bitmap)c.drawImage(cut.bitmap,cut.left,cut.top);
+ else c.drawImage(image,source.sx,source.sy,source.sw,source.sh,0,0,source.sw,source.sh);
+ $('viewer-title').textContent=name+' · 프레임 '+(n+1)+' · '+(processed?'게임 커팅 결과':'원본');
+ $('viewer').showModal();
+}
+function renderAtlas(item,metrics){
+ const {name,image,cuts}=item;
+ const section=document.createElement('section');section.className='sheet';
+ const title=document.createElement('h2');title.textContent=name==='난입'?'난입 / 1~4번 사용':name+' / 8프레임';section.appendChild(title);
+ if(metrics){const m=document.createElement('p');m.className='metrics';m.textContent='확인된 제거 픽셀 합계: '+metrics.reduce((v,a)=>v+a.removedPixels,0).toLocaleString();section.appendChild(m)}
+ for(const processed of [false,true]){
+  const label=document.createElement('div');label.className='original-label';label.textContent=processed?'게임 커팅 결과':'원본 4×2 셀';section.appendChild(label);
+  const row=document.createElement('div');row.className='columns';
+  for(let n=0;n<8;n++){
+   const cut=cuts[n],flag=!!metrics&&(metrics[n].coverage>.96||metrics[n].coverage<.1);
+   const tile=document.createElement('div');tile.className='frame'+(flag?' problem':'');
+   const txt=document.createElement('strong');txt.textContent='F'+(n+1)+(name==='난입'&&n>=4?' (미사용)':'');tile.appendChild(txt);
+   const canvas=document.createElement('canvas');drawComparison(canvas,image,cut,n,processed);tile.appendChild(canvas);
+   const meta=document.createElement('small');
+   meta.textContent=processed?('제거 '+(cut.removedPixels||0)+'px'):'원본';
+   tile.appendChild(meta);
+   tile.addEventListener('click',()=>zoomFrame(name,image,cut,n,processed));
+   row.appendChild(tile);
+  }
+  section.appendChild(row);
+ }
+ return section;
+}
+$('close-viewer').addEventListener('click',()=>$('viewer').close());
+$('game-source').addEventListener('load',async()=>{
+ try{
+  const api=$('game-source').contentWindow.__redhoodFrameAudit;
+  if(typeof api!=='function')throw Error('게임의 최신 원본 검수 기능을 읽지 못했습니다. 캐시를 지우고 다시 열어주세요.');
+  const data=await api();
+  $('status').textContent='커팅 결과 준비 완료 · 7개 시트 / 56프레임 (게임 내 전투 48프레임). 주황 테두리는 자동 이상치 후보.';
+  const fragment=document.createDocumentFragment();
+  for(const item of data.atlases)fragment.appendChild(renderAtlas(item,data.metrics.byAtlas?.[item.name]));
+  $('gallery').appendChild(fragment);
+ }catch(error){
+  $('status').textContent='검수 로드 오류: '+String(error?.message||error);
+ }
+});
+</script>
+</body>
+</html>
