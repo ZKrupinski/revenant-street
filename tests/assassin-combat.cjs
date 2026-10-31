@@ -1514,9 +1514,9 @@ test('redhood death uses the rebuilt 8-frame full-body atlas and restores legs a
 test('redhood hit keeps original full-length boots and audited ground anchors',()=>{
  // Source 1774x887 bitmap audit: eight original poses show both complete feet,
  // and none touches a cell border. Disable destructive isolation ONLY for hit.
- assert(html.includes("if(name==='hit'){"),'hit motion must have its own non-destructive crop path');
+ assert(html.includes("if(name==='hit'||name==='death'){"),'hit and death motions must both retain their own non-destructive crop path');
  assert(html.includes('sourcePreserved:true'),'diagnostic records uncut original hit alpha');
- const isolated=html.slice(html.indexOf("if(name==='hit'){"),html.indexOf("const result=isolateIntruderFrames(image,cuts,name);"));
+ const isolated=html.slice(html.indexOf("if(name==='hit'||name==='death'){"),html.indexOf("const result=isolateIntruderFrames(image,cuts,name);"));
  assert(isolated.includes('continue;'),'original hit poses must skip eroded-core alpha pruning');
  assert.deepEqual(Array.from(t.INTRUDER_FRAME_FOOT.hit),[439,440,441,440,419,421,421,419],
   'all eight floor anchors match original source boot-tip pixels');
