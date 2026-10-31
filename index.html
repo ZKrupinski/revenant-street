@@ -732,12 +732,122 @@ function getIntruderCrops(image){
 function getIntruderFrameCrop(image,index){
  return getIntruderCrops(image)?.[Math.max(0,Math.min(7,index|0))]||null;
 }
+// Remove spillover from adjacent painted 4x2 cells before the fight.
+// The previous alpha bbox included ALL non-transparent pieces, even
+// fragments of neighbouring poses. Keep the dominant connected body
+// silhouette (8-connected at alpha 24), small adjacent costume pieces,
+// and antialiased border pixels. Never overwrite the original PNG sheets.
+function isolateIntruderFrames(image,frames,mode){
+ const source=document.createElement('canvas');
+ source.width=image.naturalWidth;source.height=image.naturalHeight;
+ const sourceCtx=source.getContext('2d',{willReadFrequently:true});
+ sourceCtx.drawImage(image,0,0);
+ const strict=mode==='attack'||mode==='death'||mode==='hit';
+ let corrected=0,discarded=0;
+ for(let frame=0;frame<frames.length;frame++){
+  const crop=frames[frame];
+  const cw=crop.cellW,ch=crop.cellH;
+  const ox=Math.round((frame%4)*image.naturalWidth/4);
+  const oy=Math.round(Math.floor(frame/4)*image.naturalHeight/2);
+  const input=sourceCtx.getImageData(ox,oy,cw,ch);
+  const data=input.data,size=cw*ch;
+  const labels=new Uint16Array(size),queue=new Int32Array(size),groups=[];
+  let nextId=1;
+  for(let at=0;at<size;at++){
+   if(labels[at]||data[at*4+3]<24)continue;
+   let start=0,end=0;queue[end++]=at;labels[at]=nextId;
+   let n=0,sumX=0,minX=cw,maxX=-1,minY=ch,maxY=-1;
+   while(start<end){
+    const index=queue[start++],x=index%cw,y=(index/cw)|0;
+    n++;sumX+=x;minX=Math.min(minX,x);maxX=Math.max(maxX,x);
+    minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+    for(let yy=Math.max(0,y-1);yy<=Math.min(ch-1,y+1);yy++)
+     for(let xx=Math.max(0,x-1);xx<=Math.min(cw-1,x+1);xx++){
+      const neighbor=yy*cw+xx;
+      if(!labels[neighbor]&&data[neighbor*4+3]>=24){
+       labels[neighbor]=nextId;queue[end++]=neighbor;
+      }
+     }
+   }
+   groups.push({id:nextId,size:n,x:sumX/n,minX,maxX,minY,maxY});
+   if(nextId===65535)break;
+   nextId++;
+  }
+  if(!groups.length)continue;
+  const best=groups.reduce((a,b)=>{
+   const score=c=>c.size*(1-.22*Math.min(1,Math.abs(c.x-cw*.5)/(cw*.5)));
+   return score(a)>=score(b)?a:b;
+  });
+  // Very small side islands are usually the neighbouring animation's
+  // boot, arm or cape. The principal body stays intact even at the edge.
+  const selected=new Uint8Array(nextId+1);
+  selected[best.id]=1;
+  for(const part of groups){
+   if(part===best)continue;
+   const overlap=Math.max(0,Math.min(part.maxX,best.maxX)-Math.max(part.minX,best.minX));
+   const adjacent=Math.max(0,Math.max(part.minX-best.maxX,best.minX-part.maxX));
+   const close=Math.abs(part.x-best.x)<cw*(strict?.28:.42);
+   const meaningful=part.size>=Math.max(75,best.size*(strict?.018:.009));
+   if(meaningful&&close&&(overlap>0||adjacent<cw*.065))
+    selected[part.id]=1;
+  }
+  const keep=new Uint8Array(size);
+  let minX=cw,minY=ch,maxX=-1,maxY=-1;
+  for(let at=0;at<size;at++){
+   if(selected[labels[at]]&&labels[at])keep[at]=1;
+  }
+  // Recover the original soft alpha edge without expanding a neighbour.
+  for(let at=0;at<size;at++){
+   if(keep[at]||!data[at*4+3])continue;
+   const x=at%cw,y=(at/cw)|0;
+   for(let yy=Math.max(0,y-1);yy<=Math.min(ch-1,y+1)&&!keep[at];yy++)
+    for(let xx=Math.max(0,x-1);xx<=Math.min(cw-1,x+1);xx++){
+     const candidate=yy*cw+xx;
+     if(labels[candidate]&&selected[labels[candidate]]){keep[at]=1;break}
+    }
+  }
+  let removed=0;
+  for(let at=0;at<size;at++){
+   const alpha=data[at*4+3];if(!alpha)continue;
+   if(!keep[at]){data[at*4+3]=0;removed++;continue}
+   const x=at%cw,y=(at/cw)|0;
+   minX=Math.min(minX,x);maxX=Math.max(maxX,x);
+   minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+  }
+  if(maxX<minX||maxY<minY)continue; // Never erase a whole actor.
+  const pad=1;
+  minX=Math.max(0,minX-pad);maxX=Math.min(cw-1,maxX+pad);
+  minY=Math.max(0,minY-pad);maxY=Math.min(ch-1,maxY+pad);
+  const width=maxX-minX+1,height=maxY-minY+1;
+  const cut=document.createElement('canvas');
+  cut.width=width;cut.height=height;
+  const cutCtx=cut.getContext('2d');
+  const out=cutCtx.createImageData(width,height);
+  for(let y=0;y<height;y++){
+   const from=((y+minY)*cw+minX)*4,to=y*width*4;
+   out.data.set(data.subarray(from,from+width*4),to);
+  }
+  cutCtx.putImageData(out,0,0);
+  Object.assign(crop,{bitmap:cut,sx:0,sy:0,sw:width,sh:height,
+   left:minX,top:minY,removedPixels:removed});
+  corrected++;discarded+=removed;
+ }
+ source.width=0;source.height=0;
+ return {corrected,discarded};
+}
 function prepareIntruderSpriteCrops(){
+ const diagnostic={atlases:0,frames:0,removedPixels:0};
  for(const [name,image] of [['난입',intruderEntryImage],...INTRUDER_MOTION_KEYS.map(k=>[k,intruderMotionImages[k]])]){
   const cuts=getIntruderCrops(image);
   if(!cuts||cuts.length!==8||cuts.some(c=>c.empty||c.sw<1||c.sh<1))
    throw Error('빨간 후드 스프라이트 '+name+'의 커팅 영역을 확인해주세요.');
+  diagnostic.atlases++;
+  if(name==='난입')continue;
+  const result=isolateIntruderFrames(image,cuts,name);
+  diagnostic.frames+=result.corrected;
+  diagnostic.removedPixels+=result.discarded;
  }
+ window.__redhoodCutQA=diagnostic;
 }
 const INTRUDER_FRAME_FOOT={
  idle:[439,439,439,439,432,432,432,432],
@@ -1159,11 +1269,18 @@ function drawIntruderEntry(e,x,y){
  if(!crop)return;
  const scale=1.18-.48*u,drift=(1-u)*(1-u),side=e.entrySide||1;
  if(u>.46)ellipseShadow(x,y,1.03,.33*u);
- ctx.save();ctx.translate(x+side*78*drift,y+140*drift);
+ ctx.save();ctx.translate(x+side*78*drift,y);
  if(side<0)ctx.scale(-1,1);
- // Keep the intact original cell pivot even though empty space is trimmed.
+ // Source frame 0 BEGINS at the bottommost screen edge. It rises quickly
+ // from beneath the camera, while the actor shrinks and lands on the road.
+ // Convert screen bottom into world Y when combo zoom is active.
+ const zoom=Math.max(1,cameraZoom||1),centerY=H*.51;
+ const bottomWorld=centerY+(H-6-centerY)/zoom;
+ const originalTop=y+(-crop.cellH+crop.top)*scale+8;
+ const startWeight=Math.pow(1-u,3.15);
+ const drawnTop=originalTop+(bottomWorld-originalTop)*startWeight;
  ctx.drawImage(intruderEntryImage,crop.sx,crop.sy,crop.sw,crop.sh,
-  (-crop.cellW/2+crop.left)*scale,(-crop.cellH+crop.top)*scale+8,
+  (-crop.cellW/2+crop.left)*scale,drawnTop-y,
   crop.sw*scale,crop.sh*scale);
  ctx.restore();
 }
@@ -1225,11 +1342,12 @@ function drawIntruderCombat(e,x,y,z){
  // alpha-trimming must not introduce size popping or idle/run jitter.
  const left=(-crop.cellW/2+crop.left)*scale,top=(-foot+crop.top)*scale;
  const w=crop.sw*scale,h=crop.sh*scale;
- ctx.drawImage(image,crop.sx,crop.sy,crop.sw,crop.sh,left,top,w,h);
+ const sprite=crop.bitmap||image;
+ ctx.drawImage(sprite,crop.sx,crop.sy,crop.sw,crop.sh,left,top,w,h);
  if(e.hitFlash>0){
   ctx.filter='brightness(0) invert(1)';
   ctx.globalAlpha=opacity*.75*clamp(e.hitFlash/.22,0,1);
-  ctx.drawImage(image,crop.sx,crop.sy,crop.sw,crop.sh,left,top,w,h);
+  ctx.drawImage(sprite,crop.sx,crop.sy,crop.sw,crop.sh,left,top,w,h);
   ctx.filter='none';
  }
  ctx.restore();
@@ -2335,7 +2453,7 @@ function spawnIntruderSupport(){
   e.maxPoise=Math.round(e.maxPoise*growth);
   e.squad=index;e.supportTeam=true;e.supportGroup=wave+'-'+index;
   e.supportIndex=j;e.encountered=true;e.renderX=x;e.renderY=y;
-  e.entryAge=0;e.entryDuration=1.05+j*.13;e.entrySide=side;
+  e.entryAge=0;e.entryDuration=.68+j*.065;e.entrySide=side;
   e.entryLandingPlayed=false;e.face=-side;
   e.cooldown=1.15+j*.18;e.specialCooldown=2.15+j*1.35;
   enemies.push(e);
