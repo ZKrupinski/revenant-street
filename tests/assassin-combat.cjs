@@ -855,6 +855,32 @@ test('four smaller bitmap arcade controls retain large touch surfaces and presse
  assert(html.includes("b.classList.add('pressed')")&&html.includes("b.classList.remove('pressed')"),
  'all touch down/up/cancel handlers still animate both button states');
 });
+test('approved arcade joystick uses bitmap disc and separately movable red ball, no guide circles',()=>{
+ const root=path.join(__dirname,'../assets/ui');
+ for(const name of ['z-arcade-stick-base.webp','z-arcade-stick-knob.webp']){
+  const bytes=fs.readFileSync(path.join(root,name));
+  assert(bytes.length>8000&&bytes.subarray(0,4).toString()==='RIFF',name+' exists as original raster');
+ }
+ const part=html.slice(html.indexOf('<style id="joystick-arcade-control">'),
+ html.indexOf('</style>',html.indexOf('<style id="joystick-arcade-control">')));
+ assert(part.includes('--joystick-base-url')&&part.includes('--joystick-knob-url'),
+ 'metallic base and red ball use independent transparent raster layers');
+ assert(part.includes('.analog-ring::after')&&part.includes('.analog-axis')&&part.includes('display:none!important'),
+ 'old circle guide / vector axis must be gone');
+ assert(part.includes('transition:translate .045s ease-out'),
+ 'ball tilts responsively within its collar');
+ assert(html.includes('cy=r.top+r.height*.35'),
+ 'pointer neutral center uses the painted red ball, not center of lower base');
+ assert(html.includes("${(x*.42).toFixed(1)}px ${(y*.42).toFixed(1)}px"),
+ 'tilt travel stays visually inside the arcade stick while analog input remains full');
+ const compact=html.slice(html.indexOf('<style id="compact-arcade-face-buttons">'),
+ html.indexOf('</style>',html.indexOf('<style id="compact-arcade-face-buttons">')));
+ assert(compact.includes('position:absolute;inset:4%'),'visible caps become 8% smaller');
+ assert(compact.includes('button.pressed::before')&&compact.includes('background-position:var(--arcade-x) 100%'),
+ 'fast pressed sprite swapping is preserved');
+ assert(compact.includes('background-image:none!important')&&compact.includes('transform:none!important'),
+ 'outer full square touch target does not shrink');
+});
 test('offscreen arrows ping-pong across eight hand-painted frames at 8 fps',()=>{
  const atlas=fs.readFileSync(path.join(__dirname,'../assets/ui/edge-arrows-animated.webp'));
  assert.equal(atlas.toString('ascii',0,4),'RIFF','WebP signature');

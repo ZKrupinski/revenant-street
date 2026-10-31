@@ -197,7 +197,9 @@ async function uiBitmapPreload(){
  assert(html.includes("['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)]"));
  assert(html.includes("['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)]"));
  assert(html.includes("['아케이드 조작 버튼 4종·눌림 8프레임',()=>ensureBitmapDecoded(arcadeButtonsImage)]"));
- for(const file of ['assets/ui/upgrade-icons-v2.webp','assets/ui/edge-arrows-animated.webp','assets/fx/parry-shield.png','assets/ui/arcade-action-buttons-v1.webp']){
+ assert(html.includes("['왼쪽 아케이드 스틱 베이스',()=>ensureBitmapDecoded(joystickBaseImage)]"));
+ assert(html.includes("['왼쪽 아케이드 스틱 빨간 볼탑',()=>ensureBitmapDecoded(joystickKnobImage)]"));
+ for(const file of ['assets/ui/upgrade-icons-v2.webp','assets/ui/edge-arrows-animated.webp','assets/fx/parry-shield.png','assets/ui/arcade-action-buttons-v1.webp','assets/ui/z-arcade-stick-base.webp','assets/ui/z-arcade-stick-knob.webp']){
   const imgBytes=fs.readFileSync(path.join(root,file));
   assert(imgBytes.length>3000,'real UI bitmap asset exists: '+file);
  }

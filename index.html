@@ -350,6 +350,68 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
  #stageWrap .touch-controls .touch-actions{--face-btn:50px}
 }
 </style>
+
+<style id="joystick-arcade-control">
+/* Two real transparent bitmap layers cut from the approved red-ball arcade
+   joystick concept. No outer circular touch guide or vector arrows. */
+#stageWrap .analog-pad{
+ flex:0 0 clamp(110px,11cqw,130px)!important;
+ width:clamp(110px,11cqw,130px)!important;
+ height:clamp(110px,11cqw,130px)!important;
+ justify-content:flex-end!important;align-items:center!important;
+ background:transparent!important;
+}
+#stageWrap .analog-pad .analog-ring{
+ position:relative;
+ width:clamp(106px,10.5cqw,126px)!important;
+ height:clamp(106px,10.5cqw,126px)!important;
+ background:var(--joystick-base-url,url('./assets/ui/z-arcade-stick-base.webp')) center / 100% 100% no-repeat!important;
+ border:0!important;border-radius:0!important;
+ box-shadow:none!important;overflow:visible!important;
+}
+#stageWrap .analog-pad .analog-ring::after,
+#stageWrap .analog-pad .analog-axis,
+#stageWrap .analog-pad .analog-caption{display:none!important}
+#stageWrap .analog-pad .analog-thumb{
+ position:absolute;left:50%!important;top:50%!important;
+ width:100%!important;height:100%!important;
+ transform:translate(-50%,-50%)!important;
+ background:var(--joystick-knob-url,url('./assets/ui/z-arcade-stick-knob.webp')) center / 100% 100% no-repeat!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ pointer-events:none!important;filter:drop-shadow(0 2px 2px #0008);
+ transition:translate .045s ease-out;
+}
+#stageWrap .analog-pad.engaged .analog-ring{
+ border:0!important;box-shadow:none!important;
+}
+@media(max-width:550px){
+ #stageWrap .analog-pad{flex-basis:106px!important;width:106px!important;height:110px!important}
+ #stageWrap .analog-pad .analog-ring{width:104px!important;height:104px!important}
+}
+</style>
+<style id="compact-arcade-face-buttons">
+/* Preserve all four original square touch targets, but shrink only the
+   visible glossy bitmap by 8%. Extra corner pixels remain touchable. */
+#stageWrap .touch-controls .touch-actions button{
+ background-image:none!important;box-shadow:none!important;
+ transform:none!important;filter:none!important;
+}
+#stageWrap .touch-controls .touch-actions button::before{
+ content:"";display:block;position:absolute;inset:4%;
+ pointer-events:none!important;
+ background:var(--arcade-control-url,url('./assets/ui/arcade-action-buttons-v1.webp')) var(--arcade-x) 0% / 400% 200% no-repeat;
+ filter:drop-shadow(0 2px 4px #000b);
+ transition:transform .05s ease-out,filter .05s ease-out;
+ transform:translate3d(0,0,0);
+}
+#stageWrap .touch-controls .touch-actions button.pressed::before,
+#stageWrap .touch-controls .touch-actions button:active::before{
+ background-position:var(--arcade-x) 100%!important;
+ transition:transform .02s linear,filter .02s linear;
+ transform:translate3d(0,3px,0) scale(.965);
+ filter:brightness(1.1) drop-shadow(0 1px 2px #0008);
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -428,6 +490,9 @@ let parryShieldImage=new Image();parryShieldImage.src='./assets/fx/parry-shield.
 let upgradeIconsImage=new Image();upgradeIconsImage.src='./assets/ui/upgrade-icons-v2.webp';
 // Predecode the full four-button raised/pressed bitmap atlas before gameplay.
 let arcadeButtonsImage=new Image();arcadeButtonsImage.src='./assets/ui/arcade-action-buttons-v1.webp';
+// Predecode both transparent bitmap pieces of the arcade joystick.
+let joystickBaseImage=new Image();joystickBaseImage.src='./assets/ui/z-arcade-stick-base.webp';
+let joystickKnobImage=new Image();joystickKnobImage.src='./assets/ui/z-arcade-stick-knob.webp';
 const keys=new Set(), padPrev={}, touchKey={};
 const p={x:270,y:570,z:0,vz:0,facing:1,hp:100,maxHp:100,stamina:100,stagger:0,inv:0,stun:0,attack:0,attackDuration:0,hitDone:false,comboIdx:0,comboWindow:0,parry:0,dodge:0,dodgeX:0,weapon:0,maxWeapon:18,moveDX:0,moveDY:0,moveName:'idle',kickIdx:-1,punchIdx:-1,animAge:0,mod:'none',mods:[],credits:0,hits:0,hitTimeout:0,damageBoost:0,glow:0};
 
@@ -1698,7 +1763,9 @@ function resetFailedUiBitmaps(){
   {get:()=>offscreenArrow,set:im=>{offscreenArrow=im},url:'./assets/ui/edge-arrows-animated.webp'},
   {get:()=>parryShieldImage,set:im=>{parryShieldImage=im},url:'./assets/fx/parry-shield.png'},
   {get:()=>upgradeIconsImage,set:im=>{upgradeIconsImage=im},url:'./assets/ui/upgrade-icons-v2.webp',css:true},
-  {get:()=>arcadeButtonsImage,set:im=>{arcadeButtonsImage=im},url:'./assets/ui/arcade-action-buttons-v1.webp',css:'arcade'}
+  {get:()=>arcadeButtonsImage,set:im=>{arcadeButtonsImage=im},url:'./assets/ui/arcade-action-buttons-v1.webp',css:'arcade'},
+  {get:()=>joystickBaseImage,set:im=>{joystickBaseImage=im},url:'./assets/ui/z-arcade-stick-base.webp',css:'joystickBase'},
+  {get:()=>joystickKnobImage,set:im=>{joystickKnobImage=im},url:'./assets/ui/z-arcade-stick-knob.webp',css:'joystickKnob'}
  ];
  for(const item of sources){
   const current=item.get(),prior=UI_DECODE_CACHE.get(current);
@@ -1709,7 +1776,7 @@ function resetFailedUiBitmaps(){
   // A failed CSS image must point to the retried URL too; otherwise the
   // loading screen might pass while the cards retain the failed cached URL.
   if(item.css&&typeof document!=='undefined')
-   document.documentElement?.style?.setProperty(item.css==='arcade'?'--arcade-control-url':'--upgrade-preloaded-url','url("'+path+'")');
+   document.documentElement?.style?.setProperty(({arcade:'--arcade-control-url',joystickBase:'--joystick-base-url',joystickKnob:'--joystick-knob-url'})[item.css]||'--upgrade-preloaded-url','url("'+path+'")');
  }
 }
 function requiredSceneArt(preview=false){
@@ -1719,6 +1786,8 @@ function requiredSceneArt(preview=false){
   ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
   ['업그레이드 아이콘 22종',()=>ensureBitmapDecoded(upgradeIconsImage)],
   ['아케이드 조작 버튼 4종·눌림 8프레임',()=>ensureBitmapDecoded(arcadeButtonsImage)],
+  ['왼쪽 아케이드 스틱 베이스',()=>ensureBitmapDecoded(joystickBaseImage)],
+  ['왼쪽 아케이드 스틱 빨간 볼탑',()=>ensureBitmapDecoded(joystickKnobImage)],
   ...['burst_red','burst_blue','burst_gold'].map(k=>['전투 이펙트 '+k,()=>ensureBitmapDecoded(img[k])]),
   ...Object.keys(Z_REMOTE_ATLAS).map(k=>['Z '+k,()=>loadZMove(k),
    Z_ALL_ATTACKS.includes(k)&&!['jab','frontkick','cross','superman_punch','axe_kick','diagonal_airkick'].includes(k)]),
@@ -3506,13 +3575,15 @@ const analogPad=$('analogPad'),analogThumb=$('analogThumb');
 function resetAnalog(){analog.dx=0;analog.dy=0;analog.pointerId=null;analogThumb.style.translate='0px 0px';analogPad.classList.remove('engaged')}
 function trackAnalog(e){
  const ring=analogPad.querySelector('.analog-ring'),r=ring.getBoundingClientRect();
- const cx=r.left+r.width/2,cy=r.top+r.height/2,rad=r.width*.35;
+ // Painted red ball rests above the disc center (35% of sprite height).
+ const cx=r.left+r.width/2,cy=r.top+r.height*.35,rad=r.width*.35;
  let x=e.clientX-cx,y=e.clientY-cy;const length=Math.hypot(x,y);
  if(length>rad){const u=rad/length;x*=u;y*=u}
  const nx=x/rad,ny=y/rad,mag=Math.hypot(nx,ny),dead=.12;
  const f=mag<=dead?0:(mag-dead)/(1-dead),unit=Math.max(.0001,mag);
  analog.dx=nx/unit*f;analog.dy=ny/unit*f;
- analogThumb.style.translate=`${x.toFixed(1)}px ${y.toFixed(1)}px`;
+ // Sphere inclines within the metal collar; real gamepad movement keeps full range.
+ analogThumb.style.translate=`${(x*.42).toFixed(1)}px ${(y*.42).toFixed(1)}px`;
 }
 analogPad.addEventListener('pointerdown',e=>{
  if(analog.pointerId!==null)return;e.preventDefault();analog.pointerId=e.pointerId;
