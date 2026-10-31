@@ -683,6 +683,24 @@ let offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows-anima
 // camera-facing back-view entry, last four frames are its own combat stance.
 // Never pass this actor to the original raider/Masked Grunt atlas after landing.
 let intruderEntryImage=new Image();intruderEntryImage.src='./assets/enemies/redhood-ambush-entry-8.webp';
+// Six painted 8-frame action sheets: the foreground entrance is cinematic
+// ONLY. Every subsequent combat action is rendered from this enemy's own art.
+const INTRUDER_MOTION_KEYS=['idle','run','attack','hit','death','special'];
+const intruderMotionImages=Object.fromEntries(INTRUDER_MOTION_KEYS.map(key=>{
+ const image=new Image();image.src='./assets/enemies/redhood-intruder/'+key+'.png';
+ return [key,image];
+}));
+// Per-frame bottommost opaque pixel, measured from the original transparent
+// 4x2 atlases; corrects the AI sheets' different row baselines without
+// changing body proportions or borrowing another enemy's animation.
+const INTRUDER_FRAME_FOOT={
+ idle:[439,439,439,439,432,432,432,432],
+ run:[433,433,432,433,415,414,416,415],
+ attack:[438,438,438,438,415,415,415,415],
+ hit:[440,440,442,440,419,420,420,420],
+ death:[444,444,444,444,377,379,375,376],
+ special:[440,443,409,436,410,418,407,417]
+};
 // 8 fps ping-pong keeps the peak flash from harshly jumping back to the dim pose.
 const OFFSCREEN_ARROW_SEQUENCE=[0,1,2,3,2,1];
 function offscreenArrowFrameAt(seconds){return OFFSCREEN_ARROW_SEQUENCE[Math.floor(Math.max(0,seconds)*8)%OFFSCREEN_ARROW_SEQUENCE.length]}
@@ -1102,67 +1120,79 @@ function drawIntruderEntry(e,x,y){
 // are a coherent combat pose; it never borrows a frame from the old red hood.
 // Whole-sprite lean/recoil/fall preserves the costume and foot scale until
 // dedicated additional action atlases are authored for this exact character.
+function intruderVisualMove(e,key){
+ // Death always wins over any interrupted aerial special.
+ if(e.dead||key==='fall')return 'death';
+ if(e.specialPhase)return 'special';
+ if(key==='attack')return 'attack';
+ if(key==='getup'||key.startsWith('hit'))return 'hit';
+ if(key==='walk'||key==='run'||key==='charge')return 'run';
+ return 'idle';
+}
 function intruderCombatFrame(e,key){
- if(e.specialPhase){
-  if(e.specialPhase==='leap')return 0+Math.min(3,Math.floor((e.specialTime||0)/.32*4));
-  if(e.specialPhase==='hang')return 1;
-  if(e.specialPhase==='dive')return 2;
-  if(e.specialPhase==='windup')return 6;
-  return 7;
+ const move=intruderVisualMove(e,key);
+ const one=t=>Math.min(7,Math.max(0,Math.floor(clamp(t,0,.9999)*8)));
+ if(move==='special'){
+  if(e.specialPhase==='windup')return Math.min(1,one((e.specialTime||0)/.57));
+  if(e.specialPhase==='leap')return 1+Math.min(2,Math.floor(clamp((e.specialTime||0)/.32,0,.9999)*3));
+  if(e.specialPhase==='hang')return 3;
+  if(e.specialPhase==='dive')return 4+Math.min(1,Math.floor(clamp((e.specialTime||0)/.25,0,.9999)*2));
+  return 6+Math.min(1,Math.floor(clamp((e.specialTime||0)/.41,0,.9999)*2));
  }
- const t=Math.max(0,e.spriteTime||0);
- if(key==='fall')return 7;
- if(key==='getup')return 4+Math.min(3,Math.floor(clamp(1-(e.riseTime||0)/.67,0,.9999)*4));
- if(key.startsWith('hit'))return 5+Math.min(2,Math.floor(clamp(1-(e.reactionTime||0)/Math.max(.01,e.reactionDuration||.48),0,.9999)*3));
- if(key==='attack')return e.windup>0?5:7;
- if(key==='charge')return 6;
- if(key==='walk'||key==='run')return 4+(Math.floor(Math.max(0,e.spriteDistance||0)/(key==='run'?38:27))%4);
- // Hold the final entry landing pose briefly to avoid a snap at the handoff.
- if(t<.24)return 7;
- return 4+([0,1,2,1][Math.floor(t*4.7)%4]);
+ if(move==='death'){
+  if(e.dead)return one((e.collapseAge||0)/.92);
+  return Math.min(6,Math.max(2,one(1-(e.proneTime||0)/.62)));
+ }
+ if(move==='hit'){
+  if(key==='getup')return 4+Math.min(3,Math.floor(clamp(1-(e.riseTime||0)/.67,0,.9999)*4));
+  return one(1-(e.reactionTime||0)/Math.max(.01,e.reactionDuration||.48));
+ }
+ if(move==='attack'){
+  if(e.windup>0)return Math.min(5,one((1-e.windup/Math.max(.01,e.windupDuration||.45))*.78));
+  return 5+Math.min(2,Math.floor(clamp(1-(e.attackPoseTime||0)/.17,0,.9999)*3));
+ }
+ if(move==='run')return Math.floor(Math.max(0,e.spriteDistance||0)/(key==='run'?39:27))%8;
+ return Math.floor(Math.max(0,e.spriteTime||0)*5.5)%8;
 }
 function drawIntruderCombat(e,x,y,z){
- if(!intruderEntryImage.complete||!intruderEntryImage.naturalWidth)return;
- const key=getMaskedMove(e),frame=intruderCombatFrame(e,key);
- const cw=intruderEntryImage.naturalWidth/4,ch=intruderEntryImage.naturalHeight/2;
- const specialAir=['leap','hang','dive'].includes(e.specialPhase);
- const specialScale=specialAir?1.16:e.specialPhase==='windup'?1.055:1;
- const w=cw*.68*specialScale,h=ch*.68*specialScale;
- const sourceY=specialAir?0:ch;
- const moving=key==='walk'||key==='run';
- const step=moving?Math.sin((e.spriteDistance||0)/(key==='run'?20:26))*2.8:0;
- const charging=key==='charge',attacking=key==='attack';
- const struck=key.startsWith('hit'),down=key==='fall';
- const groundedDown=down&&z<12;
- const lean=groundedDown?1.21:down?.32:struck?.19:charging?-.12:attacking?-.09:e.specialPhase==='windup'?.13:0;
- const shove=attacking?(e.windup>0?3:19):charging?7:0;
+ const key=getMaskedMove(e);
+ const move=intruderVisualMove(e,key);
+ const image=intruderMotionImages[move];
+ // The game waits for ALL six images to decode before entering combat.
+ // Never substitute the preexisting red-hood raider's artwork.
+ if(!image?.complete||!image.naturalWidth)return;
+ const frame=intruderCombatFrame(e,key);
+ const iw=image.naturalWidth,ih=image.naturalHeight;
+ const col=frame%4,row=Math.floor(frame/4);
+ const sx=Math.round(col*iw/4),sy=Math.round(row*ih/2);
+ const sw=Math.round((col+1)*iw/4)-sx,sh=Math.round((row+1)*ih/2)-sy;
+ // One common physical scale for idle, run, attack and reactions.
+ const scale=move==='special'?.61:.585;
+ const w=sw*scale,h=sh*scale;
+ const foot=INTRUDER_FRAME_FOOT[move]?.[frame]??sh-5;
  const opacity=e.dead?clamp(e.fade,0,1):1;
  ellipseShadow(x,y,1.06,.42*opacity/(1+z*.022));
- ctx.save();
- ctx.globalAlpha=opacity;
- ctx.translate(Math.round(x),Math.round(y-z+step));
- // Both rows belong to the SAME new intruder, including his aerial special.
- ctx.scale(e.face>0?1:-1,1);
- ctx.translate(shove,0);
- ctx.rotate(lean);
- ctx.drawImage(intruderEntryImage,(frame%4)*cw,sourceY,cw,ch,-w/2,-h+8,w,h);
+ ctx.save();ctx.globalAlpha=opacity;
+ ctx.translate(Math.round(x),Math.round(y-z));
+ ctx.scale(e.face>0?1:-1,1); // All six source sheets face right.
+ const left=-w/2,top=-foot*scale;
+ ctx.drawImage(image,sx,sy,sw,sh,left,top,w,h);
  if(e.hitFlash>0){
   ctx.filter='brightness(0) invert(1)';
   ctx.globalAlpha=opacity*.75*clamp(e.hitFlash/.22,0,1);
-  ctx.drawImage(intruderEntryImage,(frame%4)*cw,sourceY,cw,ch,-w/2,-h+8,w,h);
+  ctx.drawImage(image,sx,sy,sw,sh,left,top,w,h);
   ctx.filter='none';
  }
  ctx.restore();
  if(e.dead)return;
- // Combat and damage logic remains the ordinary grunt AI, with separate art.
- const top=y-z-270,bw=95;
- ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,top,bw,7);
- ctx.fillStyle='#ff9aab';ctx.fillRect(x-bw/2,top,bw*clamp(e.hp/e.maxHp,0,1),7);
- if(e.poise>0){ctx.fillStyle='#7ee5fa';ctx.fillRect(x-bw/2,top+9,bw*clamp(e.poise/e.maxPoise,0,1),4)}
+ const hpTop=y-z-270,bw=95;
+ ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,hpTop,bw,7);
+ ctx.fillStyle='#ff9aab';ctx.fillRect(x-bw/2,hpTop,bw*clamp(e.hp/e.maxHp,0,1),7);
+ if(e.poise>0){ctx.fillStyle='#7ee5fa';ctx.fillRect(x-bw/2,hpTop+9,bw*clamp(e.poise/e.maxPoise,0,1),4)}
  ctx.textAlign='center';
- if(e.windup>0){ctx.fillStyle='#ff697b';ctx.font='900 26px Arial';ctx.fillText('!',x,top-13)}
- if(e.chargePrep>0){ctx.fillStyle='#ffb842';ctx.font='900 28px Arial';ctx.fillText('!!',x,top-18)}
- if(e.groggy>0){ctx.fillStyle='#9ef4ff';ctx.font='900 14px Arial';ctx.fillText('공격 → 처형',x,top-12)}
+ if(e.windup>0){ctx.fillStyle='#ff697b';ctx.font='900 26px Arial';ctx.fillText('!',x,hpTop-13)}
+ if(e.chargePrep>0){ctx.fillStyle='#ffb842';ctx.font='900 28px Arial';ctx.fillText('!!',x,hpTop-18)}
+ if(e.groggy>0){ctx.fillStyle='#9ef4ff';ctx.font='900 14px Arial';ctx.fillText('공격 → 처형',x,hpTop-12)}
 }
 // No vector circles/rings: the warning and landing flash stamp original
 // painted burst bitmap sprites onto the lane in world coordinates.
@@ -2124,7 +2154,8 @@ function requiredSceneArt(preview=false){
   ['배경 디코딩',()=>ensureBitmapDecoded(img.street_pano)],
   ['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)],
   ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
-  ['신규 난입자 전용 난입·전투 8프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
+  ['난입 연출 8프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
+  ...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임',()=>ensureBitmapDecoded(intruderMotionImages[k])]),
   ['업그레이드 아이콘 22종',()=>ensureBitmapDecoded(upgradeIconsImage)],
   ['아케이드 조작 버튼 4종·눌림 8프레임',()=>ensureBitmapDecoded(arcadeButtonsImage)],
   ['왼쪽 아케이드 스틱 베이스',()=>ensureBitmapDecoded(joystickBaseImage)],
