@@ -1829,8 +1829,10 @@ test('held pad attack cannot auto-pick until released; A and X both confirm menu
   for(let i=0;i<10;i++){pad.buttons[0].pressed=true;t.pollPad();pad.buttons[0].pressed=false;t.pollPad()}
   assert(fake[0].clicked>=1,'A/cross must confirm after release of a previously held face button');
   const afterA=fake[0].clicked;
+  // The test does not run a clock; skip the intentional menu confirm cooldown.
+  t.menuPad.readyAt=0;t.menuPad.neutralAt=0;t.pollPad();
   pad.buttons[2].pressed=true;t.pollPad();t.pollPad();
-  assert.equal(fake[0].clicked,afterA+1,'X also confirms after the intervening neutral release');
+  assert.equal(fake[0].clicked,afterA+1,'X also confirms after neutral release and cooldown');
  }finally{m.querySelectorAll=old;world.navigator.getGamepads=()=>[];t.pollPad()}
 });
 
