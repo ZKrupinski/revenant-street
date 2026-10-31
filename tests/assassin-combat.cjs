@@ -1438,7 +1438,11 @@ test('stage-relative HUD reserves separate left, centre and right layout areas',
  assert(css.includes('#hud .hud-center{left:29%;width:42%;'),'centre has its own lane');
  assert(css.includes('@container (max-width:610px)'),'compact landscape or fold devices');
  assert(css.includes('#stageWrap .touch-actions{--face-btn:clamp(43px,5.2cqw,61px)'));
- assert(css.includes('#stageWrap #touchControls:not([hidden]) ~ .bottom-tip{display:none}'));
+ assert(!html.includes('id="bottomTip"'),'bottom keyboard and gamepad guide must be removed, not hidden');
+ assert(!html.includes("('bottomTip')"),'no title reset may reference the removed banner');
+ assert(!css.includes('.bottom-tip'),'combat stage should have no bottom guide styling');
+ assert(html.includes('id="touchControls"'),'touch input controls must remain available');
+ assert(html.includes('data-key="j"'),'attack touch button must remain operational');
  assert(!css.includes('display:none!important} #stageWrap .touch-controls'),'touch control must remain visible');
 });
 test('upgrades stay in two rows by default and expand only when selected',()=>{
