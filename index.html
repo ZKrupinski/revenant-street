@@ -3283,7 +3283,7 @@ function requestSelectMod(m){
  const rank=modRank(m)+1,strip=$('modStrip');
  const preview='<span class="mod-chip compact reward-preview" title="'+MOD_META[m].title+
   ' 획득"><span class="icon">'+modIconMarkup(m)+'</span><b>x'+rank+'</b></span>';
- strip.innerHTML+=preview;
+ strip.innerHTML=preview+strip.innerHTML; // Always show the chosen icon in the visible first HUD slot.
  const stage=$('stageWrap'),hudTarget=strip.querySelector?.('.reward-preview');
  const start=chosen?.getBoundingClientRect?.(),end=hudTarget?.getBoundingClientRect?.(),
   area=stage.getBoundingClientRect?.();

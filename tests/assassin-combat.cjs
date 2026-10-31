@@ -1400,7 +1400,9 @@ test('reward choices open with no prelit first-card focus or outline',()=>{
  }finally{menu.querySelectorAll=old}
 });
 test('reward confirmation glows and holds before granting exactly one upgrade',()=>{
- g.startRun();t.keys.clear();t.heldKeyboard.clear();t.rewardMenu('mid');
+ g.startRun();t.keys.clear();t.heldKeyboard.clear();
+ t.p.x=t.WAVE_GATES[1]+10;t.setSquad(t.SQUAD_SPOTS[1].length);t.setEnemies([]);
+ t.updateEnemies(0);assert.equal(g.getState().gameState,'reward','real wave clear must open the reward menu');
  const before=t.modRank('rush');
  assert.equal(t.requestSelectMod('rush'),true);
  assert.equal(g.getState().gameState,'reward');
