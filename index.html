@@ -1609,6 +1609,8 @@ function makeEnemy(type,x,y,index){
  poise:0,maxPoise:poise,speed,damage,reach,stun:0,inv:0,windup:0,
  cooldown:(index%3)*.23+.38,attackDone:false,hitFlash:0,groggy:0,phase:1,
  dead:false,fade:1,decision:0,strafe:Math.random()>.5?1:-1,
+  tactic:'advance',tacticTime:.65+(index%5)*.22,retreatCooldown:1.2+(index%4)*.9,
+  berserkCooldown:1.7+(index%5)*.5,
  bleed:0,burn:0,shock:0,freeze:0,spriteKey:'',spriteTime:0,spriteDistance:0,visualMoving:false,visualSpeed:0,visualSpeedSmooth:0,locomotionMode:'walk',visualHold:0,renderX:x,renderY:groundY(y),
   attackPoseTime:0,windupDuration:.45,hitAnimation:'hitHead',proneTime:0,riseTime:0,pendingFall:false,deathAge:0,
   brain:type==='boss'?'boss':type==='elite'?'elite':['swarm','feint','charger','swarm','feint','charger'][index%6],
@@ -2587,6 +2589,45 @@ function updateEnemies(dt){
    e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
    continue;
   }
+  // Tactical decision below committed strike / charge so enemies can't
+  // cancel attacks mid-animation. Only ordinary mobs get mood changes.
+  if(e.type!=='boss'&&e.type!=='elite'){
+   e.tacticTime=Math.max(0,(e.tacticTime||0)-dt);
+   e.retreatCooldown=Math.max(0,(e.retreatCooldown||0)-dt);
+   e.berserkCooldown=Math.max(0,(e.berserkCooldown||0)-dt);
+   if(e.tacticTime===0){
+    const wounded=e.hp/e.maxHp<.56,roll=Math.random();
+    if(e.retreatCooldown===0&&dist<340&&dist>90&&(wounded?roll<.51:roll<.09)){
+     e.tactic='retreat';e.tacticTime=.60+(e.slot%4)*.12;
+     e.retreatCooldown=4.6+(e.slot%3)*.8;e.strafe*=-1;
+     floatText('후퇴!',e.x,e.y-195,'#9dd9ff');
+    }else if(e.berserkCooldown===0&&e.chargeCooldown<=0&&dist>145&&dist<520&&roll<(.31+(wave-1)*.07)){
+     e.tactic='berserk';e.tacticTime=.4;e.berserkCooldown=4.1+(e.slot%4)*.65;
+    }else if(dist<450&&roll<.70){
+     e.tactic='feint';e.tacticTime=.95+(e.slot%4)*.17;e.strafe*=-1;
+    }else{
+     e.tactic='advance';e.tacticTime=.85+(e.slot%4)*.2;
+    }
+   }
+   if(e.tactic==='berserk'&&e.chargeCooldown<=0&&dist>135&&dist<530){
+    e.chargePrep=.18;e.chargePrepDuration=.18;
+    e.chargeCooldown=3.1+(e.slot%4)*.47;
+    e.tactic='advance';e.tacticTime=1.3;
+    fxBurst(e.x+e.face*42,e.y-135,'red',1.05);
+    floatText('폭주!',e.x,e.y-193,'#ff8787');
+    continue;
+   }
+   if(e.tactic==='retreat'&&e.tacticTime>0&&dist<440){
+    // A brief retreat, clamped to 390 px from Z. They always return.
+    const lastX=e.x,lastY=e.y,side=e.x>=p.x?1:-1;
+    const targetX=clamp(p.x+side*Math.min(390,dist+125),55,STAGE_WIDTH-55);
+    e.x+=Math.sign(targetX-e.x)*Math.min(Math.abs(targetX-e.x),speed*1.65*dt);
+    e.y=groundY(e.y+e.strafe*Math.min(38,speed*.56*dt));
+    const moved=Math.hypot(e.x-lastX,(e.y-lastY)*1.7);
+    e.spriteDistance+=moved;e.visualMoving=moved>.001;e.visualSpeed=dt>0?moved/dt:0;
+    continue;
+   }
+  }
   if((e.brain==='charger'||e.brain==='feint')&&e.chargeCooldown<=0&&dist>145&&dist<420&&Math.abs(dy)<135){
    e.chargePrep=e.brain==='charger'?.34:.48;e.chargePrepDuration=e.chargePrep;
    e.chargeCooldown=2.7+(e.slot%5)*.63;
@@ -2595,10 +2636,11 @@ function updateEnemies(dt){
   const side=e.x>=p.x?1:-1;
   const spacing=Math.max(e.type==='boss'?132:Math.min(e.reach+43,77+(e.slot%3)*12),bodyHalfX(p)+bodyHalfX(e)+12); // Aim for sprite edge, not inside another body.
   const lanes=[-47,-19,24,47,-31,10];
-  const targetX=clamp(p.x+side*spacing,55,STAGE_WIDTH-55);
-  const targetY=groundY(p.y+lanes[e.slot%6]);
+  const bait=e.tactic==='feint'&&e.tacticTime>0&&e.type!=='boss'&&e.type!=='elite';
+  const targetX=clamp(p.x+side*(spacing+(bait?90:0)),55,STAGE_WIDTH-55);
+  const targetY=groundY(p.y+lanes[e.slot%6]+(bait?e.strafe*38:0));
   const friends=nearbyEnemies.filter(o=>o!==e&&o.type!=='boss'&&Math.abs(o.x-e.x)<180).length;
-  const moveSpeed=speed*(friends?1.21:1.08);
+  const moveSpeed=speed*(friends?1.21:1.08)*(bait?1.28:1);
   const readyToHit=dist<Math.max(e.reach+64,bodyHalfX(p)+bodyHalfX(e)+28)&&Math.abs(dy)<68&&e.z<40;
   const activeWindups=nearbyEnemies.filter(o=>o!==e&&(o.windup>0||o.chargeTime>0)&&Math.abs(o.x-p.x)<200).length;
   if(e.type!=='boss'&&readyToHit&&e.cooldown<=0&&activeWindups<3){
