@@ -3976,6 +3976,7 @@ function update(dt){
  // Don't decode a full library of 2K sprite sheets while the user fights.
  // Required combat animations are prepared behind the loading screen.
 const pad=pollPad();
+syncExternalStickVisual(pad);
 if(gameState==='reward'&&rewardSelection){updateRewardSelection(dt);return}
 if(gameState!=='playing')return;
  // Time domains: background, camera, particles and general mobs slow to 33%.
@@ -4573,6 +4574,20 @@ function keyDown(ev){
 function keyUp(ev){const k=ev.key.toLowerCase();keys.delete(k);heldKeyboard.delete(k);menuBlockedKeys.delete(k);syncFaceButtonVisuals()}
 window.addEventListener('keydown',keyDown);window.addEventListener('keyup',keyUp);
 const analogPad=$('analogPad'),analogThumb=$('analogThumb'),analogShaft=$('analogShaft');
+// Mirror keyboard WASD, D-pad and the physical analog stick onto the
+// SAME bitmap joystick as the touch drag. No extra vector control art.
+function syncExternalStickVisual(pad){
+ if(analog.pointerId!==null)return; // Live touch controls its own picture.
+ const active=gameState==='playing';
+ const dx=active?clamp((keys.has('d')?1:0)-(keys.has('a')?1:0)+(pad?.dx||0),-1,1):0;
+ const dy=active?clamp((keys.has('s')?1:0)-(keys.has('w')?1:0)+(pad?.dy||0),-1,1):0;
+ const magnitude=Math.hypot(dx,dy),factor=magnitude>1?1/magnitude:1;
+ const nx=dx*factor,ny=dy*factor;
+ const ring=analogPad.querySelector('.analog-ring'),r=ring.getBoundingClientRect();
+ const radius=r.width*.35,x=nx*radius,y=ny*radius;
+ analogShaft.style.transform=`translate(-50%,-60.56%) rotate(${(nx*28).toFixed(1)}deg) scaleY(${(1-ny*.38).toFixed(3)})`;
+ analogThumb.style.translate=`${(x*.42).toFixed(1)}px ${(y*.42-r.height*(38/360)).toFixed(1)}px`;
+}
 function resetAnalog(){
  analog.dx=0;analog.dy=0;analog.pointerId=null;
  analogThumb.style.translate='0 -10.56%';
