@@ -1,87 +1,100 @@
 #!/usr/bin/env python3
-"""Repair the Iron Mask special 8-frame bitmap sheet without clipped attack poses.
+"""Rebuild the Iron Mask 8-frame special using complete existing painted poses.
 
-The original special atlas contains baked-in vertical crop boundaries in source
-frames 4–6. Reconstruct those stages from complete painted attack poses rather
-than trying to expand a source image whose pixels are already missing.
-All eight frames are re-aligned to the same ground anchor (557px).
+The first-generation crimson-rush atlas includes baked-in cuts to the limbs,
+cloak and crimson sweep. Padding those cropped frames cannot restore pixels.
+Use complete run/attack poses for the body and retain the red energy as a
+separate translucent bitmap effect, without repainting the character.
 """
 from pathlib import Path
-from PIL import Image
-import math
+from PIL import Image, ImageFilter
+from collections import deque
 
 ROOT=Path(__file__).resolve().parents[1]
-SOURCE=ROOT/"assets/ironmask-elite/special.webp"
-DEST=SOURCE
-CELL_W,CELL_H,FOOT=512,608,557
-atlas=Image.open(SOURCE).convert("RGBA")
-assert atlas.size==(CELL_W*4,CELL_H*2), f"Unexpected Iron Mask source sheet size: {atlas.size}"
-frames=[atlas.crop(((i%4)*CELL_W,(i//4)*CELL_H,(i%4+1)*CELL_W,(i//4+1)*CELL_H)) for i in range(8)]
+DIR=ROOT/"assets/ironmask-elite"
+W,H,FOOT=512,608,557
 
-def isolate_main_pose(im):
-    """Retain the largest connected painted subject; omit orphaned cropped arcs."""
-    from collections import deque
-    from PIL import ImageFilter
-    alpha=im.getchannel("A")
-    # Lightly connect anti-aliased adjoining edges, leaving separated crop debris.
-    mask=alpha.point(lambda v: 255 if v>=24 else 0).filter(ImageFilter.MaxFilter(3))
-    w,h=mask.size
-    pix=mask.load()
-    visited=bytearray(w*h)
-    best=[]
-    for yy in range(h):
-        for xx in range(w):
-            k=yy*w+xx
-            if not pix[xx,yy] or visited[k]: continue
-            q=deque([k]);visited[k]=1;component=[]
-            while q:
-                p=q.popleft();component.append(p)
-                y,x=divmod(p,w)
-                for nx,ny in ((x-1,y),(x+1,y),(x,y-1),(x,y+1)):
-                    if nx<0 or nx>=w or ny<0 or ny>=h:continue
-                    nk=ny*w+nx
-                    if not visited[nk] and pix[nx,ny]:
-                        visited[nk]=1;q.append(nk)
-            if len(component)>len(best):best=component
-    # If all fragments touch, the safest result is still the original bitmap.
-    if not best:return im
-    keep=Image.new("L",(w,h))
-    px=keep.load()
-    for p in best:
-        y,x=divmod(p,w);px[x,y]=255
-    keep=keep.filter(ImageFilter.MaxFilter(5))
-    out=im.copy()
-    original_alpha=im.getchannel("A")
+def sheet_frames(name):
+    im=Image.open(DIR/name).convert("RGBA")
+    assert im.size==(W*4,H*2), f"{name} has unexpected size {im.size}"
+    return [im.crop(((i%4)*W,(i//4)*H,((i%4)+1)*W,((i//4)+1)*H)) for i in range(8)]
+
+def isolate_subject(im):
+    """Discard separated residual scraps from adjacent generated atlas cells."""
+    alpha=im.getchannel('A')
+    mask=alpha.point(lambda v: 255 if v>=22 else 0).filter(ImageFilter.MaxFilter(3))
+    pix=mask.load();seen=bytearray(W*H);largest=[]
+    for y in range(H):
+        for x in range(W):
+            first=y*W+x
+            if seen[first] or not pix[x,y]:continue
+            todo=deque([first]);seen[first]=1;group=[]
+            while todo:
+                pos=todo.popleft();group.append(pos);yy,xx=divmod(pos,W)
+                for nx,ny in ((xx-1,yy),(xx+1,yy),(xx,yy-1),(xx,yy+1)):
+                    if 0<=nx<W and 0<=ny<H:
+                        p=ny*W+nx
+                        if not seen[p] and pix[nx,ny]:
+                            seen[p]=1;todo.append(p)
+            if len(group)>len(largest):largest=group
+    if not largest:return im
+    selection=Image.new('L',(W,H))
+    ss=selection.load()
+    for pos in largest:
+        yy,xx=divmod(pos,W);ss[xx,yy]=255
+    selection=selection.filter(ImageFilter.MaxFilter(5))
     from PIL import ImageChops
-    out.putalpha(ImageChops.multiply(original_alpha,keep))
-    return out
+    result=im.copy()
+    result.putalpha(ImageChops.multiply(alpha,selection))
+    return result
 
-# Source poses 4,5,6 were cut at the source before packing; do not replay them.
-# 0-3 are retained where safe, while 4-6 form follow-through motion from intact art.
+run=sheet_frames('run.webp')
+attack=sheet_frames('attack.webp')
+old_special=sheet_frames('special.webp')
+# Paint-only crimson energy, not its chopped body/legs. No vector shapes.
+effect=Image.new('RGBA',(W,H))
+src=old_special[3].getdata()
+pixels=[]
+for rr,gg,bb,aa in src:
+    if aa>14 and rr>100 and rr>gg*1.42 and rr>bb*1.16:
+        strength=min(255,int(aa*min(1.0,(rr-gg)/75)*.92))
+        pixels.append((rr,gg,bb,strength))
+    else:pixels.append((0,0,0,0))
+effect.putdata(pixels)
+effect.putalpha(effect.getchannel('A').filter(ImageFilter.GaussianBlur(.7)))
+
+# Each base is a COMPLETE painted sprite, not one of the damaged strike poses.
+# 8 distinct complete stages: ready, rush, leap, impact, hard punch, recovery.
 timeline=[
-    (0,0.99,-1,0,0),     # guard into special
-    (1,0.99,-5,0,0),     # crouched forward
-    (2,0.98,0,0,0),      # explosive initial rush
-    (3,0.94,0,0,0),      # first complete red arc
-    (3,1.01,8,-2,-2),    # stronger active hit
-    (3,0.98,20,0,3),     # follow-through, still a full painted pose
-    (0,0.98,17,0,0),     # recovery rather than source-cut frame 6
-    (7,1.00,0,0,0),      # complete recovery pose
+    ('attack',0,1.00,0,0,0.00),
+    ('run',0,1.00,-4,0,0.00),
+    ('run',2,1.00,1,0,0.32),
+    ('run',3,1.00,4,0,0.65),
+    ('attack',5,.97,4,0,1.00),
+    ('run',5,1.00,8,0,0.78),
+    ('attack',6,1.00,0,0,0.30),
+    ('attack',7,1.00,0,0,0.00)
 ]
-fixed=Image.new("RGBA",atlas.size,(0,0,0,0))
-for i,(source_idx,scale,shift_x,shift_y,angle) in enumerate(timeline):
-    src=frames[source_idx]
-    if source_idx in (0,1,2):
-        src=isolate_main_pose(src)
-    scaled=src.resize((round(CELL_W*scale),round(CELL_H*scale)),Image.Resampling.LANCZOS)
-    if angle:
-        # Rotate with transparent expansion; preserve the original target ground plane.
-        scaled=scaled.rotate(angle,Image.Resampling.BICUBIC,expand=True)
-    cell=Image.new("RGBA",(CELL_W,CELL_H),(0,0,0,0))
-    x=round((CELL_W-scaled.width)/2+shift_x)
-    y=round(FOOT*(1-scale)+shift_y)
-    cell.paste(scaled,(x,y),scaled)
-    fixed.alpha_composite(cell,((i%4)*CELL_W,(i//4)*CELL_H))
-# WebP with alpha, preserving 4x2/512x608 and the old loader's exact geometry.
-fixed.save(DEST,"WEBP",quality=97,method=6)
-print("Repaired eight Iron Mask attack frames:",DEST,DEST.stat().st_size,"bytes")
+atlas=Image.new('RGBA',(W*4,H*2))
+for i,(which,source_idx,scale,shift_x,shift_y,flash) in enumerate(timeline):
+    body=isolate_subject((run if which=='run' else attack)[source_idx])
+    body=body.resize((round(W*scale),round(H*scale)),Image.Resampling.LANCZOS)
+    stage=Image.new('RGBA',(W,H))
+    bx=round((W-body.width)/2+shift_x)
+    by=round(FOOT*(1-scale)+shift_y)
+    backing=Image.new('RGBA',(W,H))
+    backing.paste(body,(bx,by))  # no mask: preserve original sprite alpha
+    if flash:
+        # Fit the pixel-art crimson swoosh safely inside the target frame.
+        spark=effect.resize((round(W*.80),round(H*.80)),Image.Resampling.LANCZOS)
+        spark_alpha=spark.getchannel('A').point(lambda v:round(v*flash))
+        spark.putalpha(spark_alpha)
+        eback=Image.new('RGBA',(W,H))
+        eback.paste(spark,(round(W*.20/2)+23,round(H*.20/2)-10))
+        stage=Image.alpha_composite(stage,eback)
+    stage=Image.alpha_composite(stage,backing)
+    atlas.alpha_composite(stage,((i%4)*W,(i//4)*H))
+# Source dimensions and foot anchor are identical to the JavaScript loader.
+out=DIR/'special.webp'
+atlas.save(out,format='WEBP',quality=97,method=6)
+print('Iron Mask: 8 complete frames,',out.stat().st_size,'bytes')
