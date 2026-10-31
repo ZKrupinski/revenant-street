@@ -34,6 +34,8 @@ jobs:
         run: node tests/assassin-combat.cjs
       - name: All eight Iron Mask special frames, no skipped animation poses
         run: node tests/elite-eight-frame.cjs
+      - name: Hooded Iron Mask full AI charge-and-strike regression
+        run: node tests/elite-ai-integration.cjs
       - name: Z locomotion full-body motion planner checks
         run: node tests/z-gait-planner.cjs
       - name: Original Z V3 walk/run and backstep regression
