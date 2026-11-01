@@ -56,6 +56,17 @@ assert(css2.includes('white-space:nowrap!important'),
  'title buttons stay in one line rather than growing vertically');
 assert((title.match(/data-action="(start|hub|guide)"/g)||[]).length===3,
  'all three title actions remain intact');
+const titleActions=['data-action="hub"','data-action="start"','data-action="guide"'];
+const buttonOrder=titleActions.map(a=>title.indexOf(a));
+assert(buttonOrder.every(i=>i>=0)&&buttonOrder[0]<buttonOrder[1]&&buttonOrder[1]<buttonOrder[2],
+ 'HUB, centered GAME START, and controls are in this order');
+assert(title.includes('class="main-btn title-game-start" data-action="start"><span class="title-start-text">GAME START</span></button>'),
+ 'center start button keeps its start action and bold flashing text span');
+const titleStyle=html.match(/<style id="project-z-title-art-first-v2">([\\s\\S]*?)<\\/style>/);
+assert(titleStyle,'art-first title style exists');
+for(const token of ['.buttons.title-action-row','font:1000','z-title-start-text-blink','steps(1,end)','prefers-reduced-motion'])
+ assert(titleStyle[1].includes(token),'title center/blink style missing: '+token);
+
 console.log('PASS: BI landing screen has zero lower text lines and compact readable action buttons');
 
 console.log('PASS: title and header use approved original cybernetic bitmap, with no cropped artwork or missing controls');
