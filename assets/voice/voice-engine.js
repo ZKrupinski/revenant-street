@@ -6,11 +6,12 @@
 (() => {
  'use strict';
  const CLIPS={
-  // Former protagonist cries are now exclusively the enemy pain voices.
-  enemyA:'./assets/voice/hero-grunt-a.wav',
-  enemyB:'./assets/voice/hero-grunt-b.wav',
-  yell:'./assets/voice/voice-yell.wav',
-  roar:'./assets/voice/voice-roar.wav',
+  // Dark remastered CC0 pain vocals: short, bass-heavy and restrained.
+  // The old high pitched drawn-out "aaah" yell is never played at runtime.
+  enemyA:'./assets/voice/enemy-pain-deep-a.mp3',
+  enemyB:'./assets/voice/enemy-pain-deep-b.mp3',
+  enemyShout:'./assets/voice/enemy-shout-deep.mp3',
+  enemyDeath:'./assets/voice/enemy-death-deep.mp3',
   // Foley, not gunfire: short firearm slide, bolt and charging-lever clicks.
   mechA:'./assets/voice/hero-mech-a.mp3',
   mechB:'./assets/voice/hero-mech-b.mp3',
@@ -128,13 +129,12 @@
     try{quiet.source.stop()}catch(_){}
     active.delete(quiet);
    }
-   // Absolutely no protagonist voice files can be selected in any branch.
-   // The old hero groans remain exclusive to the enemy impact bank.
+   // No piercing yell on any enemy hurt/death/shout path. Every vocal
+   // uses a subdued, low-formant, remastered take of the original CC0 male.
    const file=kind==='heroPower'?'mechPower':
     (kind==='heroStrike'||kind==='heroMove')?(Math.random()<.5?'mechA':'mechB'):
-    kind==='bossDeath'||kind==='bossShout'?'roar':
-    kind==='enemyDeath'?(Math.random()<.65?'yell':'enemyB'):
-    kind==='enemyShout'?(Math.random()<.6?'enemyB':'yell'):
+    kind==='bossDeath'||kind==='enemyDeath'?'enemyDeath':
+    kind==='bossShout'||kind==='enemyShout'?'enemyShout':
     (Math.random()<.5?'enemyA':'enemyB');
    const buffer=buffers[file];
    if(!buffer)return false;
@@ -148,18 +148,21 @@
    }
    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
    source.buffer=buffer;
-   const characterPitch=isHero?(kind==='heroPower'?.92:1.03):boss?.77:actor.type==='elite'?.84:
-    actor.type==='guard'?.90:actor.type==='assassin'?1.035:.97;
-   const rate=Math.max(.68,Math.min(1.21,characterPitch*(.95+Math.random()*.10)));
+   // Samples are already pitched down and formant-shifted offline. Do not
+   // pitch-shift them another full octave during play or make them cartoonish.
+   const characterPitch=isHero?(kind==='heroPower'?.92:1.03):boss?.94:actor.type==='elite'?.98:
+    actor.type==='guard'?.99:actor.type==='assassin'?1.03:1;
+   const rate=Math.max(.86,Math.min(1.11,characterPitch*(.97+Math.random()*.06)));
    source.playbackRate.value=rate;
+   // Vocals stay below the physical blow SFX; the BGM is never ducked.
    const strengths={heroStrike:.94,heroPower:1.07,heroMove:.29,
-    enemyHurt:.59,enemyShout:.73,enemyDeath:.87,bossShout:1.02,bossDeath:1.11};
+    enemyHurt:.51,enemyShout:.55,enemyDeath:.70,bossShout:.76,bossDeath:.83};
    const position=isHero?1:Math.max(.3,1-Math.abs(actor.x-hero.x)/1600);
    const volume=(strengths[kind]||.7)*position;
-   filter.type='lowpass';filter.frequency.value=isHero?7600:boss?3500:4500;
+   filter.type='lowpass';filter.frequency.value=isHero?7600:boss?2600:2900;
    const maxDuration=kind==='heroMove'?.19:kind==='heroStrike'?.42:kind==='heroPower'?.72:
-    kind==='enemyHurt'?.34:kind==='enemyShout'?.74:kind==='bossShout'?1.20:
-    kind==='enemyDeath'?1.25:2.2;
+    kind==='enemyHurt'?.33:kind==='enemyShout'?.64:kind==='bossShout'?.72:
+    kind==='enemyDeath'?1.05:kind==='bossDeath'?1.12:2.2;
    const duration=Math.min(maxDuration,buffer.duration/rate);
    if(!(duration>.02))return false;
    // Let the independent punch crack play first; groans follow ~75ms later.
