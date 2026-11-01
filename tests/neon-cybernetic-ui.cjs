@@ -54,5 +54,5 @@ require('./title-bi.cjs');
 // Hero entrance is part of the initial UI-to-combat transition.
 require('./hero-entry.cjs');
 
-// Only the mid-bosses share a small screen-centered HP display.
+// Mid-bosses no longer receive standalone HP HUD; only the final Hunter does.
 require('./elite-centered-hud.cjs');
