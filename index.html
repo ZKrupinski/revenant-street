@@ -3391,6 +3391,7 @@ let zArtLastKey='',zArtFrame=-1,zLastGoodFrame=null;
 const heroAfterimages=[];
 const HERO_GHOST_MOBILE=!!window.matchMedia?.('(pointer: coarse)').matches;
 const MAX_HERO_GHOSTS=HERO_GHOST_MOBILE?4:6; // Prevent 12 full-res redraws on slower devices.
+const MAX_COUNTER_GHOSTS=HERO_GHOST_MOBILE?5:7; // Brief special-only headroom; bitmap references, not copies.
 let nextHeroGhostAt=0,lastHeroGhostX=NaN,lastHeroGhostY=NaN,lastHeroGhostFrame=null;
 function resetHeroAfterimages(){
  heroAfterimages.length=0;nextHeroGhostAt=0;
@@ -3418,23 +3419,43 @@ function captureHeroAfterimage(fr,key){
   (p.dodge>0?.038:p.attack>0?.046:fast?.044:.055));
  lastHeroGhostX=p.x;lastHeroGhostY=p.y;lastHeroGhostFrame=fr;
 }
+// A confirmed follow-up punch freezes several genuine attack poses behind
+// the hero. No procedural line trails, and the mobile cap stays bounded.
+function spawnRiposteAfterimages(){
+ const art=zArtState.superman_punch;
+ const frames=art?.ready&&art.frames?.length===8?art.frames:null;
+ if(!frames||gameState!=='playing')return 0;
+ const count=HERO_GHOST_MOBILE?4:5,dir=p.facing<0?-1:1;
+ for(let i=0;i<count;i++){
+  const duration=.83+i*.085;
+  const frame=frames[Math.min(7,Math.max(0,4-i))];
+  heroAfterimages.push({
+   frame,x:p.x-dir*(35+i*34),y:p.y,z:p.z||0,face:dir,dir,
+   locomotion:false,idle:false,counterEcho:true,
+   life:duration,maxLife:duration
+  });
+ }
+ while(heroAfterimages.length>MAX_COUNTER_GHOSTS)heroAfterimages.shift();
+ return count;
+}
 function drawHeroAfterimages(){
  if(!heroAfterimages.length)return;
  ctx.save();
  // Exact cached character sprites, not particles, rectangles or vector strokes.
  ctx.filter='brightness(1.23) saturate(1.18)';
  for(const ghost of heroAfterimages){
+  ctx.filter=ghost.counterEcho?'brightness(1.5) saturate(1.33)':'brightness(1.23) saturate(1.18)';
   const b=ghost.frame?.bounds,source=ghost.frame?.canvas;
   if(!b||!source)continue;
   const remaining=clamp(ghost.life/ghost.maxLife,0,1);
   const elapsed=1-remaining;
   // Push the old poses behind the moving body to make the gait unmistakable.
-  const trailOffset=ghost.idle?3+elapsed*5:ghost.locomotion?10+elapsed*43:elapsed*13;
+  const trailOffset=ghost.counterEcho?0:ghost.idle?3+elapsed*5:ghost.locomotion?10+elapsed*43:elapsed*13;
   const ghostX=ghost.x-ghost.dir*trailOffset;
   const away=Math.hypot(p.x-ghostX,(p.y-ghost.y)*1.3);
   const distanceFade=Math.pow(1-clamp(away/470,0,1),.70);
-  const alpha=Math.min(.84,(ghost.idle?.20:ghost.locomotion?.90:.62)*
-   Math.pow(remaining,ghost.idle?.85:.50)*distanceFade);
+  const alpha=Math.min(.88,(ghost.counterEcho?.88:ghost.idle?.20:ghost.locomotion?.90:.62)*
+   Math.pow(remaining,ghost.counterEcho?.55:ghost.idle?.85:.50)*distanceFade);
   if(alpha<.018)continue;
   const sc=ghost.frame.unitScale||1;
   ctx.globalAlpha=alpha;
@@ -4215,13 +4236,35 @@ let strikeCameraTime=0,strikeCameraTarget=1;
 // while actors/background/particles are slowed by the cinematic world clock.
 let parryCameraTime=0,parryCameraFacing=1;
 const PARRY_CAMERA_ZOOM=1.30,PARRY_CAMERA_DURATION=.78,PARRY_CAMERA_ANCHOR=.31;
+// A second, independently triggered camera for the actual counter contact.
+let counterCameraTime=0,counterCameraFacing=1,counterCameraArtWidth=665;
+let riposteCinematicTime=0;
+const COUNTER_CAMERA_ZOOM=1.29,COUNTER_CAMERA_DURATION=1.10,COUNTER_CAMERA_ANCHOR=.23;
+const COUNTER_CAMERA_MARGIN=48;
+function triggerCounterCamera(face,width){
+ counterCameraFacing=face<0?-1:1;
+ counterCameraArtWidth=clamp(width,590,1090);
+ counterCameraTime=COUNTER_CAMERA_DURATION;
+ // Keep even max-upgraded original VFX wholly in frame, without resizing it.
+ const limit=(W-2*COUNTER_CAMERA_MARGIN)/counterCameraArtWidth;
+ cameraZoom=Math.min(cameraZoom,Math.max(1.03,Math.min(COUNTER_CAMERA_ZOOM,limit)));
+}
+function counterCameraZoomGoal(){
+ return Math.max(1.03,Math.min(COUNTER_CAMERA_ZOOM,(W-2*COUNTER_CAMERA_MARGIN)/counterCameraArtWidth));
+}
+function counterCameraWorldAnchor(zoom){
+ const focus=W*.52,behind=83-counterCameraArtWidth*.18,front=83+counterCameraArtWidth*.82;
+ const min=(COUNTER_CAMERA_MARGIN-(1-zoom)*focus)/zoom-behind;
+ const max=(W-COUNTER_CAMERA_MARGIN-(1-zoom)*focus)/zoom-front;
+ return clamp(W*COUNTER_CAMERA_ANCHOR,Math.min(min,max),Math.max(min,max));
+}
 // Leave the established 465px lead framing intact most of the time.
 // Every few seconds, ease the hero to true screen center so the entire
 // layered street makes a noticeable lateral sweep, then return to normal.
 const CAMERA_RECENTER_INTERVAL=4.6,CAMERA_RECENTER_DURATION=1.75;
 let cameraRecenterClock=0,cameraRecenterHold=0,cameraRecenterBlend=0;
 function updatePeriodicCamera(dt){
- const cinematic=parryCameraTime>0||strikeCameraTime>0||comboCameraLock>0||p.riposteWindow>0||p.riposteChasing||!!p.riposteStrikeTarget;
+ const cinematic=counterCameraTime>0||parryCameraTime>0||strikeCameraTime>0||comboCameraLock>0||p.riposteWindow>0||p.riposteChasing||!!p.riposteStrikeTarget;
  if(cinematic){
   // Manual cinematic zoom and parry pursuit always take priority.
   cameraRecenterHold=0;
@@ -4254,16 +4297,17 @@ function updateComboCamera(dt,realDt=dt){
  const combo=p.hitTimeout>0?(p.hits||0):0;
  const base=1+Math.min(.20,combo*.013);
  const comboGoal=Math.min(1.245,base+(comboCameraLock>0?comboCameraPulse:0));
- const striking=strikeCameraTime>0,parryFocus=parryCameraTime>0;
+ const striking=strikeCameraTime>0,parryFocus=parryCameraTime>0,counterFocus=counterCameraTime>0;
  const baseGoal=striking?Math.max(comboGoal,strikeCameraTarget):comboGoal;
- const goal=parryFocus?Math.max(baseGoal,PARRY_CAMERA_ZOOM):baseGoal;
- // Camera closes in promptly through hitstop; the world and enemies stay slowed.
- cameraZoom+=(goal-cameraZoom)*Math.min(1,(parryFocus?realDt:dt)*(parryFocus?18:striking?37:5.2));
+ const goal=counterFocus?counterCameraZoomGoal():parryFocus?Math.max(baseGoal,PARRY_CAMERA_ZOOM):baseGoal;
+ // Counter camera uses real time through hitstop and the doubled slowdown.
+ cameraZoom+=(goal-cameraZoom)*Math.min(1,(counterFocus||parryFocus?realDt:dt)*(counterFocus?19:parryFocus?18:striking?37:5.2));
  strikeCameraTime=Math.max(0,strikeCameraTime-dt);
  comboCameraLock=Math.max(0,comboCameraLock-dt);
  comboCameraPulse=Math.max(0,comboCameraPulse-dt*.12);
  updatePeriodicCamera(dt);
  if(parryFocus)parryCameraTime=Math.max(0,parryCameraTime-realDt);
+ if(counterFocus)counterCameraTime=Math.max(0,counterCameraTime-realDt);
 }
 // Keep the existing look-ahead lead, but mirror it when the hero faces
 // left. Normalize the combo-hit focus to the forward direction first, then
@@ -4277,6 +4321,13 @@ function normalCameraTargetX(){
  return facing>0?rightX:2*p.x-W-rightX;
 }
 function followComboCamera(dt,realDt=dt){
+ if(counterCameraTime>0){
+  const inView=counterCameraWorldAnchor(clamp(cameraZoom,1,1.36));
+  const heroWorldOffset=counterCameraFacing>0?inView:W-inView;
+  const target=clamp(p.x-heroWorldOffset,0,STAGE_WIDTH-W);
+  cameraX+=(target-cameraX)*Math.min(1,realDt*17);
+  return;
+ }
  if(parryCameraTime>0){
   // Keep the hero toward the rear third of the zoomed frame, creating space
   // for the entire outward burst on either facing direction.
@@ -4945,6 +4996,7 @@ function titleMenu(){
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>지상 연속타격 · 점프 후 새로 누르면 수직 내려차기와 착지 광역타</div><div><kbd>↑ / K / Y / △</kbd>점프 · 이동 도약 / 자동 착지 공격 없음</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링 성공으로 적을 멀리 날려 보낸 직후 <b class="key">공격 버튼을 한 번</b> 누르면 자동 대쉬 추격과 빈사 강타가 이어집니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
 function resetPlayer(){deathCinematic.active=false;deathCinematic.elapsed=0;
  cameraX=0;cameraZoom=1;comboCameraLock=0;parryCameraTime=0;parryCameraFacing=1;
+ counterCameraTime=0;counterCameraFacing=1;counterCameraArtWidth=665;riposteCinematicTime=0;
  footstepRumbleDistance=0;lastFootstepRumbleTime=-99;hapticPriorityUntil=-99;
  comboCameraFocusX=0;comboCameraPulse=0;comboCameraLastSnap=-99;
  strikeCameraTime=0;strikeCameraTarget=1;
@@ -5923,7 +5975,13 @@ function attackCheck(){
   const dmg=(skill.damage+p.damageBoost)*(1+modRank('power')*.16);
   const centerX=e.x,centerY=e.y;
   hurtEnemy(e,Math.min(e.hp,dmg),65+modRank('counter')*25);
-   spawnParryCounterFx(p,e,skill.visual); // true parry follow-up contact only
+  spawnParryCounterFx(p,e,skill.visual); // exact user-approved eight-frame counter art
+  // Only a *landed* chase punch triggers the second camera/echo/slow-motion beat.
+  spawnRiposteAfterimages();
+  triggerCounterCamera(p.facing,clamp(665*skill.visual/1.25,590,1090));
+  parryCameraTime=0;strikeCameraTime=0;
+  riposteCinematicTime=1.08;
+  slowMotion=Math.max(slowMotion,1.48);parrySlowTarget=e;
   for(const other of enemies){
    if(other===e||other.dead||other.inv>0||Math.abs(other.z-e.z)>100)continue;
    if(((other.x-centerX)/skill.range)**2+((other.y-centerY)/skill.lane)**2>1)continue;
@@ -5940,7 +5998,7 @@ function attackCheck(){
   e.stun=Math.max(e.stun,1.12);e.reactionTime=e.reactionDuration=.85;
   e.hitAnimation='hitFly';e.pendingFall=!e.dead&&e.type!=='boss';
   e.reactionDir=p.facing;
-  hitStop=Math.max(hitStop,.18);screenShake=Math.max(screenShake,30);
+  hitStop=Math.max(hitStop,.22);screenShake=Math.max(screenShake,30);
   screenTint=Math.max(screenTint,.55);
   fxBurst(e.x,e.y-125,'gold',skill.visual);
   spawnModBitmap('gold',e.x,e.y-133,skill.visual*.75,'brightness(1.6) saturate(1.4)',.35);
@@ -6858,10 +6916,10 @@ function updateEnemies(dt,parryVictimScale=1){
 function updateEffects(dt,realDt=dt){
  p.hitFlash=Math.max(0,(p.hitFlash||0)-dt);
  for(let i=heroAfterimages.length-1;i>=0;i--){
-  heroAfterimages[i].life-=dt;
+  heroAfterimages[i].life-=heroAfterimages[i].counterEcho?realDt*.83:dt;
   if(heroAfterimages[i].life<=0)heroAfterimages.splice(i,1);
  }
- for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){f.life-=f.kind==='parrySuccess10'?realDt:dt;if(f.kind==='dashPierceSprite'||f.kind==='parryCounterSprite'){f.age=(f.age||0)+dt;if((f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02)}}fx=fx.filter(f=>f.life>0);for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
+ for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){const fxDt=f.kind==='parrySuccess10'?realDt:f.kind==='parryCounterSprite'?realDt*.78:dt;f.life-=fxDt;if(f.kind==='dashPierceSprite'||f.kind==='parryCounterSprite'){f.age=(f.age||0)+fxDt;if((f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02)}}fx=fx.filter(f=>f.life>0);for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
 let modStripCache='',lastHudCombo=-1,hudAccumulator=.12,modsExpanded=false;
 function setModsExpanded(open){
  modsExpanded=!!open;
@@ -6961,9 +7019,11 @@ if(gameState!=='playing')return;
  // Hero actions run at 13.9% real speed; parried victim at 7.7%.
  // The ten-frame parry flash and camera response alone use real time so they
  // remain legible through the stronger world slowdown and initial hitstop.
- const cinematic=slowMotion>0;
- const worldDt=dt*(cinematic?.24:1),heroDt=worldDt*(cinematic?.58:1);
- const targetScale=cinematic?.32:1;
+ const counterCinematic=riposteCinematicTime>0;
+ const cinematic=slowMotion>0||counterCinematic;
+ const worldDt=dt*(counterCinematic?.18:cinematic?.24:1),heroDt=worldDt*(cinematic?.58:1);
+ const targetScale=counterCinematic?.26:cinematic?.32:1;
+ riposteCinematicTime=Math.max(0,riposteCinematicTime-dt);
  slowMotion=Math.max(0,slowMotion-dt);
  if(slowMotion<=0)parrySlowTarget=null;
  time+=worldDt;messageUpdate(worldDt);updateEffects(worldDt,dt);updateComboCamera(worldDt,dt);
@@ -7540,7 +7600,7 @@ function startDeathCinematic(){
  p.downTimer=0;p.getupTimer=0;p.stun=0;p.hitHeavyTimer=0;
  p.z=0;p.vz=0;p.moveDX=0;p.moveDY=0;p.running=false;
  p.motionKey='';p.motionTime=0;p.inv=0;p.hitFlash=.18;
- hitStop=0;slowMotion=0;parrySlowTarget=null;screenTint=.95;
+ hitStop=0;slowMotion=0;parrySlowTarget=null;counterCameraTime=0;riposteCinematicTime=0;screenTint=.95;
  screenShake=Math.max(screenShake,14);
  resetHeroAfterimages();resetInputs();
  $('touchControls').hidden=true;$('hint').hidden=true;$('bossHud').hidden=true;
