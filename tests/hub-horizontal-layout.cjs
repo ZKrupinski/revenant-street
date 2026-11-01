@@ -53,10 +53,8 @@ assert(begin>=0&&end>begin,'Hub template must exist');
 const render=html.slice(begin,end);
 for(const s of [
  'class="hub-module hub-centered-card',
- 'style="display:flex!important;flex-direction:column!important;',
- 'class="hub-art-slot" style="display:flex!important;',
- 'border-right:0!important',
- 'class="hub-card-info" style="display:flex!important;flex-direction:column!important;',
+ 'class="hub-art-slot"',
+ 'class="hub-card-info"',
  'class="hub-emblem">',
  'modIconMarkup(m.art)',
  'class="hub-module-name"',
@@ -68,6 +66,8 @@ for(const s of [
  'data-action="start"',
  'data-action="title"'
 ])assert(render.includes(s),'Hub behavior or centered DOM missing: '+s);
+assert(!render.includes('style="display:flex!important;flex-direction:column!important;'),
+ 'inline layout declarations must not override the responsive Hub CSS');
 assert.equal((render.match(/class="hub-art-slot"/g)||[]).length,1,
  'one bitmap slot per Hub card template; three generated modules');
 assert.equal((render.match(/class="hub-footer-guide"/g)||[]).length,1,
