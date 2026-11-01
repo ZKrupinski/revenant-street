@@ -4391,6 +4391,26 @@ let loadingRun=false;
 // A separate <img> for the CSS sprite primes the same exact browser URL cache;
 // the drawing engine already holds the arrow/shield <img> instances.
 const UI_DECODE_CACHE=new WeakMap();
+// Bitmap chrome is referenced only through CSS url()/border-image, so it was
+// missing from the original sprite readiness gate. Load the *exact same URLs*
+// before any battle, including reward, HUB and shared dialog panel artwork.
+const UI_CHROME_SOURCES=[
+ ['기본 창 배경','./assets/ui/z-panel-grunge-v1.png','--z-panel-bitmap'],
+ ['청록 프레임','./assets/ui/z-frame-cyan-v1.png','--z-frame-cyan'],
+ ['붉은 프레임','./assets/ui/z-frame-red-v1.png','--z-frame-red'],
+ ['황금 선택 프레임','./assets/ui/z-frame-gold-v1.png','--z-frame-gold'],
+ ['강화 완료 프레임','./assets/ui/z-frame-green-v1.png','--z-frame-green'],
+ ['메인 버튼 배경','./assets/ui/z-button-primary-v1.png','--z-button-red'],
+ ['서브 버튼 배경','./assets/ui/z-button-secondary-v1.png','--z-button-steel'],
+ ['네온 창 외곽','./assets/ui/z-neon-outer-v2.png','--z-neon-outer'],
+ ['네온 카드 프레임','./assets/ui/z-neon-card-v2.png','--z-neon-card'],
+ ['강화 창 패널','./assets/ui/z-tech-panel-v2.png','--z-neon-panel'],
+ ['타이틀 전체 그림','./assets/ui/project-z-title-bi-20261101.webp',null],
+ ['타이틀 헤더 그림','./assets/ui/project-z-wordmark-bi-20261101.webp',null]
+].map(([label,url,cssVar])=>{
+ const image=new Image();image.src=url;
+ return {label,url,cssVar,image};
+});
 function ensureBitmapDecoded(image){
  if(!image)return {ready:false,failed:true,error:'Missing bitmap'};
  let state=UI_DECODE_CACHE.get(image);
@@ -4435,6 +4455,16 @@ function resetFailedUiBitmaps(){
   if(item.css&&typeof document!=='undefined')
    document.documentElement?.style?.setProperty(({arcade:'--arcade-control-url',joystickBase:'--joystick-base-url',joystickShaft:'--joystick-shaft-url',joystickKnob:'--joystick-knob-url',joystickMask:'--joystick-ball-mask-url'})[item.css]||'--upgrade-preloaded-url','url("'+path+'")');
  }
+ // Retry CSS-only assets as well: the same retried URL must be used by CSS.
+ // Otherwise decoded offscreen pixels may pass while the actual frame stays blank.
+ for(const item of UI_CHROME_SOURCES){
+  const current=item.image,prior=UI_DECODE_CACHE.get(current);
+  if(!prior?.failed&&!(current.complete&&current.naturalWidth===0))continue;
+  const next=new Image(),url=item.url+(item.url.includes('?')?'&':'?')+'retry='+Date.now();
+  item.image=next;next.src=url;
+  if(item.cssVar&&typeof document!=='undefined')
+   document.documentElement?.style?.setProperty(item.cssVar,'url("'+url+'")');
+ }
 }
 function requiredSceneArt(preview=false){
  const checks=[
@@ -4447,6 +4477,8 @@ function requiredSceneArt(preview=false){
   ['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
   ...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임',()=>ensureBitmapDecoded(intruderMotionImages[k])]),
   ['업그레이드 아이콘 25종',()=>ensureBitmapDecoded(upgradeIconsImage)],
+  // All CSS-framed panels and bitmap buttons are part of the mandatory load.
+  ...UI_CHROME_SOURCES.map(item=>['UI '+item.label,()=>ensureBitmapDecoded(item.image)]),
   ['아케이드 조작 버튼 4종·눌림 8프레임',()=>ensureBitmapDecoded(arcadeButtonsImage)],
   ['왼쪽 아케이드 스틱 베이스',()=>ensureBitmapDecoded(joystickBaseImage)],
   ['왼쪽 아케이드 스틱 금속 봉',()=>ensureBitmapDecoded(joystickShaftImage)],
@@ -4491,7 +4523,7 @@ async function requestRunStart(){
  requestGameFullscreen(); // User's START action, before the first await.
  loadingRun=true;gameState='loading';resetFailedSceneArt();resetFailedUiBitmaps();
  const preview=/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'');
- showMenu(`<div class="eyebrow">PROJECT Z / RESOURCE PREPARATION</div><h2>게임 리소스 준비 중</h2><p id="loadStatus">음악·음성·캐릭터·업그레이드 아이콘·화살표·아케이드 버튼 디코딩이 끝난 뒤 시작합니다.</p><div class="bar hp"><div class="bar-fill" id="loadBar" style="width:0%"></div></div><p class="micro">고해상도 비트맵 압축 해제 · 프레임 8장 정렬 중</p>`);
+ showMenu(`<div class="eyebrow">PROJECT Z / RESOURCE PREPARATION</div><h2>게임 리소스 준비 중</h2><p id="loadStatus">음악·음성·캐릭터·업그레이드 아이콘·강화창 테두리·버튼까지 모두 디코딩한 뒤 시작합니다.</p><div class="bar hp"><div class="bar-fill" id="loadBar" style="width:0%"></div></div><p class="micro">고해상도 비트맵 압축 해제 · 프레임 8장 정렬 중</p>`);
  try{
   const music=window.__revenantBgm;
   if(!music)throw Error('음악 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');
