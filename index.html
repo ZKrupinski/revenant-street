@@ -2985,16 +2985,23 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 </style>
 <style id="hub-contextual-focus-v1">
-/* Quiet at rest: show the actual cyan bitmap focus frame only during an
-   explicit navigation/hover/touch interaction, never on every idle card.
-   Gold/pink selected and installed frames are separate semantic statuses. */
+/* The original illustrated dark frame stays visible at rest; only real
+   navigation, mouse hover and brief touch light the sky-blue focus ring.
+   The chosen card instead keeps its independent gold selected state. */
 #stageWrap #menu.hub-dialog .hub-modules .hub-module:not(.selected):not(.installed){
- border-image-source:none!important;
- border-color:#344d63!important;
+ border-image-source:var(--z-neon-card)!important;
+ border-color:transparent!important;
  box-shadow:inset 0 0 8px #0007!important;
 }
+#stageWrap #menu.hub-dialog .hub-modules .hub-module.selected{
+ border-image-source:var(--z-frame-gold)!important;
+ box-shadow:inset 0 0 0 1px #e8b97b38!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules .hub-module.installed{
+ border-image-source:var(--z-frame-green)!important;
+ box-shadow:inset 0 0 0 1px #74e4b23f!important;
+}
 #stageWrap #menu.hub-dialog .hub-modules .hub-module.pad-selected,
-#stageWrap #menu.hub-dialog .hub-modules .hub-module:focus-visible,
 #stageWrap #menu.hub-dialog .hub-modules .hub-module.touch-focus{
  border-image-source:var(--z-frame-cyan)!important;
  border-color:transparent!important;
@@ -7954,9 +7961,19 @@ function focusHubApplyAfterSelection(){
  apply.focus?.({preventScroll:true});
  return true;
 }
+// A Hub card preview re-renders the menu but should not reset navigation:
+// preserving held D-pad/stick direction prevents unintended extra moves.
+function hubMenuWithoutNavigationReset(upgraded=''){
+ const nav=menuPad.nav,confirm=menuPad.confirm,back=menuPad.back;
+ const neutralAt=menuPad.neutralAt;
+ hubMenu(upgraded);
+ menuPad.nav=nav;menuPad.confirm=confirm;menuPad.back=back;
+ menuPad.neutralAt=neutralAt;
+ menuPad.readyAt=Date.now();menuPad.armed=true;
+}
 function selectHubModule(key,fromTouch=false){
  if(gameState!=='hub'||!hubAvailableModules().some(m=>m.id===key))return false;
- hubSelected=key;hubResetArmed=false;hubMenu();
+ hubSelected=key;hubResetArmed=false;hubMenuWithoutNavigationReset();
  focusHubApplyAfterSelection();
  if(fromTouch){
   // The card DOM was replaced by hubMenu; pulse the NEW card briefly.
@@ -8022,7 +8039,8 @@ function buyUpgrade(key=hubSelected){
  const cost=hubUpgradeCost(perma[key]||0);
  if(gameState!=='hub'||hubResetArmed||key!==hubSelected||!hubAvailableModules().some(m=>m.id===key)||
   perma[key]>=HUB_MAX_LEVEL||perma.shards<cost)return false;
- perma.shards-=cost;perma[key]++;save();hubMenu(key);
+ perma.shards-=cost;perma[key]++;save();hubMenuWithoutNavigationReset(key);
+ focusHubApplyAfterSelection();
  sound('parry');vibrateImpact('heavy',true);return true;
 }
 function prepareHubReset(){
@@ -8118,14 +8136,27 @@ function suspendGame(){heldKeyboard.clear();menuBlockedKeys.clear();resetInputs(
 window.addEventListener('blur',suspendGame);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame()});
 
-$('menu').addEventListener('focusin',e=>{const items=menuButtons(),i=items.indexOf(e.target);if(i<0)return;menuPad.index=i;items.forEach((b,n)=>b.classList.toggle('pad-selected',n===i))});
+// Pointer focus is not controller navigation; stop Android touch focus from
+// leaving an enduring cyan selector on a card. Programmatic Apply focus works.
+let hubPointerFocusPending=false,hubTouchPointerPending=false;
+$('menu').addEventListener('focusin',e=>{
+ const items=menuButtons(),i=items.indexOf(e.target);if(i<0)return;
+ if(hubPointerFocusPending&&e.target.dataset?.perma){
+  items.forEach(b=>b.classList.remove('pad-selected'));return;
+ }
+ menuPad.index=i;
+ items.forEach((b,n)=>b.classList.toggle('pad-selected',n===i));
+});
 // A real touch pointer gets a temporary sky-blue frame. Hover remains a
 // mouse-only CSS state, so touch browsers cannot leave sticky hover outlines.
-let hubTouchPointerPending=false;
 $('menu').addEventListener('pointerdown',e=>{
- hubTouchPointerPending=e.pointerType==='touch'&&!!e.target.closest?.('button[data-perma]');
+ const card=e.target.closest?.('button[data-perma]');
+ hubPointerFocusPending=!!card&&gameState==='hub';
+ hubTouchPointerPending=hubPointerFocusPending&&e.pointerType==='touch';
 });
-$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){hubResetArmed=false;hubMenu()}else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='hubEconomy')hubEconomyMenu();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma){const touched=hubTouchPointerPending||e.pointerType==='touch';hubTouchPointerPending=false;selectHubModule(b.dataset.perma,touched)}});
+$('menu').addEventListener('pointerup',()=>{hubPointerFocusPending=false});
+$('menu').addEventListener('pointercancel',()=>{hubPointerFocusPending=false;hubTouchPointerPending=false});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){hubResetArmed=false;hubMenu()}else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='hubEconomy')hubEconomyMenu();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma){const touched=hubTouchPointerPending||e.pointerType==='touch';hubTouchPointerPending=false;hubPointerFocusPending=false;selectHubModule(b.dataset.perma,touched)}});
 $('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activeModStacks().length+(p.mod==='neuro'?1:0))};
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){
