@@ -5024,6 +5024,8 @@ function requiredSceneArt(preview=false){
   ['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)],
   ['지면강타 8프레임 비트맵',()=>ensureBitmapDecoded(GROUND_SLAM_ART.image),true],
   ['대쉬 후 번개 관통 8프레임 비트맵',()=>ensureBitmapDecoded(DASH_PIERCE_ART.image)],
+   // Optional until the exact user-uploaded atlas is present. Never block GAME START.
+   ['패링 반격 원본 8프레임 비트맵',()=>ensureBitmapDecoded(PARRY_COUNTER_ART.image),true],
   ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
   ['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
   ...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임',()=>ensureBitmapDecoded(intruderMotionImages[k])]),
@@ -5812,6 +5814,52 @@ function drawDashChargeSprite(attacker){
   -width*.50,-height*.53,width,height);
  ctx.restore();return true;
 }
+
+/* Approved parry-counter artwork: upload EXACT original 28867.png to this path.
+   4x2 uneven pixel grid (1774 x 887): derive integer source boundaries to
+   preserve the original source bytes, alpha and neighboring frame safety. */
+const PARRY_COUNTER_ART={
+ src:'./assets/vfx/project_z_parry_counter_user_8f.png',
+ image:new Image(),available:false,missing:false
+};
+PARRY_COUNTER_ART.image.onload=()=>{
+ const im=PARRY_COUNTER_ART.image;
+ PARRY_COUNTER_ART.available=im.naturalWidth===1774&&im.naturalHeight===887;
+};
+PARRY_COUNTER_ART.image.onerror=()=>{PARRY_COUNTER_ART.missing=true};
+PARRY_COUNTER_ART.image.src=PARRY_COUNTER_ART.src;
+function spawnParryCounterFx(attacker,target,visual=1.25){
+ if(!PARRY_COUNTER_ART.available)return false;
+ const dir=attacker.facing>=0?1:-1;
+ const width=clamp(665*visual/1.25,590,1090);
+ const duration=.39; // quick first POP and stronger secondary blast
+ fx.push({kind:'parryCounterSprite',x:attacker.x+dir*83,
+  y:attacker.y-141,dir,width,age:0,drawnFrame:-1,
+  life:duration,maxLife:duration});
+ return true;
+}
+function drawParryCounterSprite(f){
+ const im=PARRY_COUNTER_ART.image;
+ if(!PARRY_COUNTER_ART.available||!im.complete)return false;
+ const ratio=clamp((f.age||0)/f.maxLife,0,.999999);
+ // Bring up the 1st shock instantly; the 2nd lobe begins at 48% life.
+ const targetFrame=ratio<.48?Math.min(3,Math.floor(ratio/.48*4)):
+  4+Math.min(3,Math.floor((ratio-.48)/.52*4));
+ // Always display each original cell once, even after a hit-stop frame jump.
+ const frame=Math.min(targetFrame,(f.drawnFrame??-1)+1);
+ f.drawnFrame=frame;
+ const col=frame%4,row=Math.floor(frame/4);
+ const sx=Math.round(col*im.naturalWidth/4),sy=Math.round(row*im.naturalHeight/2);
+ const ex=Math.round((col+1)*im.naturalWidth/4),ey=Math.round((row+1)*im.naturalHeight/2);
+ const sw=ex-sx,sh=ey-sy;
+ const width=f.width,height=width*(sh/sw)*.81;
+ ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.dir,1);
+ ctx.globalAlpha=ratio>.81?clamp((1-ratio)/.19,0,1):1;
+ // Anchor the left-side ignition around the player's forward hand;
+ // project most energy into the opposing enemy's side.
+ ctx.drawImage(im,sx,sy,sw,sh,-width*.18,-height*.50,width,height);
+ ctx.restore();return true;
+}
 function heelLandingShockwave(powered=false){
  const skill=specialStats('jumpspeed');
  const rx=skill.range,ry=skill.lane;
@@ -5857,6 +5905,7 @@ function attackCheck(){
   const dmg=(skill.damage+p.damageBoost)*(1+modRank('power')*.16);
   const centerX=e.x,centerY=e.y;
   hurtEnemy(e,Math.min(e.hp,dmg),65+modRank('counter')*25);
+   spawnParryCounterFx(p,e,skill.visual); // true parry follow-up contact only
   for(const other of enemies){
    if(other===e||other.dead||other.inv>0||Math.abs(other.z-e.z)>100)continue;
    if(((other.x-centerX)/skill.range)**2+((other.y-centerY)/skill.lane)**2>1)continue;
@@ -6794,7 +6843,7 @@ function updateEffects(dt){
   heroAfterimages[i].life-=dt;
   if(heroAfterimages[i].life<=0)heroAfterimages.splice(i,1);
  }
- for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){f.life-=dt;if(f.kind==='dashPierceSprite'){f.age=(f.age||0)+dt;if((f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02)}}fx=fx.filter(f=>f.life>0);for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
+ for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){f.life-=dt;if(f.kind==='dashPierceSprite'||f.kind==='parryCounterSprite'){f.age=(f.age||0)+dt;if((f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02)}}fx=fx.filter(f=>f.life>0);for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
 let modStripCache='',lastHudCombo=-1,hudAccumulator=.12,modsExpanded=false;
 function setModsExpanded(open){
  modsExpanded=!!open;
@@ -7223,6 +7272,7 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  if(a.chargePrep>0){ctx.textAlign='center';ctx.fillStyle='#ffb842';ctx.font='900 31px Arial';ctx.fillText('!!',x,y0-18)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('공격 → 처형',x,y0-12)}}}
 function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+820;for(const f of fx){if(f.x<left||f.x>right)continue;
  if(f.kind==='dashPierceSprite'){drawDashPierceSprite(f);continue;}
+  if(f.kind==='parryCounterSprite'){drawParryCounterSprite(f);continue;}
   if(f.kind==='dashTrailSprite'){drawDashTrailSprite(f);continue;}
  if(f.kind==='groundSlamSprite'){
   if(!drawGroundSlamSprite(f)){
