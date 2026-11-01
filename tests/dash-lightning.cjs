@@ -21,12 +21,13 @@ const world={
   set src(s){this._src=s;this.complete=true;this.onload?.()}
   get src(){return this._src}
  },
- ctx:{save(){},restore(){},translate(x,y){transforms.push(['translate',x,y])},
+ ctx:{save(){},restore(){},rotate(){},translate(x,y){transforms.push(['translate',x,y])},
   scale(x,y){transforms.push(['scale',x,y])},drawImage(...args){draws.push(args)}},
  fx:[],clamp:(v,min,max)=>Math.min(max,Math.max(min,v)),modRank:()=>0
 };
 vm.createContext(world);
-vm.runInContext(html.slice(begin,end)+'\nthis.drawDash=drawDashPierceSprite;this.spawnDash=spawnDashPierceFx;',world);
+world.p={x:250,y:550,dodge:.25,dodgeDuration:.32,dodgeX:1,evadeBackstep:false,dashSparkDistance:0,dashSparkCount:0,dashSparkSeq:1};
+vm.runInContext(html.slice(begin,end)+'\nthis.drawDash=drawDashPierceSprite;this.spawnDash=spawnDashPierceFx;this.emitTrail=emitDashTrailFx;this.drawTrail=drawDashTrailSprite;this.drawCharge=drawDashChargeSprite;',world);
 world.spawnDash({x:100,y:550,facing:1},{x:265,y:550});
 assert.equal(world.fx.length,1,'one sprite per successful dash attack, not one per nearby enemy');
 const f=world.fx[0];
@@ -112,3 +113,33 @@ combat.enemyStrike({type:'raider',dead:false,groggy:0,eliteAttack:false,
 assert.equal(combat.p.hp,hpBefore,'enemy attack cannot damage during the protected dash punch');
 assert.equal(combat.p.attack,attackBefore,'enemy attack cannot cancel the protected dash punch');
 console.log('PASS: enlarged forward-aligned dash lightning and uninterrupted post-dash punch');
+
+const firstTrail=world.fx.length;
+world.emitTrail(world.p,100,292);
+const streaks=world.fx.slice(firstTrail);
+assert.equal(streaks.length,6,'3 pairs per 192px real forward dash');
+assert.equal(streaks.filter(f=>f.mode==='wake').length,3);
+assert.equal(streaks.filter(f=>f.mode==='gather').length,3);
+assert(streaks.every(f=>f.kind==='dashTrailSprite'&&f.dir===1));
+const seeker=streaks.find(f=>f.mode==='gather');
+const wake=streaks.find(f=>f.mode==='wake');
+const startDraw=draws.length,startTransform=transforms.length;
+world.p.x=410;seeker.life=seeker.maxLife*.30;
+assert(world.drawTrail(seeker)&&world.drawTrail(wake)&&world.drawCharge(world.p));
+assert.equal(draws.length,startDraw+3,'all dash sprites come from 8F bitmap');
+const tailTransforms=transforms.slice(startTransform);
+assert(tailTransforms.some(([k,x,y])=>k==='translate'&&x>seeker.x&&y<seeker.y),
+ 'electricity converges toward forward moving fist');
+assert(tailTransforms.some(([k,x,y])=>k==='translate'&&x>world.p.x&&y===404),
+ 'charge graphic is in front of hero and at fist height');
+const noMore=world.fx.length;
+world.p.evadeBackstep=true;world.emitTrail(world.p,410,335);
+assert.equal(world.fx.length,noMore);assert.equal(world.drawCharge(world.p),false);
+world.p.evadeBackstep=false;world.p.dodge=0;world.emitTrail(world.p,335,450);
+assert.equal(world.fx.length,noMore,'no fake trail on regular running');
+world.p.dodge=.18;world.p.dodgeX=-1;world.p.dashSparkSeq++;world.p.dashSparkDistance=0;world.p.dashSparkCount=0;
+world.emitTrail(world.p,600,440);
+assert(world.fx.slice(noMore).some(f=>f.dir===-1),'mirror for left dash');
+assert(html.includes("if(p.dodge>0&&!p.evadeBackstep&&p.stun<=0)emitDashTrailFx(p,movementStartX,p.x)"));
+assert(html.includes("if(p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p)"));
+console.log('PASS: trailing and fist-seeking electrical sprites on forward dash only');

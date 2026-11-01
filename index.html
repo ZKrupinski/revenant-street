@@ -4934,7 +4934,7 @@ function resetPlayer(){deathCinematic.active=false;deathCinematic.elapsed=0;
  cameraRecenterClock=0;cameraRecenterHold=0;cameraRecenterBlend=0;
  resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p._voiceAt=-99;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.dodgeDuration=.30;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
  p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
- p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.comboMoveCycle=[];p.comboMoveCursor=0;p.comboMoveCount=0;p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.backstepping=false;p.evadeBackstep=false;p.evadeExhausted=false;p.dashBufferedUntil=0;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
+ p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.comboMoveCycle=[];p.comboMoveCursor=0;p.comboMoveCount=0;p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.dashSparkDistance=0;p.dashSparkCount=0;p.dashSparkSeq=0;p.backstepping=false;p.evadeBackstep=false;p.evadeExhausted=false;p.dashBufferedUntil=0;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 // All game UI bitmap assets must be fetched and DECODED before starting.
 // A separate <img> for the CSS sprite primes the same exact browser URL cache;
@@ -5485,6 +5485,7 @@ function dodge(fromBuffer=false){
  const duration=exhausted?Math.min(.19,dash.duration*.66):dash.duration;
  p.evadeBackstep=backInput;p.evadeExhausted=exhausted;
  p.dodge=p.dodgeDuration=duration;
+ p.dashSparkDistance=0;p.dashSparkCount=0;p.dashSparkSeq=(p.dashSparkSeq||0)+1;
  // Forward dashes retain protection briefly after travel ends; backstep timing remains separate.
  p.inv=Math.max(p.inv,backInput?(exhausted?.12:.34):duration+(exhausted?.16:.24));
  p.dodgeX=backInput?-p.facing:p.facing;p.stamina=Math.max(0,p.stamina-19);
@@ -5750,6 +5751,64 @@ function drawDashPierceSprite(f){
  ctx.drawImage(im,(frame%4)*cw,Math.floor(frame/4)*ch,cw,ch,-width*.09,-height*.53,width,height);
  ctx.restore();
  return true;
+}
+// Stamped 8F hand-painted bitmap electricity; no procedural vector lines.
+const DASH_TRAIL_STEP=54;
+function emitDashTrailFx(attacker,fromX,toX){
+ if(!DASH_PIERCE_ART.available||attacker.dodge<=0||attacker.evadeBackstep)return;
+ const dir=attacker.dodgeX>=0?1:-1,traveled=(toX-fromX)*dir;
+ if(traveled<=.5)return;
+ const accumulated=attacker.dashSparkDistance||0;
+ const count=Math.min(6,Math.floor((accumulated+traveled)/DASH_TRAIL_STEP));
+ for(let i=0;i<count;i++){
+  const dist=(i+1)*DASH_TRAIL_STEP-accumulated;
+  if(dist<0||dist>traveled)continue;
+  const x=fromX+dir*dist,seed=attacker.dashSparkCount||0;
+  attacker.dashSparkCount=seed+1;
+  const y=attacker.y-123+(seed%3-1)*25;
+  if(fx.length>80)fx.splice(0,fx.length-70); // mobile budget
+  fx.push({kind:'dashTrailSprite',mode:'wake',x,y,dir,seed,
+   width:166+(seed%3)*17,life:.25,maxLife:.25});
+  fx.push({kind:'dashTrailSprite',mode:'gather',x:x-dir*36,
+   y:y+(seed%2?15:-15),dir,seed,seq:attacker.dashSparkSeq,
+   width:122+(seed%4)*13,life:.22,maxLife:.22});
+ }
+ attacker.dashSparkDistance=(accumulated+traveled)%DASH_TRAIL_STEP;
+}
+function drawDashTrailSprite(f){
+ const im=DASH_PIERCE_ART.image;
+ if(!DASH_PIERCE_ART.available||!im.complete||!im.naturalWidth)return false;
+ const age=clamp(1-f.life/f.maxLife,0,1);
+ const frame=(f.seed+Math.floor(age*8))%8;
+ const cw=im.naturalWidth/4,ch=im.naturalHeight/2;
+ const gathering=f.mode==='gather';
+ const ease=gathering?Math.pow(age,.70):0;
+ const active=gathering&&f.seq===p.dashSparkSeq;
+ const x=active?f.x+(p.x+f.dir*112-f.x)*ease:f.x;
+ const y=active?f.y+(p.y-146-f.y)*ease:f.y;
+ const width=f.width*(gathering?.82+age*.38:1);
+ const height=width*(ch/cw);
+ ctx.save();ctx.translate(x,y);ctx.scale(f.dir,1);
+ ctx.rotate((f.seed%3-1)*(gathering?.08:.13));
+ ctx.globalAlpha=(gathering?.82:.66)*Math.pow(1-age,1.15);
+ ctx.drawImage(im,(frame%4)*cw,Math.floor(frame/4)*ch,cw,ch,
+  -width*.50,-height*.53,width,height);
+ ctx.restore();return true;
+}
+function drawDashChargeSprite(attacker){
+ const im=DASH_PIERCE_ART.image;
+ if(!DASH_PIERCE_ART.available||!im.complete||!im.naturalWidth||
+  attacker.dodge<=0||attacker.evadeBackstep)return false;
+ const dir=attacker.dodgeX>=0?1:-1;
+ const progress=clamp(1-attacker.dodge/Math.max(.01,attacker.dodgeDuration),0,.999);
+ const frame=Math.min(7,Math.floor(progress*8));
+ const cw=im.naturalWidth/4,ch=im.naturalHeight/2;
+ const width=192+progress*101,height=width*(ch/cw);
+ ctx.save();ctx.translate(attacker.x+dir*(84+progress*33),attacker.y-146);
+ ctx.scale(dir,1);ctx.globalAlpha=.50+progress*.27;
+ ctx.drawImage(im,(frame%4)*cw,Math.floor(frame/4)*ch,cw,ch,
+  -width*.50,-height*.53,width,height);
+ ctx.restore();return true;
 }
 function heelLandingShockwave(powered=false){
  const skill=specialStats('jumpspeed');
@@ -6138,6 +6197,7 @@ function control(dt,pad){
   p.parryRecoilRemaining=Math.max(0,p.parryRecoilRemaining-Math.abs(moved-p.x));
   p.x=moved;p.parryRecoilTime=Math.max(0,p.parryRecoilTime-dt);
  }
+ if(p.dodge>0&&!p.evadeBackstep&&p.stun<=0)emitDashTrailFx(p,movementStartX,p.x);
  const distanceTraveled=Math.hypot(p.x-movementStartX,(p.y-movementStartY)*1.9);
  if(distanceTraveled>.001&&p.attack<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0){
   p.gaitDistance=(p.gaitDistance||0)+distanceTraveled;
@@ -7161,6 +7221,7 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  if(a.chargePrep>0){ctx.textAlign='center';ctx.fillStyle='#ffb842';ctx.font='900 31px Arial';ctx.fillText('!!',x,y0-18)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('공격 → 처형',x,y0-12)}}}
 function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+820;for(const f of fx){if(f.x<left||f.x>right)continue;
  if(f.kind==='dashPierceSprite'){drawDashPierceSprite(f);continue;}
+  if(f.kind==='dashTrailSprite'){drawDashTrailSprite(f);continue;}
  if(f.kind==='groundSlamSprite'){
   if(!drawGroundSlamSprite(f)){
    // Existing painted bitmap fallback while the new resource is unavailable.
@@ -7203,7 +7264,7 @@ function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+82
   }
   ctx.restore();continue;
  }
- let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}for(const f of floating){if(f.x<left||f.x>right)continue;ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;ctx.lineWidth=4;ctx.strokeStyle='#10131c';ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);ctx.restore()}}
+ let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}if(p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p);for(const f of floating){if(f.x<left||f.x>right)continue;ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;ctx.lineWidth=4;ctx.strokeStyle='#10131c';ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);ctx.restore()}}
 const visibleActors=[];
 function draw(){
  if(gameState!=='playing'&&gameState!=='dying'&&!rewardSelection)return;
