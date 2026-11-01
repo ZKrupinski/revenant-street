@@ -78,7 +78,7 @@ assert(titleStyle[1].includes('font:1000 clamp(20px,2.55cqw,30px)'),
  'GAME START must have the largest heavyweight type');
 assert(titleStyle[1].includes('55%,100%{opacity:.48}'),
  'GAME START blink should remain readable even in its dim phase');
-assert(html.includes("menuPad.index=$('menu').querySelector('.title-action-row')?1:0;"),
+assert(html.includes("menuPad.index=html.includes('class=\"buttons title-action-row\"')?1:0;"),
  'title confirm defaults to the middle GAME START, without initial focus');
 assert(!html.includes("if(gameState!=='reward')selectMenuItem(0)"),
  'no menu may auto-select and light an unrelated button on open');
