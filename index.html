@@ -5965,6 +5965,45 @@ function heelLandingShockwave(powered=false){
   fxBurst(enemy.x,enemy.y-96,'red',powered?1.55:1.25);
  }
 }
+// Front-facing shockwave shared by the dash punch and the parry chase finisher.
+// The contact target(s) keep their full direct-hit damage; this picks up only
+// nearby enemies outside that hitbox, with falloff and rank-scaled coverage.
+function applyForwardSpecialSplash(kind,impactX,impactY,directTargets,fullDamage){
+ const dash=kind==='dash',skill=specialStats(dash?'dashspeed':'counter');
+ const rank=modRank(dash?'dashspeed':'counter'),face=p.facing<0?-1:1;
+ const rx=dash?skill.range+80:skill.range+90;
+ const ry=skill.lane+(dash?40:36);
+ let affected=0;
+ for(const enemy of enemies){
+  if(enemy.dead||enemy.inv>0||directTargets.has(enemy)||intruderEntering(enemy))continue;
+  if(enemy.z>155||Math.abs(enemy.y-impactY)>ry)continue;
+  const forward=(enemy.x-p.x)*face;
+  if(forward<10)continue; // never hit targets behind the hero
+  const relative=(enemy.x-impactX)*face;
+  const sideRange=relative<0?rx*.66:rx;
+  const ellipse=(relative/sideRange)**2+((enemy.y-impactY)/ry)**2;
+  if(ellipse>1.08)continue;
+  const falloff=clamp(1-.20*Math.sqrt(ellipse),.78,1);
+  const damage=fullDamage*(dash?.58:.70)*falloff;
+  const centerY=enemy.y;
+  hurtEnemy(enemy,damage,(dash?33:45)+rank*(dash?8:14));
+  const resist=enemy.type==='boss'?.36:(enemy.type==='elite'||enemy.type==='intruder')?.70:
+   enemy.type==='guard'?.82:1;
+  enemy.knockVX=face*skill.push*resist*(dash?.56:.62);
+  enemy.knockDrag=4.4;
+  enemy.knockVY=clamp((centerY-impactY)*1.15,-100,100);
+  enemy.stun=Math.max(enemy.stun,.42+rank*.065);
+  if(enemy.type!=='boss'){
+   enemy.z=Math.max(enemy.z,4);
+   enemy.vz=Math.max(enemy.vz,180+rank*20);
+   if(!enemy.dead)enemy.pendingFall=true;
+  }
+  enemy.reactionDir=face;
+  fxBurst(enemy.x,enemy.y-110,dash?'blue':'gold',.78+rank*.08);
+  affected++;
+ }
+ return affected;
+}
 function attackCheck(){
  if(p.riposteStrikeTarget){
   playCombatGunfire('counter','superman_punch');
@@ -5982,12 +6021,9 @@ function attackCheck(){
   parryCameraTime=0;strikeCameraTime=0;
   riposteCinematicTime=1.08;
   slowMotion=Math.max(slowMotion,1.48);parrySlowTarget=e;
-  for(const other of enemies){
-   if(other===e||other.dead||other.inv>0||Math.abs(other.z-e.z)>100)continue;
-   if(((other.x-centerX)/skill.range)**2+((other.y-centerY)/skill.lane)**2>1)continue;
-   hurtEnemy(other,dmg*.70,45+modRank('counter')*18);
-   other.knockVX=p.facing*skill.push*(other.type==='boss'?.36:.8);other.knockDrag=3.4;
-  }
+  // Secondary foes in the same forward impact fan take splash damage,
+  // including foes in neighboring lanes; never damage the primary twice.
+  applyForwardSpecialSplash('counter',centerX,centerY,new Set([e]),dmg);
   // Carry the second spectacular launch through even if this blow kills.
   // Dead characters keep world-space airborne physics until they land;
   // they do not recover with a token amount of HP and rush back.
@@ -6019,6 +6055,8 @@ function attackCheck(){
  const reach=p.dashSmash?specialStats('dashspeed').range:p.counterBoost?220:armed?([134,145,170][p.comboIdx]||135):(baseReach[p.moveName]||100);
  const poise={jab:21,cross:29,hook:38,uppercut:53,backfist:32,hammerfist:62,spinning_elbow:58,rising_elbow:49,superman_punch:68,shovel_hook:41,frontkick:43,lowkick:34,roundkick:57,axe_kick:65,sidekick:58,spinning_heel:72,crescent_kick:56,diagonal_airkick:74,rising_headbutt:62,forward_headbutt:54,airkick:78};
  let hits=0;
+ const directTargets=new Set();
+ let dashImpactX=0,dashImpactY=0;
  for(const e of enemies){if(e.dead||e.inv>0)continue;const dx=e.x-p.x,dy=Math.abs(e.y-p.y);const contactReach=Math.max(reach,bodyHalfX(p)+bodyHalfX(e)+20);if((dx*p.facing)>-25&&(dx*p.facing)<contactReach&&dy<(p.dashSmash?specialStats('dashspeed').lane:p.airAttack?78:56)&&(p.airAttack?p.z<225:Math.abs(e.z-p.z)<82)){let dmg=damage;
  const critChance=Math.min(.65,modRank('crit')*.10);
  const critical=Math.random()<critChance;
@@ -6035,7 +6073,11 @@ function attackCheck(){
    spawnModLink('blue',e.x,e.y-125,o.x,o.y-118,.75,'hue-rotate(59deg)',.22);
   });
  }
- if(p.dashSmash&&hits===0)spawnDashPierceFx(p,e); // real impact frame, no whiff or repeat for crowds
+ if(p.dashSmash&&hits===0){
+  dashImpactX=e.x;dashImpactY=e.y;
+  spawnDashPierceFx(p,e); // single real contact, not once per splash victim
+ }
+ directTargets.add(e);
  hurtEnemy(e,dmg,p.counterBoost?100:armed?([28,31,47][p.comboIdx]||28):(poise[p.moveName]||28));createModImpact(e);combatStrengthFx(e,critical);hits++;
  if(p.airKickPhase==='dive'){
   // Drive victims down rather than launch them away from the heel.
@@ -6067,6 +6109,10 @@ function attackCheck(){
   spawnModBitmap('gold',e.x,e.y-112,1.75+modRank('nova')*.17,'brightness(1.25)',.35);
   screenShake=Math.max(screenShake,Math.min(21,10+modRank('nova')*1.3));
  }}}
+ // Like the landing slam, the dash finisher radiates to nearby forward
+ // enemies beyond its narrow direct punch lane. A whiff never creates AoE.
+ if(p.dashSmash&&hits>0)
+  applyForwardSpecialSplash('dash',dashImpactX,dashImpactY,directTargets,damage);
  if(armed){p.weapon--;if(p.weapon<=0){flash('OVERLOAD SHATTER!',1.7);screenShake=27;screenTint=.9;sound('break');fxBurst(p.x+75*p.facing,p.y-120,'red',3);for(const e of enemies)if(!e.dead&&Math.hypot(e.x-p.x,(e.y-p.y)*1.4)<310){hurtEnemy(e,85,105)}}}
  if(hits>0&&p.attackDriveRemaining>0&&p.attackDriveTotal>0){
   // Commit the hit's momentum into forward pressure; avoid backward recoil.
