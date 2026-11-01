@@ -6,6 +6,7 @@ on:
 permissions:
   contents: read
   pages: write
+  deployments: write
 jobs:
   cancel-stale:
     runs-on: ubuntu-latest
@@ -22,7 +23,35 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/deployments/42e6c712dc05411d46353711d4779458903ee499/cancel")
           echo "Stale Pages cancellation returned HTTP ${status}"
-          if [ "${status}" != "204" ] && [ "${status}" != "202" ] && [ "${status}" != "404" ]; then
+          if [ "${status}" != "204" ] && [ "${status}" != "202" ] && [ "${status}" != "404" ] && [ "${status}" != "400" ]; then
             cat /tmp/pages-cancel.json
             exit 1
           fi
+
+      - name: Retire stale deployment record for the obsolete SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha=42e6c712dc05411d46353711d4779458903ee499
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${api}/deployments?sha=${sha}&per_page=30" >/tmp/stale-deployments.json
+          echo "Found $(jq 'length' /tmp/stale-deployments.json) deployment record(s) for stale SHA"
+          jq -r '.[].id' /tmp/stale-deployments.json | while read -r id; do
+            [ -n "${id}" ] || continue
+            echo "Retiring deployment id ${id}"
+            curl -sS -o /tmp/retire-status.json -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'Content-Type: application/json' \
+              -d '{"state":"inactive","description":"Retired stale Pages deployment preventing new releases"}' \
+              "${api}/deployments/${id}/statuses"
+            echo
+            curl -sS -o /tmp/retire-delete.json -w '%{http_code}' -X DELETE \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github+json' \
+              "${api}/deployments/${id}"
+            echo
+          done
