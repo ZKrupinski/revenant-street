@@ -1997,26 +1997,38 @@ test('successful parry launches a strong physical knockback and short player rec
  assert.equal(t.getFx().filter(f=>f.kind==='parryShield').length,0,'no bitmap shield for parry startup');
  t.enemyAttack(e);
  assert(e.knockVX>=1000,'stronger velocity launch, not teleport');
- assert.equal(t.getFx().filter(f=>f.kind==='parryShield').length,1,'only on successful attack contact');
+ assert.equal(t.getFx().filter(f=>f.kind==='parrySuccess10').length,1,'ten-frame sprite only on successful attack contact');
  assert(t.p.parryRecoilTime>0&&t.p.parryRecoilRemaining>0);
  const x=t.p.x;t.control(1/60,{dx:0,dy:0});
  assert(t.p.x<x&&t.p.x>x-6,'gradual short backward player slide');
 });
-test('JUST PARRY shows a 1.3x bitmap shield and triggers a one-second global cinematic',()=>{
+test('JUST PARRY shows the artist ten-frame blue burst without stacked enlarged FX and preserves global cinematic',()=>{
  g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2100;t.p.y=570;
  const enemy=t.makeEnemy('assassin',t.p.x+78,t.p.y,0);enemy.stun=0;t.setEnemies([enemy]);
  t.parry();
- assert.equal(t.getFx().filter(f=>f.kind==='parryShield').length,0,'no shield before a confirmed parry');
+ assert.equal(t.getFx().filter(f=>f.kind==='parrySuccess10').length,0,'no impact before a real parry');
  assert.equal(t.getSlowMotion(),0,'guard startup never slows the world');
  t.enemyAttack(enemy);
- const shields=t.getFx().filter(f=>f.kind==='parryShield');
- assert.equal(shields.length,1,'one real bitmap shield for one success');
- assert(Math.abs(shields[0].scale-1.3)<.001&&shields[0].life>=.5,'impact shield stays at exactly 1.3x original size');
- assert(t.getFx().some(f=>f.kind==='modBitmap'&&f.color==='blue'&&Math.abs(f.scale-1.3)<.001),'secondary bitmap glow matches the 1.3x parry size');
- assert(t.getFx().some(f=>f.color==='gold'&&Math.abs(f.scale-1.495)<.001),'gold impact burst is 1.3x original size');
+ const bursts=t.getFx().filter(f=>f.kind==='parrySuccess10');
+ assert.equal(bursts.length,1,'one original ten-frame blue burst per confirmed parry');
+ assert.equal(bursts[0].life,.35,'single effect plays quickly at consistent natural size');
+ assert.equal(t.getFx().filter(f=>f.kind==='parryShield').length,0,'no inflated prior shield effect');
+ assert(!t.getFx().some(f=>f.kind==='modBitmap'&&f.color==='blue'),'no duplicate blue bitmap glow');
+ assert(!t.getFx().some(f=>f.color==='gold'),'no stacked golden burst');
  assert(t.getSlowMotion()>=.95,'cinematic lasts near one second instead of 120ms');
- assert.equal(t.getSlowVictim(),enemy,'only the successfully parried actor gets double-stacked slowdown');
+ assert.equal(t.getSlowVictim(),enemy,'only successfully parried actor gets stacked slowdown');
  assert(t.getHitStop()>=.15,'impact has a sharp initial freeze');
+});
+test('user uploaded ten-frame parry artwork is embedded intact and uses 5x2 screen-key draw',()=>{
+ const match=html.match(/parrySuccessImage\.src='data:image\/avif;base64,([^']+)'/);
+ assert(match,'actual user artwork must be embedded in the gameplay preload');
+ const avif=Buffer.from(match[1],'base64');
+ assert.equal(avif.length,6788);
+ assert.equal(avif.subarray(4,12).toString(),'ftypavif');
+ const blob=require('node:crypto').createHash('sha1').update('blob '+avif.length+'\0').update(avif).digest('hex');
+ assert.equal(blob,'6182b78d4426ffe678e36306d65c5e23ee29c9be','must match the validated uploaded ten-frame asset');
+ assert(html.includes("const fw=a.naturalWidth/5,fh=a.naturalHeight/2,w=240"));
+ assert(html.includes("ctx.globalCompositeOperation='screen'"),'solid black frame background must not become a rectangle');
 });
 test('global parry cinematic slows camera world clock, hero, and parried foe in three layers',()=>{
  g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2200;t.p.y=570;t.p.stamina=100;
