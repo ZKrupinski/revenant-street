@@ -2855,6 +2855,31 @@ body{position:fixed;inset:0;touch-action:manipulation}
  margin:3px auto 0!important;justify-self:center!important;
 }
 </style>
+<style id="expanded-joystick-touch-v1">
+/* The joystick art is unchanged. An invisible sibling enlarges the real
+   PointerEvent hit region, with events bubbling to #analogPad's existing
+   pointerdown/drag/capture handlers. This doesn't modify movement geometry. */
+#stageWrap .touch-controls .analog-pad{
+ position:relative!important;overflow:visible!important;isolation:isolate;
+}
+#stageWrap .touch-controls .analog-pad .analog-touch-zone{
+ display:block!important;position:absolute!important;
+ top:calc(-1 * clamp(24px,3.2cqw,42px))!important;
+ right:calc(-1 * clamp(18px,2.6cqw,38px))!important;
+ bottom:calc(-1 * clamp(18px,2.5cqw,32px))!important;
+ left:calc(-1 * clamp(18px,2.6cqw,36px))!important;
+ z-index:0!important;
+ margin:0!important;padding:0!important;
+ border:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;
+ pointer-events:auto!important;touch-action:none!important;
+ user-select:none!important;-webkit-user-select:none!important;
+ -webkit-tap-highlight-color:transparent!important;
+}
+#stageWrap .touch-controls .analog-pad .analog-ring{
+ z-index:1!important; /* Bitmap base, shaft and knob remain visually above hit zone. */
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -2879,7 +2904,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
     <div class="game-message" id="gameMessage" aria-live="polite"></div>
     <div class="hint" id="hint" hidden></div>
     <div class="touch-controls" id="touchControls" hidden>
-      <div class="analog-pad" id="analogPad" role="group" aria-label="드래그 조이스틱"><div class="analog-ring"><div class="analog-axis"></div><div class="analog-shaft" id="analogShaft" aria-hidden="true"></div><div class="analog-thumb" id="analogThumb"></div></div><span class="analog-caption">MOVE</span></div>
+      <div class="analog-pad" id="analogPad" role="group" aria-label="넓은 터치영역 드래그 조이스틱"><span class="analog-touch-zone" aria-hidden="true"></span><div class="analog-ring"><div class="analog-axis"></div><div class="analog-shaft" id="analogShaft" aria-hidden="true"></div><div class="analog-thumb" id="analogThumb"></div></div><span class="analog-caption">MOVE</span></div>
       <div class="touch-actions" role="group" aria-label="4버튼 아케이드 게임패드"><button data-key="k" data-face="top" data-art="jump" aria-label="점프 Y / △" type="button">점프</button><button data-key="j" data-face="left" data-art="attack" class="attack" aria-label="공격 X / □, 그로기 적 앞에서 처형" type="button">공격</button><button data-key="l" data-face="right" data-art="parry" aria-label="패링 B / ○" type="button">패링</button><button data-key="Shift" data-face="bottom" data-art="dash" aria-label="대쉬 A / ×" type="button">대쉬</button></div>
     </div>
     <div class="overlay visible" id="overlay" role="dialog" aria-modal="true"><div class="overlay-shade"></div><div class="menu" id="menu"></div></div>
