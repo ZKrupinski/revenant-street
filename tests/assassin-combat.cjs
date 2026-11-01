@@ -64,6 +64,41 @@ test('choosing a Hub item shifts keyboard and gamepad highlight to Apply without
   Object.assign(perma,backup);t.hubMenu();
  }
 });
+test('HUB cyan focus frame appears only on hover, navigation or brief touch, never at rest',()=>{
+ const cssStart=html.indexOf('<style id="hub-contextual-focus-v1">');
+ assert(cssStart>=0,'interaction-specific HUB style is present');
+ const css=html.slice(cssStart,html.indexOf('</style>',cssStart));
+ assert(css.includes('.hub-module:not(.selected):not(.installed)')&&
+        css.includes('border-image-source:none!important'),
+  'idle selectable cards do not carry a persistent cyan frame');
+ assert(css.includes('.hub-module.pad-selected')&&css.includes('.hub-module:focus-visible'),
+  'gamepad and keyboard navigation restore a cyan focus border');
+ assert(css.includes('@media(hover:hover) and (pointer:fine)')&&css.includes('.hub-module:hover'),
+  'mouse pointer highlight is enabled only on hover-capable devices');
+ assert(css.includes('.hub-module.touch-focus')&&css.includes('--z-frame-cyan'),
+  'real touch selection uses the existing painted cyan bitmap frame');
+ assert(html.includes("hubTouchPointerPending=e.pointerType==='touch'"),
+  'touch uses actual pointer type, not a coarse-screen guess');
+ assert(html.includes("setTimeout(()=>card.classList.remove('touch-focus'),540)"),
+  'touch highlight disappears automatically after a short pulse');
+ const perma=g.getState().perma,backup={...perma},menu=node('menu'),oldQuery=menu.querySelector;
+ try{
+  Object.assign(perma,{core:0,servo:0,reflex:0,hubRefreshes:0,shards:9});
+  t.hubMenu();
+  const touchCard=node('child');
+  touchCard.classList.remove('touch-focus');
+  menu.querySelector=selector=>selector==='[data-action="hubApply"]'?null:
+   selector==='button[data-perma="servo"]'?touchCard:null;
+  assert.equal(t.selectHubModule('servo',true),true);
+  assert(touchCard.classList.contains('touch-focus'),'touch selection briefly marks the new card');
+  assert.equal(perma.shards,9,'touch selection never auto-purchases');
+  touchCard.classList.remove('touch-focus');
+  assert.equal(t.selectHubModule('core'),true,'regular card preview still works');
+  assert(!touchCard.classList.contains('touch-focus'),'normal selection has no sticky touch border');
+ }finally{
+  menu.querySelector=oldQuery;Object.assign(perma,backup);t.hubMenu();
+ }
+});
 test('Permanent save reset needs double confirmation and clears upgrades, refresh history and all shards',()=>{
  const perma=g.getState().perma,backup={...perma};
  try{
