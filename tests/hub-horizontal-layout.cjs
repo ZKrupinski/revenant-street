@@ -69,6 +69,16 @@ for(const rule of [
  '#app.compact-game-stage #stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>small{'
 ])assert(finalFit.css.includes(rule),'final Hub/reward layout must preserve readable text: '+rule);
 assert(!finalFit.css.includes('width:min(176px'),'do not restore oversized icons');
+for(const rule of [
+ '#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-art-slot>.hub-emblem{',
+ '#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-art-slot>.hub-emblem{',
+ 'width:min(92px,37cqh,40cqw)!important',
+ 'width:min(60px,31cqh,40cqw)!important',
+ '#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-forecast,',
+ '#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-buy,',
+ '#app.tight-hub-stage #stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>small{'
+])assert(finalFit.css.includes(rule),'short 16:9 stage must win over earlier higher-specificity selectors: '+rule);
+
 
 const begin=html.indexOf("function hubMenu(upgraded='");
 const end=html.indexOf('function buyUpgrade(',begin);
