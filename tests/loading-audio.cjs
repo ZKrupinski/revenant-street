@@ -91,22 +91,40 @@ async function combatVoices(){
  // onended callbacks to release the three-slot voice cap.
  for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
  assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy gets its own wounded vocal');
- assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'ordinary pain must grunt instead of death-screaming');
+ assert(/enemy-pain-deep-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'ordinary pain must use the new deep groans instead of high cries');
  assert(createdSources.at(-1).startedAt>=ctx.currentTime+.075,'the crack of impact should precede the groan');
  ctx.currentTime=3.0;
  assert.equal(voices.play('heroStrike',hero,hero),true,'normal hero strikes use mechanical charging clicks');
  assert(/hero-mech-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero normal hits never play human recordings');
+ // Neither regular enemy deaths nor boss shouts may choose the piercing
+ // source file. They have a single distinct deep recording each.
+ ctx.currentTime=4.10;
+ for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
+ const defeated={x:440,y:560,type:'assassin'};
+ assert.equal(voices.play('enemyDeath',defeated,hero),true);
+ assert(createdSources.at(-1).buffer.clip.endsWith('enemy-death-deep.mp3'),'normal enemy death is a low growl, never the old sustained aaah');
+ const alerted={x:505,y:560,type:'guard'};
+ ctx.currentTime=4.35;
+ assert.equal(voices.play('enemyShout',alerted,hero),true);
+ assert(createdSources.at(-1).buffer.clip.endsWith('enemy-shout-deep.mp3'),'enemy taunts are low warnings, not shrill yells');
+ ctx.currentTime=5.2;
+ for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
+ assert.equal(voices.play('bossDeath',boss,hero),true);
+ assert(createdSources.at(-1).buffer.clip.endsWith('enemy-death-deep.mp3'),'boss death is a deep voice too');
  assert(createdSources.length>=3,'all voice families use genuine recorded buffers');
  assert(!voiceScript.includes('duckImpact'),'metal accents and enemy vocals do not change BGM volume');
  assert(!voiceScript.includes('hero-kiai-'),'old player shouts must be entirely disconnected from active gameplay');
  assert(html.includes("playImpactSound(kind,heavy?1.15:1)"),'character impact sound must continue alongside grunt');
  assert(html.includes("applyImpactFeedback(e,smash||p.dashSmash"),'striking an enemy must still play the physical hit sound');
  assert(!voiceScript.includes('window.__revenantBgm'),'the voice engine must never lower the music');
- for(const file of ['hero-grunt-a.wav','hero-grunt-b.wav','voice-yell.wav','voice-roar.wav']){
+ for(const file of ['enemy-pain-deep-a.mp3','enemy-pain-deep-b.mp3','enemy-shout-deep.mp3','enemy-death-deep.mp3']){
   const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
-  assert(bytes.length>10000,'CC0 voice file is present: '+file);
-  assert.equal(bytes.subarray(0,4).toString(),'RIFF');
+  assert(bytes.length>4000,'low-pitch remastered enemy clip must be present: '+file);
+  assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'new enemy vocals are browser-decodable MP3: '+file);
  }
+ assert(!voiceScript.includes("'./assets/voice/voice-yell.wav'"),'piercing old ahh yell is never loaded');
+ assert(!voiceScript.includes("'./assets/voice/hero-grunt-a.wav'"),'old high hurt grunt A is not loaded');
+ assert(!voiceScript.includes("'./assets/voice/hero-grunt-b.wav'"),'old high hurt grunt B is not loaded');
  for(const file of ['hero-mech-a.mp3','hero-mech-b.mp3','hero-mech-power.mp3']){
   const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
   assert(bytes.length>6000,'mechanical Foley is shipped locally: '+file);
@@ -148,7 +166,7 @@ async function combatVoices(){
   assert(bytes.length>6000,'game embeds an original gun report: '+name);
   assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'MP3 gun report must be valid: '+name);
  }
- console.log('PASS: all 19 move variations have gunshots, four firearm families, all 11 clips preload, independent louder gunfire and quiet slide locomotion');
+ console.log('PASS: all 19 move variations have gunshots, 11 clips preload, subdued deep grunts replace every old piercing aaah, BGM remains untouched');
 }
 function spriteRetry(){
  const images=[];let now=1000;
