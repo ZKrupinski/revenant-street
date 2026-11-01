@@ -61,4 +61,32 @@ assert(index.includes("const idle=key==='idle'"),'idle has dedicated ghost captu
 assert(index.includes("ghost.idle?.20"),'idle trails remain much softer than combat');
 assert(index.includes('HERO_GHOST_MOBILE?4:6'),'mobile ghost count stays capped');
 
+// Inspect the actual published original-Z idle WEBP as raw RGBA on CI.
+// This is diagnostic: different poses may legitimately move their gloves.
+try{
+ const cp=require('node:child_process');
+ const source=path.join(root,'assets/project-z-hero/z-idle-hair-safe.webp');
+ const bytes=cp.execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-i',source,'-f','rawvideo','-pix_fmt','rgba','-'],{maxBuffer:8*1024*1024});
+ const cellW=240,cellH=254,atlasW=cellW*4;
+ assert(bytes.length>=atlasW*cellH*2*4,'idle WEBP decoded to RGBA');
+ const real=Array.from({length:8},(_,i)=>{
+  const data=new Uint8ClampedArray(cellW*cellH*4);
+  for(let y=0;y<cellH;y++){
+   const offset=(((i/4)|0)*cellH+y)*atlasW*4+(i%4)*cellW*4;
+   data.set(bytes.subarray(offset,offset+cellW*4),y*cellW*4);
+  }
+  return {canvas:{width:cellW,height:cellH,getContext(){return{
+   getImageData(){return {data:new Uint8ClampedArray(data)}},
+   putImageData(img){data.set(img.data)}
+  }}}};
+ });
+ const auditWorld={frames:real,Math,Uint8Array,window:{}};
+ vm.createContext(auditWorld);
+ vm.runInContext(index.slice(idleBegin,idleEnd)+'\nthis.audit=repairIdleFistAlpha(frames);',auditWorld);
+ console.log('Idle atlas glove-alpha audit:',JSON.stringify(auditWorld.audit));
+}catch(error){
+ console.log('Idle atlas optional ffmpeg QA:',error.message.slice(0,140));
+}
+
+
 console.log('PASS: original-Z V3 gait, intact idle fist repair, subtle idle ghosts, and backwards walk share intact 8-frame atlases with reverse steps');
