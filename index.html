@@ -3766,10 +3766,8 @@ function drawIntruderCombat(e,x,y,z){
  }
  ctx.restore();
  if(e.dead)return;
- const hpTop=y-z-270,bw=95;
- ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,hpTop,bw,7);
- ctx.fillStyle='#ff9aab';ctx.fillRect(x-bw/2,hpTop,bw*clamp(e.hp/e.maxHp,0,1),7);
- if(e.poise>0){ctx.fillStyle='#7ee5fa';ctx.fillRect(x-bw/2,hpTop+9,bw*clamp(e.poise/e.maxPoise,0,1),4)}
+ // Enemy overhead HP/poise bars are intentionally hidden; keep attack telegraphs.
+ const hpTop=y-z-270;
  ctx.textAlign='center';
  if(e.windup>0){ctx.fillStyle='#ff697b';ctx.font='900 26px Arial';ctx.fillText('!',x,hpTop-13)}
  if(e.chargePrep>0){ctx.fillStyle='#ffb842';ctx.font='900 28px Arial';ctx.fillText('!!',x,hpTop-18)}
@@ -3822,10 +3820,8 @@ function drawMaskedGrunt(e,x,y,z){
  }
  ctx.restore();
  if(e.dead)return;
- const top=y-z-270,bw=95;
- ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,top,bw,7);
- ctx.fillStyle='#d9aeb2';ctx.fillRect(x-bw/2,top,bw*clamp(e.hp/e.maxHp,0,1),7);
- if(e.poise>0){ctx.fillStyle='#7ee5fa';ctx.fillRect(x-bw/2,top+9,bw*clamp(e.poise/e.maxPoise,0,1),4)}
+ // Keep warning and execution cues; no per-enemy overhead HP or poise meter.
+ const top=y-z-270;
  ctx.textAlign='center';
  if(e.windup>0){ctx.fillStyle='#ff697b';ctx.font='900 26px Arial';ctx.fillText('!',x,top-13)}
  if(e.chargePrep>0){ctx.fillStyle='#ffb842';ctx.font='900 28px Arial';ctx.fillText('!!',x,top-18)}
@@ -3867,10 +3863,8 @@ function drawAssassin(e,x,y,z){
  }
  ctx.restore();
  if(e.dead)return;
- const top=y-z-267,bw=95;
- ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,top,bw,7);
- ctx.fillStyle='#88cbd0';ctx.fillRect(x-bw/2,top,bw*clamp(e.hp/e.maxHp,0,1),7);
- if(e.poise>0){ctx.fillStyle='#f5c56b';ctx.fillRect(x-bw/2,top+9,bw*clamp(e.poise/e.maxPoise,0,1),4)}
+ // Retain the attack/groggy telegraph anchor, remove all overhead meters.
+ const top=y-z-267;
  ctx.textAlign='center';
  if(e.windup>0){ctx.fillStyle='#ff697b';ctx.font='900 26px Arial';ctx.fillText('!',x,top-13)}
  if(e.chargePrep>0){ctx.fillStyle='#ffb842';ctx.font='900 28px Arial';ctx.fillText('!!',x,top-18)}
@@ -6979,10 +6973,8 @@ function drawRiotGuard(e,x,y,z){
  }
  ctx.restore();
  if(e.dead)return;
- const top=y-z-280,bw=100;
- ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,top,bw,7);
- ctx.fillStyle='#ddbd84';ctx.fillRect(x-bw/2,top,bw*clamp(e.hp/e.maxHp,0,1),7);
- if(e.poise>0){ctx.fillStyle='#78ddef';ctx.fillRect(x-bw/2,top+9,bw*clamp(e.poise/e.maxPoise,0,1),4)}
+ // Shield guard keeps attack warnings, but no floating HP/poise gauge.
+ const top=y-z-280;
  ctx.textAlign='center';
  if(e.windup>0){ctx.font='900 28px Arial';ctx.fillStyle='#ff677d';ctx.fillText('!',x,top-14)}
  if(e.groggy>0){ctx.font='900 13px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('GROGGY',x,top-10)}
@@ -7056,7 +7048,7 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  if(isP){const swing=p.attack>0?(1-p.attack/p.attackDuration):0;const offsetX=29,offsetY=-120;ctx.save();ctx.translate(offsetX,offsetY);ctx.rotate(p.attack>0?(-.85+2.2*swing):-.88);const weapon=img['pipe_charged'];if(p.weapon>0&&weapon.complete)ctx.drawImage(weapon,-12,-18,150,38);ctx.restore();}
  // No vector rectangle on damage: only the original bitmap silhouette flashes.
  ctx.restore();
- if(!isP&&!a.dead){const y0=y-z-h-13;const bw=boss?220:96;ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,y0,bw,7);ctx.fillStyle=boss?'#fe3c54':'#d9aeb2';ctx.fillRect(x-bw/2,y0,bw*clamp(a.hp/a.maxHp,0,1),7);if(a.poise>0){ctx.fillStyle='#7ee5fa';ctx.fillRect(x-bw/2,y0+9,bw*(a.poise/a.maxPoise),4)}if(a.windup>0){ctx.textAlign='center';ctx.fillStyle='#ff697b';ctx.font=`900 ${boss?40:27}px Arial`;ctx.fillText('!',x,y0-13)}
+ if(!isP&&!a.dead){const y0=y-z-h-13;/* All enemy overhead HP/poise bars removed, including boss. */if(a.windup>0){ctx.textAlign='center';ctx.fillStyle='#ff697b';ctx.font=`900 ${boss?40:27}px Arial`;ctx.fillText('!',x,y0-13)}
  if(a.chargePrep>0){ctx.textAlign='center';ctx.fillStyle='#ffb842';ctx.font='900 31px Arial';ctx.fillText('!!',x,y0-18)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('공격 → 처형',x,y0-12)}}}
 function drawEffects(){drawModEnergy();const left=cameraX-320,right=cameraX+W+320;for(const f of fx){if(f.x<left||f.x>right)continue;
  if(f.kind==='modBitmap'){
