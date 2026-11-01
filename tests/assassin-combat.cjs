@@ -1009,6 +1009,35 @@ test('four smaller bitmap arcade controls retain large touch surfaces and presse
  assert(html.includes("button.classList.toggle('pressed',pressed)")&&html.includes("touchFaceHeld.add(art)")&&html.includes("touchFaceHeld.delete(art)"),
  'touch and gamepad presses update bitmap depressed/released poses through the shared button state');
 });
+test('left touch joystick has an enlarged invisible hit area and keeps the original drag/bitmap',()=>{
+ const markup=html.slice(html.indexOf('id="analogPad"'),html.indexOf('id="analogThumb"'));
+ assert(markup.includes('class="analog-touch-zone" aria-hidden="true"'),
+  'joystick has a transparent child hit region without adding visual artwork');
+ assert(markup.indexOf('analog-touch-zone')<markup.indexOf('analog-ring'),
+  'hit region is beneath the painted joystick');
+ const first=html.indexOf('<style id="expanded-joystick-touch-v1">'),end=html.indexOf('</style>',first);
+ assert(first>0&&end>first,'expanded hitbox CSS is present after existing controller styles');
+ const css=html.slice(first,end);
+ for(const token of [
+  'position:absolute!important','top:calc(-1 * clamp(24px,3.2cqw,42px))!important',
+  'right:calc(-1 * clamp(18px,2.6cqw,38px))!important',
+  'bottom:calc(-1 * clamp(18px,2.5cqw,32px))!important',
+  'left:calc(-1 * clamp(18px,2.6cqw,36px))!important',
+  'pointer-events:auto!important','touch-action:none!important',
+  'background:transparent!important','z-index:0!important',
+  '.analog-pad .analog-ring{','z-index:1!important'
+ ])assert(css.includes(token),'missing invisible expanded joystick hitbox rule: '+token);
+ const input=html.slice(html.indexOf("analogPad.addEventListener('pointerdown'"),
+  html.indexOf("function resetInputs()"));
+ assert(input.includes('analogPad.setPointerCapture(e.pointerId)'),
+  'expanded zone uses original drag capture on the parent');
+ assert(input.includes('analogPad.addEventListener(\'pointermove\'')&&
+  input.includes('analogPad.addEventListener(\'pointercancel\''),
+  'original drag tracking and cancellation still function');
+ assert(input.includes('trackAnalog(e)'),'touch input uses original analog movement mapping');
+ assert(html.includes("const ring=analogPad.querySelector('.analog-ring'),r=ring.getBoundingClientRect();"),
+  'movement is still centered on the visible joystick rather than the expanded hit area');
+});
 test('approved arcade joystick uses bitmap disc and separately movable red ball, no guide circles',()=>{
  const root=path.join(__dirname,'../assets/ui');
  for(const name of ['z-arcade-stick-base-centerhole.webp','z-arcade-stick-shaft-centered.webp','z-arcade-stick-knob.webp']){
