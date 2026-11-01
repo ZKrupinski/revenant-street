@@ -2027,8 +2027,24 @@ test('user uploaded ten-frame parry artwork is embedded intact and uses 5x2 scre
  assert.equal(avif.subarray(4,12).toString(),'ftypavif');
  const blob=require('node:crypto').createHash('sha1').update('blob '+avif.length+'\0').update(avif).digest('hex');
  assert.equal(blob,'6182b78d4426ffe678e36306d65c5e23ee29c9be','must match the validated uploaded ten-frame asset');
- assert(html.includes("const fw=a.naturalWidth/5,fh=a.naturalHeight/2,w=240"));
+ assert(html.includes('spawnParrySuccessFx(p.x+p.facing*42,p.y-132,p.facing);'),'impact is anchored near hero forearm');
+ assert(html.includes('const w=210,h=w*crop.sh/crop.sw'),'the new burst plays slightly smaller');
+ assert(html.includes("ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.18,-h*.5,w,h)"));
  assert(html.includes("ctx.globalCompositeOperation='screen'"),'solid black frame background must not become a rectangle');
+ const first=html.indexOf('function parrySuccessSourceRect(w,h,frame){');
+ const last=html.indexOf('function drawEffects(){',first);
+ assert(first>=0&&last>first,'crop source helper must precede rendering');
+ const sourceRect=vm.runInNewContext(html.slice(first,last)+'\nparrySuccessSourceRect');
+ for(let frame=0;frame<10;frame++){
+  const r=sourceRect(1536,1024,frame),col=frame%5,row=Math.floor(frame/5);
+  const x0=Math.round(col*1536/5),x1=Math.round((col+1)*1536/5);
+  const y0=Math.round(row*1024/2),y1=Math.round((row+1)*1024/2);
+  assert(r.sx>x0+10&&r.sy>y0+30,'each crop must discard edge contamination');
+  assert(r.sw>0&&r.sh>0&&r.sx+r.sw<x1-10&&r.sy+r.sh<y1-30,'no neighboring cell can enter the crop');
+  assert.equal(r.sx%1,0);assert.equal(r.sy%1,0);
+  assert.equal(r.sw%1,0);assert.equal(r.sh%1,0);
+ }
+ console.log('PASS: parry atlas source rectangles safe for all 10 frames, reduced scale and forearm position');
 });
 test('global parry cinematic slows camera world clock, hero, and parried foe in three layers',()=>{
  g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2200;t.p.y=570;t.p.stamina=100;
