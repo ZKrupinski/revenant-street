@@ -5137,6 +5137,49 @@ function selectMenuItem(step=0){
  if(!$('menu').classList.contains('title-dialog')&&!$('menu').classList.contains('reward-dialog')&&!$('menu').classList.contains('result-dialog'))selected.scrollIntoView?.({block:'nearest',inline:'nearest'});
  return selected;
 }
+// HUB navigation uses the rendered 2-D layout instead of the flat DOM order.
+// The cards form the top row; the action buttons form the bottom row.
+// Vertical input jumps across those rows to the horizontally closest control.
+function hubMenuNavigate(dx,dy){
+ if(gameState!=='hub')return selectMenuItem(dx||dy);
+ const items=menuButtons();if(!items.length)return null;
+ const cards=items.filter(b=>!!b.dataset?.perma);
+ const actions=items.filter(b=>!b.dataset?.perma);
+ const current=items[menuPad.index]||cards[0]||items[0];
+ const onCard=!!current.dataset?.perma;
+ const rectOf=b=>{
+  const r=b.getBoundingClientRect?.()||{left:0,top:0,width:0,height:0};
+  return {x:(r.left||0)+(r.width||0)*.5,y:(r.top||0)+(r.height||0)*.5};
+ };
+ const from=rectOf(current);
+ let candidates=[];
+ if(dy<0&&!onCard)candidates=cards;
+ else if(dy>0&&onCard)candidates=actions;
+ else if(dy!==0)return current; // Do not jump sideways in response to UP.
+ else {
+  const peers=onCard?cards:actions;
+  // Find the actual next on-screen button in the requested horizontal direction.
+  // DOM order is only a fallback for test environments with no geometry.
+  const distinct=peers.some(b=>Math.abs(rectOf(b).x-from.x)>3);
+  if(distinct)candidates=peers.filter(b=>b!==current&&(rectOf(b).x-from.x)*dx>3);
+  else candidates=peers.filter(b=>b!==current&&(items.indexOf(b)-items.indexOf(current))*dx>0);
+ }
+ if(!candidates.length)return current;
+ const target=candidates.sort((a,b)=>{
+  const score=c=>{
+   const v=rectOf(c);
+   if(dy)return Math.abs(v.x-from.x)+Math.abs(v.y-from.y)*.15;
+   if(Math.abs(v.x-from.x)<=3)return Math.abs(items.indexOf(c)-items.indexOf(current))*100;
+   return Math.abs(v.x-from.x)+Math.abs(v.y-from.y)*1.4;
+  };
+  return score(a)-score(b);
+ })[0];
+ menuPad.index=items.indexOf(target);
+ items.forEach((b,i)=>b.classList.toggle('pad-selected',i===menuPad.index));
+ target.focus?.({preventScroll:true});
+ // HUB fits inside the 16:9 game frame; never auto-scroll the entire menu.
+ return target;
+}
 function menuConfirm(){if(!menuReady()){menuPad.readyAt=Math.max(menuPad.readyAt,Date.now()+250);return false;}const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
 function menuBack(){if(rewardSelection)return false;const items=menuButtons();const back=items.find(b=>['resume','title','pauseMenu','hub'].includes(b.dataset.action));if(back){back.click();return true}return false}
 function showMenu(html){
@@ -6395,8 +6438,13 @@ function pollPad(){
  if(gameState!=='playing'){
   resetPadFaceVisuals();
   if(rewardSelection){menuPad.nav=0;menuPad.confirm=upgradeConfirm;return{dx:0,dy:0}}
-  const direction=Math.abs(dx)>.52?Math.sign(dx):Math.abs(dy)>.52?Math.sign(dy):0;
-  if(direction&&direction!==menuPad.nav)selectMenuItem(direction);
+  const horizontal=Math.abs(dx)>=Math.abs(dy);
+  const direction=horizontal?(Math.abs(dx)>.52?Math.sign(dx)*2:0):
+   (Math.abs(dy)>.52?Math.sign(dy):0);
+  if(direction&&direction!==menuPad.nav){
+   if(gameState==='hub')hubMenuNavigate(horizontal?Math.sign(direction):0,horizontal?0:Math.sign(direction));
+   else selectMenuItem(Math.sign(direction));
+  }
   menuPad.nav=direction;
   // All noncombat panels: four face buttons perform the same CONFIRM action.
   const accept=upgradeConfirm;
@@ -8062,6 +8110,12 @@ function keyDown(ev){
  if(gameState!=='playing'){
   // Consume menu input entirely: no native focused-button click or combat fallthrough.
   if(rewardSelection||menuBlockedKeys.has(k)||ev.repeat||held)return;
+  if(gameState==='hub'){
+   if(k==='w'||k==='arrowup'){hubMenuNavigate(0,-1);return}
+   if(k==='s'||k==='arrowdown'){hubMenuNavigate(0,1);return}
+   if(k==='a'){hubMenuNavigate(-1,0);return}
+   if(k==='d'||k==='arrowright'){hubMenuNavigate(1,0);return}
+  }
   if(k==='a'||k==='w'){selectMenuItem(-1);return}
   if(k==='d'||k==='s'){selectMenuItem(1);return}
   if(gameState==='reward'&&['arrowleft','arrowup','arrowright','arrowdown'].includes(k)){
