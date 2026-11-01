@@ -96,10 +96,8 @@ function draw(e,x,y,z,api){
   ctx.restore();
  }
  if(e.dead)return;
- const top=y-z-325,bw=125,tell=e.eliteTell>0;
- ctx.fillStyle='#090f1aca';ctx.fillRect(x-bw/2-2,top-2,bw+4,13);
- ctx.fillStyle=e.phase===2?'#ff657d':'#b78088';ctx.fillRect(x-bw/2,top,bw*clamp(e.hp/e.maxHp,0,1),8);
- if(e.poise>0){ctx.fillStyle='#71d5db';ctx.fillRect(x-bw/2,top+12,bw*clamp(e.poise/e.maxPoise,0,1),3)}
+ // Keep the elite identity and telegraphs, not floating health or poise bars.
+ const top=y-z-325,tell=e.eliteTell>0;
  ctx.textAlign='center';ctx.font='900 14px Arial';
  ctx.fillStyle='#e9c4ba';ctx.fillText('IRON MASK / ELITE',x,top-13);
  if(tell){ctx.fillStyle='#ff5878';ctx.font='900 24px Arial';ctx.fillText('CRIMSON RUSH!',x,top-28)}
