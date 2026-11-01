@@ -149,10 +149,8 @@ function draw(e,x,y,z,api){
  }
  ctx.restore();
  if(!e.dead){
-  const top=y-z-405,bw=165;
-  ctx.fillStyle='#0b0d18dc';ctx.fillRect(x-bw/2,top,bw,8);
-  ctx.fillStyle=e.phase===2?'#ff4f59':'#e1a6a5';
-  ctx.fillRect(x-bw/2,top,bw*Math.max(0,Math.min(1,e.hp/e.maxHp)),8);
+  // No health meter over the boss sprite; its screen-fixed HUD remains.
+  const top=y-z-405;
   if(e.bossMode==='slam'){
    ctx.textAlign='center';ctx.font='900 18px Arial';
    ctx.fillStyle='#ff677c';ctx.fillText('⚠ CRIMSON IMPACT',x,top-12);
