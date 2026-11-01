@@ -37,6 +37,8 @@ jobs:
         run: node tests/ground-slam-bitmap.cjs
       - name: Dash lightning pierce 8F bitmap and on-hit regression
         run: node tests/dash-lightning.cjs
+      - name: User-approved parry riposte 8F bitmap integration
+        run: node tests/parry-counter-art.cjs
       - name: All eight Iron Mask special frames, no skipped animation poses
         run: node tests/elite-eight-frame.cjs
       - name: Hooded Iron Mask full AI charge-and-strike regression
