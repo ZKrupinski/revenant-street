@@ -21,8 +21,13 @@ jobs:
         run: python scripts/rebuild-redhood-jump.py
       - name: Wire corrected sprite into gameplay, floor anchors and smoke tests
         run: python scripts/apply-redhood-jump-runtime.py
-      - name: Check eight red-hood Crimson Dive frames in live game source
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify repaired red-hood sprites and ground anchors
         run: node tests/redhood-jump-frames.cjs
+      - name: Verify full game combat and animation regressions
+        run: node tests/assassin-combat.cjs
       - name: Commit new production WebP, runtime fix and frame-margin audit
         run: |
           git config user.name 'github-actions[bot]'
