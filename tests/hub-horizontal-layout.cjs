@@ -53,6 +53,6 @@ assert(css.includes('height:auto!important;\n aspect-ratio:1 / 1!important;'),
  'icon bitmap must use square aspect ratio, never an unresolved full-height container');
 assert(html.includes("const MOD_ICON_ORDER=[...MOD_UI_ORDER,'neuro','hub-core','hub-servo','hub-reflex']"),
  'Hub keeps its three dedicated icons inside the 25-image atlas');
-assert(html.includes("key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.webp':key+'.png'"),
+assert(html.includes("key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.webp':key==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':key+'.png'"),
  'unrelated redhood full-body fixes remain intact');
 console.log('PASS: 3 left-side fully square icons; all captions/actions on right; single centered in-window control footer; no-scroll 16:9 and compact rules');
