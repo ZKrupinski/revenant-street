@@ -2947,20 +2947,21 @@ function resetHeroAfterimages(){
 function captureHeroAfterimage(fr,key){
  if(!fr?.canvas||!fr.bounds||gameState!=='playing')return;
  const locomotion=key==='walk'||key==='run'||key==='backwalk';
- const active=locomotion||p.dodge>0||p.attack>0||p.counterRush>0;
+ const idle=key==='idle'&&p.attack<=0&&p.dodge<=0&&p.parry<=0&&!p.riposteChasing;
+ const active=idle||locomotion||p.dodge>0||p.attack>0||p.counterRush>0;
  if(!active||p.downTimer>0||p.getupTimer>0||p.stun>0||time<nextHeroGhostAt)return;
  const distance=Number.isFinite(lastHeroGhostX)?
   Math.hypot(p.x-lastHeroGhostX,(p.y-lastHeroGhostY)*1.3):999;
  // A short gait step should still leave a ghost. Avoid static jitter copies.
- if(distance<2.5&&fr===lastHeroGhostFrame)return;
+ if(!idle&&distance<2.5&&fr===lastHeroGhostFrame)return;
  const fast=p.dodge>0||p.running||key==='run';
- const duration=locomotion?(fast?.56:.53):p.dodge>0?.43:.34;
+ const duration=idle?.28:locomotion?(fast?.56:.53):p.dodge>0?.43:.34;
  const dir=Number.isFinite(lastHeroGhostX)&&Math.abs(p.x-lastHeroGhostX)>.5?
   Math.sign(p.x-lastHeroGhostX):(p.moveDX||p.facing||1)>=0?1:-1;
  heroAfterimages.push({frame:fr,x:p.x,y:p.y,z:p.z||0,face:p.facing||1,
-   dir,locomotion,life:duration,maxLife:duration});
+   dir,locomotion,idle,life:duration,maxLife:duration});
  if(heroAfterimages.length>MAX_HERO_GHOSTS)heroAfterimages.shift();
- nextHeroGhostAt=time+(HERO_GHOST_MOBILE?
+ nextHeroGhostAt=time+(idle?(HERO_GHOST_MOBILE?.22:.19):HERO_GHOST_MOBILE?
   (p.dodge>0?.048:p.attack>0?.054:fast?.052:.068):
   (p.dodge>0?.038:p.attack>0?.046:fast?.044:.055));
  lastHeroGhostX=p.x;lastHeroGhostY=p.y;lastHeroGhostFrame=fr;
@@ -2976,12 +2977,12 @@ function drawHeroAfterimages(){
   const remaining=clamp(ghost.life/ghost.maxLife,0,1);
   const elapsed=1-remaining;
   // Push the old poses behind the moving body to make the gait unmistakable.
-  const trailOffset=ghost.locomotion?10+elapsed*43:elapsed*13;
+  const trailOffset=ghost.idle?3+elapsed*5:ghost.locomotion?10+elapsed*43:elapsed*13;
   const ghostX=ghost.x-ghost.dir*trailOffset;
   const away=Math.hypot(p.x-ghostX,(p.y-ghost.y)*1.3);
   const distanceFade=Math.pow(1-clamp(away/470,0,1),.70);
-  const alpha=Math.min(.84,(ghost.locomotion?.90:.62)*
-   Math.pow(remaining,.50)*distanceFade);
+  const alpha=Math.min(.84,(ghost.idle?.20:ghost.locomotion?.90:.62)*
+   Math.pow(remaining,ghost.idle?.85:.50)*distanceFade);
   if(alpha<.018)continue;
   const sc=ghost.frame.unitScale||1;
   ctx.globalAlpha=alpha;
@@ -3505,11 +3506,66 @@ function preparePremattedGaitCells(im){
 function preparePremattedIdleCells(im){
  const cw=Math.floor(im.naturalWidth/4),ch=Math.floor(im.naturalHeight/2);
  if(cw!==240||ch!==254)throw Error('Original Z Idle 8-frame dimensions changed');
- return Array.from({length:8},(_,i)=>{
+ const frames=Array.from({length:8},(_,i)=>{
   const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
   cv.getContext('2d').drawImage(im,(i%4)*cw,Math.floor(i/4)*ch,cw,ch,0,0,cw,ch);
   return {canvas:cv,bounds:{x:0,y:0,w:cw,h:ch},unitScale:1};
  });
+ repairIdleFistAlpha(frames);
+ return frames;
+}
+/* Rebuild only missing alpha in outer-hand areas of the ORIGINAL 8-frame idle.
+   Adjacent frames must both contain opaque pixels at that location.
+   This preserves every unique pose, hair, torso, equipment and foot alignment. */
+function repairIdleFistAlpha(frames){
+ const w=frames[0]?.canvas?.width||0,h=frames[0]?.canvas?.height||0;
+ const qa={frames:8,patches:[],repairedPixels:0};
+ if(!w||!h||frames.length!==8)return qa;
+ const contexts=frames.map(fr=>fr.canvas.getContext('2d',{willReadFrequently:true}));
+ const snapshots=contexts.map(c=>c.getImageData(0,0,w,h));
+ const xmin=Math.floor(w*.035),xmax=Math.ceil(w*.965);
+ const ymin=Math.floor(h*.23),ymax=Math.ceil(h*.78);
+ const size=w*h;
+ for(let i=0;i<8;i++){
+  const current=snapshots[i].data,previous=snapshots[(i+7)%8].data,next=snapshots[(i+1)%8].data;
+  const candidate=new Uint8Array(size),visited=new Uint8Array(size);
+  for(let y=ymin;y<ymax;y++)for(let x=xmin;x<xmax;x++){
+   // Hands sit outside the torso; never touch face, chest, legs or boots.
+   if(x>w*.40&&x<w*.60)continue;
+   const pos=y*w+x,idx=pos*4;
+   if(current[idx+3]<84&&previous[idx+3]>180&&next[idx+3]>180)candidate[pos]=1;
+  }
+  let restored=0,patchCount=0;
+  for(let y=ymin;y<ymax;y++)for(let x=xmin;x<xmax;x++){
+   const start=y*w+x;if(!candidate[start]||visited[start])continue;
+   const stack=[start],region=[];visited[start]=1;
+   let x0=x,x1=x,y0=y,y1=y;
+   while(stack.length){
+    const k=stack.pop(),xx=k%w,yy=(k/w)|0;region.push(k);
+    x0=Math.min(x0,xx);x1=Math.max(x1,xx);y0=Math.min(y0,yy);y1=Math.max(y1,yy);
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+     const ax=xx+dx,ay=yy+dy,at=ay*w+ax;
+     if(ax<xmin||ax>=xmax||ay<ymin||ay>=ymax||visited[at]||!candidate[at])continue;
+     visited[at]=1;stack.push(at);
+    }
+   }
+   // A handful of antialiased edge pixels is normal breathing motion.
+   // Only a fist-sized missing opaque island qualifies for reconstruction.
+   if(region.length<28||region.length>1600||x1-x0>w*.25||y1-y0>h*.25)continue;
+   for(const k of region){
+    const p=k*4;current[p]=previous[p];current[p+1]=previous[p+1];
+    current[p+2]=previous[p+2];current[p+3]=previous[p+3];
+   }
+   restored+=region.length;patchCount++;
+  }
+  if(restored){
+   contexts[i].putImageData(snapshots[i],0,0);
+   qa.patches.push({frame:i,pixels:restored,regions:patchCount});
+   qa.repairedPixels+=restored;
+  }
+ }
+ if(typeof window!=='undefined')window.__zIdleFistQA=qa;
+ return qa;
 }
 function loadZMove(key){
  if(!Z_REMOTE_ATLAS[key])key='idle';
