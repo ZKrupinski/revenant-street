@@ -4963,7 +4963,7 @@ const BOSS_SPAWN_X=30900;
 let enemies=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,parrySlowTarget=null,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
 const DEATH_CINEMATIC_DURATION=2.75,DEATH_COLLAPSE_DURATION=2.15;
 const deathCinematic={elapsed:0,active:false};
-let perma={core:0,servo:0,reflex:0,armor:0,sprint:0,lift:0,shards:0,hubRefreshes:0};
+let perma={core:0,servo:0,reflex:0,armor:0,sprint:0,lift:0,shards:0,hubRefreshes:0,hubAutoRefreshes:0};
 try{const stored=JSON.parse(localStorage.getItem('revenant-perma-v1')||'null');if(stored)for(const key of Object.keys(perma)){const value=stored[key];if(Number.isSafeInteger(value)&&value>=0)perma[key]=value}}catch(_){}
 // All WebAudio SFX (gunfire, reloads, impacts, menu and battle tones) play
 // at 70% of their previous amplitude; HTMLAudioElement BGM is untouched.
@@ -5568,7 +5568,7 @@ async function requestRunStart(){
   showMenu(`<div class="eyebrow">RESOURCE ERROR</div><h2>리소스 로딩 중단</h2><p>${String(err.message).replace(/[<>]/g,'')}</p><p>불완전한 캐릭터가 보이지 않도록 게임 실행을 막았습니다.</p><div class="buttons"><button class="main-btn" data-action="start">다시 불러오기</button><button class="secondary-btn" data-action="title">타이틀</button></div>`);
  }
 }
-function startRun(){resetInputs();resetPlayer();
+function startRun(){pendingHubAutoRefresh=false;resetInputs();resetPlayer();
  // Preserve WASD that was held while the loading or start overlay was visible.
  for(const k of ['w','a','s','d'])if(heldKeyboard.has(k))keys.add(k);
  menuBlockedKeys.clear();syncFaceButtonVisuals();
@@ -8042,6 +8042,7 @@ function selectMod(m){
 function completeMenu(){
  if(gameState==='complete')return;
  const reward=awardRunShards(true);if(!reward)return;
+ pendingHubAutoRefresh=wave>=HUB_AUTO_REFRESH_MIN_WAVE;
  gameState='complete';setStatus('RUN COMPLETE');$('bossHud').hidden=true;
  showMenu(`<div class="result-screen">
  <div class="result-title"><div class="eyebrow">OBJECTIVE COMPLETE / REBEL SIGNAL ONLINE</div><h1>ZONE <span>CLEARED</span></h1><p>완주 보너스 ◆3 · 스타일 랭크 <b class="key">${reward.grade}</b></p></div>
@@ -8070,6 +8071,7 @@ function startDeathCinematic(){
 function deadMenu(){
  if(gameState==='dead')return;
  const reward=awardRunShards(false);if(!reward)return;
+ pendingHubAutoRefresh=wave>=HUB_AUTO_REFRESH_MIN_WAVE;
  gameState='dead';setStatus('SIGNAL LOST');$('hint').hidden=true;
  showMenu(`<div class="result-screen">
  <div class="result-title"><div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1>
@@ -8098,7 +8100,9 @@ const HUB_OFFER_ROTATION=[
  ['core','sprint','armor'],['servo','reflex','lift']
 ];
 function hubAvailableModules(){
- const ids=HUB_OFFER_ROTATION[perma.hubRefreshes%HUB_OFFER_ROTATION.length];
+ // Automatic result refresh rotates visible stock without increasing manual refresh price.
+ const rotation=(perma.hubRefreshes+perma.hubAutoRefreshes)%HUB_OFFER_ROTATION.length;
+ const ids=HUB_OFFER_ROTATION[rotation];
  return ids.map(id=>HUB_MODULES.find(m=>m.id===id));
 }
 function refreshHubOffers(){
@@ -8149,7 +8153,22 @@ function renderTitleBaseStats(){
  <span>패링 ${v.parry.toFixed(3)}초</span><span>달리기 ${v.run}</span>
  <span>◆ ${perma.shards}</span><small>이 기기에 영구 저장</small></div>`;
 }
-let hubSelected='core',hubResetArmed=false;
+// A run qualifies once it reaches the second combat wave. Auto-refresh is
+// earned at the result screen and consumed only when returning to HUB.
+const HUB_AUTO_REFRESH_MIN_WAVE=2;
+let hubSelected='core',hubResetArmed=false,pendingHubAutoRefresh=false;
+function enterHubFromMenu(){
+ const fromResult=gameState==='dead'||gameState==='complete';
+ const refreshed=fromResult&&pendingHubAutoRefresh;
+ pendingHubAutoRefresh=false;
+ hubResetArmed=false;
+ if(refreshed){
+  perma.hubAutoRefreshes++;
+  save(); // Persist new stock, charge zero shards, leave manual refresh cost intact.
+  hubSelected=hubAvailableModules()[0].id;
+ }
+ hubMenu('',refreshed);
+}
 function showHubShardNotice(cost){
  if(gameState!=='hub')return false;
  const menu=$('menu');
@@ -8235,7 +8254,7 @@ function selectHubModule(key,fromTouch=false){
  }
  return true;
 }
-function hubMenu(upgraded=''){
+function hubMenu(upgraded='',autoRefreshed=false){
  gameState='hub';$('bossHud').hidden=true;setStatus('REBEL HUB');
  const offers=hubAvailableModules();
  if(!offers.some(m=>m.id===hubSelected))hubSelected=offers[0].id;
@@ -8255,7 +8274,7 @@ function hubMenu(upgraded=''){
    </span>
   </button>`;
  }).join('');
- const hasProgress=perma.shards>0||perma.hubRefreshes>0||HUB_MODULES.some(m=>perma[m.id]>0);
+ const hasProgress=perma.shards>0||perma.hubRefreshes>0||perma.hubAutoRefreshes>0||HUB_MODULES.some(m=>perma[m.id]>0);
  const rerollCost=hubRefreshCost();
  const reset=hubResetArmed?
   `<button type="button" class="hub-danger" data-action="hubResetConfirm">초기화 확정</button>
@@ -8270,6 +8289,7 @@ function hubMenu(upgraded=''){
   <div class="hub-bottom">
    <div class="hub-feedback" aria-live="polite">${upgraded?
      `<strong>${selected.title} Lv.${perma[upgraded]} 적용 완료!</strong> 이 기기에 저장했습니다.`:
+     autoRefreshed?`<strong>전투 진행 보상! 강화 목록 무료 갱신 완료</strong> · 새로운 3개 항목을 확인하세요.`:
      `선택: <strong>${selected.title}</strong> · 카드를 누르면 미리보기만 변경됩니다.`}</div>
    <div class="hub-action-row">
     <button type="button" class="hub-apply" data-action="hubApply" aria-disabled="${perma.shards<selectedCost||hubResetArmed||perma[hubSelected]>=HUB_MAX_LEVEL}">◆ ${selectedCost} 강화 적용</button>
@@ -8294,15 +8314,15 @@ function buyUpgrade(key=hubSelected){
  sound('parry');vibrateImpact('heavy',true);return true;
 }
 function prepareHubReset(){
- if(gameState!=='hub'||hubResetArmed||(perma.shards===0&&perma.hubRefreshes===0&&HUB_MODULES.every(m=>perma[m.id]===0)))return false;
+ if(gameState!=='hub'||hubResetArmed||(perma.shards===0&&perma.hubRefreshes===0&&perma.hubAutoRefreshes===0&&HUB_MODULES.every(m=>perma[m.id]===0)))return false;
  hubResetArmed=true;hubMenu();return true;
 }
 function cancelHubReset(){if(gameState!=='hub'||!hubResetArmed)return false;hubResetArmed=false;hubMenu();return true}
 function resetHubUpgrades(){
  if(gameState!=='hub'||!hubResetArmed)return false;
  for(const m of HUB_MODULES)perma[m.id]=0;
- perma.shards=0;perma.hubRefreshes=0;
- hubResetArmed=false;hubSelected='core';save();hubMenu();sound('parry');return true;
+ perma.shards=0;perma.hubRefreshes=0;perma.hubAutoRefreshes=0;
+ pendingHubAutoRefresh=false;hubResetArmed=false;hubSelected='core';save();hubMenu();sound('parry');return true;
 }
 function pauseToggle(){if(gameState==='playing'){gameState='paused';stopGamepadRumble();setStatus('PAUSED');showMenu(`<div class="eyebrow">SYSTEM SUSPENDED</div><h2>일시 정지</h2><p>전투가 일시 정지되었습니다.</p><div class="buttons"><button class="main-btn" data-action="resume">▶ 계속 플레이</button><button class="secondary-btn" data-action="sound">${mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}</button><button class="secondary-btn" data-action="rumbleTest">🎮 패드 진동 테스트</button><button class="secondary-btn" data-action="guideResume">조작 안내</button><button class="secondary-btn" data-action="title">타이틀로</button></div><p class="micro" id="rumbleStatus">연결된 패드의 진동 API를 확인 중입니다.</p>`);updateRumbleDiagnostics()}else if(gameState==='paused'){gameState='playing';setStatus('COMBAT LIVE');hideMenu()}}
 function keyDown(ev){
@@ -8412,7 +8432,7 @@ $('menu').addEventListener('pointerdown',e=>{
 });
 $('menu').addEventListener('pointerup',()=>{hubPointerFocusPending=false});
 $('menu').addEventListener('pointercancel',()=>{hubPointerFocusPending=false;hubTouchPointerPending=false});
-$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if($('menu').querySelector('.hub-shard-notice-mask')&&a!=='hubShardNoticeClose')return;if(a==='hubShardNoticeClose')closeHubShardNotice();else if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){hubResetArmed=false;hubMenu()}else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='hubEconomy')hubEconomyMenu();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma){const touched=hubTouchPointerPending||e.pointerType==='touch';hubTouchPointerPending=false;hubPointerFocusPending=false;selectHubModule(b.dataset.perma,touched)}});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if($('menu').querySelector('.hub-shard-notice-mask')&&a!=='hubShardNoticeClose')return;if(a==='hubShardNoticeClose')closeHubShardNotice();else if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub')enterHubFromMenu()else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='hubEconomy')hubEconomyMenu();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma){const touched=hubTouchPointerPending||e.pointerType==='touch';hubTouchPointerPending=false;hubPointerFocusPending=false;selectHubModule(b.dataset.perma,touched)}});
 $('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activeModStacks().length+(p.mod==='neuro'?1:0))};
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){
