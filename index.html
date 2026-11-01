@@ -3235,6 +3235,58 @@ body{position:fixed;inset:0;touch-action:manipulation}
  }
 }
 </style>
+<style id="hub-selected-red-neon-v3">
+/* The selected HUB module is a persistent bright RED state.
+   Gamepad focus on another (unselected) card remains CYAN;
+   applied-but-unselected cards keep their GREEN status. */
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module{
+ transition:transform .14s ease-out,filter .14s ease-out,box-shadow .14s ease-out!important;
+ transform-origin:50% 50%!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected.pad-selected,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected:focus-visible,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected.touch-focus{
+ position:relative!important;
+ z-index:5!important;
+ transform:scale(1.018)!important;
+ translate:none!important;
+ border:9px solid transparent!important;
+ border-image:var(--z-frame-red) 36 fill / 9px / 0 stretch!important;
+ filter:brightness(1.16) saturate(1.13)!important;
+ outline:none!important;
+ box-shadow:inset 0 0 0 2px #ffc0caaa,inset 0 0 18px #ff355966,0 0 11px #ff7186dd,0 0 23px #ff345ab8!important;
+}
+/* Reuse the existing bitmap red frame over the selected card,
+   deliberately thicker than the default frames (no vector outlines). */
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected::after,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected.pad-selected::after,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected:focus-visible::after,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected.touch-focus::after{
+ content:"";
+ position:absolute;inset:0;z-index:5;
+ pointer-events:none;
+ border:11px solid transparent!important;
+ border-image:var(--z-frame-red) 36 / 11px / 0 stretch!important;
+ opacity:1!important;
+ filter:drop-shadow(0 0 7px #ff7d98) drop-shadow(0 0 14px #ff365e)!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected .hub-buy{
+ border-image-source:var(--z-frame-red)!important;
+ background:#2c1a2a var(--z-button-steel) center / 100% 100% no-repeat!important;
+ color:#ffe1e5!important;
+ box-shadow:inset 0 0 8px #ff3d6355,0 0 9px #ff527899!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected .hub-module-name,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected .hub-forecast{
+ filter:brightness(1.07)!important;
+}
+@media(prefers-reduced-motion:reduce){
+ #stageWrap #menu.hub-dialog .hub-modules>button.hub-module{
+  transition:none!important;
+ }
+}
+</style>
 </head>
 <body>
 <div id="app">
