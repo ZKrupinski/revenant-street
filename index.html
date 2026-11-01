@@ -1967,6 +1967,122 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 </style>
 
+<style id="hub-centered-artwork-v7">
+/* HUB ONLY: replace split icon/text card with centered vertical composition.
+   Keep all artwork square and uncropped; never alter mid-combat power-up cards. */
+#stageWrap #menu.hub-dialog .hub-module{
+ display:flex!important;flex-direction:column!important;
+ justify-content:center!important;align-items:center!important;
+ text-align:center!important;
+ grid-template-columns:none!important;grid-template-rows:none!important;
+ row-gap:clamp(5px,1cqh,10px)!important;column-gap:0!important;
+ padding:clamp(7px,1.15cqh,12px)!important;
+}
+#stageWrap #menu.hub-dialog .hub-art-slot{
+ display:flex!important;grid-column:auto!important;grid-row:auto!important;
+ flex:0 1 auto!important;align-items:center!important;justify-content:center!important;
+ width:100%!important;height:auto!important;min-height:0!important;
+ margin:0 auto!important;padding:0!important;
+ border:0!important;border-right:0!important;
+ box-sizing:border-box!important;overflow:visible!important;
+}
+#stageWrap #menu.hub-dialog .hub-art-slot .hub-emblem{
+ display:block!important;position:relative!important;flex:0 1 auto!important;
+ width:clamp(90px,25cqh,172px)!important;max-width:70%!important;
+ height:auto!important;aspect-ratio:1/1!important;
+ min-width:0!important;min-height:0!important;max-height:none!important;
+ margin:0 auto!important;padding:0!important;
+ border:0!important;background:transparent!important;
+ box-shadow:none!important;overflow:visible!important;
+}
+#stageWrap #menu.hub-dialog .hub-art-slot .hub-emblem .upgrade-art{
+ display:block!important;width:100%!important;height:auto!important;
+ aspect-ratio:1/1!important;object-fit:contain!important;
+ margin:0 auto!important;max-width:100%!important;max-height:none!important;
+ background-size:500% 500%!important;background-repeat:no-repeat!important;
+}
+#stageWrap #menu.hub-dialog .hub-card-info{
+ display:flex!important;grid-column:auto!important;grid-row:auto!important;
+ flex:0 1 auto!important;flex-direction:column!important;
+ align-items:center!important;justify-content:center!important;
+ width:100%!important;min-width:0!important;min-height:0!important;
+ gap:clamp(4px,.7cqh,8px)!important;overflow:visible!important;
+ text-align:center!important;
+}
+#stageWrap #menu.hub-dialog .hub-card-info .hub-module-name{
+ display:flex!important;flex-direction:column!important;align-items:center!important;
+ justify-content:center!important;flex-wrap:nowrap!important;
+ width:100%!important;max-width:100%!important;min-width:0!important;
+ white-space:normal!important;word-break:keep-all!important;
+ text-align:center!important;font-size:clamp(13px,2.25cqh,19px)!important;
+ line-height:1.15!important;
+}
+#stageWrap #menu.hub-dialog .hub-card-info .hub-module-name small{
+ display:block!important;margin:2px 0 0!important;
+ font-size:clamp(9px,1.4cqh,12px)!important;text-align:center!important;
+}
+#stageWrap #menu.hub-dialog .hub-card-info .hub-forecast{
+ display:flex!important;flex-direction:row!important;align-items:center!important;
+ justify-content:center!important;flex-wrap:wrap!important;
+ gap:clamp(3px,.6cqw,8px)!important;
+ width:100%!important;margin:0!important;padding:0!important;
+ border:0!important;text-align:center!important;
+ font-size:clamp(12px,2.1cqh,18px)!important;line-height:1.2!important;
+}
+#stageWrap #menu.hub-dialog .hub-card-info .hub-desc{
+ width:100%!important;min-height:0!important;
+ margin:0!important;text-align:center!important;
+ white-space:normal!important;overflow:hidden!important;
+ text-overflow:ellipsis!important;line-height:1.2!important;
+}
+#stageWrap #menu.hub-dialog .hub-card-info .hub-buy{
+ display:flex!important;flex-direction:row!important;
+ align-items:center!important;justify-content:center!important;
+ flex:0 0 auto!important;
+ width:76%!important;min-width:0!important;
+ margin:clamp(2px,.4cqh,5px) auto 0!important;
+ min-height:clamp(28px,4.7cqh,39px)!important;
+ padding:clamp(4px,.6cqh,7px) 8px!important;
+ gap:clamp(10px,1.5cqw,22px)!important;
+ text-align:center!important;white-space:nowrap!important;
+}
+/* Dense / short stages use the same centered layout, not the old split grid. */
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-module,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-module{
+ display:flex!important;flex-direction:column!important;
+ justify-content:center!important;align-items:center!important;
+ grid-template-columns:none!important;grid-template-rows:none!important;
+ column-gap:0!important;row-gap:clamp(2px,.65cqh,6px)!important;
+ padding:clamp(3px,.8cqh,8px)!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-art-slot .hub-emblem{
+ width:clamp(56px,17cqh,116px)!important;max-width:72%!important;
+}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-art-slot .hub-emblem{
+ width:clamp(38px,13cqh,84px)!important;max-width:75%!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-card-info,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-card-info{
+ align-items:center!important;gap:clamp(2px,.45cqh,5px)!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-card-info .hub-module-name,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-card-info .hub-module-name{
+ display:flex!important;align-items:center!important;text-align:center!important;
+ white-space:normal!important;
+}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-card-info .hub-buy{
+ width:90%!important;min-height:20px!important;
+ flex-direction:row!important;justify-content:center!important;
+}
+@media(max-height:580px){
+ #stageWrap #menu.hub-dialog .hub-art-slot .hub-emblem{
+  width:clamp(56px,17cqh,116px)!important;max-width:70%!important;
+ }
+ #stageWrap #menu.hub-dialog .hub-module{row-gap:clamp(3px,.7cqh,6px)!important}
+ #stageWrap #menu.hub-dialog .hub-card-info .hub-desc{display:none!important}
+}
+</style>
+
 <style id="project-z-final-bitmap-bi-v1">
 /* Final 2026-11 PROJECT Z logo uses the approved ORIGINAL bitmap artwork.
    Never stretch the graphic, paint a fake vector logo or crop the punch. */
