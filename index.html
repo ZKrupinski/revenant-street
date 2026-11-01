@@ -4060,6 +4060,19 @@ function startRun(){resetInputs();resetPlayer();
   red.cooldown=.25;red.renderX=red.x;red.renderY=red.y;
   enemies=[red];squadIndex=1;supportTriggered=true;
   flash(entryQA?'RED HOOD / 난입 4프레임 검수':'RED HOOD / 공중 특수공격 8프레임 검수',2);
+ }else if(/(?:[?&])intruder=(preview|entry)(?:&|$)/.test(window.location?.search||'')){
+  // Real red-hood QA: preview tests aerial attack; entry tests foreground leap.
+  const entryQA=/(?:[?&])intruder=entry(?:&|$)/.test(window.location?.search||'');
+  wave=1;p.x=700;p.y=570;cameraX=clamp(p.x-425,0,STAGE_WIDTH-W);
+  const red=makeEnemy('intruder',p.x+320,p.y,enemySerial++);
+  red.entryDuration=.98;red.entryAge=entryQA?0:red.entryDuration;
+  red.entryLandingPlayed=!entryQA;red.entrySide=1;
+  red.supportTeam=true;red.supportGroup='redhood-qa';
+  red.supportTeamMaxHp=red.maxHp;red.supportTeamSize=1;red.encountered=true;
+  red.specialCooldown=entryQA?1.2:0;
+  red.cooldown=.25;red.renderX=red.x;red.renderY=red.y;
+  enemies=[red];squadIndex=1;supportTriggered=true;
+  flash(entryQA?'RED HOOD / 난입 4프레임 검수':'RED HOOD / 공중 특수공격 8프레임 검수',2);
  }else if(/(?:[?&])elite=preview(?:&|$)/.test(window.location?.search||'')){
   // Real combat QA: show the real Iron Mask sprite/AI immediately, at full scale.
   // Normal gameplay is unchanged when this explicit preview URL is absent.
