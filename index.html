@@ -5668,7 +5668,7 @@ function awardEnemyKill(e){
  const money=e.type==='boss'?300:e.type==='elite'?135:e.type==='intruder'?110:e.type==='guard'?65:45;
  p.credits+=money;
  const textValue='+₩'+money;
- floatText(textValue,e.x,e.y-210,shards?'#ffe78c':'#ffdc8d');
+ floatText(textValue,e.x,e.y-210,'#ffdc8d');
  fxBurst(e.x,e.y-120,'gold',.85);
 }
 function hurtEnemy(e,dmg,poise){
