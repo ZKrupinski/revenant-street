@@ -39,7 +39,7 @@ updated=""" if(/(?:[?&])intruder=(preview|entry)(?:&|$)/.test(window.location?.s
  }else if(/(?:[?&])elite=preview(?:&|$)/.test(window.location?.search||'')){"""
 replace_once(html,original,updated)
 test=ROOT/'tests/assassin-combat.cjs'
-replace_once(test,old_source,new_source)
+replace_once(test,old_source[old_source.index('image.src='):-1],new_source[new_source.index('image.src='):-1])
 smoke=ROOT/'.github/workflows/z-smoke.yml'
 old_smoke="""      - name: Combat and animation regression tests
         run: node tests/assassin-combat.cjs"""
