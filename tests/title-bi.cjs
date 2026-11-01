@@ -39,4 +39,23 @@ assert(html.includes('class="title-bi-accessible">REVENANT STREET</h1>'),
  'screen readers still get a text title');
 assert(html.includes('data-action="start"')&&html.includes('data-action="hub"')&&html.includes('data-action="guide"'),
  'all original title buttons remain usable');
+
+const start=html.indexOf('function titleMenu(){');
+const end=html.indexOf('function guideMenu(',start);
+assert(start>0&&end>start,'original titleMenu function still exists');
+const title=html.slice(start,end);
+for(const banned of ['<p class="desc">','<div class="feature-row">','${renderTitleBaseStats()}','<p class="micro">']){
+ assert(!title.includes(banned),'title overlay no longer obscures BI: '+banned);
+}
+const css2=html.slice(html.indexOf('<style id="project-z-title-art-first-v2">'));
+assert(css2.includes('#stageWrap #menu.title-dialog .all-face-confirm-hint'),
+ 'automatically appended controller hint is hidden only on the title screen');
+assert(css2.includes('max-height:44px!important'),
+ 'title action buttons have a compact height cap');
+assert(css2.includes('white-space:nowrap!important'),
+ 'title buttons stay in one line rather than growing vertically');
+assert((title.match(/data-action="(start|hub|guide)"/g)||[]).length===3,
+ 'all three title actions remain intact');
+console.log('PASS: BI landing screen has zero lower text lines and compact readable action buttons');
+
 console.log('PASS: title and header use approved original cybernetic bitmap, with no cropped artwork or missing controls');
