@@ -5022,6 +5022,7 @@ function requiredSceneArt(preview=false){
   ['배경 디코딩',()=>ensureBitmapDecoded(img.street_pano)],
   ['주인공 머플러 제거 등장 8프레임',()=>ensureBitmapDecoded(heroEntry.image)],
   ['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)],
+  ['지면강타 8프레임 비트맵',()=>ensureBitmapDecoded(GROUND_SLAM_ART.image),true],
   ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
   ['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
   ...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임',()=>ensureBitmapDecoded(intruderMotionImages[k])]),
