@@ -3330,6 +3330,34 @@ function syncZSprite(){if(zArtNode)zArtNode.style.display='none'}
 RZAssassinArt.load('idle');loadMaskedMove('idle');loadZMove('idle');loadZMove('walk');loadZMove('run');loadZMove('dash');loadZMove('guard');loadZMove('airkick');loadZMove('axe_kick');loadZMove('jab');loadZMove('frontkick');loadZMove('lowkick');loadZMove('roundkick');
 
 const STAGE_WIDTH=32000;let cameraX=0;
+
+/* 8-frame scarf-free Z arrival: source is the original supplied sprite artwork,
+   not a new character. Existing attack/hit/idle sprites stay unchanged. */
+const HERO_ENTRY_ATLAS_URL='https://d2ol7oe51mr4n9.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/6a789253-a909-44c9-80b3-42af6957ed70.webp';
+const heroEntry={active:false,elapsed:0,duration:2.34,frames:8,image:new Image(),landed:false};
+heroEntry.image.crossOrigin='anonymous';heroEntry.image.src=HERO_ENTRY_ATLAS_URL;
+function heroEntryEase(t){t=clamp(t,0,1);return t*t*(3-2*t)}
+function heroEntryPose(u){return Math.min(7,Math.floor(clamp(u,0,.99999)*8))}
+function drawHeroEntryCinematic(){
+ const u=clamp(heroEntry.elapsed/heroEntry.duration,0,1),im=heroEntry.image;
+ ctx.save();
+ const darkness=(1-heroEntryEase((u-.10)/.70))*.55;
+ if(darkness>0){ctx.fillStyle='rgba(3,7,13,'+darkness.toFixed(3)+')';ctx.fillRect(0,0,W,H)}
+ const settle=heroEntryEase((u-.10)/.82),scale=2.05+(0.58-2.05)*settle;
+ const screenX=W*.53+(p.x-cameraX-W*.53)*heroEntryEase((u-.24)/.70);
+ const groundY=H*1.02+(p.y-H*1.02)*heroEntryEase((u-.24)/.70);
+ if(im?.complete&&im.naturalWidth>0&&im.naturalHeight>0){
+  const i=heroEntryPose(u),col=i%4,row=Math.floor(i/4);
+  const sx=Math.round(col*im.naturalWidth/4),ex=Math.round((col+1)*im.naturalWidth/4);
+  const sy=Math.round(row*im.naturalHeight/2),ey=Math.round((row+1)*im.naturalHeight/2);
+  const sw=ex-sx,sh=ey-sy;
+  ctx.globalAlpha=1-heroEntryEase((u-.94)/.06);
+  ctx.drawImage(im,sx,sy,sw,sh,screenX-sw*scale/2,groundY-sh*scale,sw*scale,sh*scale);
+  ctx.globalAlpha=1;
+ }
+ ctx.restore();
+}
+
 // Each confirmed combo impact nudges the focus and builds up cinematic zoom.
 let cameraZoom=1,comboCameraLock=0,comboCameraFocusX=0;
 let comboCameraPulse=0,comboCameraLastSnap=-99;
@@ -4112,6 +4140,7 @@ function requiredSceneArt(preview=false){
   // All embedded combat/camera illustrations are fully decoded before play.
   ...assetNames.filter(k=>EMBEDDED_ASSETS[k]).map(k=>['내장 비트맵 '+k,()=>ensureBitmapDecoded(img[k])]),
   ['배경 디코딩',()=>ensureBitmapDecoded(img.street_pano)],
+  ['주인공 머플러 제거 등장 8프레임',()=>ensureBitmapDecoded(heroEntry.image)],
   ['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)],
   ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
   ['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
@@ -4200,6 +4229,9 @@ function startRun(){resetInputs();resetPlayer();
  for(const k of ['w','a','s','d'])if(heldKeyboard.has(k))keys.add(k);
  menuBlockedKeys.clear();syncFaceButtonVisuals();
  setModsExpanded(false);wave=0;fx=[];floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;parrySlowTarget=null;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
+ const urlQA=/(?:[?&])(?:intruder|elite|boss)=(?:preview|entry)(?:&|$)/.test(window.location?.search||'');
+ heroEntry.active=!urlQA;heroEntry.elapsed=0;heroEntry.landed=false;
+ if(heroEntry.active){$('touchControls').hidden=true;$('hud').hidden=true;setStatus('Z / DEPLOYING')}
  // A previous menu button cannot be treated as a fresh combat press.
  menuPad.armed=false;menuPad.confirm=false;
  if(/(?:[?&])intruder=(preview|entry)(?:&|$)/.test(window.location?.search||'')){
@@ -4241,8 +4273,8 @@ function startRun(){resetInputs();resetPlayer();
   // ten screens. Normal gameplay and progression stay unchanged.
   wave=2;p.x=30400;p.y=560;cameraX=clamp(p.x-450,0,STAGE_WIDTH-W);
   spawnWave();flash('HUNTER / 최종 보스 미리보기',2);
- }else flash('CHAPTER 01 : 침수된 거리',2);
- sound('attack')}
+ }else if(!heroEntry.active)flash('CHAPTER 01 : 침수된 거리',2);
+ if(!heroEntry.active)sound('attack')}
 function spawnNextEncounter(){
  if(wave!==1&&wave!==2)return false;
  const spots=SQUAD_SPOTS[wave]||[],i=squadIndex;
@@ -5789,6 +5821,24 @@ function updateHud(){
   $('bossPhase').textContent=String(Math.max(...group.map(e=>e.phase))).padStart(2,'0');
  } }
 function update(dt){
+ // Real-clock entrance freezes controls, AI and hitboxes while real stage
+ // scenery is revealed; all eight painted bitmap poses play only once.
+ if(heroEntry.active){
+  if(gameState!=='playing')return;
+  const previous=heroEntry.elapsed;
+  heroEntry.elapsed=Math.min(heroEntry.duration,previous+dt);
+  time+=dt*.24;
+  if(!heroEntry.landed&&heroEntry.elapsed>=heroEntry.duration*.60){
+   heroEntry.landed=true;sound('attack');vibrateImpact('heavy',true);
+  }
+  if(heroEntry.elapsed>=heroEntry.duration){
+   heroEntry.active=false;
+   $('hud').hidden=false;$('touchControls').hidden=false;
+   p.inv=Math.max(p.inv,.30);setStatus('COMBAT LIVE');updateHud();
+   flash('CHAPTER 01 : 침수된 거리',1.35);
+  }
+  return;
+ }
  // Play the completed eight-frame death collapse with real-clock timing
  // while enemy AI and hero input remain fully suspended.
  if(gameState==='dying'){
@@ -6195,6 +6245,7 @@ function draw(){
   ctx.translate(px,py);ctx.scale(zoom,zoom);ctx.translate(-px,-py);
  }
  drawBackdrop();
+ if(heroEntry.active){drawHeroEntryCinematic();ctx.restore();return;}
  ctx.save();ctx.translate(-Math.round(cameraX),0);
  const actors=visibleActors;actors.length=0;
  if(p.x>cameraX-300&&p.x<cameraX+W+300)actors.push(p);
