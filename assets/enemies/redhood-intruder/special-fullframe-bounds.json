@@ -1,0 +1,178 @@
+{
+  "original": "assets/enemies/redhood-intruder/special.png",
+  "output": "assets/enemies/redhood-intruder/special-fullframe.webp",
+  "cell": [
+    576,
+    576
+  ],
+  "frames": [
+    {
+      "frame": 1,
+      "source_size": [
+        444,
+        444
+      ],
+      "bbox": [
+        83,
+        148,
+        532,
+        507
+      ],
+      "margins": [
+        83,
+        148,
+        44,
+        69
+      ],
+      "foot": 506,
+      "extended_crimson_pixels": 155
+    },
+    {
+      "frame": 2,
+      "source_size": [
+        443,
+        444
+      ],
+      "bbox": [
+        44,
+        126,
+        531,
+        510
+      ],
+      "margins": [
+        44,
+        126,
+        45,
+        66
+      ],
+      "foot": 509,
+      "extended_crimson_pixels": 341
+    },
+    {
+      "frame": 3,
+      "source_size": [
+        443,
+        444
+      ],
+      "bbox": [
+        44,
+        115,
+        532,
+        476
+      ],
+      "margins": [
+        44,
+        115,
+        44,
+        100
+      ],
+      "foot": 475,
+      "extended_crimson_pixels": 2746
+    },
+    {
+      "frame": 4,
+      "source_size": [
+        444,
+        444
+      ],
+      "bbox": [
+        43,
+        71,
+        490,
+        502
+      ],
+      "margins": [
+        43,
+        71,
+        86,
+        74
+      ],
+      "foot": 502,
+      "extended_crimson_pixels": 2735
+    },
+    {
+      "frame": 5,
+      "source_size": [
+        444,
+        443
+      ],
+      "bbox": [
+        93,
+        71,
+        533,
+        478
+      ],
+      "margins": [
+        93,
+        71,
+        43,
+        98
+      ],
+      "foot": 476,
+      "extended_crimson_pixels": 433
+    },
+    {
+      "frame": 6,
+      "source_size": [
+        443,
+        443
+      ],
+      "bbox": [
+        43,
+        103,
+        532,
+        485
+      ],
+      "margins": [
+        43,
+        103,
+        44,
+        91
+      ],
+      "foot": 484,
+      "extended_crimson_pixels": 2034
+    },
+    {
+      "frame": 7,
+      "source_size": [
+        443,
+        443
+      ],
+      "bbox": [
+        43,
+        173,
+        532,
+        473
+      ],
+      "margins": [
+        43,
+        173,
+        44,
+        103
+      ],
+      "foot": 473,
+      "extended_crimson_pixels": 2992
+    },
+    {
+      "frame": 8,
+      "source_size": [
+        444,
+        443
+      ],
+      "bbox": [
+        43,
+        108,
+        488,
+        484
+      ],
+      "margins": [
+        43,
+        108,
+        88,
+        92
+      ],
+      "foot": 483,
+      "extended_crimson_pixels": 1221
+    }
+  ]
+}
