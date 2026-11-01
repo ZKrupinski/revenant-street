@@ -5823,8 +5823,10 @@ function updateHud(){
 function update(dt){
  // Real-clock entrance freezes controls, AI and hitboxes while real stage
  // scenery is revealed; all eight painted bitmap poses play only once.
+ // A reward/pause/death menu can supersede the opening without delaying
+ // menu confirmation, including fast QA and test scenarios.
+ if(heroEntry.active&&gameState!=='playing')heroEntry.active=false;
  if(heroEntry.active){
-  if(gameState!=='playing')return;
   const previous=heroEntry.elapsed;
   heroEntry.elapsed=Math.min(heroEntry.duration,previous+dt);
   time+=dt*.24;
