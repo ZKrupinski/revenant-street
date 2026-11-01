@@ -2896,6 +2896,94 @@ body{position:fixed;inset:0;touch-action:manipulation}
 #menu .hub-action-row button{min-height:48px}
 @media(max-width:670px){#menu .hub-economy-columns{grid-template-columns:1fr}#menu .run-result-grid{grid-template-columns:1fr}}
 </style>
+<style id="result-16x9-no-scroll">
+/* Defeat and clear share one stage-sized dashboard; never make the action
+   buttons fall below the frame, even in a letterboxed mobile landscape view. */
+#stageWrap #menu.result-dialog{
+ box-sizing:border-box!important;
+ width:min(1060px,calc(100% - 20px))!important;
+ max-width:calc(100% - 16px)!important;
+ height:min(535px,calc(100% - 20px))!important;
+ min-height:0!important;
+ max-height:calc(100% - 16px)!important;
+ overflow:hidden!important;
+ padding:clamp(8px,1.65cqh,17px) clamp(12px,2.6cqw,27px)!important;
+ display:flex!important;flex-direction:column!important;
+}
+#stageWrap #menu.result-dialog .result-screen{
+ display:grid!important;flex:1 1 auto;min-height:0;width:100%;
+ grid-template-columns:minmax(0,1.16fr) minmax(0,.84fr);
+ grid-template-rows:minmax(0,1fr) auto auto auto;
+ grid-template-areas:"title payout" "stats stats" "actions actions" "tip tip";
+ gap:clamp(4px,.9cqh,9px) clamp(9px,1.8cqw,18px);
+ align-items:stretch;
+}
+#stageWrap #menu.result-dialog .result-title{
+ grid-area:title;min-width:0;display:flex;flex-direction:column;
+ justify-content:center;align-items:flex-start;
+}
+#stageWrap #menu.result-dialog .eyebrow{
+ margin:0 0 clamp(2px,.65cqh,7px)!important;
+ font:900 clamp(9px,1.65cqh,14px)/1.15 Arial,'Malgun Gothic',sans-serif!important;
+ letter-spacing:clamp(.5px,.20cqw,2.5px)!important;overflow-wrap:anywhere;
+}
+#stageWrap #menu.result-dialog .result-title h1{
+ font:italic 900 clamp(34px,9.4cqh,73px)/.86 Impact,'Arial Black',sans-serif!important;
+ margin:0 0 clamp(3px,.5cqh,6px)!important;letter-spacing:1px!important;
+}
+#stageWrap #menu.result-dialog .result-title h1 span{display:block}
+#stageWrap #menu.result-dialog .result-title p{
+ font:700 clamp(10px,1.75cqh,14px)/1.23 Arial,'Malgun Gothic',sans-serif!important;
+ margin:0!important;overflow-wrap:anywhere;
+}
+#stageWrap #menu.result-dialog .result-payout{
+ grid-area:payout;display:flex!important;flex-direction:column;
+ align-items:center;justify-content:center;
+ gap:clamp(5px,1.7cqh,14px);min-width:0;
+ margin:0!important;padding:clamp(7px,1.4cqh,13px)!important;
+ text-align:center;border-color:#5a7688;
+}
+#stageWrap #menu.result-dialog .result-payout span{
+ font:800 clamp(10px,1.9cqh,16px)/1.2 Arial,'Malgun Gothic',sans-serif;
+}
+#stageWrap #menu.result-dialog .result-payout strong{
+ font:900 clamp(20px,4.5cqh,35px)/1 Impact,Arial,sans-serif;white-space:nowrap;
+}
+#stageWrap #menu.result-dialog .run-result-grid{
+ grid-area:stats;display:grid!important;
+ grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ grid-template-rows:repeat(2,minmax(0,1fr))!important;
+ gap:clamp(3px,.8cqh,8px)!important;
+ margin:0!important;padding:clamp(4px,.8cqh,8px)!important;
+ min-width:0;min-height:0;max-height:clamp(76px,18cqh,133px);
+}
+#stageWrap #menu.result-dialog .run-result-grid span{
+ min-width:0;min-height:0;display:flex;align-items:center;
+ padding:clamp(3px,.8cqh,8px) clamp(5px,1.1cqw,11px)!important;
+ font:800 clamp(9px,1.65cqh,14px)/1.23 Arial,'Malgun Gothic',sans-serif!important;
+ overflow-wrap:anywhere;white-space:normal;
+}
+#stageWrap #menu.result-dialog .result-actions{
+ grid-area:actions;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:clamp(7px,1.3cqw,14px)!important;margin:0!important;min-width:0;
+}
+#stageWrap #menu.result-dialog .result-actions button{
+ width:100%;min-width:0;min-height:clamp(33px,7.6cqh,55px)!important;
+ padding:clamp(5px,1.2cqh,11px) 8px!important;
+ font:900 clamp(11px,2.1cqh,17px)/1.15 Arial,'Malgun Gothic',sans-serif!important;
+ text-align:center;white-space:normal;
+}
+#stageWrap #menu.result-dialog .result-tip{
+ grid-area:tip;min-width:0;text-align:center;
+ color:#b8cbd9;font:800 clamp(8px,1.25cqh,11px)/1.1 Arial,'Malgun Gothic',sans-serif;
+}
+#stageWrap #menu.result-dialog>.all-face-confirm-hint{display:none!important}
+@container (max-height:450px){
+ #stageWrap #menu.result-dialog{padding:5px 9px!important}
+ #stageWrap #menu.result-dialog .result-screen{gap:3px 7px}
+ #stageWrap #menu.result-dialog .result-tip{font-size:8px}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -4159,7 +4247,9 @@ function paintZ(x,y,z,externalOpacity=1){
  if(recoil){ctx.rotate(-.10*recoil);ctx.scale(1+.04*recoil,1-.14*recoil)}
  if(fr){
   const b=fr.bounds,sc=fr.unitScale;
-  ctx.globalAlpha=(p.inv>0&&Math.sin(time*33)>0?.67:1)*externalOpacity;
+  // Keep the actual hero solid at every invulnerability phase; communicate
+  // invincibility with the existing hit flash, motion and bitmap afterimages.
+  ctx.globalAlpha=externalOpacity;
   // Keep original image visible (25%+) beneath a <=75% white alpha mask.
   const originalOpacity=ctx.globalAlpha;
   ctx.drawImage(fr.canvas,b.x,b.y,b.w,b.h,-b.w*sc/2,-b.h*sc,b.w*sc,b.h*sc);
@@ -4219,20 +4309,20 @@ function drawHeroEntryCinematic(){
  const footY=H*1.04+(actorFootY-H*1.04)*settle;
  const i=heroEntryPose(u),col=i%4,row=Math.floor(i/4);
  const stagePoseOpacity=heroEntryEase((t-(heroEntry.duration-.33))/.25);
- // During the final stance, subtly blend into the real player animation at
- // its actual foot position instead of a one-frame sprite pop.
- if(stagePoseOpacity>0&&backdropAlpha>.99){
-  paintZ(actorScreenX,p.y,p.z,stagePoseOpacity);
- }
- if(im.complete&&im.naturalWidth===HERO_ENTRY_FRAME_W*4&&
-    im.naturalHeight===HERO_ENTRY_FRAME_H*2){
-  ctx.globalAlpha=1-stagePoseOpacity;
+ const introReady=im.complete&&im.naturalWidth===HERO_ENTRY_FRAME_W*4&&
+  im.naturalHeight===HERO_ENTRY_FRAME_H*2;
+ // Switch once at the matching-foot pose rather than alpha-crossfading two
+ // different silhouettes; the hero never appears translucent on arrival.
+ const showMainPose=!introReady||(stagePoseOpacity>=.5&&backdropAlpha>.99);
+ if(showMainPose){
+  paintZ(actorScreenX,p.y,p.z,1);
+ }else{
+  ctx.globalAlpha=1;
   ctx.drawImage(im,col*HERO_ENTRY_FRAME_W,row*HERO_ENTRY_FRAME_H,
    HERO_ENTRY_FRAME_W,HERO_ENTRY_FRAME_H,
    screenX-HERO_ENTRY_FRAME_W*spriteScale/2,
    footY-HERO_ENTRY_FOOT_Y*spriteScale,
    HERO_ENTRY_FRAME_W*spriteScale,HERO_ENTRY_FRAME_H*spriteScale);
-  ctx.globalAlpha=1;
  }
  const flash=heroEntryFlash();
  if(flash>0){
@@ -5009,7 +5099,7 @@ function selectMenuItem(step=0){
  for(let i=0;i<items.length;i++)items[i].classList.toggle('pad-selected',i===menuPad.index);
  const selected=items[menuPad.index];
  selected.focus?.({preventScroll:true});
- if(!$('menu').classList.contains('title-dialog')&&!$('menu').classList.contains('reward-dialog'))selected.scrollIntoView?.({block:'nearest',inline:'nearest'});
+ if(!$('menu').classList.contains('title-dialog')&&!$('menu').classList.contains('reward-dialog')&&!$('menu').classList.contains('result-dialog'))selected.scrollIntoView?.({block:'nearest',inline:'nearest'});
  return selected;
 }
 function menuConfirm(){if(!menuReady()){menuPad.readyAt=Math.max(menuPad.readyAt,Date.now()+250);return false;}const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
@@ -5020,6 +5110,8 @@ function showMenu(html){
  menuBlockedKeys.clear();for(const key of heldKeyboard)menuBlockedKeys.add(key);
  canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;if(gameState==='hub')$('menu').classList.add('hub-dialog');else $('menu').classList.remove('hub-dialog');
  $('menu').classList.toggle('reward-dialog',gameState==='reward');
+ $('menu').classList.toggle('result-dialog',gameState==='dead'||gameState==='complete');
+ $('menu').scrollTop=0;
  $('menu').classList.remove('title-dialog');$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;
  // Keep menus visually neutral until navigation. Title confirm defaults to GAME START.
  menuPad.index=html.includes('class="buttons title-action-row"')?1:0;
@@ -7698,9 +7790,13 @@ function completeMenu(){
  if(gameState==='complete')return;
  const reward=awardRunShards(true);if(!reward)return;
  gameState='complete';setStatus('RUN COMPLETE');$('bossHud').hidden=true;
- showMenu(`<div class="eyebrow">OBJECTIVE COMPLETE / REBEL SIGNAL ONLINE</div><h1>ZONE <span>CLEARED</span></h1><p>완주 보너스 ◆3 포함 · 스타일 평가 랭크 <b class="key">${reward.grade}</b></p>
- <div class="hub-stat"><span>전리품 ₩${p.credits}</span><strong>이번 런 ◆+${reward.total}</strong></div>${runResultMarkup(reward)}
- <div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB로 귀환</button><button class="secondary-btn" data-action="start">새로운 런 시작</button></div>`);
+ showMenu(`<div class="result-screen">
+ <div class="result-title"><div class="eyebrow">OBJECTIVE COMPLETE / REBEL SIGNAL ONLINE</div><h1>ZONE <span>CLEARED</span></h1><p>완주 보너스 ◆3 · 스타일 랭크 <b class="key">${reward.grade}</b></p></div>
+ <div class="hub-stat result-payout"><span>전리품 ₩${p.credits}</span><strong>이번 런 ◆+${reward.total}</strong></div>
+ ${runResultMarkup(reward)}
+ <div class="buttons result-actions"><button class="main-btn" data-action="hub">REBEL HUB로 귀환</button><button class="secondary-btn" data-action="start">새로운 런 시작</button></div>
+ <div class="result-tip">패드 스틱·십자키 / WASD로 이동 · 공격 버튼으로 선택</div>
+ </div>`);
 }
 function startDeathCinematic(){
  if(gameState!=='playing'||deathCinematic.active)return false;
@@ -7722,10 +7818,14 @@ function deadMenu(){
  if(gameState==='dead')return;
  const reward=awardRunShards(false);if(!reward)return;
  gameState='dead';setStatus('SIGNAL LOST');$('hint').hidden=true;
- showMenu(`<div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1>
- <p>전투 결과에 따른 샤드 정산 · 스타일 랭크 <b class="key">${reward.grade}</b></p>
- <div class="hub-stat"><span>처치 ${runKills}명 · 공격 ${reward.attacks}회</span><strong>SHARDS +${reward.total}</strong></div>${runResultMarkup(reward)}
- <div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB</button><button class="secondary-btn" data-action="start">즉시 재시작</button></div>`);
+ showMenu(`<div class="result-screen">
+ <div class="result-title"><div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1>
+ <p>전투 성적 정산 · 스타일 랭크 <b class="key">${reward.grade}</b></p></div>
+ <div class="hub-stat result-payout"><span>처치 ${runKills}명 · 공격 ${reward.attacks}회</span><strong>SHARDS +${reward.total}</strong></div>
+ ${runResultMarkup(reward)}
+ <div class="buttons result-actions"><button class="main-btn" data-action="hub">REBEL HUB</button><button class="secondary-btn" data-action="start">즉시 재시작</button></div>
+ <div class="result-tip">패드 스틱·십자키 / WASD로 이동 · 공격 버튼으로 선택</div>
+ </div>`);
 }
 const HUB_COST=2; // Lv.0 reference cost; higher levels use hubUpgradeCost.
 const HUB_MODULES=[
