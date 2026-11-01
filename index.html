@@ -5975,7 +5975,7 @@ function attackCheck(){
   const dmg=(skill.damage+p.damageBoost)*(1+modRank('power')*.16);
   const centerX=e.x,centerY=e.y;
   hurtEnemy(e,Math.min(e.hp,dmg),65+modRank('counter')*25);
-  spawnParryCounterFx(p,e,skill.visual); // exact user-approved eight-frame counter art
+  spawnParryCounterFx(p,e,skill.visual); // true parry follow-up contact only
   // Only a *landed* chase punch triggers the second camera/echo/slow-motion beat.
   spawnRiposteAfterimages();
   triggerCounterCamera(p.facing,clamp(665*skill.visual/1.25,590,1090));
