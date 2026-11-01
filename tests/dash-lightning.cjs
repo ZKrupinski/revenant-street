@@ -128,7 +128,7 @@ world.p.x=410;seeker.life=seeker.maxLife*.30;
 assert(world.drawTrail(seeker)&&world.drawTrail(wake)&&world.drawCharge(world.p));
 assert.equal(draws.length,startDraw+3,'all dash sprites come from 8F bitmap');
 const tailTransforms=transforms.slice(startTransform);
-assert(tailTransforms.some(([k,x,y])=>k==='translate'&&x>seeker.x&&y<seeker.y),
+assert(tailTransforms.some(([k,x,y])=>k==='translate'&&x>seeker.x&&Math.abs(y-404)<Math.abs(seeker.y-404)),
  'electricity converges toward forward moving fist');
 assert(tailTransforms.some(([k,x,y])=>k==='translate'&&x>world.p.x&&y===404),
  'charge graphic is in front of hero and at fist height');
