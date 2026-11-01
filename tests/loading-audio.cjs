@@ -215,11 +215,11 @@ async function uiBitmapPreload(){
   'start checks every UI frame and its decoded pixels, not merely a network fetch');
  assert(html.includes("document.documentElement?.style?.setProperty(item.cssVar"),
   'failed border-image URLs must be cache-busted in the live CSS on retry');
- const styles=[...html.matchAll(/<style[^>]*>([\\s\\S]*?)<\\/style>/g)].map(x=>x[1]).join('\\n');
+ const styles=html.slice(0,html.indexOf('</head>'));
  for(const item of chrome){
   assert(styles.includes(item.url)||item.url.includes('project-z-title-bi')||item.url.includes('project-z-wordmark-bi'),
    'chrome preloader must point to the same URL used by CSS: '+item.url);
-  const file=path.join(root,item.url.replace(/^\\.\\//,''));
+  const file=path.join(root,item.url.slice(2));
   const b=fs.readFileSync(file);
   assert(b.length>3000,'chrome asset is nonempty: '+item.url);
   if(item.url.endsWith('.png'))assert.equal(b.subarray(0,8).toString('hex'),'89504e470d0a1a0a','PNG chrome decode source');
