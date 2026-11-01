@@ -80,7 +80,7 @@ async function combatVoices(){
  assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy pain follows the real damage event');
  assert.equal(voices.play('enemyHurt',foe,hero),false,'injury voice is rate limited');
  ctx.currentTime=1.3;
- assert.equal(voices.play('bossShout',boss,hero),true,'boss warning has a dedicated roar');
+ assert.equal(voices.play('bossShout',boss,hero),true,'boss warning remains a recognizably human male shout');
  ctx.currentTime=1.9;
  assert.equal(voices.play('heroPower',hero,hero),true,'heavy attack emits a powerful metallic bolt action');
  const powerClip=createdSources.at(-1).buffer.clip;
@@ -91,44 +91,52 @@ async function combatVoices(){
  // onended callbacks to release the three-slot voice cap.
  for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
  assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy gets its own wounded vocal');
- assert(/enemy-pain-deep-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'ordinary pain must use the new deep groans instead of high cries');
+ assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'pain must use original human CC0 grunt recordings, not animal-like deep remasters');
  assert(createdSources.at(-1).startedAt>=ctx.currentTime+.055,'the crack of impact should precede the groan by about 60ms');
  const enemyVolume=Math.max(...voiceGains.at(-1).gain.history);
- assert(enemyVolume>1.5&&enemyVolume<2.2,'hurt vocal gain must cut through metal music without clipping: '+enemyVolume);
- assert(voiceScript.includes("const ENEMY_VOICE_GAIN=2.15"),'low-pitch vocals have an independent audibility boost');
- assert(voiceScript.includes("presence.frequency.value=920;presence.gain.value=2.5"),'presence stays in lower mids, not shrill highs');
+ assert(enemyVolume>.9&&enemyVolume<1.5,'natural grunt gain must avoid overdriven growl: '+enemyVolume);
+ assert(voiceScript.includes("const ENEMY_VOICE_GAIN=1.35"),'human voice gain is reduced to avoid artificial low growling');
+ assert(voiceScript.includes("presence.frequency.value=1800;presence.gain.value=2.0"),'human intelligibility stays in the upper mids');
  ctx.currentTime=3.0;
  assert.equal(voices.play('heroStrike',hero,hero),true,'normal hero strikes use mechanical charging clicks');
  assert(/hero-mech-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero normal hits never play human recordings');
- // Neither regular enemy deaths nor boss shouts may choose the piercing
- // source file. They have a single distinct deep recording each.
+ // Enemy death and warning voices use the original unpitched CC0 human take.
+ // Different timing and gain keep shouts distinct without beastlike pitch shifts.
  ctx.currentTime=4.10;
  for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
  const defeated={x:440,y:560,type:'assassin'};
  assert.equal(voices.play('enemyDeath',defeated,hero),true);
- assert(createdSources.at(-1).buffer.clip.endsWith('enemy-death-deep.mp3'),'normal enemy death is a low growl, never the old sustained aaah');
+ assert(createdSources.at(-1).buffer.clip.endsWith('voice-yell.wav'),'normal enemy death uses an original human yell rather than a processed roar');
  const alerted={x:505,y:560,type:'guard'};
  ctx.currentTime=4.35;
  assert.equal(voices.play('enemyShout',alerted,hero),true);
- assert(createdSources.at(-1).buffer.clip.endsWith('enemy-shout-deep.mp3'),'enemy taunts are low warnings, not shrill yells');
+ assert(createdSources.at(-1).buffer.clip.endsWith('voice-yell.wav'),'enemy taunts use natural human shouting, not an animal-like remaster');
  ctx.currentTime=5.2;
  for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
  assert.equal(voices.play('bossDeath',boss,hero),true);
- assert(createdSources.at(-1).buffer.clip.endsWith('enemy-death-deep.mp3'),'boss death is a deep voice too');
+ assert(createdSources.at(-1).buffer.clip.endsWith('voice-yell.wav'),'boss death retains the human male vocal source');
  assert(createdSources.length>=3,'all voice families use genuine recorded buffers');
  assert(!voiceScript.includes('duckImpact'),'metal accents and enemy vocals do not change BGM volume');
  assert(!voiceScript.includes('hero-kiai-'),'old player shouts must be entirely disconnected from active gameplay');
  assert(html.includes("playImpactSound(kind,heavy?1.15:1)"),'character impact sound must continue alongside grunt');
  assert(html.includes("applyImpactFeedback(e,smash||p.dashSmash"),'striking an enemy must still play the physical hit sound');
  assert(!voiceScript.includes('window.__revenantBgm'),'the voice engine must never lower the music');
- for(const file of ['enemy-pain-deep-a.mp3','enemy-pain-deep-b.mp3','enemy-shout-deep.mp3','enemy-death-deep.mp3']){
+ for(const file of ['hero-grunt-a.wav','hero-grunt-b.wav','voice-yell.wav']){
   const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
-  assert(bytes.length>4000,'low-pitch remastered enemy clip must be present: '+file);
-  assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'new enemy vocals are browser-decodable MP3: '+file);
+  assert(bytes.length>10000,'natural human recording is shipped: '+file);
+  assert(bytes.subarray(0,4).toString()==='RIFF'&&bytes.subarray(8,12).toString()==='WAVE',
+   'enemy voice must be a real WAV recording: '+file);
  }
- assert(!voiceScript.includes("'./assets/voice/voice-yell.wav'"),'piercing old ahh yell is never loaded');
- assert(!voiceScript.includes("'./assets/voice/hero-grunt-a.wav'"),'old high hurt grunt A is not loaded');
- assert(!voiceScript.includes("'./assets/voice/hero-grunt-b.wav'"),'old high hurt grunt B is not loaded');
+ for(const oldFile of ['enemy-pain-deep-a.mp3','enemy-pain-deep-b.mp3','enemy-shout-deep.mp3','enemy-death-deep.mp3']){
+  assert(!voiceScript.includes("'./assets/voice/"+oldFile+"'"),
+   'animal-like formant-shifted remasters must not be loaded: '+oldFile);
+ }
+ assert(voiceScript.includes("const rate=Math.max(.95,Math.min(1.075"),
+  'natural male voice pitch must stay close to source');
+ assert(voiceScript.includes("const offset=isHero?0:sampleOnset(buffer)"),
+  'start at the audible male breath or consonant instead of leading silence');
+ assert(html.includes('voice-engine.js?v=20261101-natural-human-voice-v3'),
+  'browser cache must not replay the old, animal-like voice engine');
  for(const file of ['hero-mech-a.mp3','hero-mech-b.mp3','hero-mech-power.mp3']){
   const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
   assert(bytes.length>6000,'mechanical Foley is shipped locally: '+file);
