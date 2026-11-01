@@ -3062,6 +3062,43 @@ body{position:fixed;inset:0;touch-action:manipulation}
  #stageWrap #menu.hub-dialog .hub-modules>button.hub-module:hover::after{opacity:1!important}
 }
 </style>
+<style id="hub-shard-shortage-modal-v1">
+/* Bitmap-only HUB warning; contained in the existing 16:9 menu. */
+#stageWrap #menu.hub-dialog .hub-shard-notice-mask{
+ position:absolute;inset:0;z-index:80;
+ display:flex;align-items:center;justify-content:center;
+ box-sizing:border-box;padding:clamp(9px,2.3cqh,25px)!important;
+ background:rgba(2,7,15,.79);backdrop-filter:blur(3px);
+}
+#stageWrap #menu.hub-dialog .hub-shard-notice{
+ box-sizing:border-box;display:flex;flex-direction:column;align-items:center;
+ justify-content:center;width:min(455px,100%);max-height:100%;
+ overflow:hidden;gap:clamp(5px,1.5cqh,13px);
+ padding:clamp(12px,2.6cqh,26px)!important;text-align:center;
+ background:#0a1a29 var(--z-panel-bitmap) center / 100% 100% no-repeat!important;
+ border:10px solid transparent!important;
+ border-image:var(--z-frame-red) 36 fill / 10px / 0 stretch!important;
+ box-shadow:0 14px 40px #000e,0 0 18px #e94d6e64!important;
+ color:#eef6ff;
+}
+#stageWrap #menu.hub-dialog .hub-shard-notice h3{
+ margin:0!important;color:#ffe3cf!important;
+ font:900 clamp(17px,3.4cqh,25px)/1.15 Arial,'Malgun Gothic',sans-serif!important;
+}
+#stageWrap #menu.hub-dialog .hub-shard-notice p{
+ margin:0!important;color:#cee4f0!important;
+ font:800 clamp(11px,2.1cqh,15px)/1.35 Arial,'Malgun Gothic',sans-serif!important;
+}
+#stageWrap #menu.hub-dialog .hub-shard-notice .hub-shard-counts{
+ color:#ffe6ae!important;
+ font:900 clamp(12px,2.6cqh,18px)/1.25 Arial,'Malgun Gothic',sans-serif!important;
+}
+#stageWrap #menu.hub-dialog .hub-shard-notice button{
+ width:min(240px,100%);min-height:clamp(29px,6.5cqh,44px)!important;
+ font:900 clamp(12px,2.4cqh,17px)/1 Arial,'Malgun Gothic',sans-serif!important;
+ transform:none!important;translate:none!important;
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -5169,7 +5206,11 @@ const menuPad={index:0,nav:0,confirm:false,back:false,armed:false,readyAt:0,neut
 const heldKeyboard=new Set();
 const menuBlockedKeys=new Set();
 function menuReady(){return !rewardSelection&&Date.now()>=menuPad.readyAt}
-function menuButtons(){return Array.from($('menu').querySelectorAll('button')).filter(b=>!b.disabled)}
+function menuButtons(){
+ const menu=$('menu');
+ const modal=menu.querySelector('.hub-shard-notice-mask');
+ return Array.from((modal||menu).querySelectorAll('button')).filter(b=>!b.disabled);
+}
 function selectMenuItem(step=0){
  if(rewardSelection)return null;
  const items=menuButtons();if(!items.length){menuPad.index=0;return null}
@@ -5224,7 +5265,7 @@ function hubMenuNavigate(dx,dy){
  return target;
 }
 function menuConfirm(){if(!menuReady()){menuPad.readyAt=Math.max(menuPad.readyAt,Date.now()+250);return false;}const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
-function menuBack(){if(rewardSelection)return false;const items=menuButtons();const back=items.find(b=>['resume','title','pauseMenu','hub'].includes(b.dataset.action));if(back){back.click();return true}return false}
+function menuBack(){if(rewardSelection)return false;if(closeHubShardNotice())return true;const items=menuButtons();const back=items.find(b=>['resume','title','pauseMenu','hub'].includes(b.dataset.action));if(back){back.click();return true}return false}
 function showMenu(html){
  $('overlay').classList.remove('reward-confirming');
  menuPad.readyAt=Date.now()+(gameState==='reward'?700:180);menuPad.armed=false;menuPad.neutralAt=Date.now();
@@ -8023,6 +8064,37 @@ function renderTitleBaseStats(){
  <span>◆ ${perma.shards}</span><small>이 기기에 영구 저장</small></div>`;
 }
 let hubSelected='core',hubResetArmed=false;
+function showHubShardNotice(cost){
+ if(gameState!=='hub')return false;
+ const menu=$('menu');
+ if(menu.querySelector('.hub-shard-notice-mask'))return true;
+ const module=HUB_MODULES.find(m=>m.id===hubSelected);
+ const shortfall=Math.max(0,cost-perma.shards);
+ const mask=document.createElement('div');
+ mask.className='hub-shard-notice-mask';
+ mask.innerHTML=`<section class="hub-shard-notice" role="alertdialog" aria-modal="true" aria-labelledby="hubShardNoticeTitle" aria-describedby="hubShardNoticeDetails">
+  <h3 id="hubShardNoticeTitle">샤드가 부족합니다!</h3>
+  <p id="hubShardNoticeDetails">${module?.title||'선택한 강화'}에 필요한 샤드가 부족해 강화를 적용할 수 없습니다.</p>
+  <p class="hub-shard-counts">필요 ◆${cost} · 보유 ◆${perma.shards} · 부족 ◆${shortfall}</p>
+  <p>전투에 재출격해 샤드를 획득한 뒤 다시 강화해 주세요.</p>
+  <button type="button" class="secondary-btn" data-action="hubShardNoticeClose">확인</button>
+ </section>`;
+ menu.appendChild(mask);
+ menuPad.index=0;
+ menuPad.readyAt=Date.now()+180;
+ const ok=mask.querySelector('button');
+ ok.classList.add('pad-selected');
+ ok.focus?.({preventScroll:true});
+ return true;
+}
+function closeHubShardNotice(){
+ const notice=$('menu').querySelector('.hub-shard-notice-mask');
+ if(!notice)return false;
+ notice.remove();
+ menuPad.readyAt=Date.now()+160;
+ focusHubApplyAfterSelection();
+ return true;
+}
 function hubStatsMarkup(){
  const before=permanentBaseStats();
  const after=permanentBaseStats({...perma,[hubSelected]:perma[hubSelected]+1});
@@ -8129,7 +8201,8 @@ function hubMenu(upgraded=''){
 function buyUpgrade(key=hubSelected){
  const cost=hubUpgradeCost(perma[key]||0);
  if(gameState!=='hub'||hubResetArmed||key!==hubSelected||!hubAvailableModules().some(m=>m.id===key)||
-  perma[key]>=HUB_MAX_LEVEL||perma.shards<cost)return false;
+  perma[key]>=HUB_MAX_LEVEL)return false;
+ if(perma.shards<cost){showHubShardNotice(cost);return false}
  perma.shards-=cost;perma[key]++;save();hubMenuWithoutNavigationReset(key);
  focusHubApplyAfterSelection();
  sound('parry');vibrateImpact('heavy',true);return true;
@@ -8253,7 +8326,7 @@ $('menu').addEventListener('pointerdown',e=>{
 });
 $('menu').addEventListener('pointerup',()=>{hubPointerFocusPending=false});
 $('menu').addEventListener('pointercancel',()=>{hubPointerFocusPending=false;hubTouchPointerPending=false});
-$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){hubResetArmed=false;hubMenu()}else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='hubEconomy')hubEconomyMenu();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma){const touched=hubTouchPointerPending||e.pointerType==='touch';hubTouchPointerPending=false;hubPointerFocusPending=false;selectHubModule(b.dataset.perma,touched)}});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if($('menu').querySelector('.hub-shard-notice-mask')&&a!=='hubShardNoticeClose')return;if(a==='hubShardNoticeClose')closeHubShardNotice();else if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){hubResetArmed=false;hubMenu()}else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='hubEconomy')hubEconomyMenu();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma){const touched=hubTouchPointerPending||e.pointerType==='touch';hubTouchPointerPending=false;hubPointerFocusPending=false;selectHubModule(b.dataset.perma,touched)}});
 $('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activeModStacks().length+(p.mod==='neuro'?1:0))};
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){
