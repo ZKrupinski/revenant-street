@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - scripts/rebuild-redhood-jump.py
+      - scripts/apply-redhood-jump-runtime.py
       - .github/workflows/redhood-jump-rebuild.yml
   workflow_dispatch:
 permissions:
@@ -18,13 +19,15 @@ jobs:
         run: python -m pip install --quiet Pillow
       - name: Repack original red hood special animation in eight independent full-body cells
         run: python scripts/rebuild-redhood-jump.py
-      - name: Commit new production WebP and frame-margin audit
+      - name: Wire corrected sprite into gameplay, floor anchors and smoke tests
+        run: python scripts/apply-redhood-jump-runtime.py
+      - name: Commit new production WebP, runtime fix and frame-margin audit
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add assets/enemies/redhood-intruder/special-fullframe.webp assets/enemies/redhood-intruder/special-fullframe-bounds.json
+          git add assets/enemies/redhood-intruder/special-fullframe.webp assets/enemies/redhood-intruder/special-fullframe-bounds.json index.html tests/assassin-combat.cjs .github/workflows/z-smoke.yml
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Repack red hood aerial dive into 8 full-body crop-safe frames'
+          git commit -m 'Restore red-hood aerial jump in live combat with eight crop-safe frames'
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
