@@ -69,16 +69,21 @@ test('HUB cyan focus frame appears only on hover, navigation or brief touch, nev
  assert(cssStart>=0,'interaction-specific HUB style is present');
  const css=html.slice(cssStart,html.indexOf('</style>',cssStart));
  assert(css.includes('.hub-module:not(.selected):not(.installed)')&&
-        css.includes('border-image-source:none!important'),
-  'idle selectable cards do not carry a persistent cyan frame');
- assert(css.includes('.hub-module.pad-selected')&&css.includes('.hub-module:focus-visible'),
-  'gamepad and keyboard navigation restore a cyan focus border');
+        css.includes('border-image-source:var(--z-neon-card)!important'),
+  'idle selectable cards retain the original low-intensity illustrated frame instead of a bright focus or plain box');
+ assert(css.includes('.hub-module.pad-selected')&&!css.includes('.hub-module:focus-visible'),
+  'sky-blue focus is driven by explicit navigation, not lingering Android touch focus');
+ assert(css.includes('border-image-source:var(--z-frame-gold)!important')&&
+  css.includes('border-image-source:var(--z-frame-green)!important'),
+  'selected and installed cards retain stable gold and green frames independent of focus');
  assert(css.includes('@media(hover:hover) and (pointer:fine)')&&css.includes('.hub-module:hover'),
   'mouse pointer highlight is enabled only on hover-capable devices');
  assert(css.includes('.hub-module.touch-focus')&&css.includes('--z-frame-cyan'),
   'real touch selection uses the existing painted cyan bitmap frame');
- assert(html.includes("hubTouchPointerPending=e.pointerType==='touch'"),
-  'touch uses actual pointer type, not a coarse-screen guess');
+ assert(html.includes("hubTouchPointerPending=hubPointerFocusPending&&e.pointerType==='touch'"),
+  'touch uses actual pointer type and only when a card is actually pressed');
+ assert(html.includes("if(hubPointerFocusPending&&e.target.dataset?.perma)"),
+  'pointer focus does not create a sticky gamepad-style selection');
  assert(html.includes("setTimeout(()=>card.classList.remove('touch-focus'),540)"),
   'touch highlight disappears automatically after a short pulse');
  const perma=g.getState().perma,backup={...perma},menu=node('menu'),oldQuery=menu.querySelector;
@@ -97,6 +102,41 @@ test('HUB cyan focus frame appears only on hover, navigation or brief touch, nev
   assert(!touchCard.classList.contains('touch-focus'),'normal selection has no sticky touch border');
  }finally{
   menu.querySelector=oldQuery;Object.assign(perma,backup);t.hubMenu();
+ }
+});
+test('HUB card previews preserve held gamepad direction and permit the next intentional confirm',()=>{
+ const menu=node('menu'),oldQuery=menu.querySelector,oldAll=menu.querySelectorAll;
+ const perma=g.getState().perma,backup={...perma},oldPad=world.navigator.getGamepads;
+ const cards=Array.from({length:3},()=>({disabled:false,classList:{toggle(){}},focus(){},scrollIntoView(){}}));
+ const apply={disabled:false,classList:{toggle(){}},focus(){},scrollIntoView(){},click(){}};
+ let axes=[1,0];
+ world.navigator.getGamepads=()=>[{axes,buttons:Array.from({length:16},()=>({pressed:false})),connected:true}];
+ menu.querySelector=(selector)=>selector==='[data-action="hubApply"]'?apply:null;
+ menu.querySelectorAll=()=>[...cards,apply];
+ try{
+  Object.assign(perma,{core:0,servo:0,reflex:0,shards:20,hubRefreshes:0});
+  t.hubMenu();
+  t.menuPad.nav=1;t.menuPad.confirm=true;t.menuPad.armed=false;t.menuPad.readyAt=Date.now()+10000;
+  assert.equal(t.selectHubModule('servo'),true);
+  assert.equal(t.menuPad.nav,1,'active stick direction survives card DOM replacement');
+  assert.equal(t.menuPad.confirm,true,'the held accept button remains recorded and cannot double-fire');
+  assert.equal(t.menuPad.armed,true,'newly selected Apply is ready immediately, without rearming delay');
+  assert(t.menuPad.readyAt<=Date.now(),'preview does not add an unnecessary 180ms input gate');
+  assert.equal(t.menuPad.index,3,'after preview the gamepad points directly at Apply');
+  t.pollPad();
+  assert.equal(t.menuPad.index,3,'held stick must not spuriously navigate away from Apply after rerender');
+  axes=[0,0];t.pollPad();
+  axes=[1,0];t.pollPad();
+  assert.equal(t.menuPad.index,0,'released then newly moved stick navigates normally');
+  axes=[0,0];t.pollPad();
+  t.menuPad.nav=-1;t.menuPad.confirm=true;
+  assert.equal(t.buyUpgrade('servo'),true);
+  assert.equal(t.menuPad.nav,-1,'buy/re-render also preserves stick direction');
+  assert.equal(t.menuPad.confirm,true,'buy/re-render preserves face-button edge gating');
+  assert.equal(t.menuPad.index,3,'after buying focus remains on Apply for optional next upgrade');
+ }finally{
+  world.navigator.getGamepads=oldPad;menu.querySelector=oldQuery;menu.querySelectorAll=oldAll;
+  Object.assign(perma,backup);t.menuPad.nav=0;t.menuPad.confirm=false;t.hubMenu();
  }
 });
 test('Permanent save reset needs double confirmation and clears upgrades, refresh history and all shards',()=>{
