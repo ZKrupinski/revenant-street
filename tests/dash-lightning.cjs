@@ -32,7 +32,9 @@ assert.equal(world.fx.length,1,'one sprite per successful dash attack, not one p
 const f=world.fx[0];
 assert.equal(f.kind,'dashPierceSprite');
 assert.equal(f.dir,1);
-assert.equal(f.y,438,'electric spear pierces chest-height enemy plane');
+assert.equal(f.x,198,'bolt starts forward near the right-hand fist');
+assert.equal(f.y,402,'bolt aligns with attacker punch height');
+assert.equal(f.width,560,'bolt grows at least 27% for a nearby impact');
 for(let i=0;i<8;i++){
  const progress=(i+.25)/8;
  f.age=f.maxLife*progress;
@@ -61,6 +63,7 @@ assert.deepEqual(draws.slice(skipsBefore).map(d=>[d[1],d[2]]),
 world.spawnDash({x:600,y:550,facing:-1},{x:430,y:550});
 const left=world.fx.at(-1);
 assert.equal(left.dir,-1);
+assert.equal(left.x,502,'left-facing art shifts toward enemy, not behind Z');
 assert.equal(world.drawDash(left),true);
 assert(transforms.some(([op,x,y])=>op==='scale'&&x===-1&&y===1),
  'left attacks flip the authored right-facing sprite horizontally');
@@ -71,3 +74,41 @@ assert(!html.includes("spawnDashPierceFx(p,e); // when beginning dash"),
 assert(html.includes("if(f.kind==='dashPierceSprite'){drawDashPierceSprite(f);continue;}"),
  'sprite renders in the normal world-space effect pass, over the enemy');
 console.log('PASS: 8-frame transparent lightning, decoded on start, first dash hit only, full sequence and bilateral facing');
+
+
+// Dash ends with a short grace and its committed follow-up punch cannot be
+// interrupted before impact by the enemy hurt/stun code.
+const combat={
+ gameState:'playing',hitStop:0.2,
+ p:{x:100,y:550,z:0,facing:1,stun:0,downTimer:0,getupTimer:0,
+  hp:100,stamina:100,moveDX:0,attack:0,parry:0,dodge:0,inv:0,
+  riposteChasing:false,dashFollowWindow:0,recentMoves:[],comboIdx:0},
+ analog:{dx:0},keys:new Set(),performance:{now:()=>10},
+ dashMobilityStats:()=>({duration:.32,speed:1250}),
+ modRank:()=>0,clamp:(v,min,max)=>Math.min(max,Math.max(min,v)),
+ loadZMove(){},fxBurst(){},sound(){},playCombatVoice(){},
+ triggerStrikeCamera(){},vibrateImpact(){},bodyHalfX:()=>54
+};
+vm.createContext(combat);
+const dodgeStart=html.indexOf('function dodge('),dodgeEnd=html.indexOf('function consumeBufferedDash(');
+const attackStart=html.indexOf('function startAttack(){'),attackEnd=html.indexOf('function parry(){');
+const enemyStart=html.indexOf('function enemyAttack('),enemyEnd=html.indexOf('function fxBurst(');
+assert(dodgeStart>0&&dodgeEnd>dodgeStart&&attackStart>0&&attackEnd>attackStart&&enemyStart>0&&enemyEnd>enemyStart);
+vm.runInContext(html.slice(dodgeStart,dodgeEnd)+'\nthis.useDash=dodge;',combat);
+vm.runInContext(html.slice(attackStart,attackEnd)+'\nthis.useDashAttack=startAttack;',combat);
+vm.runInContext(html.slice(enemyStart,enemyEnd)+'\nthis.enemyStrike=enemyAttack;',combat);
+assert.equal(combat.useDash(),true);
+assert(Math.abs(combat.p.inv-(combat.p.dodgeDuration+.24))<1e-8,
+ 'regular forward dash gets 240ms i-frames AFTER movement ends');
+combat.p.dodge=0; // elapsed dash, the follow-up window is still active
+combat.p.inv=.18; // simulate remaining post-dash invulnerability
+combat.useDashAttack();
+assert.equal(combat.p.dashSmash,true,'dash + attack commits to the lunge punch');
+assert(combat.p.inv>=combat.p.attackDuration+.139,
+ 'the entire dash follow-up and 140ms of recovery are invulnerable');
+const hpBefore=combat.p.hp,attackBefore=combat.p.attack;
+combat.enemyStrike({type:'raider',dead:false,groggy:0,eliteAttack:false,
+ x:combat.p.x+66,y:combat.p.y,z:0,reach:70,damage:30,face:-1});
+assert.equal(combat.p.hp,hpBefore,'enemy attack cannot damage during the protected dash punch');
+assert.equal(combat.p.attack,attackBefore,'enemy attack cannot cancel the protected dash punch');
+console.log('PASS: enlarged forward-aligned dash lightning and uninterrupted post-dash punch');

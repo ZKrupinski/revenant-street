@@ -5366,7 +5366,8 @@ function startAttack(){
   p.attackDriveTotal=280;p.attackDriveRemaining=280;
   p.comboWindow=.95;p.comboIdx=2;p.stamina-=16;p.animAge=0;
   p.recentMoves.push('cross');if(p.recentMoves.length>5)p.recentMoves.shift();
-  p.inv=Math.max(p.inv,.14);triggerStrikeCamera('dash');vibrateImpact('dash');sound('attack');playCombatVoice('heroPower');
+  // Protect the whole committed lunge punch and a short recovery from enemy interrupts.
+  p.inv=Math.max(p.inv,p.attackDuration+.14);triggerStrikeCamera('dash');vibrateImpact('dash');sound('attack');playCombatVoice('heroPower');
   return;
  }
  p.dashSmash=false;
@@ -5484,7 +5485,8 @@ function dodge(fromBuffer=false){
  const duration=exhausted?Math.min(.19,dash.duration*.66):dash.duration;
  p.evadeBackstep=backInput;p.evadeExhausted=exhausted;
  p.dodge=p.dodgeDuration=duration;
- p.inv=exhausted?.12:backInput?.34:Math.min(.44,duration+.055);
+ // Forward dashes retain protection briefly after travel ends; backstep timing remains separate.
+ p.inv=Math.max(p.inv,backInput?(exhausted?.12:.34):duration+(exhausted?.16:.24));
  p.dodgeX=backInput?-p.facing:p.facing;p.stamina=Math.max(0,p.stamina-19);
  p.dashFollowWindow=backInput?0:Math.max(.63,duration+.30);
  // The accepted input takes priority over the previous strike's hit-stop.
@@ -5723,11 +5725,12 @@ DASH_PIERCE_ART.image.onerror=()=>{DASH_PIERCE_ART.missing=true};
 DASH_PIERCE_ART.image.src=DASH_PIERCE_ART.src;
 function spawnDashPierceFx(attacker,target){
  const dir=attacker.facing>=0?1:-1;
- const x=attacker.x+dir*45;
- const span=Math.abs(target.x-x);
- const width=clamp(span+310+modRank('dashspeed')*21,440,820);
+ // Expand and project the eight painted frames forward from the attacker's fist.
+ const x=attacker.x+dir*98;
+ const span=Math.max(0,(target.x-x)*dir);
+ const width=clamp(span+430+modRank('dashspeed')*27,560,980);
  const duration=.29; // all 8 frames are displayed, once per successful dash hit
- fx.push({kind:'dashPierceSprite',x,y:target.y-112,dir,width,
+ fx.push({kind:'dashPierceSprite',x,y:attacker.y-148,dir,width,
   age:0,drawnFrame:-1,life:duration,maxLife:duration});
 }
 function drawDashPierceSprite(f){
@@ -5744,7 +5747,7 @@ function drawDashPierceSprite(f){
  ctx.translate(f.x,f.y);
  ctx.scale(f.dir,1); // same sprite pierces both right- and left-facing victims
  ctx.globalAlpha=ratio>.78?clamp((1-ratio)/.22,0,1):1;
- ctx.drawImage(im,(frame%4)*cw,Math.floor(frame/4)*ch,cw,ch,-width*.13,-height*.53,width,height);
+ ctx.drawImage(im,(frame%4)*cw,Math.floor(frame/4)*ch,cw,ch,-width*.09,-height*.53,width,height);
  ctx.restore();
  return true;
 }
