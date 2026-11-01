@@ -6405,9 +6405,8 @@ function updateIntruderSpecial(e,dt){
   e.z=225*(1-u)*(1-u);e.vz=0;
   if(u>=1){
    e.specialPhase='recovery';e.specialTime=0;e.z=0;e.vz=0;
-   spawnModBitmap('red',e.x,e.y-32,3.45,'saturate(1.85) brightness(1.25)',.56);
-   spawnModBitmap('gold',e.x,e.y-77,2.4,'saturate(1.25) brightness(1.2)',.44);
-   spawnModBitmap('red',e.x,e.y-155,2.0,'brightness(1.4)',.36);
+   // Red-hood elite dive: use the same full-width, foot-anchored 8F ground impact.
+   spawnGroundSlamFx(e.x,e.y,1.40,'elite');
    screenShake=Math.max(screenShake,27);
    screenTint=Math.max(screenTint,.55);
    hitStop=Math.max(hitStop,.10);
