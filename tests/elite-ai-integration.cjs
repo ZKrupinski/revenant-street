@@ -11,7 +11,7 @@ const end=html.indexOf('// The elite red-hood relief team',begin);
 assert(begin>0&&end>begin,'actual in-game Iron Mask AI located');
 const game={p:{x:700,y:560},STAGE_WIDTH:31850,screenShake:0,
  clamp:(n,a,b)=>Math.max(a,Math.min(b,n)),groundY:y=>Math.min(658,Math.max(551,y)),
- bodyHalfX:()=>36,fxBurst:()=>{},floatText:()=>{},playCombatVoice:()=>{}};
+ bodyHalfX:()=>36,fxBurst:()=>{},spawnGroundSlamFx:()=>{},floatText:()=>{},playCombatVoice:()=>{}};
 vm.createContext(game);
 vm.runInContext(html.slice(begin,end)+';this.stepElite=updateEliteAI;',game);
 function testScenario(startX,label) {
