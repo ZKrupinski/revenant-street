@@ -51,3 +51,16 @@ Four original AI-generated gunshot Foley samples (Higgsfield Mirelo Text to Audi
 | `shot-heavy.mp3` | Heavy shotgun discharge and pump rattle | `8dd15581-9f0e-4ba8-a794-cd33687913c1` |
 
 Gunshot recordings play on a separate foreground gunfire bus with onset-silence trimming; all samples are predecoded at start. Original punch impact SFX, BGM, CC0 enemy vocals, and short slide/bolt Foley remain independent. Dashes, jump starts, parries, pursuit, ordinary walking and running also have mechanical accents. No voice clips are used for the protagonist.
+
+## Deep enemy pain remaster (November 1, 2026)
+
+All four new enemy voice assets are **derivatives of the CC0 HaelDB recordings already credited above**, not new speech, voice imitation or third-party proprietary sound effects. The source files remain in the repository for auditing; the old high-pitched vocal cues are retained solely as archival data and are no longer loaded by the game.
+
+| New runtime asset | CC0 source | Intended event |
+| --- | --- | --- |
+| `enemy-pain-deep-a.mp3` | `hero-grunt-a.wav` / 3grunt1.wav | Short restrained impact groan A |
+| `enemy-pain-deep-b.mp3` | `hero-grunt-b.wav` / 3grunt3.wav | Short restrained impact groan B |
+| `enemy-shout-deep.mp3` | `voice-roar.wav` / 3yell9.wav | Muted guttural hostile warning |
+| `enemy-death-deep.mp3` | `voice-roar.wav` / 3yell9.wav | Longer but subdued death groan |
+
+Editing: FFmpeg Rubber Band pitch/formant downshift (0.67–0.72), 78 Hz high pass, soft bass emphasis at 180 Hz, 2.15 kHz low pass, dynamics control, soft 11 ms attack and 75 ms release, limited peak, mono 22.05 kHz and 80 kb/s MP3. Hit grunts are kept under 0.42 s; warnings under 0.68 s. Playback is further capped by the voice bus and never ducks the BGM or reduces the actual impact effects. The original longer bright `voice-yell.wav` is never selected by the live voice engine.
