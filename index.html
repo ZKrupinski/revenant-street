@@ -5764,14 +5764,15 @@ function emitDashTrailFx(attacker,fromX,toX){
   const dist=(i+1)*DASH_TRAIL_STEP-accumulated;
   if(dist<0||dist>traveled)continue;
   const x=fromX+dir*dist,seed=attacker.dashSparkCount||0;
+  const wakeX=x-dir*36; // Pull all electricity slightly behind the rushing hero.
   attacker.dashSparkCount=seed+1;
   const y=attacker.y-123+(seed%3-1)*25;
   if(fx.length>80)fx.splice(0,fx.length-70); // mobile budget
-  fx.push({kind:'dashTrailSprite',mode:'wake',x,y,dir,seed,
-   width:166+(seed%3)*17,life:.25,maxLife:.25});
-  fx.push({kind:'dashTrailSprite',mode:'gather',x:x-dir*36,
+  fx.push({kind:'dashTrailSprite',mode:'wake',x:wakeX,y,dir,seed,
+   width:230+(seed%3)*20,life:.28,maxLife:.28});
+  fx.push({kind:'dashTrailSprite',mode:'gather',x:x-dir*65,
    y:y+(seed%2?15:-15),dir,seed,seq:attacker.dashSparkSeq,
-   width:122+(seed%4)*13,life:.22,maxLife:.22});
+   width:154+(seed%4)*16,life:.24,maxLife:.24});
  }
  attacker.dashSparkDistance=(accumulated+traveled)%DASH_TRAIL_STEP;
 }
@@ -5784,10 +5785,11 @@ function drawDashTrailSprite(f){
  const gathering=f.mode==='gather';
  const ease=gathering?Math.pow(age,.70):0;
  const active=gathering&&f.seq===p.dashSparkSeq;
- const x=active?f.x+(p.x+f.dir*112-f.x)*ease:f.x;
+ const x=active?f.x+(p.x+f.dir*72-f.x)*ease:f.x; // Converge near fist, farther back than before.
  const y=active?f.y+(p.y-146-f.y)*ease:f.y;
  const width=f.width*(gathering?.82+age*.38:1);
- const height=width*(ch/cw);
+ // Stretch along the dash lane, preserving the authored bitmap's transparent edges.
+ const height=width*(ch/cw)*(gathering?.88:.70);
  ctx.save();ctx.translate(x,y);ctx.scale(f.dir,1);
  ctx.rotate((f.seed%3-1)*(gathering?.08:.13));
  ctx.globalAlpha=(gathering?.82:.66)*Math.pow(1-age,1.15);
@@ -5803,8 +5805,8 @@ function drawDashChargeSprite(attacker){
  const progress=clamp(1-attacker.dodge/Math.max(.01,attacker.dodgeDuration),0,.999);
  const frame=Math.min(7,Math.floor(progress*8));
  const cw=im.naturalWidth/4,ch=im.naturalHeight/2;
- const width=192+progress*101,height=width*(ch/cw);
- ctx.save();ctx.translate(attacker.x+dir*(84+progress*33),attacker.y-146);
+ const width=220+progress*112,height=width*(ch/cw)*.82;
+ ctx.save();ctx.translate(attacker.x+dir*(52+progress*26),attacker.y-146);
  ctx.scale(dir,1);ctx.globalAlpha=.50+progress*.27;
  ctx.drawImage(im,(frame%4)*cw,Math.floor(frame/4)*ch,cw,ch,
   -width*.50,-height*.53,width,height);

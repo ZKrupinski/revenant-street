@@ -121,6 +121,10 @@ assert.equal(streaks.length,6,'3 pairs per 192px real forward dash');
 assert.equal(streaks.filter(f=>f.mode==='wake').length,3);
 assert.equal(streaks.filter(f=>f.mode==='gather').length,3);
 assert(streaks.every(f=>f.kind==='dashTrailSprite'&&f.dir===1));
+assert.equal(streaks[0].x,118,'wake lands 36px behind its distance sample');
+assert.equal(streaks[1].x,89,'gather electricity spawns farther back on dash path');
+assert.equal(streaks[0].width,230,'wake is horizontally wider than original 166px');
+assert.equal(streaks[1].width,154,'fist seeking sparks widen while staying small');
 const seeker=streaks.find(f=>f.mode==='gather');
 const wake=streaks.find(f=>f.mode==='wake');
 const startDraw=draws.length,startTransform=transforms.length;
@@ -130,8 +134,11 @@ assert.equal(draws.length,startDraw+3,'all dash sprites come from 8F bitmap');
 const tailTransforms=transforms.slice(startTransform);
 assert(tailTransforms.some(([k,x,y])=>k==='translate'&&x>seeker.x&&Math.abs(y-404)<Math.abs(seeker.y-404)),
  'electricity converges toward forward moving fist');
-assert(tailTransforms.some(([k,x,y])=>k==='translate'&&x>world.p.x&&y===404),
- 'charge graphic is in front of hero and at fist height');
+assert(tailTransforms.some(([k,x,y])=>k==='translate'&&x===world.p.x+52+(1-world.p.dodge/world.p.dodgeDuration)*26&&y===404),
+ 'charged bitmap shifts 32px toward the rear while staying at fist height');
+const drawnWake=draws[startDraw+1],drawnCharge=draws[startDraw+2];
+assert(drawnWake[8]<drawnWake[7]*.52,'wake is stretched wide and compressed vertically');
+assert(drawnCharge[8]<drawnCharge[7]*.52,'charging electricity also stretches across dash direction');
 const noMore=world.fx.length;
 world.p.evadeBackstep=true;world.emitTrail(world.p,410,335);
 assert.equal(world.fx.length,noMore);assert.equal(world.drawCharge(world.p),false);
