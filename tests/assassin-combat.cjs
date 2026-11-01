@@ -139,7 +139,7 @@ test('Versioned perma storage remains backward compatible across apply and reset
  assert(html.includes("else if(a==='hubRefresh')refreshHubOffers()"));
  assert(html.includes("else if(a==='hubEconomy')hubEconomyMenu()"));
  assert(html.includes("else if(a==='hubResetConfirm')resetHubUpgrades()"));
- assert(html.includes("else if(b.dataset.perma)selectHubModule(b.dataset.perma)"));
+ assert(html.includes("else if(b.dataset.perma){const touched=hubTouchPointerPending"),'HUB card clicks preserve the actual pointer type');
  const css=html.slice(html.indexOf('<style id="hub-base-stats-preview">'),html.indexOf('</style>',html.indexOf('<style id="hub-base-stats-preview">')));
  assert(css.includes('.hub-bottom')&&css.includes('.hub-action-row')&&css.includes('@container(max-width:610px)'));
 });
