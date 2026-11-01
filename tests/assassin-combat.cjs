@@ -124,7 +124,7 @@ test('HUB shop rotates three genuine module offers for shards and scales every r
   assert(after.jumpHeight>t.permanentBaseStats({...perma,lift:0}).jumpHeight);
   assert.equal(t.hubEconomyMenu(),true);
   assert(node('menu').innerHTML.includes('보상')&&node('menu').innerHTML.includes('Lv.12'));
-  assert.equal(t.buyUpgrade(),false,'an off-offer or nonselected upgrade cannot be bought');
+  assert.equal(t.buyUpgrade('armor'),false,'buying a module other than the selected offer is blocked');
  }finally{Object.assign(perma,backup);t.hubMenu()}
 });
 test('opening battle spawns one small squad just beyond the screen',()=>{
