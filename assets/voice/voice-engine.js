@@ -25,6 +25,9 @@
  // Match the game's global SFX 70% mix; this is post-compressor and
  // never touches the separate HTMLAudioElement background soundtrack.
  const NON_BGM_SFX_LEVEL=.70;
+ // Dark samples were mastered quietly; amplify ONLY enemy vocals so they
+ // cut through music and fist impacts without raising hero Foley or BGM.
+ const ENEMY_VOICE_GAIN=2.15;
  let context=null,loading=null,master=null,gunBus=null,lastCrowd=-99;
  const SHOT_FAMILIES=['shotPistol','shotRevolver','shotRifle','shotHeavy'];
  // Attack motions deterministically choose their own timbre and pitch;
@@ -119,15 +122,17 @@
    // A lethal scream must never be lost because a grunt just played.
    const fatal=kind==='heroDeath'||kind==='enemyDeath'||kind==='bossDeath';
    if(!fatal&&now-(actor._voiceAt??-99)<(kind==='heroPower'?.14:cooldown))return false;
-   if(kind==='enemyHurt'&&now-lastCrowd<.14)return false;
+   if(kind==='enemyHurt'&&now-lastCrowd<.105)return false;
    const important=isHero||boss||kind==='enemyDeath';
-   if(active.size>=3) {
-    if(!important)return false;
-    // Hard caps must not silence the hero's next strong attack or a kill scream.
-    const quiet=[...active].find(v=>!v.important)||[...active][0];
-    if(!quiet)return false;
-    try{quiet.source.stop()}catch(_){}
-    active.delete(quiet);
+   if(active.size>=4) {
+    // In crowds a fresh painful hit replaces an old quiet grunt instead of
+    // disappearing. Keep a hard four-voice limit; never bury the impact SFX.
+    const quiet=[...active].find(v=>!v.important);
+    if(!quiet&&!important)return false;
+    const victim=quiet||[...active][0];
+    if(!victim)return false;
+    try{victim.source.stop()}catch(_){}
+    active.delete(victim);
    }
    // No piercing yell on any enemy hurt/death/shout path. Every vocal
    // uses a subdued, low-formant, remastered take of the original CC0 male.
@@ -154,28 +159,36 @@
     actor.type==='guard'?.99:actor.type==='assassin'?1.03:1;
    const rate=Math.max(.86,Math.min(1.11,characterPitch*(.97+Math.random()*.06)));
    source.playbackRate.value=rate;
-   // Vocals stay below the physical blow SFX; the BGM is never ducked.
+   // Give low, restrained agony its own audible foreground presence while
+   // keeping all punches, metal mechanisms and background music unchanged.
    const strengths={heroStrike:.94,heroPower:1.07,heroMove:.29,
-    enemyHurt:.51,enemyShout:.55,enemyDeath:.70,bossShout:.76,bossDeath:.83};
-   const position=isHero?1:Math.max(.3,1-Math.abs(actor.x-hero.x)/1600);
-   const volume=(strengths[kind]||.7)*position;
-   filter.type='lowpass';filter.frequency.value=isHero?7600:boss?2600:2900;
+    enemyHurt:.86,enemyShout:.77,enemyDeath:.96,bossShout:.90,bossDeath:1.02};
+   const position=isHero?1:Math.max(.62,1-Math.abs(actor.x-hero.x)/2350);
+   const volume=(strengths[kind]||.7)*position*(isHero?1:ENEMY_VOICE_GAIN);
+   filter.type='lowpass';filter.frequency.value=isHero?7600:boss?3100:3400;
+   // Small lower-mid presence bump avoids piercing highs but restores
+   // consonant/body detail masked by the fast metal soundtrack.
+   const presence=isHero?null:context.createBiquadFilter();
+   if(presence){presence.type='peaking';presence.frequency.value=920;presence.gain.value=2.5;}
    const maxDuration=kind==='heroMove'?.19:kind==='heroStrike'?.42:kind==='heroPower'?.72:
     kind==='enemyHurt'?.33:kind==='enemyShout'?.64:kind==='bossShout'?.72:
     kind==='enemyDeath'?1.05:kind==='bossDeath'?1.12:2.2;
    const duration=Math.min(maxDuration,buffer.duration/rate);
    if(!(duration>.02))return false;
    // Let the independent punch crack play first; groans follow ~75ms later.
-   const delay=kind==='enemyHurt'||kind==='enemyDeath'||kind==='bossDeath'?.085:0;
+   const delay=kind==='enemyHurt'||kind==='enemyDeath'||kind==='bossDeath'?.06:0;
    const at=now+delay;
    const attack=Math.min(.007,duration*.12),release=Math.min(.09,duration*.28);
    gain.gain.setValueAtTime(.0001,at);
    gain.gain.linearRampToValueAtTime(volume,at+attack);
    gain.gain.setValueAtTime(volume,Math.max(at+attack,at+duration-release));
    gain.gain.linearRampToValueAtTime(.0001,at+duration);
-   source.connect(filter).connect(gain).connect(master);
+   source.connect(filter);
+   if(presence)filter.connect(presence).connect(gain);
+   else filter.connect(gain);
+   gain.connect(master);
    const entry={source,important};active.add(entry);
-   source.onended=()=>{active.delete(entry);source.disconnect();filter.disconnect();gain.disconnect()};
+   source.onended=()=>{active.delete(entry);source.disconnect();filter.disconnect();presence?.disconnect();gain.disconnect()};
    source.start(at,0,duration*rate);
    source.stop(at+duration+.015);
    actor._voiceAt=now;
