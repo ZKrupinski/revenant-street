@@ -97,6 +97,15 @@ for(const rule of [
  '#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-art-slot>.hub-emblem,',
  '#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-art-slot>.hub-emblem{'
 ])assert(iconFit.css.includes(rule),'Hub icon or reserved text rows missing: '+rule);
+for(const rule of [
+ '#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module,',
+ '#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module{',
+ '#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-art-slot,',
+ '#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-card-info{',
+ 'grid-template-rows:minmax(0,1fr) max-content!important',
+ 'grid-template-rows:max-content max-content max-content!important',
+ 'grid-column:1!important;grid-row:3!important'
+])assert(iconFit.css.includes(rule),'small-stage layout overrides must also keep Hub in grid: '+rule);
 assert(!iconFit.css.includes('position:absolute!important'),
  'do not put icon or button atop the title and numeric stat');
 
