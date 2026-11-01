@@ -2984,6 +2984,34 @@ body{position:fixed;inset:0;touch-action:manipulation}
  #stageWrap #menu.result-dialog .result-tip{font-size:8px}
 }
 </style>
+<style id="hub-contextual-focus-v1">
+/* Quiet at rest: show the actual cyan bitmap focus frame only during an
+   explicit navigation/hover/touch interaction, never on every idle card.
+   Gold/pink selected and installed frames are separate semantic statuses. */
+#stageWrap #menu.hub-dialog .hub-modules .hub-module:not(.selected):not(.installed){
+ border-image-source:none!important;
+ border-color:#344d63!important;
+ box-shadow:inset 0 0 8px #0007!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules .hub-module.pad-selected,
+#stageWrap #menu.hub-dialog .hub-modules .hub-module:focus-visible,
+#stageWrap #menu.hub-dialog .hub-modules .hub-module.touch-focus{
+ border-image-source:var(--z-frame-cyan)!important;
+ border-color:transparent!important;
+ outline:none!important;
+ filter:brightness(1.1)!important;
+ box-shadow:0 0 13px #66ceff8a!important;
+}
+@media(hover:hover) and (pointer:fine){
+ #stageWrap #menu.hub-dialog .hub-modules .hub-module:hover{
+  border-image-source:var(--z-frame-cyan)!important;
+  border-color:transparent!important;
+  outline:none!important;
+  filter:brightness(1.1)!important;
+  box-shadow:0 0 13px #66ceff8a!important;
+ }
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -7926,10 +7954,19 @@ function focusHubApplyAfterSelection(){
  apply.focus?.({preventScroll:true});
  return true;
 }
-function selectHubModule(key){
+function selectHubModule(key,fromTouch=false){
  if(gameState!=='hub'||!hubAvailableModules().some(m=>m.id===key))return false;
  hubSelected=key;hubResetArmed=false;hubMenu();
  focusHubApplyAfterSelection();
+ if(fromTouch){
+  // The card DOM was replaced by hubMenu; pulse the NEW card briefly.
+  // Keep actual selection on Apply so the next gamepad press confirms.
+  const card=$('menu').querySelector('button[data-perma="'+key+'"]');
+  if(card){
+   card.classList.add('touch-focus');
+   setTimeout(()=>card.classList.remove('touch-focus'),540);
+  }
+ }
  return true;
 }
 function hubMenu(upgraded=''){
@@ -8082,7 +8119,13 @@ window.addEventListener('blur',suspendGame);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame()});
 
 $('menu').addEventListener('focusin',e=>{const items=menuButtons(),i=items.indexOf(e.target);if(i<0)return;menuPad.index=i;items.forEach((b,n)=>b.classList.toggle('pad-selected',n===i))});
-$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){hubResetArmed=false;hubMenu()}else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='hubEconomy')hubEconomyMenu();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)selectHubModule(b.dataset.perma)});
+// A real touch pointer gets a temporary sky-blue frame. Hover remains a
+// mouse-only CSS state, so touch browsers cannot leave sticky hover outlines.
+let hubTouchPointerPending=false;
+$('menu').addEventListener('pointerdown',e=>{
+ hubTouchPointerPending=e.pointerType==='touch'&&!!e.target.closest?.('button[data-perma]');
+});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){hubResetArmed=false;hubMenu()}else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='hubEconomy')hubEconomyMenu();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma){const touched=hubTouchPointerPending||e.pointerType==='touch';hubTouchPointerPending=false;selectHubModule(b.dataset.perma,touched)}});
 $('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activeModStacks().length+(p.mod==='neuro'?1:0))};
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){
