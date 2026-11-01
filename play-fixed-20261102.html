@@ -3288,6 +3288,150 @@ body{position:fixed;inset:0;touch-action:manipulation}
  }
 }
 </style>
+<style id="z-sf-sharp-neon-v1">
+/* NOV 2026 | Tight SF neon language.
+   Image-based rims stay intact. No wide colored haze, no vector replacement. */
+
+/* Outer HUB and combat-reward windows: readable textured frames, narrow glow. */
+#stageWrap #menu.menu.hub-dialog{
+ box-shadow:0 8px 20px #000a,0 0 0 1px #ff82932e,0 0 5px #ff426b31,0 0 11px #ff426b1b!important;
+}
+#stageWrap #menu.menu.reward-dialog{
+ box-shadow:0 8px 20px #000a,0 0 0 1px #a8f2ff21,0 0 5px #49ceff34,0 0 11px #49ceff1a!important;
+}
+
+/* All HUB cards at rest stay dark, subtly inset with no surrounding bloom. */
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module:not(.selected):not(.installed):not(.pad-selected):not(.touch-focus):not(:focus-visible){
+ box-shadow:inset 0 0 6px #0008,0 2px 5px #0007!important;
+ filter:none!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.installed:not(.selected):not(.pad-selected):not(.touch-focus):not(:focus-visible){
+ border-image-source:var(--z-frame-green)!important;
+ box-shadow:inset 0 0 0 1px #9ee9bc24,0 0 6px #75dcaa28!important;
+ filter:brightness(1.025)!important;
+}
+
+/* Red selected: preserves slightly larger card / thicker painted bitmap rim. */
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected.pad-selected,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected.touch-focus,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected:focus-visible{
+ z-index:5!important;
+ transform:scale(1.014)!important;
+ translate:none!important;
+ border-image-source:var(--z-frame-red)!important;
+ filter:brightness(1.10) saturate(1.06)!important;
+ outline:none!important;
+ box-shadow:inset 0 0 0 1px #ffcad58c,inset 0 0 7px #ff507136,0 0 5px #ff5a7852,0 0 11px #ff406337!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected::after,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected.pad-selected::after,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected.touch-focus::after,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected:focus-visible::after{
+ border-image:var(--z-frame-red) 36 / 11px / 0 stretch!important;
+ opacity:1!important;
+ filter:drop-shadow(0 0 3px #ff91a46e) drop-shadow(0 0 7px #ff416059)!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.selected .hub-buy{
+ border-image-source:var(--z-frame-red)!important;
+ box-shadow:inset 0 0 5px #ff49612d,0 0 5px #ff547143!important;
+}
+
+/* Blue navigation focus; a different state from the selected red card. */
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.pad-selected:not(.selected),
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.touch-focus:not(.selected),
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module:focus-visible:not(.selected){
+ border-image-source:var(--z-frame-cyan)!important;
+ transform:none!important;translate:none!important;
+ filter:brightness(1.08)!important;
+ box-shadow:inset 0 0 0 1px #d3f8ff9c,inset 0 0 7px #5bc7ff2e,0 0 6px #69d9ff4b,0 0 12px #2ea9ff22!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.pad-selected:not(.selected)::after,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.touch-focus:not(.selected)::after,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module:focus-visible:not(.selected)::after{
+ opacity:1!important;
+ filter:drop-shadow(0 0 3px #b3f6ff64) drop-shadow(0 0 7px #52bfff38)!important;
+}
+@media(hover:hover) and (pointer:fine){
+ #stageWrap #menu.hub-dialog .hub-modules>button.hub-module:hover:not(.selected){
+  border-image-source:var(--z-frame-cyan)!important;
+  filter:brightness(1.08)!important;
+  box-shadow:inset 0 0 0 1px #d3f8ff9c,inset 0 0 7px #5bc7ff2e,0 0 6px #69d9ff4b,0 0 12px #2ea9ff22!important;
+ }
+ #stageWrap #menu.hub-dialog .hub-modules>button.hub-module:hover:not(.selected)::after{
+  opacity:1!important;
+  filter:drop-shadow(0 0 3px #b3f6ff64) drop-shadow(0 0 7px #52bfff38)!important;
+ }
+}
+
+/* HUB primary/utility buttons: focused edges do not light up entire rows. */
+#stageWrap #menu.hub-dialog .hub-action-row>button,
+#stageWrap #menu.hub-dialog .hub-buttons>button{
+ box-shadow:0 2px 5px #0007,0 0 4px #ff497218!important;
+}
+#stageWrap #menu.hub-dialog .hub-action-row>button:focus-visible,
+#stageWrap #menu.hub-dialog .hub-buttons>button:focus-visible{
+ outline:1px solid #b8f5ff!important;
+ outline-offset:1px!important;
+ box-shadow:0 0 5px #7bddff69,inset 0 0 5px #52c8ff27!important;
+}
+
+/* Combat upgrade card blue focus, with a crisp painted luminous edge. */
+#stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn.pad-selected,
+#stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn:focus-visible{
+ outline:none!important;
+ border-image-source:var(--z-frame-cyan)!important;
+ filter:brightness(1.10) saturate(1.06)!important;
+ box-shadow:inset 0 0 0 1px #dcfbffc7,inset 0 0 8px #46bbff32,0 0 7px #69ddff59,0 0 13px #27a8ff24!important;
+}
+#stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn.pad-selected:not(.reward-chosen)::before,
+#stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn:focus-visible:not(.reward-chosen)::before{
+ opacity:1!important;
+ filter:drop-shadow(0 0 3px #c4faff88) drop-shadow(0 0 7px #55c7ff4a)!important;
+}
+@media(hover:hover) and (pointer:fine){
+ #stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn:hover:not(.reward-chosen){
+  border-image-source:var(--z-frame-cyan)!important;
+  filter:brightness(1.10) saturate(1.06)!important;
+  box-shadow:inset 0 0 0 1px #dcfbffc7,inset 0 0 8px #46bbff32,0 0 7px #69ddff59,0 0 13px #27a8ff24!important;
+ }
+ #stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn:hover:not(.reward-chosen)::before{
+  opacity:1!important;
+  filter:drop-shadow(0 0 3px #c4faff88) drop-shadow(0 0 7px #55c7ff4a)!important;
+ }
+}
+
+/* Press/confirm remain punchy: intense line brightness, NOT a 70px halo. */
+#stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn:active{
+ border-image-source:var(--z-frame-cyan)!important;
+ box-shadow:inset 0 0 0 2px #eaffff,inset 0 0 9px #4dccff6c,0 0 8px #c4fbffd1,0 0 15px #37bdff55!important;
+ filter:brightness(1.16)!important;
+}
+#stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen{
+ border-image-source:var(--z-frame-cyan)!important;
+ box-shadow:inset 0 0 0 2px #e2fcff,inset 0 0 9px #5acfff60,0 0 8px #c2faffb8,0 0 16px #3bbcff4f!important;
+ filter:brightness(1.17) saturate(1.07)!important;
+}
+#stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen::before{
+ opacity:1!important;
+ animation:zRewardSharpRim .72s ease-out both!important;
+}
+#stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen::after{
+ box-shadow:0 0 5px #a2f3ff9c,0 0 10px #46c2ff4a!important;
+}
+@keyframes zRewardSharpRim{
+ 0%{filter:drop-shadow(0 0 3px #95e7ff88)}
+ 18%{filter:drop-shadow(0 0 6px #e7ffffca) drop-shadow(0 0 10px #56cfff9e)}
+ 40%{filter:drop-shadow(0 0 4px #c1f7ffc0) drop-shadow(0 0 8px #4bc5ff71)}
+ 100%{filter:drop-shadow(0 0 3px #b2f5ff78) drop-shadow(0 0 6px #3bb9ff40)}
+}
+@media(prefers-reduced-motion:reduce){
+ #stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen::before{
+  animation:none!important;
+  filter:drop-shadow(0 0 4px #c7faff7d)!important;
+ }
+}
+</style>
 </head>
 <body>
 <div id="app">
