@@ -4229,7 +4229,7 @@ function startRun(){resetInputs();resetPlayer();
  for(const k of ['w','a','s','d'])if(heldKeyboard.has(k))keys.add(k);
  menuBlockedKeys.clear();syncFaceButtonVisuals();
  setModsExpanded(false);wave=0;fx=[];floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;parrySlowTarget=null;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
- const urlQA=/(?:[?&])(?:intruder|elite|boss)=(?:preview|entry)(?:&|$)/.test(window.location?.search||'');
+ const urlQA=/(?:[?&])(?:intruder|elite|boss)=(?:preview|entry)(?:&|$)|(?:[?&])intro=off(?:&|$)/.test(window.location?.search||'');
  heroEntry.active=!urlQA;heroEntry.elapsed=0;heroEntry.landed=false;
  if(heroEntry.active){$('touchControls').hidden=true;$('hud').hidden=true;setStatus('Z / DEPLOYING')}
  // A previous menu button cannot be treated as a fresh combat press.
