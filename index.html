@@ -15,9 +15,9 @@
 .squad-progress>div{height:100%;width:0;background:linear-gradient(90deg,#80c7ed,#7df5b2);transition:width .17s}
 .squad-status{font:800 10px Arial,'Malgun Gothic',sans-serif;color:#b4d4ee;letter-spacing:.1px}.hud-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}.currency{font-family:Impact,sans-serif;font-size:26px;letter-spacing:2px;text-shadow:0 3px 3px #000}.currency b{color:#ffd792}.combo{font:24px Impact,sans-serif;color:#ff7082;text-shadow:0 3px #000}.combo small{font-size:12px;color:white}.small-button{pointer-events:auto;border:1px solid #7779;color:white;background:#050b14a9;padding:3px 11px;min-height:28px}
 .boss-hud{position:absolute;z-index:4;top:115px;right:30px;width:min(380px,40%);background:#060711a6;padding:10px;border:1px solid #9f3448}.boss-title{display:flex;justify-content:space-between;font:900 12px Arial;letter-spacing:2px;margin-bottom:6px}.boss-title span:last-child{color:#fa747d}.boss-track{height:12px;background:#211922;border:1px solid #fb5b69}.boss-track>div{width:100%;height:100%;background:linear-gradient(90deg,#93172b,#fa3a50);transition:width .1s}
-.game-message{position:absolute;z-index:5;top:31%;left:0;right:0;text-align:center;pointer-events:none;font:italic 900 clamp(15px,3vw,50px) Impact,'Arial Black',sans-serif;letter-spacing:3px;color:#ffe6e2;text-shadow:3px 3px 0 #7d152d,0 0 30px #000;opacity:0;transition:opacity .15s}.game-message.active{opacity:1}
+.game-message{position:absolute;z-index:5;top:35%;left:8%;right:8%;text-align:center;pointer-events:none;font:italic 900 clamp(14px,1.5vw,24px)/1.3 Impact,'Arial Black',sans-serif;letter-spacing:1.2px;color:#ffe6e2;text-shadow:2px 2px 0 #7d152d,0 0 15px #000;opacity:0;transition:opacity .15s;overflow-wrap:break-word}.game-message.active{opacity:1}
 /* Compact, flashing message shown only after the phase is cleared. */
-.game-message.phase-clear{top:37%;font-size:clamp(14px,2vw,28px);letter-spacing:1.3px;line-height:1.25;padding:0 16px}
+.game-message.phase-clear{top:37%;font-size:inherit;letter-spacing:1.2px;line-height:1.3;padding:0 8px}
 .game-message.phase-clear.active{animation:phase-clear-blink .76s steps(1,end) infinite}
 @keyframes phase-clear-blink{0%,49%{opacity:1}50%,100%{opacity:.14}}
 @media (prefers-reduced-motion:reduce){.game-message.phase-clear.active{animation:none;opacity:1}}
