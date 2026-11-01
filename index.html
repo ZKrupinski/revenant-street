@@ -2689,6 +2689,44 @@ body{position:fixed;inset:0;touch-action:manipulation}
  display:-webkit-box!important;-webkit-box-orient:vertical!important;
  -webkit-line-clamp:3!important;overflow:hidden!important;margin-top:1px!important;
 }
+
+/* Beat older #app.tight / #app.compact rules that have three ID selectors.
+   These previously overrode the new smaller icon caps on letterboxed phones. */
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-art-slot>.hub-emblem{
+ width:min(92px,37cqh,40cqw)!important;height:min(92px,37cqh,40cqw)!important;
+}
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-art-slot>.hub-emblem{
+ width:min(60px,31cqh,40cqw)!important;height:min(60px,31cqh,40cqw)!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-module-name,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-module-name{
+ display:block!important;position:static!important;font-size:clamp(11px,5.8cqh,15px)!important;
+ line-height:1.1!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-forecast,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-forecast{
+ display:flex!important;position:static!important;justify-content:center!important;
+ flex-wrap:wrap!important;font-size:clamp(10px,5.2cqh,13px)!important;
+ line-height:1.1!important;overflow:visible!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-buy,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-buy{
+ display:flex!important;position:static!important;flex:0 0 auto!important;
+ height:26px!important;min-height:26px!important;
+ width:82%!important;max-width:100%!important;margin:auto auto 0!important;
+ padding:3px 4px!important;font-size:clamp(10px,4.7cqh,12px)!important;
+}
+#app.tight-hub-stage #stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>.sym>.upgrade-art{
+ width:min(90px,15cqh)!important;height:min(90px,15cqh)!important;max-width:70%!important;
+}
+#app.compact-game-stage #stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>.sym>.upgrade-art{
+ width:min(42px,13cqh)!important;height:min(42px,13cqh)!important;max-width:70%!important;
+}
+#app.tight-hub-stage #stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>small{
+ display:block!important;flex:0 1 auto!important;
+ font-size:clamp(10px,2cqh,12px)!important;line-height:1.18!important;
+ overflow:visible!important;-webkit-line-clamp:unset!important;
+}
 </style>
 </head>
 <body>
