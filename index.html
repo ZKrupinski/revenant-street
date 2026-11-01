@@ -2728,6 +2728,144 @@ body{position:fixed;inset:0;touch-action:manipulation}
  overflow:visible!important;-webkit-line-clamp:unset!important;
 }
 </style>
+<style id="hub-icons-art-first-v10">
+/* Three balanced Hub cards: the ART takes every spare pixel, while the
+   title, numeric change, and action reserve their own non-overlapping rows.
+   No stage-height pixel guesses: each icon is sized from its own grid cell. */
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module{
+ container-name:hub-upgrade-card!important;
+ container-type:size!important;
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr)!important;
+ grid-template-rows:minmax(0,1fr) max-content!important;
+ align-items:stretch!important;justify-content:stretch!important;
+ box-sizing:border-box!important;
+ gap:clamp(2px,.7cqh,5px)!important;
+ width:100%!important;height:100%!important;max-height:100%!important;
+ padding:clamp(5px,.85cqh,9px)!important;
+ min-height:0!important;overflow:hidden!important;
+ text-align:center!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-art-slot{
+ container-name:hub-art-space!important;container-type:size!important;
+ display:flex!important;grid-column:1!important;grid-row:1!important;
+ align-items:center!important;justify-content:center!important;
+ box-sizing:border-box!important;
+ width:100%!important;height:100%!important;
+ min-width:0!important;min-height:0!important;
+ max-width:100%!important;max-height:100%!important;
+ padding:2px!important;margin:0!important;
+ border:0!important;border-right:0!important;
+ overflow:hidden!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-art-slot>.hub-emblem{
+ display:block!important;position:relative!important;
+ flex:0 0 auto!important;box-sizing:border-box!important;
+ width:min(150px,92cqh,86cqw)!important;
+ height:min(150px,92cqh,86cqw)!important;
+ min-width:0!important;min-height:0!important;
+ max-width:100%!important;max-height:100%!important;
+ aspect-ratio:1/1!important;
+ margin:0 auto!important;padding:0!important;
+ border:0!important;background:transparent!important;
+ overflow:visible!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-emblem>.upgrade-art{
+ display:block!important;box-sizing:border-box!important;
+ width:100%!important;height:100%!important;
+ max-width:100%!important;max-height:100%!important;
+ aspect-ratio:1/1!important;
+ padding:0!important;margin:0!important;
+ object-fit:contain!important;
+ background-size:500% 500%!important;background-repeat:no-repeat!important;
+}
+/* Text is NEVER laid over the image. Let the art row shrink first. */
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-card-info{
+ display:grid!important;grid-column:1!important;grid-row:2!important;
+ grid-template-columns:minmax(0,1fr)!important;
+ grid-template-rows:max-content max-content max-content!important;
+ align-content:end!important;justify-items:center!important;
+ box-sizing:border-box!important;
+ width:100%!important;min-width:0!important;min-height:0!important;
+ flex:none!important;gap:clamp(2px,.45cqh,4px)!important;
+ overflow:visible!important;
+ margin:0!important;padding:0!important;
+ text-align:center!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name{
+ display:block!important;position:static!important;
+ grid-column:1!important;grid-row:1!important;
+ width:100%!important;min-width:0!important;min-height:0!important;
+ margin:0!important;padding:0!important;
+ font-size:clamp(12px,2.5cqh,17px)!important;
+ line-height:1.12!important;
+ white-space:normal!important;word-break:keep-all!important;
+ text-align:center!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name small{
+ display:none!important; /* Detailed level is shown in the stat preview above. */
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-forecast{
+ display:flex!important;position:static!important;
+ grid-column:1!important;grid-row:2!important;
+ flex:none!important;align-items:center!important;justify-content:center!important;
+ box-sizing:border-box!important;
+ width:100%!important;min-height:0!important;max-height:none!important;
+ padding:0!important;margin:0!important;
+ flex-wrap:wrap!important;gap:1px 4px!important;
+ white-space:normal!important;
+ font-size:clamp(11px,2.25cqh,15px)!important;
+ line-height:1.14!important;overflow:visible!important;
+ text-align:center!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-desc{
+ display:none!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-buy{
+ display:flex!important;position:static!important;
+ grid-column:1!important;grid-row:3!important;
+ align-items:center!important;justify-content:center!important;
+ justify-self:center!important;align-self:end!important;
+ box-sizing:border-box!important;flex:none!important;
+ width:82%!important;max-width:100%!important;
+ height:clamp(27px,4.5cqh,38px)!important;
+ min-height:27px!important;
+ margin:clamp(3px,.6cqh,5px) auto 0!important;
+ padding:3px 7px!important;
+ gap:clamp(7px,1cqw,14px)!important;
+ font-size:clamp(11px,2.2cqh,14px)!important;
+ line-height:1.15!important;
+ white-space:nowrap!important;overflow:hidden!important;
+}
+/* Previous #app-prefixed rules have stronger specificity; repeat the new
+   dimensions under those selectors rather than shrinking to 60px again. */
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-art-slot>.hub-emblem,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-art-slot>.hub-emblem{
+ width:min(150px,92cqh,86cqw)!important;
+ height:min(150px,92cqh,86cqw)!important;
+ max-width:100%!important;max-height:100%!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name{
+ display:block!important;position:static!important;
+ font-size:clamp(11px,2.65cqh,16px)!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-forecast,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-forecast{
+ display:flex!important;position:static!important;
+ justify-content:center!important;flex-wrap:wrap!important;
+ font-size:clamp(10px,2.35cqh,14px)!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-buy,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-buy{
+ display:flex!important;position:static!important;
+ width:82%!important;max-width:100%!important;
+ height:clamp(25px,4.5cqh,36px)!important;
+ min-height:25px!important;
+ font-size:clamp(10px,2.3cqh,13px)!important;
+ margin:3px auto 0!important;
+}
+</style>
 </head>
 <body>
 <div id="app">
