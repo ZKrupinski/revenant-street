@@ -21,11 +21,13 @@ jobs:
         run: python scripts/rebuild-redhood-jump.py
       - name: Wire corrected sprite into gameplay, floor anchors and smoke tests
         run: python scripts/apply-redhood-jump-runtime.py
+      - name: Check eight red-hood Crimson Dive frames in live game source
+        run: node tests/redhood-jump-frames.cjs
       - name: Commit new production WebP, runtime fix and frame-margin audit
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add assets/enemies/redhood-intruder/special-fullframe.webp assets/enemies/redhood-intruder/special-fullframe-bounds.json index.html tests/assassin-combat.cjs .github/workflows/z-smoke.yml
+          git add assets/enemies/redhood-intruder/special-fullframe.webp assets/enemies/redhood-intruder/special-fullframe-bounds.json index.html tests/assassin-combat.cjs
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Restore red-hood aerial jump in live combat with eight crop-safe frames'
           git fetch origin main
