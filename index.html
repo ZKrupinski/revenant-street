@@ -2280,6 +2280,50 @@ body{position:fixed;inset:0;touch-action:manipulation}
 #app.compact-game-stage #stageWrap #menu.title-dialog .title-game-start .title-start-text{
  font-size:clamp(10px,1.9cqh,14px)!important;
 }
+
+/* 2026-11-01 title hierarchy: exact horizontal center, largest primary CTA. */
+#stageWrap #menu.title-dialog .buttons.title-action-row{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr) minmax(0,1.27fr) minmax(0,1fr)!important;
+ column-gap:clamp(5px,1cqw,13px)!important;
+ align-items:end!important;
+ width:100%!important;
+}
+#stageWrap #menu.title-dialog .buttons.title-action-row>button{
+ width:100%!important;min-width:0!important;
+ align-self:end!important;
+}
+#stageWrap #menu.title-dialog .buttons.title-action-row>button[data-action="hub"]{
+ flex:none!important;
+}
+#stageWrap #menu.title-dialog .buttons.title-action-row>button.title-game-start{
+ grid-column:2!important;position:relative!important;
+ height:clamp(47px,7.8cqh,63px)!important;
+ max-height:63px!important;min-height:47px!important;
+ padding:7px 10px!important;
+ border-image-width:6px!important;
+ box-shadow:0 0 13px #f9317877,0 4px 12px #000b!important;
+}
+#stageWrap #menu.title-dialog .title-game-start .title-start-text{
+ font:1000 clamp(20px,2.55cqw,30px)/1 Arial,'Malgun Gothic',sans-serif!important;
+ letter-spacing:1.3px!important;
+ text-shadow:0 2px 3px #000d,0 0 10px #fff1f3a6!important;
+}
+@keyframes z-title-start-text-blink{
+ 0%,54%{opacity:1}
+ 55%,100%{opacity:.48}
+}
+/* Preserve original title order and larger start control on compact letterboxed phones. */
+#app.compact-game-stage #stageWrap #menu.title-dialog .buttons.title-action-row{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+}
+#app.compact-game-stage #stageWrap #menu.title-dialog .buttons.title-action-row>button.title-game-start{
+ height:clamp(23px,4.2cqh,34px)!important;
+ min-height:23px!important;max-height:34px!important;
+}
+#app.compact-game-stage #stageWrap #menu.title-dialog .title-game-start .title-start-text{
+ font-size:clamp(12px,2.45cqh,17px)!important;
+}
 </style>
 
 <style id="project-z-elite-centered-energy-v1">
@@ -4308,7 +4352,10 @@ function showMenu(html){
  menuBlockedKeys.clear();for(const key of heldKeyboard)menuBlockedKeys.add(key);
  canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;if(gameState==='hub')$('menu').classList.add('hub-dialog');else $('menu').classList.remove('hub-dialog');
  $('menu').classList.toggle('reward-dialog',gameState==='reward');
- $('menu').classList.remove('title-dialog');$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;menuPad.index=0;menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
+ $('menu').classList.remove('title-dialog');$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;
+ // Keep menus visually neutral until navigation. Title confirm defaults to GAME START.
+ menuPad.index=$('menu').querySelector('.title-action-row')?1:0;
+ menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
  // Four face buttons are equivalent CONFIRM on title, REBEL HUB,
  // pause, defeat, and upgrade panels; movement still picks the focus.
  if(['menu','dead','paused'].includes(gameState)){
@@ -4316,9 +4363,9 @@ function showMenu(html){
   note.textContent='패드 스틱·십자키 / WASD 이동  ·  X/Y/A/B 아무 버튼으로 선택';
   $('menu').appendChild(note);
  }
- // Reward cards begin visually neutral; only a real navigation/focus action
- // can light a card border. Keep the existing directional selection order.
- if(gameState!=='reward')selectMenuItem(0)}
+ // Do not pre-focus any button or paint the cyan gamepad selection on entry.
+ // A real keyboard/gamepad direction (or user focus) calls selectMenuItem().
+ for(const b of $('menu').querySelectorAll('button.pad-selected'))b.classList.remove('pad-selected');
 function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('reward-confirming');$('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){
  gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;
