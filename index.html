@@ -5023,6 +5023,7 @@ function requiredSceneArt(preview=false){
   ['주인공 머플러 제거 등장 8프레임',()=>ensureBitmapDecoded(heroEntry.image)],
   ['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)],
   ['지면강타 8프레임 비트맵',()=>ensureBitmapDecoded(GROUND_SLAM_ART.image),true],
+  ['대쉬 후 번개 관통 8프레임 비트맵',()=>ensureBitmapDecoded(DASH_PIERCE_ART.image)],
   ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
   ['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
   ...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임',()=>ensureBitmapDecoded(intruderMotionImages[k])]),
@@ -5707,6 +5708,42 @@ function drawGroundSlamSprite(f){
   f.x-width*.5,f.y-footAnchor,width,height);
  ctx.restore();return true;
 }
+/* The original 8-frame horizontal lightning painting (4 columns x 2 rows).
+   Each rendered frame has its own transparent safety margin. */
+const DASH_PIERCE_ART={
+ src:'./assets/vfx/project_z_dash_lightning_8f.png',
+ image:new Image(),available:false,missing:false
+};
+DASH_PIERCE_ART.image.onload=()=>{
+ const im=DASH_PIERCE_ART.image;
+ DASH_PIERCE_ART.available=im.naturalWidth>0&&im.naturalHeight>0&&
+  im.naturalWidth%4===0&&im.naturalHeight%2===0;
+};
+DASH_PIERCE_ART.image.onerror=()=>{DASH_PIERCE_ART.missing=true};
+DASH_PIERCE_ART.image.src=DASH_PIERCE_ART.src;
+function spawnDashPierceFx(attacker,target){
+ const dir=attacker.facing>=0?1:-1;
+ const x=attacker.x+dir*45;
+ const span=Math.abs(target.x-x);
+ const width=clamp(span+310+modRank('dashspeed')*21,440,820);
+ const duration=.29; // all 8 frames are displayed, once per successful dash hit
+ fx.push({kind:'dashPierceSprite',x,y:target.y-112,dir,width,
+  life:duration,maxLife:duration});
+}
+function drawDashPierceSprite(f){
+ const im=DASH_PIERCE_ART.image;
+ if(!DASH_PIERCE_ART.available||!im.complete||!im.naturalWidth)return false;
+ const ratio=clamp(1-f.life/f.maxLife,0,.999999);
+ const frame=Math.min(7,Math.floor(ratio*8)),cw=im.naturalWidth/4,ch=im.naturalHeight/2;
+ const width=f.width,height=width*(ch/cw);
+ ctx.save();
+ ctx.translate(f.x,f.y);
+ ctx.scale(f.dir,1); // same sprite pierces both right- and left-facing victims
+ ctx.globalAlpha=ratio>.78?clamp((1-ratio)/.22,0,1):1;
+ ctx.drawImage(im,(frame%4)*cw,Math.floor(frame/4)*ch,cw,ch,-width*.13,-height*.53,width,height);
+ ctx.restore();
+ return true;
+}
 function heelLandingShockwave(powered=false){
  const skill=specialStats('jumpspeed');
  const rx=skill.range,ry=skill.lane;
@@ -5805,6 +5842,7 @@ function attackCheck(){
    spawnModLink('blue',e.x,e.y-125,o.x,o.y-118,.75,'hue-rotate(59deg)',.22);
   });
  }
+ if(p.dashSmash&&hits===0)spawnDashPierceFx(p,e); // real impact frame, no whiff or repeat for crowds
  hurtEnemy(e,dmg,p.counterBoost?100:armed?([28,31,47][p.comboIdx]||28):(poise[p.moveName]||28));createModImpact(e);combatStrengthFx(e,critical);hits++;
  if(p.airKickPhase==='dive'){
   // Drive victims down rather than launch them away from the heel.
@@ -7114,7 +7152,8 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  ctx.restore();
  if(!isP&&!a.dead){const y0=y-z-h-13;/* All enemy overhead HP/poise bars removed, including boss. */if(a.windup>0){ctx.textAlign='center';ctx.fillStyle='#ff697b';ctx.font=`900 ${boss?40:27}px Arial`;ctx.fillText('!',x,y0-13)}
  if(a.chargePrep>0){ctx.textAlign='center';ctx.fillStyle='#ffb842';ctx.font='900 31px Arial';ctx.fillText('!!',x,y0-18)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('공격 → 처형',x,y0-12)}}}
-function drawEffects(){drawModEnergy();const left=cameraX-620,right=cameraX+W+620;for(const f of fx){if(f.x<left||f.x>right)continue;
+function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+820;for(const f of fx){if(f.x<left||f.x>right)continue;
+ if(f.kind==='dashPierceSprite'){drawDashPierceSprite(f);continue;}
  if(f.kind==='groundSlamSprite'){
   if(!drawGroundSlamSprite(f)){
    // Existing painted bitmap fallback while the new resource is unavailable.
