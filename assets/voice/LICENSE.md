@@ -64,3 +64,16 @@ All four new enemy voice assets are **derivatives of the CC0 HaelDB recordings a
 | `enemy-death-deep.mp3` | `voice-roar.wav` / 3yell9.wav | Longer but subdued death groan |
 
 Editing: FFmpeg Rubber Band pitch/formant downshift (0.67–0.72), 78 Hz high pass, soft bass emphasis at 180 Hz, 2.15 kHz low pass, dynamics control, soft 11 ms attack and 75 ms release, limited peak, mono 22.05 kHz and 80 kb/s MP3. Hit grunts are kept under 0.42 s; warnings under 0.68 s. Playback is further capped by the voice bus and never ducks the BGM or reduces the actual impact effects. The original longer bright `voice-yell.wav` is never selected by the live voice engine.
+
+## Natural human enemy pain playback (November 1, 2026)
+
+The heavily pitch/formant-shifted remasters above are now **archived and no longer loaded during gameplay**. They were reported to sound like animal growls rather than human pain reactions. Runtime maps the enemy voices back to the existing original CC0 male recordings; no new third-party material or licensed audio was introduced.
+
+| Runtime event | Current source |
+| --- | --- |
+| Short enemy hit A | `hero-grunt-a.wav` (3grunt1) |
+| Short enemy hit B | `hero-grunt-b.wav` (3grunt3) |
+| Enemy/boss alert shout | `voice-yell.wav` (3yell1) |
+| Enemy/boss death | `voice-yell.wav` (3yell1), longer/softer envelope |
+
+The live engine keeps playback near the original male voice pitch (approx. 0.95–1.075×) with gentle upper-mid presence and without the old 0.67–0.72 formant downshift. Enemy hurt is capped near 0.30 s; shouts and deaths have individual durations and loudness. Existing gunshot/impact SFX and BGM stay independent and are never ducked.
