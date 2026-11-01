@@ -7678,7 +7678,14 @@ function selectMod(m){
    m==='vital'?1.03:1.27,'brightness(1.17)',.39);
  sound('parry');setStatus('COMBAT LIVE');updateHud();
 }
-function completeMenu(){gameState='complete';setStatus('RUN COMPLETE');perma.shards+=4;save();$('bossHud').hidden=true;showMenu(`<div class="eyebrow">OBJECTIVE COMPLETE / REBEL SIGNAL ONLINE</div><h1>ZONE <span>CLEARED</span></h1><p>엘리트 헌터를 격파했습니다. 사이버네틱 지하 기지 <b class="key">REBEL HUB</b>로 귀환합니다.</p><div class="hub-stat"><span>처치 ${runKills}명 / 전리품 ₩${p.credits}</span><strong>영구 자원 +4</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB로 귀환</button><button class="secondary-btn" data-action="start">새로운 런 시작</button></div>`)}
+function completeMenu(){
+ if(gameState==='complete')return;
+ const reward=awardRunShards(true);if(!reward)return;
+ gameState='complete';setStatus('RUN COMPLETE');$('bossHud').hidden=true;
+ showMenu(`<div class="eyebrow">OBJECTIVE COMPLETE / REBEL SIGNAL ONLINE</div><h1>ZONE <span>CLEARED</span></h1><p>완주 보너스 ◆3 포함 · 스타일 평가 랭크 <b class="key">${reward.grade}</b></p>
+ <div class="hub-stat"><span>전리품 ₩${p.credits}</span><strong>이번 런 ◆+${reward.total}</strong></div>${runResultMarkup(reward)}
+ <div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB로 귀환</button><button class="secondary-btn" data-action="start">새로운 런 시작</button></div>`);
+}
 function startDeathCinematic(){
  if(gameState!=='playing'||deathCinematic.active)return false;
  deathCinematic.active=true;deathCinematic.elapsed=0;
@@ -7695,25 +7702,56 @@ function startDeathCinematic(){
  loadZMove('knockdown');updateHud();
  return true;
 }
-function deadMenu(){if(gameState==='dead')return;gameState='dead';setStatus('SIGNAL LOST');perma.shards+=1;save();$('hint').hidden=true;showMenu(`<div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1><p>기계 신체가 파괴됐습니다. 영구 자원 <b class="key">+1</b>을 회수했습니다.</p><div class="hub-stat"><span>이번 런의 처치 ${runKills}명</span><strong>SHARDS +1</strong></div><div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB</button><button class="secondary-btn" data-action="start">즉시 재시작</button></div>`)}
-const HUB_COST=2;
+function deadMenu(){
+ if(gameState==='dead')return;
+ const reward=awardRunShards(false);if(!reward)return;
+ gameState='dead';setStatus('SIGNAL LOST');$('hint').hidden=true;
+ showMenu(`<div class="eyebrow">BIO-SIGNAL TERMINATED / CYBERNETIC REBOOT</div><h1>YOU <span>DIED</span></h1>
+ <p>전투 결과에 따른 샤드 정산 · 스타일 랭크 <b class="key">${reward.grade}</b></p>
+ <div class="hub-stat"><span>처치 ${runKills}명 · 공격 ${reward.attacks}회</span><strong>SHARDS +${reward.total}</strong></div>${runResultMarkup(reward)}
+ <div class="buttons"><button class="main-btn" data-action="hub">REBEL HUB</button><button class="secondary-btn" data-action="start">즉시 재시작</button></div>`);
+}
+const HUB_COST=2; // Lv.0 reference cost; higher levels use hubUpgradeCost.
 const HUB_MODULES=[
  {id:'core',title:'외골격 강화',art:'hub-core',stat:'최대 체력',format:n=>(100+20*n)+' HP',detail:'최대 체력 영구 +20'},
  {id:'servo',title:'파워 서보',art:'hub-servo',stat:'추가 타격 피해',format:n=>'+'+(2*n)+' DMG',detail:'모든 타격 추가 피해 영구 +2'},
- {id:'reflex',title:'패링 신경망',art:'hub-reflex',stat:'패링 지속시간',format:n=>(.34+.035*n).toFixed(3)+'초',detail:'패링 지속시간 영구 +0.035초'}
+ {id:'reflex',title:'패링 신경망',art:'hub-reflex',stat:'패링 지속시간',format:n=>(.34+.035*n).toFixed(3)+'초',detail:'패링 지속시간 영구 +0.035초'},
+ {id:'armor',title:'합금 장갑',art:'guard',stat:'받는 피해 감소',format:n=>(4*n)+'%',detail:'받는 피해 영구 -4%/레벨'},
+ {id:'sprint',title:'구동 부스터',art:'haste',stat:'달리기 속도',format:n=>(690+25*n)+'px/s',detail:'달리기 속도 영구 +25px/s'},
+ {id:'lift',title:'점프 액추에이터',art:'jumpheight',stat:'점프 도약력',format:n=>(670+20*n)+'',detail:'기본 도약력 영구 +20/레벨'}
 ];
+const HUB_MAX_LEVEL=12;
+function hubUpgradeCost(level){return 2+level+Math.floor(level*level/3)}
+function hubRefreshCost(){return 1+Math.min(4,perma.hubRefreshes)}
+const HUB_OFFER_ROTATION=[
+ ['core','servo','reflex'],['armor','sprint','lift'],
+ ['core','armor','lift'],['servo','sprint','reflex'],
+ ['core','sprint','armor'],['servo','reflex','lift']
+];
+function hubAvailableModules(){
+ const ids=HUB_OFFER_ROTATION[perma.hubRefreshes%HUB_OFFER_ROTATION.length];
+ return ids.map(id=>HUB_MODULES.find(m=>m.id===id));
+}
+function refreshHubOffers(){
+ if(gameState!=='hub'||hubResetArmed||perma.shards<hubRefreshCost())return false;
+ const cost=hubRefreshCost();
+ perma.shards-=cost;perma.hubRefreshes++;hubSelected=hubAvailableModules()[0].id;
+ save();hubMenu();sound('parry');return true;
+}
 const HUB_STAT_INFO=[
  ['hp','최대 체력',v=>v+' HP'],['damage','추가 공격력',v=>'+'+v],
  ['parry','패링 지속시간',v=>v.toFixed(3)+'초'],['stamina','스태미나',v=>v],
  ['walk','걷기 속도',v=>v+'px/s'],['run','달리기 속도',v=>v+'px/s'],
  ['dash','기본 대쉬 거리',v=>v+'px'],['jump','공중 이동속도',v=>v+'px/s'],
- ['jumpHeight','점프 높이',v=>v+'px'],['weapon','무기 내구도',v=>v]
+ ['jumpHeight','점프 높이',v=>v+'px'],['armor','피해 감소',v=>v+'%'],['weapon','무기 내구도',v=>v]
 ];
 function permanentBaseStats(levels=perma){
  const jump=jumpMobilityStats(0,0);
+ const leap=670+20*(levels.lift||0);
  return {hp:100+20*levels.core,damage:2*levels.servo,parry:.34+.035*levels.reflex,
-  stamina:100,walk:PLAYER_WALK_SPEED,run:PLAYER_RUN_SPEED,dash:dashMobilityStats(0,0).distance,
-  jump:jump.moveSpeed,jumpHeight:jump.height,weapon:18};
+  stamina:100,walk:PLAYER_WALK_SPEED,run:PLAYER_RUN_SPEED+25*(levels.sprint||0),dash:dashMobilityStats(0,0).distance,
+  jump:jump.moveSpeed,jumpHeight:Math.round(leap*leap/(2*1440)),
+  armor:4*(levels.armor||0),weapon:18};
 }
 function renderTitleBaseStats(){
  const v=permanentBaseStats();
@@ -7726,7 +7764,7 @@ let hubSelected='core',hubResetArmed=false;
 function hubStatsMarkup(){
  const before=permanentBaseStats();
  const after=permanentBaseStats({...perma,[hubSelected]:perma[hubSelected]+1});
- const miniLabels={hp:'HP',damage:'공격',parry:'패링',stamina:'기력',walk:'걷기',run:'달리기',dash:'대쉬',jump:'공중',jumpHeight:'점프',weapon:'내구'};
+ const miniLabels={hp:'HP',damage:'공격',parry:'패링',stamina:'기력',walk:'걷기',run:'달리기',dash:'대쉬',jump:'공중',jumpHeight:'점프',armor:'장갑',weapon:'내구'};
  const mini=(id,value)=>{
   if(id==='parry')return value.toFixed(3);
   return id==='damage'?'+'+value:String(Math.round(value));
@@ -7741,35 +7779,39 @@ function hubStatsMarkup(){
  }).join('')}</div></section>`;
 }
 function selectHubModule(key){
- if(gameState!=='hub'||!HUB_MODULES.some(m=>m.id===key))return false;
+ if(gameState!=='hub'||!hubAvailableModules().some(m=>m.id===key))return false;
  hubSelected=key;hubResetArmed=false;hubMenu();return true;
 }
 function hubMenu(upgraded=''){
  gameState='hub';$('bossHud').hidden=true;setStatus('REBEL HUB');
- const selected=HUB_MODULES.find(m=>m.id===hubSelected)||HUB_MODULES[0];
- const cards=HUB_MODULES.map(m=>{
-  const lv=perma[m.id];
+ const offers=hubAvailableModules();
+ if(!offers.some(m=>m.id===hubSelected))hubSelected=offers[0].id;
+ const selected=HUB_MODULES.find(m=>m.id===hubSelected)||offers[0];
+ const selectedCost=hubUpgradeCost(perma[hubSelected]);
+ const cards=offers.map(m=>{
+  const lv=perma[m.id],cost=hubUpgradeCost(lv),maxed=lv>=HUB_MAX_LEVEL;
   return `<button type="button" class="hub-module hub-centered-card hub-${m.id}${hubSelected===m.id?' selected':''}${upgraded===m.id?' installed':''}"
    data-perma="${m.id}" aria-pressed="${hubSelected===m.id}">
    <span class="hub-art-slot"><span class="hub-emblem">${modIconMarkup(m.art)}</span></span>
    <span class="hub-card-info">
-    <span class="hub-module-name">${m.title}<small>Lv.${lv} → ${lv+1}</small></span>
+    <span class="hub-module-name">${m.title}<small>Lv.${lv}${maxed?' MAX':' → '+(lv+1)}</small></span>
     <span class="hub-forecast"><span class="hub-from">${m.format(lv)}</span>
      <span class="hub-arrow">→</span><span class="hub-to">${m.format(lv+1)}</span></span>
     <span class="hub-desc">${m.detail}</span>
-    <span class="hub-buy"><span>${upgraded===m.id?'적용 완료':hubSelected===m.id?'선택됨':'선택'}</span><span>◆ ${HUB_COST}</span></span>
+    <span class="hub-buy"><span>${maxed?'최대 레벨':upgraded===m.id?'적용 완료':hubSelected===m.id?'선택됨':'선택'}</span><span>${maxed?'MAX':'◆ '+cost}</span></span>
    </span>
   </button>`;
  }).join('');
- const refund=HUB_COST*HUB_MODULES.reduce((n,m)=>n+perma[m.id],0);
+ const hasProgress=perma.shards>0||perma.hubRefreshes>0||HUB_MODULES.some(m=>perma[m.id]>0);
+ const rerollCost=hubRefreshCost();
  const reset=hubResetArmed?
   `<button type="button" class="hub-danger" data-action="hubResetConfirm">초기화 확정</button>
    <button type="button" data-action="hubResetCancel">취소</button>`:
-  `<button type="button" class="hub-reset" data-action="hubReset"${refund===0?' disabled':''}>강화 초기화</button>`;
+  `<button type="button" class="hub-reset" data-action="hubReset"${!hasProgress?' disabled':''}>저장 초기화</button>`;
  showMenu(`<div class="hub-screen">
   <div class="hub-header"><div><div class="hub-kicker">SAVED PERMANENT PROGRESSION</div><div class="hub-title">REBEL <em>HUB</em></div></div>
   <div class="hub-wallet"><small>보유 파편</small><strong>◆ ${perma.shards}</strong></div></div>
-  <div class="hub-intro"><span class="hub-color-legend" aria-label="카드 테두리 색상 의미"><span><b class="neutral"></b>선택 가능</span><span><b class="selected"></b>선택 중</span><span><b class="applied"></b>적용 완료</span></span><span>모듈당 ◆ ${HUB_COST}</span></div>
+  <div class="hub-intro"><span class="hub-color-legend" aria-label="카드 테두리 색상 의미"><span><b class="neutral"></b>선택 가능</span><span><b class="selected"></b>선택 중</span><span><b class="applied"></b>적용 완료</span></span><span>강화 비용은 레벨에 따라 증가</span></div>
   ${hubStatsMarkup()}
   <div class="hub-modules" role="group" aria-label="영구 강화 선택">${cards}</div>
   <div class="hub-bottom">
@@ -7777,10 +7819,11 @@ function hubMenu(upgraded=''){
      `<strong>${selected.title} Lv.${perma[upgraded]} 적용 완료!</strong> 이 기기에 저장했습니다.`:
      `선택: <strong>${selected.title}</strong> · 카드를 누르면 미리보기만 변경됩니다.`}</div>
    <div class="hub-action-row">
-    <button type="button" class="hub-apply" data-action="hubApply"${perma.shards<HUB_COST||hubResetArmed?' disabled':''}>◆ ${HUB_COST} 강화 적용</button>
+    <button type="button" class="hub-apply" data-action="hubApply"${perma.shards<selectedCost||hubResetArmed||perma[hubSelected]>=HUB_MAX_LEVEL?' disabled':''}>◆ ${selectedCost} 강화 적용</button>
+    <button type="button" class="hub-reset" data-action="hubRefresh"${perma.shards<rerollCost||hubResetArmed?' disabled':''}>목록 갱신 ◆ ${rerollCost}</button>
     ${reset}</div>
-   <div class="hub-saved-note">${hubResetArmed?`<b>정말 초기화할까요?</b> 강화 레벨 0 · 투자 파편 ◆${refund} 반환`:
-     `이 기기에 자동 저장 · 강화 초기화 시 투자 파편 ◆${refund} 반환`}</div>
+   <div class="hub-saved-note">${hubResetArmed?`<b>저장 데이터 전체 초기화:</b> 강화 레벨·보유 샤드·갱신 기록 모두 0, 환불 없음`:
+     `3개 목록 중 선택 · 갱신하면 샤드 소모 후 다른 3개 표시 · 강화 시 누진 비용`}</div>
    <div class="hub-buttons"><button type="button" class="main-btn" data-action="start">▶ 재출격</button>
     <button type="button" class="secondary-btn" data-action="title">타이틀</button></div>
   </div>
@@ -7788,20 +7831,22 @@ function hubMenu(upgraded=''){
   </div>`);
 }
 function buyUpgrade(key=hubSelected){
- if(gameState!=='hub'||hubResetArmed||key!==hubSelected||!HUB_MODULES.some(m=>m.id===key)||perma.shards<HUB_COST)return false;
- perma.shards-=HUB_COST;perma[key]++;save();hubMenu(key);
+ const cost=hubUpgradeCost(perma[key]||0);
+ if(gameState!=='hub'||hubResetArmed||key!==hubSelected||!hubAvailableModules().some(m=>m.id===key)||
+  perma[key]>=HUB_MAX_LEVEL||perma.shards<cost)return false;
+ perma.shards-=cost;perma[key]++;save();hubMenu(key);
  sound('parry');vibrateImpact('heavy',true);return true;
 }
 function prepareHubReset(){
- if(gameState!=='hub'||hubResetArmed||HUB_MODULES.every(m=>perma[m.id]===0))return false;
+ if(gameState!=='hub'||hubResetArmed||(perma.shards===0&&perma.hubRefreshes===0&&HUB_MODULES.every(m=>perma[m.id]===0)))return false;
  hubResetArmed=true;hubMenu();return true;
 }
 function cancelHubReset(){if(gameState!=='hub'||!hubResetArmed)return false;hubResetArmed=false;hubMenu();return true}
 function resetHubUpgrades(){
  if(gameState!=='hub'||!hubResetArmed)return false;
- const refund=HUB_COST*HUB_MODULES.reduce((n,m)=>n+perma[m.id],0);
  for(const m of HUB_MODULES)perma[m.id]=0;
- perma.shards+=refund;hubResetArmed=false;hubSelected='core';save();hubMenu();sound('parry');return true;
+ perma.shards=0;perma.hubRefreshes=0;
+ hubResetArmed=false;hubSelected='core';save();hubMenu();sound('parry');return true;
 }
 function pauseToggle(){if(gameState==='playing'){gameState='paused';stopGamepadRumble();setStatus('PAUSED');showMenu(`<div class="eyebrow">SYSTEM SUSPENDED</div><h2>일시 정지</h2><p>전투가 일시 정지되었습니다.</p><div class="buttons"><button class="main-btn" data-action="resume">▶ 계속 플레이</button><button class="secondary-btn" data-action="sound">${mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}</button><button class="secondary-btn" data-action="rumbleTest">🎮 패드 진동 테스트</button><button class="secondary-btn" data-action="guideResume">조작 안내</button><button class="secondary-btn" data-action="title">타이틀로</button></div><p class="micro" id="rumbleStatus">연결된 패드의 진동 API를 확인 중입니다.</p>`);updateRumbleDiagnostics()}else if(gameState==='paused'){gameState='playing';setStatus('COMBAT LIVE');hideMenu()}}
 function keyDown(ev){
@@ -7886,7 +7931,7 @@ window.addEventListener('blur',suspendGame);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame()});
 
 $('menu').addEventListener('focusin',e=>{const items=menuButtons(),i=items.indexOf(e.target);if(i<0)return;menuPad.index=i;items.forEach((b,n)=>b.classList.toggle('pad-selected',n===i))});
-$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){hubResetArmed=false;hubMenu()}else if(a==='hubApply')buyUpgrade();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)selectHubModule(b.dataset.perma)});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){hubResetArmed=false;hubMenu()}else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)selectHubModule(b.dataset.perma)});
 $('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activeModStacks().length+(p.mod==='neuro'?1:0))};
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){
