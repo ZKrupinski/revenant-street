@@ -178,7 +178,7 @@ test('HUB controller and WASD navigate spatially between button rows, never a fl
   t.hubMenuNavigate(-1,0);
   assert.equal(t.menuPad.index,6,'LEFT on bottom row moves to neighboring bottom button');
   t.hubMenuNavigate(0,-1);
-  assert.equal(t.menuPad.index,1,'UP crosses back to nearest card from an action');
+  assert.equal(t.menuPad.index,2,'UP returns to the rightmost card geometrically above the economy action');
   // WASD uses the same spatial model, while ArrowLeft remains confirmation.
   t.menuPad.index=4;t.heldKeyboard.clear();
   const key=k=>{t.keyDown({key:k,repeat:false,preventDefault(){}});t.keyUp({key:k})};
