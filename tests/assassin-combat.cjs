@@ -2626,4 +2626,33 @@ test('new PA-K punch is a loud transient on its own audio bus and never ducks mu
   if(previousBgm)world.__revenantBgm=previousBgm;else delete world.__revenantBgm;
  }
 });
+// The same 4x2 bitmap ground slam is wired to hero landing, elite special
+// collision, and the Hunter boss' actual painted slam strike (not their tells).
+{
+ const rules=[
+  "const GROUND_SLAM_ART={",
+  "src:'./assets/vfx/project-z-ground-slam-8f.webp'",
+  "columns:4,rows:2,frames:8,footX:.5,footY:.8",
+  "function spawnGroundSlamFx(x,y,intensity=1,source='hero')",
+  "kind:'groundSlamSprite'",
+  "const frame=Math.min(7,Math.floor(ratio*8))",
+  "ctx.drawImage(bitmap,(frame%4)*cw,Math.floor(frame/4)*ch,cw,ch",
+  "spawnGroundSlamFx(p.x,p.y,skill.visual,'hero')",
+  "if(kind==='slam')spawnGroundSlamFx(b.x,b.y,1.55,'boss')",
+  "spawnGroundSlamFx(e.x+e.face*35,e.y,1.20,'elite')",
+  "if(f.kind==='groundSlamSprite')",
+  "if(!drawGroundSlamSprite(f))"
+ ];
+ for(const rule of rules)assert(html.includes(rule),'missing shared ground smash spritesheet integration: '+rule);
+ assert(!html.includes("drawGroundSlamSprite(f);fxBurst("),'no double-up geometry on the same slam');
+ const begin=html.indexOf("function drawGroundSlamSprite("),
+  end=html.indexOf("function heelLandingShockwave(",begin);
+ const block=html.slice(begin,end);
+ assert(block.includes("width*(ch/cw)"),'4x2 frame maintains authored aspect ratio');
+ assert(block.includes("f.y-footAnchor"),'feet remain locked to the actor ground');
+ const elite=html.indexOf("spawnGroundSlamFx(e.x+e.face*35,e.y,1.20,'elite')");
+ const hit=html.indexOf("e.eliteAttack=true;",elite-1500);
+ assert(hit>=0&&hit<elite,'iron mask spawn occurs at special attack collision not warning');
+}
+
 console.log(`${checks} combat regression checks passed`);
