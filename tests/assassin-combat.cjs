@@ -127,6 +127,43 @@ test('HUB shop rotates three genuine module offers for shards and scales every r
   assert.equal(t.buyUpgrade('armor'),false,'buying a module other than the selected offer is blocked');
  }finally{Object.assign(perma,backup);t.hubMenu()}
 });
+test('defeat and victory share a fully visible scroll-free 16:9 result panel',()=>{
+ const css=html.slice(html.indexOf('<style id="result-16x9-no-scroll">'),html.indexOf('</style>',html.indexOf('<style id="result-16x9-no-scroll">')));
+ assert(css.includes('#stageWrap #menu.result-dialog'),'dedicated high-priority result styles exist');
+ assert(css.includes('overflow:hidden!important'),'result container must never scroll');
+ assert(css.includes('grid-template-areas:"title payout" "stats stats" "actions actions" "tip tip"'),
+  'result layout reserves the bottom rows for BOTH actions and control hint');
+ assert(css.includes('grid-template-columns:repeat(2,minmax(0,1fr))!important'),
+  'stat tiles fit in 2x2 without stacking to 4 tall rows');
+ assert(css.includes('max-height:calc(100% - 16px)!important'),
+  'result remains inside the 16:9 stage at all heights');
+ assert(html.includes("gameState==='dead'||gameState==='complete'"),'both endings enable layout');
+ assert(html.includes("!$('menu').classList.contains('result-dialog')"),'gamepad menu navigation never scrolls the result');
+ for(const type of ['dead','complete']){
+  g.startRun();t.setEnemies([]);t.p.x=3300;
+  if(type==='dead')t.deadMenu();else t.completeMenu();
+  assert(node('menu').classList.contains('result-dialog'),type+' sets layout mode');
+  const menu=node('menu').innerHTML;
+  assert(menu.includes('class="result-screen"')&&menu.includes('result-payout')&&menu.includes('result-actions'));
+  assert(menu.includes('run-result-grid')&&menu.includes('result-tip'),'all details and controls remain present');
+  assert(menu.includes('data-action="hub"')&&menu.includes('data-action="start"'),'both result buttons preserved');
+  assert(!node('menu').classList.contains('reward-dialog'),'result mode does not inherit reward scrolling');
+ }
+ t.hubMenu();assert(!node('menu').classList.contains('result-dialog'),'opening Hub clears result-only CSS state');
+});
+test('hero remains fully opaque during invulnerability and does not crossfade on entrance',()=>{
+ const paint=html.slice(html.indexOf('function paintZ(x,y,z,externalOpacity=1){'),
+  html.indexOf('function syncZSprite(){'));
+ assert(paint.includes('ctx.globalAlpha=externalOpacity;'),
+  'hero bitmap is unaffected by invulnerability oscillation');
+ assert(!paint.includes('p.inv>0&&Math.sin'),'removes 67% invincibility alpha flicker entirely');
+ const entry=html.slice(html.indexOf('function drawHeroEntryCinematic(){'),
+  html.indexOf('// Each confirmed combo impact'));
+ assert(entry.includes('stagePoseOpacity>=.5')&&entry.includes('paintZ(actorScreenX,p.y,p.z,1)'),
+  'intro swaps only at the matching pose and renders full-opacity hero');
+ assert(!entry.includes('ctx.globalAlpha=1-stagePoseOpacity'),
+  'intro image no longer fades to partially transparent outline');
+});
 test('opening battle spawns one small squad just beyond the screen',()=>{
  g.startRun();
  const live=t.getEnemies().filter(e=>!e.dead);
