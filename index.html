@@ -1960,10 +1960,111 @@ body{position:fixed;inset:0;touch-action:manipulation}
  #stageWrap #menu.hub-dialog .hub-card-info .hub-desc{display:none!important}
 }
 </style>
+
+<style id="project-z-final-bitmap-bi-v1">
+/* Final 2026-11 PROJECT Z logo uses the approved ORIGINAL bitmap artwork.
+   Never stretch the graphic, paint a fake vector logo or crop the punch. */
+#app>.masthead .brand{align-items:flex-start;justify-content:center;max-width:min(42vw,380px)}
+#app>.masthead .masthead-brand-bi{
+ display:block;width:auto;max-width:min(36vw,340px);
+ height:clamp(28px,3.8vh,44px);max-height:44px;
+ object-fit:contain;object-position:left center;
+ filter:drop-shadow(0 2px 4px #000c);
+}
+#stageWrap #menu.title-dialog{
+ position:relative!important;isolation:isolate;
+ width:min(1050px,calc(100% - 12px))!important;
+ min-height:min(570px,calc(100% - 12px))!important;
+ max-height:100%!important;
+ display:flex!important;flex-direction:column!important;justify-content:flex-end!important;
+ padding:clamp(9px,1.4vh,18px) clamp(12px,2.4vw,30px)!important;
+ overflow:hidden!important;
+}
+#stageWrap #menu.title-dialog .title-full-bi{
+ display:block!important;position:absolute!important;
+ inset:0!important;width:100%!important;height:100%!important;
+ object-fit:cover!important;object-position:center center!important;
+ z-index:0!important;pointer-events:none!important;
+ border:0!important;max-width:none!important;
+}
+#stageWrap #menu.title-dialog .title-bi-fade{
+ display:block;position:absolute;inset:0;z-index:1;pointer-events:none;
+ background:linear-gradient(to bottom,transparent 0%,transparent 43%,#04091655 56%,#06101cc9 72%,#06101cf7 100%);
+}
+#stageWrap #menu.title-dialog .eyebrow,
+#stageWrap #menu.title-dialog .title-bi-accessible{
+ position:absolute!important;width:1px!important;height:1px!important;
+ margin:0!important;padding:0!important;overflow:hidden!important;
+ clip-path:inset(50%)!important;white-space:nowrap!important;
+}
+#stageWrap #menu.title-dialog .desc,
+#stageWrap #menu.title-dialog .feature-row,
+#stageWrap #menu.title-dialog .title-base-stats,
+#stageWrap #menu.title-dialog .buttons,
+#stageWrap #menu.title-dialog .micro,
+#stageWrap #menu.title-dialog .all-face-confirm-hint{
+ position:relative!important;z-index:2!important;
+}
+#stageWrap #menu.title-dialog .desc{
+ max-width:100%!important;color:#f6f7ff!important;
+ text-shadow:0 2px 5px #000,0 0 9px #000!important;
+ font-size:clamp(10px,1.65vh,14px)!important;
+ margin:0 0 5px!important;
+}
+#stageWrap #menu.title-dialog .feature-row{
+ display:flex;gap:5px!important;flex-wrap:wrap;
+ margin:0 0 5px!important;
+}
+#stageWrap #menu.title-dialog .feature-row span{
+ background:#0b1728d9!important;border-color:#d93e80aa!important;
+}
+#stageWrap #menu.title-dialog .title-base-stats{
+ margin:0 0 4px!important;background:#091524eb!important;
+}
+#stageWrap #menu.title-dialog .buttons{
+ margin:3px 0 4px!important;gap:8px!important;
+ justify-content:space-between!important;flex-wrap:nowrap!important;
+}
+#stageWrap #menu.title-dialog .buttons>button{
+ flex:1 1 0;min-width:0!important;
+ font-size:clamp(10px,1.75vh,15px)!important;
+ padding:7px 9px!important;min-height:clamp(36px,6vh,55px)!important;
+}
+#stageWrap #menu.title-dialog .micro{
+ margin:0 0 2px!important;font-size:clamp(8px,1.18vh,11px)!important;
+ text-shadow:0 2px 4px #000;
+}
+#app.compact-game-stage #stageWrap #menu.title-dialog{
+ min-height:min(100%,290px)!important;
+ width:min(100%,620px)!important;
+ justify-content:flex-end!important;
+}
+#app.compact-game-stage #stageWrap #menu.title-dialog .title-full-bi{
+ object-fit:cover!important;object-position:center 36%!important;
+}
+#app.compact-game-stage #stageWrap #menu.title-dialog .title-bi-fade{
+ background:linear-gradient(to bottom,#0000 0%,#03071433 33%,#060b17d9 57%,#060b17fc 100%);
+}
+#app.compact-game-stage #stageWrap #menu.title-dialog .buttons{
+ flex-direction:column!important;margin:0!important;
+}
+#app.compact-game-stage #stageWrap #menu.title-dialog .buttons>button{
+ width:100%!important;min-height:24px!important;
+ padding:2px 5px!important;font-size:clamp(9px,1.8vh,12px)!important;
+}
+@media (max-height:500px){
+ #stageWrap #menu.title-dialog .desc,
+ #stageWrap #menu.title-dialog .micro{display:none!important}
+ #stageWrap #menu.title-dialog .buttons>button{min-height:26px!important}
+}
+@media (prefers-reduced-motion:reduce){
+ #stageWrap #menu.title-dialog .title-full-bi{animation:none!important}
+}
+</style>
 </head>
 <body>
 <div id="app">
-  <header class="masthead"><div class="brand"><span class="brand-kicker">PROJECT Z–ACTION / PLAYABLE COMBAT PROTOTYPE</span><strong>REVENANT <em>STREET</em></strong></div><div class="status"><span class="status-dot"></span><span id="statusLabel">STANDBY</span><span class="ver">ALPHA 1.11</span></div></header>
+  <header class="masthead"><div class="brand"><span class="brand-kicker">PROJECT Z–ACTION / PLAYABLE COMBAT PROTOTYPE</span><img class="masthead-brand-bi" src="./assets/ui/project-z-wordmark-bi-20261101.webp" alt="REVENANT STREET" width="840" height="288" decoding="async" /></div><div class="status"><span class="status-dot"></span><span id="statusLabel">STANDBY</span><span class="ver">ALPHA 1.11</span></div></header>
   <main class="stage-wrap" id="stageWrap">
     <canvas id="game" width="1280" height="720" aria-label="레버넌트 스트리트 게임 화면"></canvas>
 <svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs><filter id="z-alpha-key" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  4 -5 4 0 1"/></filter></defs></svg>
@@ -3882,7 +3983,7 @@ function showMenu(html){
 function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('reward-confirming');$('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){
  gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;
- showMenu(`<div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1>REVENANT <span>STREET</span></h1>
+ showMenu(`<img class="title-full-bi" src="./assets/ui/project-z-title-bi-20261101.webp" alt="" width="1672" height="941" decoding="async" fetchpriority="high" /><span class="title-bi-fade" aria-hidden="true"></span><div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1 class="title-bi-accessible">REVENANT STREET</h1>
  <p class="desc">비가 멈추지 않는 신-세운상가의 뒷골목. 인간이었던 자, <b class="key">Z</b>. 기계 신체에 남은 마지막 분노로 도시의 헌터들을 돌파하라.</p>
  <div class="feature-row"><span>TRUE 3D HITBOX</span><span>JUST PARRY</span><span>EXECUTION</span><span>OVERLOAD SHATTER</span></div>
  ${renderTitleBaseStats()}
