@@ -1,82 +1,87 @@
 #!/usr/bin/env python3
-"""Repack the RED HOOD INTRUDER Crimson Dive, without sacrificing limbs or VFX.
+"""Exact eight-cell repack of the NEW red-hood intruder's Crimson Dive.
 
-The artist's original 1774x887 4x2 PNG crowded its 443/444px source cells,
-and the runtime eroded/auto-cropped those cells. Preserve each of the eight
-original illustrated poses at its native pixels, separate them into 576x576
-safe cells, and softly continue only the RED painted energy at a hard seam.
-Do not borrow Iron Mask elite or regular red-hood combat art.
+The published 1774×887 4×2 original has orphaned hood, cape and effect parts
+inside adjacent poses. Preserve the artist's complete transparent pixels and
+reattach identified edge fragments before giving each motion its own 608px cell.
+No vector art, no borrowing another enemy, no altered costume.
 """
 from pathlib import Path
-from PIL import Image
-import json,math
+from PIL import Image,ImageDraw
+import json
 ROOT=Path(__file__).resolve().parents[1]
 DIR=ROOT/'assets/enemies/redhood-intruder'
 SRC=DIR/'special.png'
 OUT=DIR/'special-fullframe.webp'
 REPORT=DIR/'special-fullframe-bounds.json'
-source=Image.open(SRC).convert('RGBA')
-assert source.size==(1774,887), f'Unexpected original red-hood source dimensions: {source.size}'
-CW=CH=576
-atlas=Image.new('RGBA',(CW*4,CH*2))
-stats=[]
+im=Image.open(SRC).convert('RGBA')
+assert im.size==(1774,887),f'Unexpected original source dimensions {im.size}'
+W=H=608
 SOURCE_FOOT=[440,443,409,436,410,418,407,417]
-
-def extend_bitmap_crimson_edges(canvas,cell,ox,oy):
-    """Reconstruct fading portions of red bitmap streaks clipped at a gridline.
-
-    No polygon/vector art and no fake limbs. Only original sampled scarlet
-    stroke pixels get a short natural alpha tail within the safe 66px padding.
-    """
-    src=cell.load();dst=canvas.load();w,h=cell.size
-    extended=0
-    for side in ('left','right'):
-        x=0 if side=='left' else w-1
-        for y in range(3,h-3):
-            r,g,b,a=src[x,y]
-            if not (a>=18 and r>=95 and r>g*1.42 and r>b*1.21):
-                continue
-            # Continue original edge colors with a diminishing transparent tip,
-            # not the adjoining frame's unrelated glove, cloak or boot.
-            for d in range(1,31):
-                nx=ox-d if side=='left' else ox+w-1+d
-                if nx<0 or nx>=CW:break
-                k=max(0.0,(1-d/31)**1.65)
-                strength=round(a*k*.77)
-                if strength<3:break
-                old=dst[nx,oy+y]
-                if strength>old[3]:
-                    dst[nx,oy+y]=(r,g,b,strength)
-                    extended+=1
-    return extended
-
+cells=[]
 for i in range(8):
-    c,r=i%4,i//4
-    x0=round(c*source.width/4);x1=round((c+1)*source.width/4)
-    y0=round(r*source.height/2);y1=round((r+1)*source.height/2)
-    piece=source.crop((x0,y0,x1,y1))
-    w,h=piece.size
-    pad_x=(CW-w)//2
-    pad_y=(CH-h)//2
-    safe=Image.new('RGBA',(CW,CH),(0,0,0,0))
-    safe.paste(piece,(pad_x,pad_y))
-    restored=extend_bitmap_crimson_edges(safe,piece,pad_x,pad_y)
-    bbox=safe.getchannel('A').point(lambda a:255 if a>=20 else 0).getbbox()
-    if bbox is None:raise RuntimeError(f'redhood special frame {i+1} is blank')
-    margins=[bbox[0],bbox[1],CW-bbox[2],CH-bbox[3]]
-    if min(margins)<27:raise RuntimeError(f'Frame {i+1} unsafe: {margins}')
-    # Keep each existing drawn frame's own grounded foot reference.
-    new_foot=pad_y+SOURCE_FOOT[i]
-    if new_foot>=CH-20:raise RuntimeError(f'Invalid foot baseline on {i+1}')
-    atlas.alpha_composite(safe,(c*CW,r*CH))
-    stats.append({'frame':i+1,'source_size':[w,h],
-                  'bbox':bbox,'margins':margins,'foot':new_foot,
-                  'extended_crimson_pixels':restored})
-    print('RED HOOD DIVE',i+1,'/8 safe margins',margins,'foot',new_foot,'crimson',restored,flush=True)
-
-atlas.save(OUT,'WEBP',quality=96,method=6)
-check=Image.open(OUT)
-assert check.size==(2304,1152) and OUT.stat().st_size>150000
-REPORT.write_text(json.dumps({'original':str(SRC.relative_to(ROOT)),
- 'output':str(OUT.relative_to(ROOT)), 'cell':[CW,CH],'frames':stats},indent=2))
-print('PASS: Eight complete packed red-hood Crimson Dive cells, original resolution preserved',OUT.stat().st_size,flush=True)
+    col,row=i%4,i//4
+    # Match the JS renderer's Math.round on positive source coordinates.
+    x0=(col*im.width//4) if col%2==0 else (col*im.width*2//4+1)//2
+    x1=((col+1)*im.width//4) if (col+1)%2==0 else (((col+1)*im.width*2//4+1)//2)
+    y0=0 if row==0 else (im.height+1)//2
+    y1=(im.height+1)//2 if row==0 else im.height
+    cells.append(im.crop((x0,y0,x1,y1)))
+# Explicit cross-cell ownership, verified against half-size connected
+# component audit. The next frame's left-edge fragments are NOT that frame's
+# hood/arm; they belong to the preceding motion. Likewise the right-edge
+# splashes on frame 5 belong to the following impact frame.
+# (source frame, recipient frame, rectangle, direction)
+recoveries=[
+ (3,2,(0,92,54,278),'previous'),  # frame 4 contained frame 3's hood/fist
+ (6,5,(0,316,48,416),'previous'), # frame 7 contained frame 6's ground VFX
+ (7,6,(0,314,40,398),'previous'), # frame 8 contained frame 7's dust
+ (4,5,(410,254,444,410),'next'), # frame 5 held frame 6's left-side splashes
+]
+fragments=[]
+for from_i,to_i,box,direction in recoveries:
+    src=cells[from_i]
+    left,top,right,bottom=box
+    assert right<=src.width and bottom<=src.height
+    fragment=src.crop(box)
+    count=sum(1 for alpha in fragment.getchannel('A').getdata() if alpha>=24)
+    if count<20:raise RuntimeError(f'Unexpectedly blank transferred fragment {from_i+1}: {count}')
+    ImageDraw.Draw(src).rectangle((left,top,right-1,bottom-1),fill=(0,0,0,0))
+    # Place the recovered pixels in their original neighboring source position:
+    # right after the prior cell, or just before the next cell.
+    relative_x=(cells[to_i].width+left) if direction=='previous' else (left-src.width)
+    fragments.append((to_i,fragment,relative_x,top,from_i,count))
+    print(f'REATTACH source {from_i+1} -> frame {to_i+1}: {count} artist pixels',flush=True)
+output=Image.new('RGBA',(W*4,H*2))
+stats=[]
+for i,cell in enumerate(cells):
+    stage=Image.new('RGBA',(W,H))
+    pad_x=(W-cell.width)//2
+    pad_y=(H-cell.height)//2
+    stage.alpha_composite(cell,(pad_x,pad_y))
+    restored=0
+    for to_i,fragment,source_x,source_y,from_i,pixel_count in fragments:
+        if to_i!=i:continue
+        # x and y measured in the target's original cell coordinates.
+        px=pad_x+source_x
+        py=pad_y+source_y
+        if px<10 or py<10 or px+fragment.width>W-10 or py+fragment.height>H-10:
+            raise RuntimeError(f'Reattached fragment cannot fit frame {i+1}')
+        stage.alpha_composite(fragment,(px,py))
+        restored+=pixel_count
+    # The trim is non-destructive: preserve all originally painted contours.
+    box=stage.getchannel('A').point(lambda a:255 if a>=22 else 0).getbbox()
+    if not box:raise RuntimeError(f'Empty red-hood motion frame {i+1}')
+    margins=[box[0],box[1],W-box[2],H-box[3]]
+    if min(margins)<18:raise RuntimeError(f'Unsafe red-hood motion frame {i+1}: {margins}')
+    foot=pad_y+SOURCE_FOOT[i]
+    if not 0<foot<H-20:raise RuntimeError(f'Bad foot anchor {i+1}: {foot}')
+    output.alpha_composite(stage,((i%4)*W,(i//4)*H))
+    stats.append({'frame':i+1,'bbox':box,'margins':margins,
+       'foot':foot,'recovered_neighbor_pixels':restored})
+    print('RED-HOOD SPECIAL',i+1,'/8','bbox',box,'margins',margins,'anchor',foot,flush=True)
+output.save(OUT,'WEBP',quality=95,method=6)
+assert Image.open(OUT).size==(4*W,2*H) and OUT.stat().st_size>180000
+REPORT.write_text(json.dumps({'source':str(SRC.relative_to(ROOT)),
+ 'output':str(OUT.relative_to(ROOT)),'cell':[W,H], 'frames':stats},indent=2))
+print('PASS: 8 unique real Crimson Dive poses, corrected neighbor-sprite ownership',OUT.stat().st_size,flush=True)
