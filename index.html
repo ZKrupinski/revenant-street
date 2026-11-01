@@ -5840,7 +5840,7 @@ function updateEnemies(dt,parryVictimScale=1){
   if(!spawnNextEncounter()&&squadIndex<(SQUAD_SPOTS[wave]?.length||0)){
    if(lastEncounterCleared!==squadIndex){
     lastEncounterCleared=squadIndex;
-    flash('적 무리 격파! 전진하면 다음 무리가 몰려옵니다',1.4);
+    flash('적 무리 격파! 전진하면 다음 무리가 몰려옵니다',1.9,'phase-clear');
    }
   }
  }
