@@ -24,7 +24,7 @@ const rules=[
  "spawnGroundSlamFx(e.x+e.face*35,e.y,1.20,'elite')",
  "spawnGroundSlamFx(e.x,e.y,1.40,'elite')",
  "if(f.kind==='groundSlamSprite')",
- "['지면강타 8프레임 비트맵',()=>ensureBitmapDecoded(GROUND_SLAM_ART.image),true]"
+ "['지면강타 8프레임 비트맵',()=>ensureBitmapDecoded(GROUND_SLAM_ART.image)]"
 ];
 for(const x of rules)assert(html.includes(x),'missing shared ground-slam source, anchor, or combat hookup: '+x);
 assert(!html.includes("spawnModBitmap('red',e.x,e.y-32,3.45"),'old overlapping red-hood explosion removed');

@@ -5,7 +5,7 @@ const code=html.slice(html.indexOf('async function requestRunStart(){'),html.ind
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return {promise,resolve,reject}};
 async function startup(fail=false){
  const music=deferred(),art=deferred(),voices=deferred();let starts=0,prepared=0,menu='';
- const nodes=new Map();const world={loadingRun:false,gameState:'title',setTimeout,Error,Promise,
+ const nodes=new Map();const world={loadingRun:false,gameState:'title',setTimeout,clearTimeout,Error,Promise,
  $:id=>{if(!nodes.has(id))nodes.set(id,{style:{}});return nodes.get(id)},
  resetFailedSceneArt(){},resetFailedUiBitmaps(){},requestGameFullscreen(){},buildSquareUpgradeIconAtlas:()=>true,prepareIntruderSpriteCrops(){},prepareStreetSeamProps(){},showMenu:s=>menu=s,waitSceneArt:()=>art.promise,depthBackdrop:()=>prepared++,img:{street_pano:{}},startRun:()=>starts++,prepareCombatVoices:()=>voices.promise,
  window:{location:{search:''},__revenantBgm:{prepare:()=>music.promise,beginPlayback:()=>Promise.resolve()}}};
@@ -202,7 +202,7 @@ function optionalArt(){
  const w={requiredSceneArt:()=>[['sidekick',()=>({failed:true,ready:false}),optional]],performance:{now:()=>0},
  setInterval:fn=>{tick=fn;return 1},clearInterval(){},Promise:class{constructor(fn){fn(()=>resolved=true,()=>rejected=true)}},Error};
  vm.createContext(w);vm.runInContext(html.slice(html.indexOf('function waitSceneArt('),html.indexOf('async function requestRunStart(')),w);
- w.waitSceneArt(false);tick();assert.equal(resolved,optional);assert.equal(rejected,!optional);
+ w.waitSceneArt(false);assert.equal(resolved,optional);assert.equal(rejected,!optional);
  }
  console.log('PASS: unavailable extra combo does not block start; required artwork still blocks');
 }

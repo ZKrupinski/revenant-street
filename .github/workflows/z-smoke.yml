@@ -31,6 +31,8 @@ jobs:
         run: node tests/neon-cybernetic-ui.cjs
       - name: Loading and music readiness regression tests
         run: node tests/loading-audio.cjs
+      - name: Title first navigation and startup performance regression
+        run: node tests/startup-performance.cjs
       - name: Combat and animation regression tests
         run: node tests/assassin-combat.cjs
       - name: Shared hand-painted ground slam 8F PNG regression
