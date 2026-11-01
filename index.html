@@ -4365,7 +4365,7 @@ function showMenu(html){
  }
  // Do not pre-focus any button or paint the cyan gamepad selection on entry.
  // A real keyboard/gamepad direction (or user focus) calls selectMenuItem().
- for(const b of $('menu').querySelectorAll('button.pad-selected'))b.classList.remove('pad-selected');
+ // innerHTML replacement creates new buttons without pad-selected state.
 }
 function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('reward-confirming');$('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){
