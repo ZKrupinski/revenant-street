@@ -6041,7 +6041,7 @@ function enemyAttack(e){
   p.parryRecoilDuration=.24;p.parryRecoilTime=.24;
   p.parryRecoilRemaining=e.type==='boss'?25:19;
   // Replace the inflated shield / blue bitmap / golden burst stack with the user's ten-frame sprite.
-  spawnParrySuccessFx(p.x+p.facing*62,p.y-140,p.facing);
+  spawnParrySuccessFx(p.x+p.facing*42,p.y-132,p.facing);
   floatText('JUST PARRY!',p.x,p.y-220,'#7df7ff');
   flash('패링 성공! 공격으로 추격!',1.35);
   screenShake=Math.max(screenShake,31);hitStop=Math.max(hitStop,.16);
@@ -7271,6 +7271,15 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  ctx.restore();
  if(!isP&&!a.dead){const y0=y-z-h-13;/* All enemy overhead HP/poise bars removed, including boss. */if(a.windup>0){ctx.textAlign='center';ctx.fillStyle='#ff697b';ctx.font=`900 ${boss?40:27}px Arial`;ctx.fillText('!',x,y0-13)}
  if(a.chargePrep>0){ctx.textAlign='center';ctx.fillStyle='#ffb842';ctx.font='900 31px Arial';ctx.fillText('!!',x,y0-18)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('공격 → 처형',x,y0-12)}}}
+// Sample the interior of each 5x2 source cell with integer edges: no adjacent-frame bleed.
+function parrySuccessSourceRect(w,h,frame){
+ const col=frame%5,row=Math.floor(frame/5);
+ const x0=Math.round(col*w/5),x1=Math.round((col+1)*w/5);
+ const y0=Math.round(row*h/2),y1=Math.round((row+1)*h/2);
+ const tileW=x1-x0,tileH=y1-y0;
+ const padX=Math.ceil(tileW*.06),padY=Math.ceil(tileH*.08);
+ return {sx:x0+padX,sy:y0+padY,sw:tileW-2*padX,sh:tileH-2*padY};
+}
 function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+820;for(const f of fx){if(f.x<left||f.x>right)continue;
  if(f.kind==='dashPierceSprite'){drawDashPierceSprite(f);continue;}
   if(f.kind==='parryCounterSprite'){drawParryCounterSprite(f);continue;}
@@ -7306,11 +7315,12 @@ function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+82
  if(f.kind==='parrySuccess10'){
   const a=parrySuccessImage,progress=clamp(1-f.life/f.maxLife,0,.9999),frame=Math.min(9,Math.floor(progress*10));
   if(a.complete&&a.naturalWidth===1536&&a.naturalHeight===1024){
-   const fw=a.naturalWidth/5,fh=a.naturalHeight/2,w=240,h=240*fh/fw;
+   const crop=parrySuccessSourceRect(a.naturalWidth,a.naturalHeight,frame);
+   const w=210,h=w*crop.sh/crop.sw; // slightly smaller, same source aspect ratio
    ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.face,1);
-   // Screen compositing keys out the solid black RGB sheet without any rectangular border.
+   // Screen compositing keys out black; inset avoids interpolation from neighboring cells.
    ctx.globalCompositeOperation='screen';ctx.globalAlpha=Math.min(1,f.life/.07);
-   ctx.drawImage(a,(frame%5)*fw,Math.floor(frame/5)*fh,fw,fh,-w*.26,-h*.5,w,h);
+   ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.18,-h*.5,w,h);
    ctx.restore();
   }
   continue;
