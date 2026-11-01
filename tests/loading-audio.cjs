@@ -204,6 +204,27 @@ async function uiBitmapPreload(){
  assert(source.includes('function ensureBitmapDecoded(image)'),'decoder readiness tracker is present');
  const vmWorld={Promise,WeakMap,Date,Image:class{constructor(){this.complete=false;this.naturalWidth=0;this.naturalHeight=0}},document:{documentElement:{style:{setProperty(){}}}}};
  vm.createContext(vmWorld);vm.runInContext(source,vmWorld);
+ // CSS-only frames used to download lazily when the first reward/HUB opened.
+ // Require the exact URL used in the stylesheet and a decoded start gate.
+ const chrome=vm.runInContext('UI_CHROME_SOURCES.map(({label,url,cssVar,image})=>({label,url,cssVar,loaded:!!image}))',vmWorld);
+ const files=chrome.map(item=>item.url);
+ assert.equal(chrome.length,12,'all 10 popup CSS bitmaps and 2 title graphics are preloaded');
+ assert.equal(new Set(files).size,chrome.length,'preloaded CSS assets must not be duplicated');
+ assert(chrome.every(item=>item.loaded),'all CSS image requests start before the battle');
+ assert(html.includes("...UI_CHROME_SOURCES.map(item=>['UI '+item.label,()=>ensureBitmapDecoded(item.image)])"),
+  'start checks every UI frame and its decoded pixels, not merely a network fetch');
+ assert(html.includes("document.documentElement?.style?.setProperty(item.cssVar"),
+  'failed border-image URLs must be cache-busted in the live CSS on retry');
+ const styles=[...html.matchAll(/<style[^>]*>([\\s\\S]*?)<\\/style>/g)].map(x=>x[1]).join('\\n');
+ for(const item of chrome){
+  assert(styles.includes(item.url)||item.url.includes('project-z-title-bi')||item.url.includes('project-z-wordmark-bi'),
+   'chrome preloader must point to the same URL used by CSS: '+item.url);
+  const file=path.join(root,item.url.replace(/^\\.\\//,''));
+  const b=fs.readFileSync(file);
+  assert(b.length>3000,'chrome asset is nonempty: '+item.url);
+  if(item.url.endsWith('.png'))assert.equal(b.subarray(0,8).toString('hex'),'89504e470d0a1a0a','PNG chrome decode source');
+  else assert.equal(b.subarray(0,4).toString('ascii'),'RIFF','WebP title decode source');
+ }
  const d=deferred(),bitmap={complete:false,naturalWidth:640,naturalHeight:256,decode:()=>d.promise};
  const before=vmWorld.ensureBitmapDecoded(bitmap);
  assert.equal(before.ready,false,'downloaded bitmap is not marked ready until decoding resolves');
