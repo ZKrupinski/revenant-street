@@ -2132,6 +2132,109 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 </style>
 
+<style id="hub-card-no-overlap-v8">
+/* Responsive HUB module. Size icons from EACH CARD'S height, not the 16:9 stage.
+   The old 25cqh read the stage height, allowing artwork to cover the text. */
+#stageWrap #menu.hub-dialog .hub-modules .hub-module{
+ container-name:hub-upgrade-card;
+ container-type:size;
+ box-sizing:border-box!important;
+ display:flex!important;flex-direction:column!important;
+ align-items:center!important;justify-content:flex-start!important;
+ height:100%!important;max-height:100%!important;min-height:0!important;
+ gap:clamp(2px,.7cqh,5px)!important;
+ padding:clamp(5px,1cqh,10px)!important;
+ overflow:hidden!important;
+ grid-template-columns:none!important;grid-template-rows:none!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-art-slot{
+ box-sizing:border-box!important;
+ display:flex!important;flex-direction:column!important;
+ align-items:center!important;justify-content:center!important;
+ width:100%!important;height:auto!important;min-height:0!important;
+ flex:0 0 auto!important;margin:0!important;padding:0!important;
+ border:0!important;border-right:0!important;overflow:hidden!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-art-slot .hub-emblem{
+ display:block!important;position:relative!important;
+ box-sizing:border-box!important;
+ width:min(138px,38cqh,70cqw)!important;
+ height:min(138px,38cqh,70cqw)!important;
+ flex:0 0 auto!important;min-width:0!important;min-height:0!important;
+ max-width:100%!important;max-height:100%!important;
+ aspect-ratio:1/1!important;
+ padding:0!important;margin:0 auto!important;
+ overflow:hidden!important;border:0!important;background:transparent!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-emblem .upgrade-art{
+ display:block!important;box-sizing:border-box!important;
+ width:100%!important;height:100%!important;
+ max-width:100%!important;max-height:100%!important;
+ aspect-ratio:1/1!important;margin:0!important;
+ background-size:500% 500%!important;background-repeat:no-repeat!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-card-info{
+ box-sizing:border-box!important;position:static!important;
+ display:flex!important;flex-direction:column!important;
+ align-items:center!important;justify-content:flex-end!important;
+ width:100%!important;min-width:0!important;min-height:0!important;
+ flex:1 1 auto!important;max-height:none!important;overflow:hidden!important;
+ gap:clamp(1px,.45cqh,4px)!important;
+ margin:0!important;padding:0!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-module-name{
+ box-sizing:border-box!important;position:static!important;
+ top:auto!important;left:auto!important;right:auto!important;
+ display:flex!important;flex-direction:column!important;
+ flex:0 0 auto!important;align-items:center!important;justify-content:center!important;
+ margin:0!important;padding:0!important;min-width:0!important;
+ width:100%!important;text-align:center!important;
+ font-size:clamp(11px,5.7cqh,17px)!important;line-height:1.1!important;
+ white-space:normal!important;word-break:keep-all!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-module-name small{
+ font-size:clamp(9px,3.7cqh,11px)!important;line-height:1.05!important;
+ margin:1px 0 0!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-forecast{
+ box-sizing:border-box!important;position:static!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ flex:0 0 auto!important;flex-wrap:wrap!important;
+ width:100%!important;min-width:0!important;max-height:none!important;
+ margin:0!important;padding:0!important;gap:1px 4px!important;
+ font-size:clamp(10px,5cqh,15px)!important;line-height:1.12!important;
+ text-align:center!important;overflow:visible!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-desc{
+ display:none!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-buy{
+ box-sizing:border-box!important;position:static!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ flex:0 0 auto!important;width:76%!important;max-width:100%!important;
+ height:clamp(24px,15cqh,38px)!important;min-height:0!important;
+ margin:clamp(2px,.65cqh,5px) auto 0!important;
+ padding:2px 6px!important;
+ gap:clamp(5px,3cqw,12px)!important;
+ font-size:clamp(10px,5cqh,14px)!important;line-height:1.1!important;
+ white-space:nowrap!important;overflow:hidden!important;
+}
+/* Portrait-mode letterboxing can make the card less than 220px high. */
+@container hub-upgrade-card (max-height:220px){
+ .hub-card-info .hub-module-name small{display:none!important}
+ .hub-card-info .hub-forecast{font-size:clamp(10px,5.8cqh,12px)!important}
+ .hub-card-info .hub-buy{margin-top:2px!important}
+}
+@container hub-upgrade-card (max-height:165px){
+ .hub-art-slot .hub-emblem{
+  width:min(68px,34cqh,55cqw)!important;
+  height:min(68px,34cqh,55cqw)!important;
+ }
+ .hub-card-info .hub-module-name{font-size:clamp(10px,7.5cqh,12px)!important}
+ .hub-card-info .hub-buy{height:22px!important;font-size:10px!important}
+}
+</style>
+
 <style id="project-z-final-bitmap-bi-v1">
 /* Final 2026-11 PROJECT Z logo uses the approved ORIGINAL bitmap artwork.
    Never stretch the graphic, paint a fake vector logo or crop the punch. */
