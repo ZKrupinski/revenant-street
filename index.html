@@ -2083,6 +2083,55 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 </style>
 
+<style id="reward-large-icons-v1">
+/* Combat reward cards only: enlarge original 25-cell bitmap atlas artwork.
+   Preserve three columns, square icon cuts and all choice/click behaviors. */
+#stageWrap #menu.reward-dialog .choice-grid .upgrade-btn .sym{
+ display:flex!important;
+ flex:none!important;flex-direction:column!important;
+ width:100%!important;min-width:0!important;
+ align-items:center!important;justify-content:center!important;
+ gap:clamp(4px,.8cqh,8px)!important;
+}
+#stageWrap #menu.reward-dialog .choice-grid .upgrade-btn .sym .upgrade-art{
+ display:block!important;flex:0 0 auto!important;
+ box-sizing:border-box!important;
+ width:clamp(100px,26cqh,176px)!important;
+ height:clamp(100px,26cqh,176px)!important;
+ max-width:72%!important;max-height:none!important;
+ aspect-ratio:1 / 1!important;
+ margin:clamp(1px,.35cqh,4px) auto clamp(4px,.75cqh,8px)!important;
+ padding:0!important;
+ border:0!important;border-radius:0!important;
+ background-size:500% 500%!important;
+ background-repeat:no-repeat!important;
+ image-rendering:auto!important;
+ object-fit:contain!important;
+ box-shadow:none!important;
+ filter:drop-shadow(0 0 9px #5cc7f748)!important;
+}
+#stageWrap #menu.reward-dialog .choice-grid .upgrade-btn .sym .up-lvl{
+ align-self:flex-start!important;
+ margin:0!important;
+}
+/* Short landscape and letterboxed mobile stages retain legible text and
+   avoid growing the cards beyond their available height. */
+#app.tight-hub-stage #stageWrap #menu.reward-dialog .choice-grid .upgrade-btn .sym .upgrade-art{
+ width:clamp(76px,19cqh,134px)!important;
+ height:clamp(76px,19cqh,134px)!important;
+ max-width:72%!important;
+}
+#app.compact-game-stage #stageWrap #menu.reward-dialog .choice-grid .upgrade-btn .sym .upgrade-art{
+ width:clamp(38px,14cqh,88px)!important;
+ height:clamp(38px,14cqh,88px)!important;
+ max-width:70%!important;
+ margin:0 auto 2px!important;
+}
+#app.compact-game-stage #stageWrap #menu.reward-dialog .choice-grid .upgrade-btn .sym{
+ gap:2px!important;
+}
+</style>
+
 <style id="project-z-final-bitmap-bi-v1">
 /* Final 2026-11 PROJECT Z logo uses the approved ORIGINAL bitmap artwork.
    Never stretch the graphic, paint a fake vector logo or crop the punch. */
