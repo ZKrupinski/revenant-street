@@ -8,6 +8,7 @@ on:
       - assets/ui/upgrade-icons-v4.webp
       - assets/industrial-combat-bgm.js
       - assets/voice/**
+      - assets/vfx/**
       - tests/**
       - .github/workflows/z-smoke.yml
   workflow_dispatch:
@@ -32,6 +33,8 @@ jobs:
         run: node tests/loading-audio.cjs
       - name: Combat and animation regression tests
         run: node tests/assassin-combat.cjs
+      - name: Shared hand-painted ground slam 8F PNG regression
+        run: node tests/ground-slam-bitmap.cjs
       - name: All eight Iron Mask special frames, no skipped animation poses
         run: node tests/elite-eight-frame.cjs
       - name: Hooded Iron Mask full AI charge-and-strike regression
