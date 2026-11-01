@@ -2929,7 +2929,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 <script src="./assets/elite-ironmask.js?v=newhood-special-1f83b64-v2"></script>
 <script src="./assets/boss-hunter.js?v=fe00bed9"></script>
 <script src="./assets/attacks-20.js?v=923cd5b7"></script>
-<script src="./assets/voice/voice-engine.js?v=20261101-deep-voice-louder-v2"></script>
+<script src="./assets/voice/voice-engine.js?v=20261101-natural-human-voice-v3"></script>
 <script>const EMBEDDED_ASSETS=window.RZ_ASSETS;</script>
 <script>
 (()=>{'use strict';
@@ -5552,7 +5552,7 @@ function hurtEnemy(e,dmg,poise){
  e.encountered=true; // A hit counts as detection even through long stun / knockback.
  e.hp-=dmg;
  if(e.hp<=0){if(e.type==='boss'||e.type==='elite'||Math.random()<.48)playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e)}
- else if(Math.random()<.75)playCombatVoice('enemyHurt',e);
+ else if(Math.random()<.62)playCombatVoice('enemyHurt',e);
  e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:(e.type==='elite'||e.type==='intruder')?.80:1),0,e.maxPoise);
 
  // The newly illustrated hooded IRON MASK must be allowed to show its special.
