@@ -17,7 +17,7 @@ for(const s of ['#stageWrap #menu.reward-dialog{','#stageWrap #menu.reward-dialo
 for(const s of ['class="up-progression"','class="${level?\'up-levelup\':\'up-new\'}"','class="up-lvl"','class="choice-grid"']){
  assert(html.includes(s),'reward card hierarchy missing: '+s);
 }
-assert(html.includes("class=\"hub-module hub-${m.id}"),'hub cards retain existing ID/selection and gamepad semantics');
+assert(html.includes("class=\"hub-module hub-centered-card hub-${m.id}"),'hub centered cards retain ID/selection and gamepad semantics');
 assert(!css.includes('data:image/svg'),'cybernetic design must be bitmap based, not vector art');
 const iconPath=path.join(root,'assets/ui/upgrade-icons-v4.webp');
 const atlas=fs.readFileSync(iconPath);
