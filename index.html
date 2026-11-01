@@ -4354,7 +4354,7 @@ function showMenu(html){
  $('menu').classList.toggle('reward-dialog',gameState==='reward');
  $('menu').classList.remove('title-dialog');$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;
  // Keep menus visually neutral until navigation. Title confirm defaults to GAME START.
- menuPad.index=$('menu').querySelector('.title-action-row')?1:0;
+ menuPad.index=html.includes('class="buttons title-action-row"')?1:0;
  menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
  // Four face buttons are equivalent CONFIRM on title, REBEL HUB,
  // pause, defeat, and upgrade panels; movement still picks the focus.
