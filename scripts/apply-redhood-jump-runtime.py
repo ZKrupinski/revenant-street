@@ -40,4 +40,14 @@ updated=""" if(/(?:[?&])intruder=(preview|entry)(?:&|$)/.test(window.location?.s
 replace_once(html,original,updated)
 test=ROOT/'tests/assassin-combat.cjs'
 replace_once(test,old_source[old_source.index('image.src='):-1],new_source[new_source.index('image.src='):-1])
+# Existing 4 red-hood punch/death/hit tests quoted the exact old conditional.
+# Preserve their assertions while adding 'special' to the non-destructive path.
+prior_guard="if(name==='hit'||name==='death'||name==='attack'){"
+fixed_guard="if(name==='hit'||name==='death'||name==='attack'||name==='special'){"
+text=test.read_text()
+if prior_guard in text:
+    test.write_text(text.replace(prior_guard,fixed_guard))
+elif fixed_guard not in text:
+    raise RuntimeError('Redhood frame-preservation test guard was not found')
+
 print('PASS: red hood real-game atlas swapped, sprite extraction kept complete, QA routes ready')
