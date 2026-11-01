@@ -3099,6 +3099,88 @@ body{position:fixed;inset:0;touch-action:manipulation}
  transform:none!important;translate:none!important;
 }
 </style>
+<style id="reward-cyan-glow-entry-v1">
+/* 3 combat upgrade cards use existing cyan PNG frames; not red/pink focus. */
+#stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn{
+ position:relative!important;transform:none!important;translate:none!important;
+}
+#stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn::before{
+ content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+ box-sizing:border-box;border:8px solid transparent;
+ border-image:var(--z-frame-cyan) 36 / 8px / 0 stretch;
+ opacity:0;transition:opacity .12s ease;
+}
+#stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn.pad-selected,
+#stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn:focus-visible{
+ outline:none!important;border-image-source:var(--z-frame-cyan)!important;
+ box-shadow:inset 0 0 0 2px #b9faff,inset 0 0 19px #2cbbff88,0 0 12px #8aecff,0 0 28px #30aaffad!important;
+ filter:brightness(1.23) saturate(1.15)!important;
+ transform:none!important;translate:none!important;
+}
+#stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn.pad-selected::before,
+#stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn:focus-visible::before{
+ opacity:1;filter:drop-shadow(0 0 9px #b6f4ff) drop-shadow(0 0 15px #36bbff);
+}
+@media(hover:hover) and (pointer:fine){
+ #stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn:hover{
+  border-image-source:var(--z-frame-cyan)!important;outline:none!important;
+  box-shadow:inset 0 0 0 2px #b9faff,inset 0 0 19px #2cbbff88,0 0 12px #8aecff,0 0 28px #30aaffad!important;
+  filter:brightness(1.23) saturate(1.15)!important;transform:none!important;
+ }
+ #stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn:hover::before{
+  opacity:1;filter:drop-shadow(0 0 9px #b6f4ff) drop-shadow(0 0 15px #36bbff);
+ }
+}
+/* Touch/mouse down produces an immediate brighter rim. */
+#stageWrap #menu.reward-dialog .choice-grid>button.upgrade-btn:active{
+ border-image-source:var(--z-frame-cyan)!important;
+ box-shadow:inset 0 0 0 3px #e5feff,inset 0 0 24px #59cfffac,0 0 22px #bafaff,0 0 46px #28aaffdb!important;
+ filter:brightness(1.4)!important;
+}
+#stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen{
+ border-image-source:var(--z-frame-cyan)!important;
+ box-shadow:inset 0 0 0 3px #e2ffff,inset 0 0 27px #37c6ffac,0 0 20px #c8ffff,0 0 46px #64d9ff,0 0 70px #158fffbe!important;
+ filter:brightness(1.43) saturate(1.2)!important;
+ animation:zRewardCyanConfirm .75s cubic-bezier(.12,.8,.23,1) both!important;
+}
+#stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen::before{
+ opacity:1!important;animation:zRewardCyanRim .70s ease-out both;
+}
+#stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen::after{
+ background:#abedff!important;color:#0b2a40!important;
+ box-shadow:0 0 15px #b6f8ff,0 0 27px #31bdff!important;
+}
+/* Jolt as the popup enters, settling before buttons become active. */
+#stageWrap .overlay.visible:not(.reward-confirming) #menu.reward-dialog.reward-entrance{
+ animation:zRewardWindowEntrance .46s ease-out both!important;
+ transform-origin:center;
+}
+@keyframes zRewardWindowEntrance{
+ 0%{opacity:.12;transform:translate3d(0,18px,0) scale(.973)}
+ 25%{opacity:1;transform:translate3d(0,-3px,0) scale(1.008)}
+ 40%{transform:translate3d(-6px,2px,0) scale(1.004)}
+ 52%{transform:translate3d(5px,-2px,0) scale(1)}
+ 65%{transform:translate3d(-3px,1px,0) scale(1)}
+ 80%{transform:translate3d(2px,0,0) scale(1)}
+ 100%{opacity:1;transform:translate3d(0,0,0) scale(1)}
+}
+@keyframes zRewardCyanConfirm{
+ 0%{transform:scale(1)}
+ 28%{transform:scale(1.085)}
+ 62%{transform:scale(1.05)}
+ 100%{transform:scale(1.02)}
+}
+@keyframes zRewardCyanRim{
+ 0%{opacity:.52}
+ 28%{opacity:1;filter:drop-shadow(0 0 19px #ebffff) drop-shadow(0 0 33px #40c5ff)}
+ 100%{opacity:1;filter:drop-shadow(0 0 11px #c5faff) drop-shadow(0 0 21px #32baff)}
+}
+@media(prefers-reduced-motion:reduce){
+ #stageWrap .overlay.visible:not(.reward-confirming) #menu.reward-dialog.reward-entrance{animation:none!important}
+ #stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen,
+ #stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen::before{animation:none!important}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -5268,6 +5350,7 @@ function menuConfirm(){if(!menuReady()){menuPad.readyAt=Math.max(menuPad.readyAt
 function menuBack(){if(rewardSelection)return false;if(closeHubShardNotice())return true;const items=menuButtons();const back=items.find(b=>['resume','title','pauseMenu','hub'].includes(b.dataset.action));if(back){back.click();return true}return false}
 function showMenu(html){
  $('overlay').classList.remove('reward-confirming');
+ $('menu').classList.remove('reward-entrance');
  menuPad.readyAt=Date.now()+(gameState==='reward'?700:180);menuPad.armed=false;menuPad.neutralAt=Date.now();
  menuBlockedKeys.clear();for(const key of heldKeyboard)menuBlockedKeys.add(key);
  canvas.style.visibility='hidden';resetInputs();$('hint').hidden=true;gameState=gameState==='playing'?'paused':gameState;$('overlay').classList.add('visible');$('menu').innerHTML=html;if(gameState==='hub')$('menu').classList.add('hub-dialog');else $('menu').classList.remove('hub-dialog');
@@ -7864,6 +7947,9 @@ function rewardMenu(reason='wave'){
  const explanation=reason==='mid'?'재화 없이 1개 선택하면 전투가 이어집니다. 기존 강화도 중첩 가능.':
  '무료 선택 · 체력 +20 회복 · 다음 지역으로 이동. 모든 강화는 최대 6레벨까지 중첩됩니다.';
  showMenu(`<div class="eyebrow">PROJECT Z / CYBERNETIC GROWTH</div><h2>${headline}</h2><p>${explanation}</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT GROWTH — ${p.mods.length} STACKS · LEVEL ${level}</div><div class="pad-hint">WASD·패드 스틱/십자키로 선택 · 패드 A/B/X/Y 또는 키보드 화살표 아무 키로 확정 · 창이 뜨면 버튼을 놓고 다시 눌러주세요</div>`);
+ $('menu').classList.add('reward-entrance');
+ // Gentle hardware pulse if supported; the card/window visual shake is independent.
+ vibrateImpact('punch',true);
 }
 function finishRewardSelection(m){
  if(wave!==2||upgradeReason==='mid'){selectMod(m);return}
