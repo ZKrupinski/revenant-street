@@ -41,6 +41,32 @@ jobs:
               fi
             fi
           done
+      - name: Switch Pages to branch publishing to bypass stale workflow lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/pages"
+          curl -sS -o /tmp/pages-before.json \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' "${api}"
+          echo "Before source:"
+          jq -c '{status,build_type,source}' /tmp/pages-before.json
+          if [ "$(jq -r '.build_type' /tmp/pages-before.json)" = "workflow" ]; then
+            code=$(curl -sS -o /tmp/pages-switch.json -w '%{http_code}' \
+              -X PUT -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              -H 'Content-Type: application/json' \
+              -d '{"build_type":"legacy","source":{"branch":"main","path":"/"}}' "${api}")
+            echo "Switch to main branch publishing returned HTTP ${code}"
+            jq -c '{message,status,build_type,source}' /tmp/pages-switch.json || true
+          fi
+          curl -sS -o /tmp/pages-after.json \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' "${api}"
+          echo "After source:"
+          jq -c '{status,build_type,source}' /tmp/pages-after.json
       - name: Cancel stuck Pages deployment from obsolete game version
         env:
           GH_TOKEN: ${{ github.token }}
