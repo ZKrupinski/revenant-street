@@ -26,6 +26,27 @@ for(const s of [
  '#app.compact-game-stage',
  '@media(max-height:580px)'
 ])assert(center.css.includes(s),'missing centered Hub visual protection: '+s);
+// Card-relative unit sizing must supersede the previous stage-relative 25cqh.
+const fit=getStyle('hub-card-no-overlap-v8');
+assert(fit.position>center.position,'safe portrait/landscape card sizing must be the last Hub styling');
+for(const rule of [
+ 'container-name:hub-upgrade-card;',
+ 'container-type:size;',
+ 'height:100%!important;max-height:100%!important;min-height:0!important;',
+ 'width:min(138px,38cqh,70cqw)!important',
+ 'height:min(138px,38cqh,70cqw)!important',
+ 'flex:1 1 auto!important;max-height:none!important;overflow:hidden!important;',
+ '.hub-card-info .hub-module-name',
+ '.hub-card-info .hub-forecast',
+ '.hub-card-info .hub-buy',
+ 'position:static!important',
+ 'height:clamp(24px,15cqh,38px)!important',
+ '@container hub-upgrade-card (max-height:220px)',
+ '@container hub-upgrade-card (max-height:165px)'
+])assert(fit.css.includes(rule),'Hub icon may cover title/stats/button on small cards: '+rule);
+assert(fit.css.indexOf('.hub-art-slot')<fit.css.indexOf('.hub-card-info'),
+ 'art slot precedes text and footer in the card layout');
+
 const begin=html.indexOf("function hubMenu(upgraded='");
 const end=html.indexOf('function buyUpgrade(',begin);
 assert(begin>=0&&end>begin,'Hub template must exist');
