@@ -2865,6 +2865,49 @@ body{position:fixed;inset:0;touch-action:manipulation}
  font-size:clamp(10px,2.3cqh,13px)!important;
  margin:3px auto 0!important;
 }
+
+/* Small-stage selectors in older styles use #app and outrank ordinary rules.
+   Repeat the GRID structure at the same specificity to stop fallback to flex. */
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr)!important;
+ grid-template-rows:minmax(0,1fr) max-content!important;
+ align-items:stretch!important;justify-content:stretch!important;
+ gap:clamp(1px,.6cqh,4px)!important;
+ min-height:0!important;max-height:100%!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-art-slot,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-art-slot{
+ display:flex!important;grid-column:1!important;grid-row:1!important;
+ container-name:hub-art-space!important;container-type:size!important;
+ align-items:center!important;justify-content:center!important;
+ height:100%!important;min-height:0!important;max-height:100%!important;
+ overflow:hidden!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-card-info,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-card-info{
+ display:grid!important;grid-column:1!important;grid-row:2!important;
+ grid-template-columns:minmax(0,1fr)!important;
+ grid-template-rows:max-content max-content max-content!important;
+ align-content:end!important;justify-items:center!important;
+ min-height:0!important;max-height:none!important;
+ gap:2px!important;overflow:visible!important;
+}
+/* No floating button or level overlays even on the 200px-high Hub cards. */
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name{
+ grid-column:1!important;grid-row:1!important;margin:0!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-forecast,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-forecast{
+ grid-column:1!important;grid-row:2!important;margin:0!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-buy,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-buy{
+ grid-column:1!important;grid-row:3!important;
+ margin:3px auto 0!important;justify-self:center!important;
+}
 </style>
 </head>
 <body>
