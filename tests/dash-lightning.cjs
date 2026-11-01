@@ -68,8 +68,9 @@ assert.equal(left.x,502,'left-facing art shifts toward enemy, not behind Z');
 assert.equal(world.drawDash(left),true);
 assert(transforms.some(([op,x,y])=>op==='scale'&&x===-1&&y===1),
  'left attacks flip the authored right-facing sprite horizontally');
-assert(html.includes('if(p.dashSmash&&hits===0)spawnDashPierceFx(p,e)'),
- 'lightning plays only at the first actual collision of dash-followup strike');
+assert(html.includes('if(p.dashSmash&&hits===0){')&&
+ html.includes('spawnDashPierceFx(p,e); // single real contact, not once per splash victim'),
+ 'lightning plays only at the first confirmed direct punch collision, never once per splash enemy');
 assert(!html.includes("spawnDashPierceFx(p,e); // when beginning dash"),
  'not played on button press or whiff');
 assert(html.includes("if(f.kind==='dashPierceSprite'){drawDashPierceSprite(f);continue;}"),
