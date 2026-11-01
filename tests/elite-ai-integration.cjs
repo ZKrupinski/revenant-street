@@ -56,4 +56,21 @@ assert(interrupt>0&&oldCancel>interrupt,'superarmor is checked before ordinary h
 assert(html.slice(interrupt,oldCancel).includes('if(ironSpecialArmor)'),
   'ordinary combo hits cannot reset the special before showing all 8 frames');
 assert(html.includes('elite=preview'),'direct real Iron Mask test encounter available');
+// Elites and support-team groups must not take over the separate boss HP HUD.
+const hudStart=html.indexOf('// Only the final boss gets a separate, screen-fixed health bar.');
+const hudEnd=html.indexOf('function update(dt){',hudStart);
+assert(hudStart>0&&hudEnd>hudStart,'dedicated boss-only HUD branch exists');
+const hud=html.slice(hudStart,hudEnd);
+assert(hud.includes("e.type==='boss'"),'final boss still drives the HUD');
+assert(!hud.includes("e.type==='elite'")&&!hud.includes("e.type==='intruder'"),
+ 'elite and support-team HP cannot create a separate HUD');
+assert(hud.includes("bossEnergyHud.hidden=gameState!=='playing'||!activeBoss;"),
+ 'HUD is hidden whenever no final boss is active');
+assert(hud.includes("clamp(100*activeBoss.hp/Math.max(1,activeBoss.maxHp),0,100)"),
+ 'final boss retains accurate HP tracking');
+assert(!html.includes('<style id="project-z-elite-centered-energy-v1">'),
+ 'unused standalone elite energy panel CSS is removed');
+assert(html.includes("bossEnergyHud.classList.toggle('final-boss-energy',!!activeBoss)"),
+ 'existing final boss visual style remains active');
+
 console.log('PASS: actual hooded Iron Mask melee/range AI runs charge 1-8 and attack 1-8; ordinary hits cannot cancel its animation');
