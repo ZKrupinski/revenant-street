@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{setProperty(){}},classList:{_s:new Set(),add(...ks){ks.forEach(k=>this._s.add(k))},remove(...ks){ks.forEach(k=>this._s.delete(k))},toggle(k,on){if(on===undefined)on=!this._s.has(k);on?this._s.add(k):this._s.delete(k);return !!on},contains(k){return this._s.has(k)}},getBoundingClientRect:()=>({left:0,top:0,right:1280,bottom:720,width:1280,height:720}),getContext:()=>ctx,addEventListener(){},appendChild(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,location:{search:'?intro=off'},setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{addEventListener(){}},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={intruderEntering,intruderEntryFrame,drawIntruderEntry,drawIntruderCombat,intruderVisualMove,intruderMotionImages,INTRUDER_FRAME_FOOT,intruderCombatFrame,updateIntruderSpecial,zCellSamplingSpec,hubMenu,selectHubModule,permanentBaseStats,renderTitleBaseStats,prepareHubReset,cancelHubReset,resetHubUpgrades,buyUpgrade,HUB_COST,HUB_MODULES,offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,offscreenEnemyTargets,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,spawnIntruderSupport,intruderSupportCount,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={intruderEntering,intruderEntryFrame,drawIntruderEntry,drawIntruderCombat,intruderVisualMove,intruderMotionImages,INTRUDER_FRAME_FOOT,intruderCombatFrame,updateIntruderSpecial,zCellSamplingSpec,hubMenu,selectHubModule,permanentBaseStats,renderTitleBaseStats,prepareHubReset,cancelHubReset,resetHubUpgrades,buyUpgrade,HUB_COST,HUB_MODULES,offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,offscreenEnemyTargets,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCounterCameraTime:()=>counterCameraTime,getRiposteCinematicTime:()=>riposteCinematicTime,getCameraX:()=>cameraX,triggerCounterCamera,counterCameraZoomGoal,counterCameraWorldAnchor,spawnRiposteAfterimages,getHeroAfterimages:()=>heroAfterimages,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,spawnIntruderSupport,intruderSupportCount,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('Rebel Hub shows entire actual base stat roster and requires a separate apply',()=>{
@@ -2080,6 +2080,67 @@ test('user uploaded ten-frame parry artwork is embedded intact and uses 5x2 scre
   assert.equal(r.sw%1,0);assert.equal(r.sh%1,0);
  }
  console.log('PASS: parry atlas source rectangles safe for all 10 frames, reduced scale and forearm position');
+});
+test('successful riposte impact retriggers camera-forward and layered slow, without affecting failed hits',()=>{
+ for(const facing of [1,-1]){
+  g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=3400;t.p.y=570;t.p.facing=facing;
+  t.setCameraX(t.p.x-(facing>0?465:815));
+  const before=t.getCameraX();
+  const target=t.makeEnemy('assassin',t.p.x+facing*132,t.p.y,0);
+  target.hp=target.maxHp=3000;t.setEnemies([target]);
+  assert.equal(t.getCounterCameraTime(),0,'no counter camera before a landed punch');
+  t.p.moveName='superman_punch';t.p.riposteStrikeTarget=target;
+  t.attackCheck();
+  assert.equal(t.p.riposteStrikeTarget,null,'consume the hit exactly once');
+  assert(t.getCounterCameraTime()>=1.09,'impact triggers a separate counter framing window');
+  assert(t.getRiposteCinematicTime()>=1.07,'impact starts a distinct strong slow-motion phase');
+  assert(t.getSlowMotion()>=1.47,'hit restores the cinematic slowdown even if the initial parry ended');
+  assert(t.getHitStop()>=.22,'confirmed counter has an emphatic impact freeze');
+  for(let n=0;n<10;n++)t.update(1/60);
+  assert((t.getCameraX()-before)*facing>80,'follow camera must move farther into the counter direction');
+  const zoom=t.getCameraZoom(),cx=t.getCameraX(),focus=1280*.52;
+  const project=x=>focus+(x-cx-focus)*zoom;
+  const width=665; // baseline eight-frame original counter atlas
+  const back=project(t.p.x+facing*(83-width*.18)),front=project(t.p.x+facing*(83+width*.82));
+  assert(Math.min(front,back)>20&&Math.max(front,back)<1260,'both ends of bitmap counter fit the zoomed view');
+  const start=t.getGameTime();t.update(1/60);
+  assert(t.getGameTime()-start<.0032,'riposte surrounding world runs below 20% of real time');
+ }
+});
+test('fully upgraded counter atlas stays in frame without resizing or cutting the source',()=>{
+ for(const facing of [1,-1]){
+  g.startRun();t.setEnemies([]);t.p.x=4200;t.p.y=570;t.p.facing=facing;
+  t.setCameraX(t.p.x-(facing>0?465:815));
+  t.triggerCounterCamera(facing,1090);
+  const safeZoom=t.counterCameraZoomGoal();
+  assert(safeZoom>1&&safeZoom<1.2,'largest original atlas uses an adaptive safe camera zoom');
+  for(let n=0;n<18;n++){t.updateComboCamera(1/60,1/60);t.followComboCamera(1/60,1/60)}
+  const c=t.getCameraX(),z=t.getCameraZoom(),focus=1280*.52;
+  const project=x=>focus+(x-c-focus)*z;
+  const bounds=[project(t.p.x+facing*(83-1090*.18)),project(t.p.x+facing*(83+1090*.82))];
+  assert(Math.min(...bounds)>30&&Math.max(...bounds)<1250,'full upscaled skill VFX remains visible in both directions');
+ }
+});
+test('counter ghost trail uses actual five bitmap attack poses, with temporary mobile-safe limits',()=>{
+ g.startRun();t.setEnemies([]);t.p.x=2800;t.p.y=570;t.p.facing=1;
+ const old=t.zArtState.superman_punch;
+ const frames=Array.from({length:8},(_,i)=>({canvas:{testFrame:i},bounds:{x:0,y:0,w:80,h:90},unitScale:1}));
+ try{
+  t.zArtState.superman_punch={ready:true,frames};
+  const target=t.makeEnemy('assassin',t.p.x+120,t.p.y,0);
+  target.hp=target.maxHp=2500;t.setEnemies([target]);
+  t.p.riposteStrikeTarget=target;t.attackCheck();
+  const ghosts=t.getHeroAfterimages().filter(x=>x.counterEcho);
+  assert(ghosts.length>=4&&ghosts.length<=5,'contact creates a bounded set of real rendered sprite echoes');
+  assert(new Set(ghosts.map(x=>x.frame)).size>=4,'echoes show multiple attack poses, not a single pasted sprite');
+  assert(ghosts.every(x=>x.x<t.p.x&&x.life>=.8),'image trails fan behind the successful right-facing punch');
+  const before=ghosts[0].life;
+  t.update(1/60);
+  assert(ghosts[0].life<before,'echoes fade even while the world is frozen');
+ }finally{
+  if(old)t.zArtState.superman_punch=old;
+  else delete t.zArtState.superman_punch;
+ }
 });
 test('global parry cinematic slows camera world clock, hero, and parried foe in three layers',()=>{
  g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2200;t.p.y=570;t.p.stamina=100;
