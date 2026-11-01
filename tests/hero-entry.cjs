@@ -29,8 +29,10 @@ assert(intro.includes('if(backdropAlpha>0)') && intro.includes('heroEntryReveal(
  'street is not visible before flash timing');
 assert(intro.includes('ctx.fillRect(0,0,W,H);')&&intro.includes('heroEntryFlash()'),
  'white flash overlays the existing stage on grounded landing');
-assert(intro.includes('paintZ(actorScreenX,p.y,p.z,stagePoseOpacity)'),
- 'transition blends into real combat idle sprite rather than snapping');
+assert(intro.includes('stagePoseOpacity>=.5')&&intro.includes('paintZ(actorScreenX,p.y,p.z,1)'),
+ 'arrival switches to solid combat sprite at matched foot position without translucent crossfade');
+assert(!intro.includes('ctx.globalAlpha=1-stagePoseOpacity'),
+ 'original arrival art is no longer faded to semi-transparency during hero handoff');
 assert(html.includes('  if(!heroEntry.landed&&heroEntry.elapsed>=heroEntry.revealAt){'),
  'land sound+rumble must align with background reveal flash');
 assert(html.includes("if(heroEntry.active&&gameState!=='playing')heroEntry.active=false"),
