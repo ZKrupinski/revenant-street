@@ -1,178 +1,146 @@
 {
-  "original": "assets/enemies/redhood-intruder/special.png",
+  "source": "assets/enemies/redhood-intruder/special.png",
   "output": "assets/enemies/redhood-intruder/special-fullframe.webp",
   "cell": [
-    576,
-    576
+    608,
+    608
   ],
   "frames": [
     {
       "frame": 1,
-      "source_size": [
-        444,
-        444
-      ],
       "bbox": [
-        83,
-        148,
-        532,
-        507
+        99,
+        165,
+        526,
+        523
       ],
       "margins": [
-        83,
-        148,
-        44,
-        69
+        99,
+        165,
+        82,
+        85
       ],
-      "foot": 506,
-      "extended_crimson_pixels": 155
+      "foot": 522,
+      "recovered_neighbor_pixels": 0
     },
     {
       "frame": 2,
-      "source_size": [
-        443,
-        444
-      ],
       "bbox": [
-        44,
-        126,
-        531,
-        510
+        82,
+        142,
+        525,
+        526
       ],
       "margins": [
-        44,
-        126,
-        45,
-        66
+        82,
+        142,
+        83,
+        82
       ],
-      "foot": 509,
-      "extended_crimson_pixels": 341
+      "foot": 525,
+      "recovered_neighbor_pixels": 0
     },
     {
       "frame": 3,
-      "source_size": [
-        443,
-        444
-      ],
       "bbox": [
-        44,
-        115,
-        532,
-        476
+        82,
+        131,
+        572,
+        492
       ],
       "margins": [
-        44,
-        115,
-        44,
-        100
+        82,
+        131,
+        36,
+        116
       ],
-      "foot": 475,
-      "extended_crimson_pixels": 2746
+      "foot": 491,
+      "recovered_neighbor_pixels": 4511
     },
     {
       "frame": 4,
-      "source_size": [
-        444,
-        444
-      ],
       "bbox": [
-        43,
-        71,
-        490,
-        502
+        144,
+        87,
+        505,
+        518
       ],
       "margins": [
-        43,
-        71,
-        86,
-        74
+        144,
+        87,
+        103,
+        90
       ],
-      "foot": 502,
-      "extended_crimson_pixels": 2735
+      "foot": 518,
+      "recovered_neighbor_pixels": 0
     },
     {
       "frame": 5,
-      "source_size": [
-        444,
-        443
-      ],
       "bbox": [
-        93,
-        71,
-        533,
-        478
+        109,
+        87,
+        526,
+        493
       ],
       "margins": [
-        93,
-        71,
-        43,
-        98
+        109,
+        87,
+        82,
+        115
       ],
-      "foot": 476,
-      "extended_crimson_pixels": 433
+      "foot": 492,
+      "recovered_neighbor_pixels": 0
     },
     {
       "frame": 6,
-      "source_size": [
-        443,
-        443
-      ],
       "bbox": [
-        43,
-        103,
-        532,
-        485
+        50,
+        119,
+        569,
+        501
       ],
       "margins": [
-        43,
-        103,
-        44,
-        91
+        50,
+        119,
+        39,
+        107
       ],
-      "foot": 484,
-      "extended_crimson_pixels": 2034
+      "foot": 500,
+      "recovered_neighbor_pixels": 3941
     },
     {
       "frame": 7,
-      "source_size": [
-        443,
-        443
-      ],
       "bbox": [
-        43,
-        173,
-        532,
-        473
+        82,
+        189,
+        566,
+        488
       ],
       "margins": [
-        43,
-        173,
-        44,
-        103
+        82,
+        189,
+        42,
+        120
       ],
-      "foot": 473,
-      "extended_crimson_pixels": 2992
+      "foot": 489,
+      "recovered_neighbor_pixels": 1372
     },
     {
       "frame": 8,
-      "source_size": [
-        444,
-        443
-      ],
       "bbox": [
-        43,
-        108,
-        488,
-        484
+        82,
+        124,
+        502,
+        500
       ],
       "margins": [
-        43,
-        108,
-        88,
-        92
+        82,
+        124,
+        106,
+        108
       ],
-      "foot": 483,
-      "extended_crimson_pixels": 1221
+      "foot": 499,
+      "recovered_neighbor_pixels": 0
     }
   ]
 }
