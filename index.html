@@ -6693,10 +6693,10 @@ function hubMenu(upgraded=''){
  const selected=HUB_MODULES.find(m=>m.id===hubSelected)||HUB_MODULES[0];
  const cards=HUB_MODULES.map(m=>{
   const lv=perma[m.id];
-  return `<button type="button" class="hub-module hub-${m.id}${hubSelected===m.id?' selected':''}${upgraded===m.id?' installed':''}"
-   data-perma="${m.id}" aria-pressed="${hubSelected===m.id}">
-   <span class="hub-art-slot"><span class="hub-emblem">${modIconMarkup(m.art)}</span></span>
-   <span class="hub-card-info">
+  return `<button type="button" class="hub-module hub-centered-card hub-${m.id}${hubSelected===m.id?' selected':''}${upgraded===m.id?' installed':''}"
+   data-perma="${m.id}" aria-pressed="${hubSelected===m.id}" style="display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;text-align:center!important;grid-template-columns:none!important;grid-template-rows:none!important">
+   <span class="hub-art-slot" style="display:flex!important;grid-column:auto!important;grid-row:auto!important;border-right:0!important;padding-right:0!important;justify-content:center!important;align-items:center!important"><span class="hub-emblem">${modIconMarkup(m.art)}</span></span>
+   <span class="hub-card-info" style="display:flex!important;flex-direction:column!important;grid-column:auto!important;grid-row:auto!important;justify-content:center!important;align-items:center!important;text-align:center!important">
     <span class="hub-module-name">${m.title}<small>Lv.${lv} → ${lv+1}</small></span>
     <span class="hub-forecast"><span class="hub-from">${m.format(lv)}</span>
      <span class="hub-arrow">→</span><span class="hub-to">${m.format(lv+1)}</span></span>
