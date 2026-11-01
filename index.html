@@ -2240,6 +2240,46 @@ body{position:fixed;inset:0;touch-action:manipulation}
   height:clamp(18px,3cqh,23px)!important;
  }
 }
+
+/* Center GAME START between Hub and guide; blink only the lettering. */
+#stageWrap #menu.title-dialog .buttons.title-action-row{
+ display:flex!important;flex-direction:row!important;
+ align-items:stretch!important;justify-content:space-between!important;
+}
+#stageWrap #menu.title-dialog .buttons.title-action-row>button{
+ flex:1 1 0!important;order:initial!important;
+}
+#stageWrap #menu.title-dialog .buttons.title-action-row>button[data-action="hub"]{
+ flex:1.18 1 0!important;
+}
+#stageWrap #menu.title-dialog .buttons.title-action-row>button.title-game-start{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+}
+#stageWrap #menu.title-dialog .title-game-start .title-start-text{
+ display:inline-block!important;
+ font:1000 clamp(14px,1.8cqw,22px)/1 Arial,'Malgun Gothic',sans-serif!important;
+ letter-spacing:.8px!important;color:#fff5f5!important;
+ text-shadow:0 1px 3px #000d,0 0 8px #ffe4eb88!important;
+ animation:z-title-start-text-blink .84s steps(1,end) infinite;
+}
+@keyframes z-title-start-text-blink{
+ 0%,54%{opacity:1}
+ 55%,100%{opacity:.18}
+}
+@media(prefers-reduced-motion:reduce){
+ #stageWrap #menu.title-dialog .title-game-start .title-start-text{
+  animation:none!important;opacity:1!important;
+ }
+}
+#app.compact-game-stage #stageWrap #menu.title-dialog .buttons.title-action-row{
+ flex-direction:column!important;
+}
+#app.compact-game-stage #stageWrap #menu.title-dialog .buttons.title-action-row>button{
+ flex:none!important;width:100%!important;
+}
+#app.compact-game-stage #stageWrap #menu.title-dialog .title-game-start .title-start-text{
+ font-size:clamp(10px,1.9cqh,14px)!important;
+}
 </style>
 
 <style id="project-z-elite-centered-energy-v1">
@@ -4283,8 +4323,8 @@ function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.re
 function titleMenu(){
  gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;
  showMenu(`<img class="title-full-bi" src="./assets/ui/project-z-title-bi-20261101.webp" alt="" width="1672" height="941" decoding="async" fetchpriority="high" /><span class="title-bi-fade" aria-hidden="true"></span><div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1 class="title-bi-accessible">REVENANT STREET</h1>
- <div class="buttons"><button class="main-btn" data-action="start">▶ 거리로 진입 / START</button>
- <button class="secondary-btn" data-action="hub">◆ REBEL HUB · 기본 스탯 강화</button>
+ <div class="buttons title-action-row"><button class="secondary-btn" data-action="hub">◆ REBEL HUB · 기본 스탯 강화</button>
+ <button class="main-btn title-game-start" data-action="start"><span class="title-start-text">GAME START</span></button>
  <button class="secondary-btn" data-action="guide">조작 및 전투 안내</button></div>`);
  $('menu').classList.add('title-dialog');$('menu').scrollTop=0;
 }
