@@ -5631,7 +5631,47 @@ function hubMenuNavigate(dx,dy){
 }
 function menuConfirm(){if(!menuReady()){menuPad.readyAt=Math.max(menuPad.readyAt,Date.now()+250);return false;}const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
 function menuBack(){if(rewardSelection)return false;if(closeHubShardNotice())return true;const items=menuButtons();const back=items.find(b=>['resume','title','pauseMenu','hub'].includes(b.dataset.action));if(back){back.click();return true}return false}
+// Opening HUD motion uses individual translate so button press/joystick transforms stay intact.
+const combatHudEntranceAnimations=new Set();
+function cancelCombatHudEntrance(){
+ for(const animation of combatHudEntranceAnimations)animation.cancel();
+ combatHudEntranceAnimations.clear();
+}
+function revealCombatHud(){
+ cancelCombatHudEntrance();
+ $('hud').hidden=false;$('touchControls').hidden=false;
+ if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+ const stage=$('stageWrap').getBoundingClientRect();
+ const entries=[
+  ['.hud-left','left',0],['.hud-center','top',45],['.hud-right','right',90],
+  ['#analogPad','left',110],
+  ['.touch-actions [data-face="left"]','bottom',140],
+  ['.touch-actions [data-face="top"]','right',175],
+  ['.touch-actions [data-face="bottom"]','bottom',210],
+  ['.touch-actions [data-face="right"]','right',245]
+ ];
+ for(const [selector,side,delay] of entries){
+  const element=document.querySelector(selector);
+  if(!element?.animate||!element.getClientRects().length)continue;
+  const rect=element.getBoundingClientRect(),margin=28;
+  const x=side==='left'?stage.left-rect.right-margin:side==='right'?stage.right-rect.left+margin:0;
+  const y=side==='top'?stage.top-rect.bottom-margin:side==='bottom'?stage.bottom-rect.top+margin:0;
+  const sx=x?Math.sign(x):0,sy=y?Math.sign(y):0;
+  const translate=(distance)=>`${sx*distance}px ${sy*distance}px`;
+  const animation=element.animate([
+   {translate:`${x}px ${y}px`,offset:0,easing:'cubic-bezier(.18,.72,.22,1)'},
+   {translate:'0px 0px',offset:.76,easing:'ease-out'},
+   {translate:translate(-2.5),offset:.82},
+   {translate:translate(1.8),offset:.88},
+   {translate:translate(-1),offset:.94},
+   {translate:'0px 0px',offset:1}
+  ],{duration:650,delay,fill:'both',easing:'linear'});
+  combatHudEntranceAnimations.add(animation);
+  animation.onfinish=()=>{animation.cancel();combatHudEntranceAnimations.delete(animation)};
+ }
+}
 function showMenu(html){
+ cancelCombatHudEntrance();
  $('overlay').classList.remove('reward-confirming');
  $('menu').classList.remove('reward-entrance');
  menuPad.readyAt=Date.now()+(gameState==='reward'?700:180);menuPad.armed=false;menuPad.neutralAt=Date.now();
@@ -5851,7 +5891,7 @@ async function requestRunStart(){
   showMenu(`<div class="eyebrow">RESOURCE ERROR</div><h2>리소스 로딩 중단</h2><p>${String(err.message).replace(/[<>]/g,'')}</p><p>불완전한 캐릭터가 보이지 않도록 게임 실행을 막았습니다.</p><div class="buttons"><button class="main-btn" data-action="start">다시 불러오기</button><button class="secondary-btn" data-action="title">타이틀</button></div>`);
  }
 }
-function startRun(){pendingHubAutoRefresh=false;resetInputs();resetPlayer();
+function startRun(){cancelCombatHudEntrance();pendingHubAutoRefresh=false;resetInputs();resetPlayer();
  // Preserve WASD that was held while the loading or start overlay was visible.
  for(const k of ['w','a','s','d'])if(heldKeyboard.has(k))keys.add(k);
  menuBlockedKeys.clear();syncFaceButtonVisuals();
@@ -7714,7 +7754,7 @@ function update(dt){
   }
   if(heroEntry.elapsed>=heroEntry.duration){
    heroEntry.active=false;
-   $('hud').hidden=false;$('touchControls').hidden=false;
+   revealCombatHud();
    p.inv=Math.max(p.inv,.30);setStatus('COMBAT LIVE');updateHud();
    flash('CHAPTER 01 : 침수된 거리',1.35);
   }
