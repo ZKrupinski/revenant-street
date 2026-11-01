@@ -47,6 +47,29 @@ for(const rule of [
 assert(fit.css.indexOf('.hub-art-slot')<fit.css.indexOf('.hub-card-info'),
  'art slot precedes text and footer in the card layout');
 
+// The final override must prioritize numbers and buttons over decorative art.
+const finalFit=getStyle('hub-reward-readable-v9');
+assert(finalFit.position>fit.position,'readable-card overrides must load after earlier artwork styles');
+for(const rule of [
+ '#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-art-slot>.hub-emblem{',
+ 'width:min(100px,40cqh,40cqw)!important',
+ 'height:min(100px,40cqh,40cqw)!important',
+ '#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-module-name{',
+ '#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-forecast{',
+ '#stageWrap #menu.hub-dialog .hub-modules .hub-module .hub-buy{',
+ 'margin:auto auto 0!important',
+ 'width:78%!important',
+ '@container hub-upgrade-card (max-height:230px)',
+ '#stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>.sym>.upgrade-art{',
+ 'width:min(120px,19cqh,66cqw)!important',
+ '#stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>.up-progression{',
+ 'display:none!important; /* Duplicate of up-lvl + title; preserve effect details. */',
+ '#stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>small{',
+ 'overflow:visible!important',
+ '#app.compact-game-stage #stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>small{'
+])assert(finalFit.css.includes(rule),'final Hub/reward layout must preserve readable text: '+rule);
+assert(!finalFit.css.includes('width:min(176px'),'do not restore oversized icons');
+
 const begin=html.indexOf("function hubMenu(upgraded='");
 const end=html.indexOf('function buyUpgrade(',begin);
 assert(begin>=0&&end>begin,'Hub template must exist');
