@@ -2011,13 +2011,48 @@ test('JUST PARRY shows the artist ten-frame blue burst without stacked enlarged 
  t.enemyAttack(enemy);
  const bursts=t.getFx().filter(f=>f.kind==='parrySuccess10');
  assert.equal(bursts.length,1,'one original ten-frame blue burst per confirmed parry');
- assert.equal(bursts[0].life,.35,'single effect plays quickly at consistent natural size');
+ assert.equal(bursts[0].life,.27,'ten-frame burst uses an accelerated 270ms real-time clock');
  assert.equal(t.getFx().filter(f=>f.kind==='parryShield').length,0,'no inflated prior shield effect');
  assert(!t.getFx().some(f=>f.kind==='modBitmap'&&f.color==='blue'),'no duplicate blue bitmap glow');
  assert(!t.getFx().some(f=>f.color==='gold'),'no stacked golden burst');
- assert(t.getSlowMotion()>=.95,'cinematic lasts near one second instead of 120ms');
+ assert(t.getSlowMotion()>=1.39,'dramatic parry cinematic lasts 1.4 seconds');
  assert.equal(t.getSlowVictim(),enemy,'only successfully parried actor gets stacked slowdown');
- assert(t.getHitStop()>=.15,'impact has a sharp initial freeze');
+ assert(t.getHitStop()>=.19,'initial parry impact has an extended 190ms freeze');
+});
+test('fast ten-frame parry burst plays on real time through freeze and slow-mo',()=>{
+ g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2600;t.p.y=570;t.p.facing=1;
+ t.setCameraX(t.p.x-465);
+ const enemy=t.makeEnemy('assassin',t.p.x+80,t.p.y,0);t.setEnemies([enemy]);
+ t.parry();t.enemyAttack(enemy);
+ const shot=t.getFx().find(f=>f.kind==='parrySuccess10');
+ assert(shot,'parry success creates a unique 10-frame burst');
+ const world=t.getGameTime();
+ for(let n=0;n<6;n++)t.update(1/60);
+ const elapsed=(6/60);
+ assert(shot.life<.27-elapsed+.0001,'VFX must advance on real time even during hitstop');
+ assert(t.getGameTime()-world<elapsed*.26,'background/world effects remain strongly slowed');
+ assert(t.getCameraZoom()>1.25,'camera zoom is visible before flash completes');
+ assert(t.getCameraX()>t.p.x-455,'camera follows the parry toward the enemy-facing side');
+ for(let n=0;n<12;n++)t.update(1/60);
+ assert(!t.getFx().includes(shot),'the full 10-frame flash ends in under 300ms real time');
+ assert(t.getSlowMotion()>1.0,'surrounding actors remain in slow motion after burst');
+});
+test('parry camera looks forward in either direction and safely frames the entire burst',()=>{
+ for(const facing of [1,-1]){
+  g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=3600;t.p.y=570;t.p.facing=facing;
+  t.setCameraX(t.p.x-(facing>0?465:815));
+  const initialX=t.getCameraX();
+  const enemy=t.makeEnemy('raider',t.p.x+facing*75,t.p.y,0);
+  t.setEnemies([enemy]);t.parry();t.enemyAttack(enemy);
+  assert(t.getCameraZoom()>=1.11,'zoom starts during the parry contact frame');
+  for(let n=0;n<10;n++)t.update(1/60);
+  const cx=t.getCameraX(),zoom=t.getCameraZoom(),focus=1280*.52;
+  assert(zoom>=1.27&&zoom<=1.36,'parry closeup zooms closer but stays within safe clip');
+  assert((cx-initialX)*facing>30,'camera leads in the outgoing attack direction');
+  const project=x=>focus+(x-cx-focus)*zoom;
+  const furthest=project(t.p.x+facing*215);
+  assert(furthest>36&&furthest<1280-36,'full blast remains safely on-screen even with closeup');
+ }
 });
 test('user uploaded ten-frame parry artwork is embedded intact and uses 5x2 screen-key draw',()=>{
  const match=html.match(/parrySuccessImage\.src='data:image\/avif;base64,([^']+)'/);
@@ -2059,10 +2094,10 @@ test('global parry cinematic slows camera world clock, hero, and parried foe in 
  t.update(1/60);
  const worldStep=t.getGameTime()-oldWorld,heroStep=t.p.motionTime-oldHero;
  const victimStep=target.spriteTime-oldVictim,otherStep=other.spriteTime-oldOther;
- assert(Math.abs(worldStep-(1/60)*.33)<.0002,'background/weather/camera world clock runs at roughly one third speed: '+worldStep);
+ assert(Math.abs(worldStep-(1/60)*.24)<.0002,'background and normal enemies run at 24% speed: '+worldStep);
  assert(Math.abs(otherStep-worldStep)<.0002,'other foes use slowed global world time');
- assert(Math.abs(heroStep-worldStep*.60)<.0002,'hero animation and movement run at 60% of already slowed world time');
- assert(Math.abs(victimStep-worldStep*.45)<.0002,'parried actor animation, knockback and AI run at 45% of world time');
+ assert(Math.abs(heroStep-worldStep*.58)<.0002,'hero animation and movement run at 58% of the slowed world clock');
+ assert(Math.abs(victimStep-worldStep*.32)<.0002,'parried actor animation and AI run at 32% of world time');
  assert(victimStep<heroStep&&heroStep<otherStep,'layered time factors visibly separate victim/hero/environment');
  assert(t.getSlowMotion()>.6,'cinematic is still active after impact freeze');
  // All cooldowns recover to normal after the real-time cinematic ends.
