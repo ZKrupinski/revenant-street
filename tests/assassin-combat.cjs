@@ -465,6 +465,41 @@ test('unupgraded dash is much shorter than prior near-teleport, with eight compl
  t.dodge();for(let i=0;i<18;i++)t.control(1/60,{dx:0,dy:0});
  assert.equal(t.p.x,64,'leftward dash clamps at start of world');
 });
+test('Dash Extender and Dash Overdrive stack independently, each up to six levels, and share one travel formula',()=>{
+ const base=t.dashMobilityStats(0,0);
+ assert.equal(base.distance,616);
+ const values=[];
+ for(const rank of [1,3,6]){
+  g.startRun();t.setEnemies([]);t.p.mods=[];t.p.stamina=100;
+  for(let i=0;i<rank;i++){
+   t.rewardMenu('mid');t.selectMod('dashrange');
+   t.rewardMenu('mid');t.selectMod('dashspeed');
+  }
+  assert.equal(t.modRank('dashrange'),rank,'Extender must retain every chosen stack');
+  assert.equal(t.modRank('dashspeed'),rank,'Overdrive must retain every chosen stack');
+  const r=t.dashMobilityStats(),onlyRange=t.dashMobilityStats(rank,0),onlySpeed=t.dashMobilityStats(0,rank);
+  const attack=t.specialStats('dashspeed');
+  assert.equal(r.duration,onlyRange.duration,'Extender owns duration');
+  assert.equal(r.speed,onlySpeed.speed,'Overdrive owns speed');
+  assert.equal(r.distance,Math.round(r.duration*r.speed),'true combined dash distance');
+  assert(r.distance>onlyRange.distance&&r.distance>onlySpeed.distance,
+   'both upgrades must have cumulative movement benefit');
+  assert.equal(attack.damage,t.specialStats('dashspeed',rank).damage,
+   'Extender must not double-apply Overdrive damage multiplier');
+  assert.equal(attack.range,t.specialStats('dashspeed',rank).range);
+  assert.equal(attack.push,t.specialStats('dashspeed',rank).push);
+  values.push(r.distance);
+  if(rank===6){
+   const before=t.p.mods.length;
+   t.selectMod('dashrange');t.selectMod('dashspeed');
+   assert.equal(t.p.mods.length,before,'fully leveled cards cannot consume another rank');
+   assert.equal(t.modRank('dashrange'),6);
+   assert.equal(t.modRank('dashspeed'),6);
+  }
+ }
+ assert(values[0]<values[1]&&values[1]<values[2],'every combined rank improves actual distance');
+ assert.deepEqual(values,[Math.round(.31*2508),Math.round(.37*3124),Math.round(.46*4048)]);
+});
 test('dash reach and dash speed are two independent six-level upgrade items',()=>{
  const init=t.dashMobilityStats(0,0),fast=t.dashMobilityStats(0,6),long=t.dashMobilityStats(6,0),both=t.dashMobilityStats(6,6);
  assert.equal(init.speed,2200);assert.equal(init.duration,.28);assert.equal(init.distance,616);
