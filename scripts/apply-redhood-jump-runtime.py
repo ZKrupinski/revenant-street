@@ -49,5 +49,12 @@ if prior_guard in text:
     test.write_text(text.replace(prior_guard,fixed_guard))
 elif fixed_guard not in text:
     raise RuntimeError('Redhood frame-preservation test guard was not found')
+# Death QA asserted the exact old asset selection expression; preserve its
+# purpose but account for the additional safe special-animation case.
+old_death="key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.webp':key+'.png'"
+new_death="key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.webp':key==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':key+'.png'"
+text=test.read_text()
+if old_death in text:test.write_text(text.replace(old_death,new_death))
+elif new_death not in text:raise RuntimeError('Death fixture asset-path assertion missing')
 
 print('PASS: red hood real-game atlas swapped, sprite extraction kept complete, QA routes ready')
