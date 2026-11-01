@@ -1534,13 +1534,13 @@ test('boss chapter is isolated at the end of the 32k street',()=>{
  assert.equal(t.STAGE_WIDTH,32000);
  assert.equal(t.WAVE_GATES[3],31850);
 });
-test('real combat currency and shards are paid exactly once, including DOT kills',()=>{
+test('combat credits are paid per kill once, while shards settle only at run end including DOT kills',()=>{
  g.startRun();
  const money=t.p.credits,shards=world.__revenant.getState().perma.shards;
  const e=t.makeEnemy('guard',t.p.x+75,t.p.y,0);t.setEnemies([e]);
  t.hurtEnemy(e,999,3);
  assert(t.p.credits>=money+65);
- assert.equal(world.__revenant.getState().perma.shards,shards+1);
+ assert.equal(world.__revenant.getState().perma.shards,shards,'kill shards must be deferred to end-of-run result');
  const oldMoney=t.p.credits;
  t.hurtEnemy(e,5,5);
  assert.equal(t.p.credits,oldMoney,'dead guard cannot pay twice');
@@ -1549,6 +1549,8 @@ test('real combat currency and shards are paid exactly once, including DOT kills
  t.updateEnemies(.3);
  assert(burn.dead);
  assert(t.p.credits>=oldMoney+45,'DOT kill must award credits too');
+ const paid=t.awardRunShards(false);assert(paid.total>=1);
+ assert.equal(world.__revenant.getState().perma.shards,shards+paid.total,'all shards settle once after result');
 });
 test('loading gate is present, checks mandatory sprites and disables live animation warmup',()=>{
  const code=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
