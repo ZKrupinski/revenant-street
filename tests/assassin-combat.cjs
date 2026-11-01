@@ -105,12 +105,12 @@ test('HUB shop rotates three genuine module offers for shards and scales every r
  try{
   Object.assign(perma,{core:0,servo:0,reflex:0,armor:0,sprint:0,lift:0,hubRefreshes:0,shards:17});
   t.hubMenu();assert.equal(t.hubRefreshCost(),1);
-  const starting=t.hubAvailableModules().map(x=>x.id);
+  const starting=Array.from(t.hubAvailableModules(),x=>x.id);
   assert.deepEqual(starting,['core','servo','reflex']);
   assert(node('menu').innerHTML.includes('data-action="hubRefresh"'));
   assert(node('menu').innerHTML.includes('data-action="hubEconomy"'));
   assert.equal(t.refreshHubOffers(),true);assert.equal(perma.shards,16);
-  const next=t.hubAvailableModules().map(x=>x.id);
+  const next=Array.from(t.hubAvailableModules(),x=>x.id);
   assert.deepEqual(next,['armor','sprint','lift']);
   assert.equal(t.selectHubModule('core'),false,'cannot select an off-offer module');
   assert.equal(t.selectHubModule('armor'),true);
@@ -118,7 +118,7 @@ test('HUB shop rotates three genuine module offers for shards and scales every r
   assert.equal(t.hubUpgradeCost(perma.armor),3);
   assert.equal(t.hubRefreshCost(),2);
   assert.equal(t.refreshHubOffers(),true);assert.equal(perma.shards,12);
-  assert.notDeepEqual(t.hubAvailableModules().map(x=>x.id),next);
+  assert.notDeepEqual(Array.from(t.hubAvailableModules(),x=>x.id),next);
   const after=t.permanentBaseStats({...perma,armor:2,sprint:2,lift:3});
   assert.equal(after.armor,8);assert.equal(after.run,740);
   assert(after.jumpHeight>t.permanentBaseStats({...perma,lift:0}).jumpHeight);
