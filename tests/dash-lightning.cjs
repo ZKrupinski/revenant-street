@@ -35,6 +35,7 @@ assert.equal(f.dir,1);
 assert.equal(f.y,438,'electric spear pierces chest-height enemy plane');
 for(let i=0;i<8;i++){
  const progress=(i+.25)/8;
+ f.age=f.maxLife*progress;
  f.life=f.maxLife*(1-progress);
  assert.equal(world.drawDash(f),true);
 }
@@ -46,6 +47,17 @@ for(let i=0;i<8;i++){
  assert.equal(args[3],543);
  assert.equal(args[4],362);
 }
+
+const skipsBefore=draws.length;
+world.spawnDash({x:100,y:550,facing:1},{x:430,y:550});
+const stalled=world.fx.at(-1);
+for(let i=0;i<8;i++){
+ stalled.age=stalled.maxLife; // Simulate a large elapsed frame time.
+ assert.equal(world.drawDash(stalled),true);
+}
+assert.deepEqual(draws.slice(skipsBefore).map(d=>[d[1],d[2]]),
+ Array.from({length:8},(_,i)=>[(i%4)*543,Math.floor(i/4)*362]),
+ 'variable-FPS catchup must still display every frame once and in order');
 world.spawnDash({x:600,y:550,facing:-1},{x:430,y:550});
 const left=world.fx.at(-1);
 assert.equal(left.dir,-1);
