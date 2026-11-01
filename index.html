@@ -5669,6 +5669,43 @@ function hurtEnemy(e,dmg,poise){
 // Neutral jump and long leap share the same heel-slam landing.
 // One radial splash per touchdown: hits launch enemies AWAY on both sides.
 // Bitmap-only explosion art: no vector shockwave rings or geometry.
+/* A shared transparent 4×2 eight-frame ground-slam bitmap. It is projected
+   onto the game's oblique foot-plane; world-space stays locked to ground Y.
+   This effect is visual-only; no hitboxes, stats, or haptics are changed. */
+const GROUND_SLAM_ART={
+ src:'./assets/vfx/project-z-ground-slam-8f.webp',
+ columns:4,rows:2,frames:8,footX:.5,footY:.8,
+ image:new Image(),available:false,missing:false
+};
+GROUND_SLAM_ART.image.onload=()=>{
+ const im=GROUND_SLAM_ART.image;
+ GROUND_SLAM_ART.available=im.naturalWidth>0&&im.naturalHeight>0&&
+  im.naturalWidth%4===0&&im.naturalHeight%2===0;
+};
+GROUND_SLAM_ART.image.onerror=()=>{GROUND_SLAM_ART.missing=true};
+GROUND_SLAM_ART.image.src=GROUND_SLAM_ART.src;
+function spawnGroundSlamFx(x,y,intensity=1,source='hero'){
+ if(fx.length>120)fx.splice(0,fx.length-110);
+ const duration=source==='boss'?.52:source==='elite'?.45:.41;
+ fx.push({kind:'groundSlamSprite',x,y,scale:Math.max(.70,Math.min(2.1,intensity)),
+  source,life:duration,maxLife:duration});
+}
+function drawGroundSlamSprite(f){
+ const bitmap=GROUND_SLAM_ART.image;
+ if(!GROUND_SLAM_ART.available||!bitmap.complete||bitmap.naturalWidth<4)return false;
+ const ratio=Math.max(0,Math.min(.99999,1-f.life/f.maxLife));
+ const frame=Math.min(7,Math.floor(ratio*8));
+ const cw=bitmap.naturalWidth/4,ch=bitmap.naturalHeight/2;
+ // The source artwork is wide and shallow: maintain this aspect without
+ // scaling it vertically independently of the ground perspective.
+ const width=clamp(530*f.scale,230,910),height=width*(ch/cw);
+ const footAnchor=height*.8;
+ const alpha=ratio>.77?Math.max(0,(1-ratio)/.23):1;
+ ctx.save();ctx.globalAlpha=alpha;
+ ctx.drawImage(bitmap,(frame%4)*cw,Math.floor(frame/4)*ch,cw,ch,
+  f.x-width*.5,f.y-footAnchor,width,height);
+ ctx.restore();return true;
+}
 function heelLandingShockwave(powered=false){
  const skill=specialStats('jumpspeed');
  const rx=skill.range,ry=skill.lane;
@@ -5677,8 +5714,9 @@ function heelLandingShockwave(powered=false){
   Math.pow((e.x-p.x)/rx,2)+Math.pow((e.y-p.y)/ry,2)<=1.10);
  screenShake=Math.max(screenShake,powered?25:20);
  hitStop=Math.max(hitStop,powered?.115:.080);
- fxBurst(p.x,p.y-30,'gold',skill.visual);
- spawnModBitmap('gold',p.x,p.y-36,skill.visual*.8,
+ spawnGroundSlamFx(p.x,p.y,skill.visual,'hero');
+ // Keep a subtle accent behind the wide hand-painted ground-smash sequence.
+ spawnModBitmap('gold',p.x,p.y-36,skill.visual*.45,
   'brightness(1.45) saturate(1.2)',.30);
  playImpactSound('heavy',powered?1.4:1.1);
  if(powered)playCombatGunfire('slam','axe_kick');
@@ -6255,7 +6293,7 @@ function updateEliteAI(e,dt,dx,dy,dist){
    e.windupDuration=e.windup;
    e.eliteSpecialRecover=Math.max(.7,(e.eliteSpecialDuration||1.04)-(e.eliteSpecialElapsed||0)+.15);
    e.cooldown=1.2;
-   fxBurst(e.x+e.face*67,e.y-123,'red',2.2);
+   spawnGroundSlamFx(e.x+e.face*35,e.y,1.20,'elite');
    screenShake=Math.max(screenShake,13);
   }
   return true;
@@ -6486,7 +6524,8 @@ function updateEnemies(dt,parryVictimScale=1){
     attack:enemyAttack,
     warning:(b,tag,color)=>{floatText(tag,b.x,b.y-360,color==='red'?'#ff7187':'#ffdca0');fxBurst(b.x,b.y-172,color,1.4);playCombatVoice('bossShout',b)},
     impact:(b,kind)=>{
-     fxBurst(b.x+b.face*63,b.y-116,kind==='slam'?'red':'gold',kind==='slam'?3.0:1.75);
+     if(kind==='slam')spawnGroundSlamFx(b.x,b.y,1.55,'boss');
+     else fxBurst(b.x+b.face*63,b.y-116,'gold',1.75);
      screenShake=Math.max(screenShake,kind==='slam'?24:12);
      playImpactSound('heavy',kind==='slam'?1.45:1.0);vibrateImpact('heavy');
      hitStop=Math.max(hitStop,kind==='slam'?.08:.04);
@@ -7075,7 +7114,15 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  ctx.restore();
  if(!isP&&!a.dead){const y0=y-z-h-13;/* All enemy overhead HP/poise bars removed, including boss. */if(a.windup>0){ctx.textAlign='center';ctx.fillStyle='#ff697b';ctx.font=`900 ${boss?40:27}px Arial`;ctx.fillText('!',x,y0-13)}
  if(a.chargePrep>0){ctx.textAlign='center';ctx.fillStyle='#ffb842';ctx.font='900 31px Arial';ctx.fillText('!!',x,y0-18)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('공격 → 처형',x,y0-12)}}}
-function drawEffects(){drawModEnergy();const left=cameraX-320,right=cameraX+W+320;for(const f of fx){if(f.x<left||f.x>right)continue;
+function drawEffects(){drawModEnergy();const left=cameraX-620,right=cameraX+W+620;for(const f of fx){if(f.x<left||f.x>right)continue;
+ if(f.kind==='groundSlamSprite'){
+  if(!drawGroundSlamSprite(f)){
+   // Existing painted bitmap fallback while the new resource is unavailable.
+   const old=img.burst_gold;
+   if(old?.complete&&old.naturalWidth){ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,.7);const w=230*f.scale;ctx.drawImage(old,f.x-w*.5,f.y-w*.37,w,w*.55);ctx.restore()}
+  }
+  continue;
+ }
  if(f.kind==='modBitmap'){
   const bitmap=img['burst_'+f.color];if(!bitmap?.complete||!bitmap.naturalWidth)continue;
   const age=1-f.life/f.maxLife,sz=125*f.scale*(.78+age*.56);
