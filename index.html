@@ -3280,7 +3280,7 @@ function currentZFrameIndex(key){
  const speed=key==='idle'?5.8:key==='airborne'?8:10;
  return Math.floor(Math.max(0,p.motionTime||0)*speed*Z_ANIM_RATE)%8;
 }
-function paintZ(x,y,z){
+function paintZ(x,y,z,externalOpacity=1){
  const key=getZMove(),atlas=loadZMove(key);
  if(p.motionKey!==key){
   const before=p.motionKey,wasMoving=['walk','run','backwalk'].includes(before),nowMoving=['walk','run','backwalk'].includes(key);
@@ -3309,7 +3309,7 @@ function paintZ(x,y,z){
  if(recoil){ctx.rotate(-.10*recoil);ctx.scale(1+.04*recoil,1-.14*recoil)}
  if(fr){
   const b=fr.bounds,sc=fr.unitScale;
-  ctx.globalAlpha=p.inv>0&&Math.sin(time*33)>0?.67:1;
+  ctx.globalAlpha=(p.inv>0&&Math.sin(time*33)>0?.67:1)*externalOpacity;
   // Keep original image visible (25%+) beneath a <=75% white alpha mask.
   const originalOpacity=ctx.globalAlpha;
   ctx.drawImage(fr.canvas,b.x,b.y,b.w,b.h,-b.w*sc/2,-b.h*sc,b.w*sc,b.h*sc);
@@ -3333,27 +3333,62 @@ const STAGE_WIDTH=32000;let cameraX=0;
 
 /* 8-frame scarf-free Z arrival: source is the original supplied sprite artwork,
    not a new character. Existing attack/hit/idle sprites stay unchanged. */
-const HERO_ENTRY_ATLAS_URL='https://d2ol7oe51mr4n9.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/6a789253-a909-44c9-80b3-42af6957ed70.webp';
-const heroEntry={active:false,elapsed:0,duration:2.34,frames:8,image:new Image(),landed:false};
-heroEntry.image.crossOrigin='anonymous';heroEntry.image.src=HERO_ENTRY_ATLAS_URL;
+const HERO_ENTRY_ATLAS_URL='./assets/hero/hero-intro-scarf-free-clean-8f.webp?v=20261101-recut';
+const HERO_ENTRY_FRAME_W=640,HERO_ENTRY_FRAME_H=560,HERO_ENTRY_FOOT_Y=480;
+const heroEntry={
+ active:false,elapsed:0,duration:2.48,frames:8,image:new Image(),landed:false,
+ revealAt:1.59,flashDuration:.27,revealDuration:.29
+};
+heroEntry.image.src=HERO_ENTRY_ATLAS_URL;
 function heroEntryEase(t){t=clamp(t,0,1);return t*t*(3-2*t)}
 function heroEntryPose(u){return Math.min(7,Math.floor(clamp(u,0,.99999)*8))}
+function heroEntryReveal(){return heroEntryEase((heroEntry.elapsed-heroEntry.revealAt)/heroEntry.revealDuration)}
+function heroEntryFlash(){
+ const t=heroEntry.elapsed-heroEntry.revealAt;
+ if(t<0||t>=heroEntry.flashDuration)return 0;
+ return t<.045?heroEntryEase(t/.045)*.96:
+  .96*(1-heroEntryEase((t-.045)/(heroEntry.flashDuration-.045)));
+}
 function drawHeroEntryCinematic(){
- const u=clamp(heroEntry.elapsed/heroEntry.duration,0,1),im=heroEntry.image;
+ // ABSOLUTE BLACK until the character reaches the same game-scale footing.
+ // This function runs before global camera shake/zoom transforms, so no
+ // sliver of the rainy street can leak out around the black background.
+ const t=heroEntry.elapsed,u=clamp(t/heroEntry.duration,0,1),im=heroEntry.image;
  ctx.save();
- const darkness=(1-heroEntryEase((u-.10)/.70))*.55;
- if(darkness>0){ctx.fillStyle='rgba(3,7,13,'+darkness.toFixed(3)+')';ctx.fillRect(0,0,W,H)}
- const settle=heroEntryEase((u-.10)/.82),scale=2.05+(0.58-2.05)*settle;
- const screenX=W*.53+(p.x-cameraX-W*.53)*heroEntryEase((u-.24)/.70);
- const groundY=H*1.02+(p.y-H*1.02)*heroEntryEase((u-.24)/.70);
- if(im?.complete&&im.naturalWidth>0&&im.naturalHeight>0){
-  const i=heroEntryPose(u),col=i%4,row=Math.floor(i/4);
-  const sx=Math.round(col*im.naturalWidth/4),ex=Math.round((col+1)*im.naturalWidth/4);
-  const sy=Math.round(row*im.naturalHeight/2),ey=Math.round((row+1)*im.naturalHeight/2);
-  const sw=ex-sx,sh=ey-sy;
-  ctx.globalAlpha=1-heroEntryEase((u-.94)/.06);
-  ctx.drawImage(im,sx,sy,sw,sh,screenX-sw*scale/2,groundY-sh*scale,sw*scale,sh*scale);
+ ctx.fillStyle='#000000';ctx.fillRect(0,0,W,H);
+ const backdropAlpha=heroEntryReveal();
+ if(backdropAlpha>0){
+  ctx.globalAlpha=backdropAlpha;
+  drawBackdrop(); // SAME background used by normal gameplay, no illustration swap.
   ctx.globalAlpha=1;
+ }
+ const settle=heroEntryEase((t-.12)/(heroEntry.revealAt-.12));
+ const spriteScale=2.05+(.51-2.05)*settle;
+ const actorScreenX=p.x-cameraX,actorFootY=p.y-p.z;
+ const screenX=W*.54+(actorScreenX-W*.54)*settle;
+ const footY=H*1.04+(actorFootY-H*1.04)*settle;
+ const i=heroEntryPose(u),col=i%4,row=Math.floor(i/4);
+ const stagePoseOpacity=heroEntryEase((t-(heroEntry.duration-.33))/.25);
+ // During the final stance, subtly blend into the real player animation at
+ // its actual foot position instead of a one-frame sprite pop.
+ if(stagePoseOpacity>0&&backdropAlpha>.99){
+  paintZ(actorScreenX,p.y,p.z,stagePoseOpacity);
+ }
+ if(im.complete&&im.naturalWidth===HERO_ENTRY_FRAME_W*4&&
+    im.naturalHeight===HERO_ENTRY_FRAME_H*2){
+  ctx.globalAlpha=1-stagePoseOpacity;
+  ctx.drawImage(im,col*HERO_ENTRY_FRAME_W,row*HERO_ENTRY_FRAME_H,
+   HERO_ENTRY_FRAME_W,HERO_ENTRY_FRAME_H,
+   screenX-HERO_ENTRY_FRAME_W*spriteScale/2,
+   footY-HERO_ENTRY_FOOT_Y*spriteScale,
+   HERO_ENTRY_FRAME_W*spriteScale,HERO_ENTRY_FRAME_H*spriteScale);
+  ctx.globalAlpha=1;
+ }
+ const flash=heroEntryFlash();
+ if(flash>0){
+  // Quick neutral-white impact flash: never show the street before touchdown.
+  ctx.fillStyle='rgba(245,247,255,'+flash.toFixed(3)+')';
+  ctx.fillRect(0,0,W,H);
  }
  ctx.restore();
 }
@@ -5830,7 +5865,7 @@ function update(dt){
   const previous=heroEntry.elapsed;
   heroEntry.elapsed=Math.min(heroEntry.duration,previous+dt);
   time+=dt*.24;
-  if(!heroEntry.landed&&heroEntry.elapsed>=heroEntry.duration*.60){
+  if(!heroEntry.landed&&heroEntry.elapsed>=heroEntry.revealAt){
    heroEntry.landed=true;sound('attack');vibrateImpact('heavy',true);
   }
   if(heroEntry.elapsed>=heroEntry.duration){
@@ -6237,7 +6272,9 @@ function drawEffects(){drawModEnergy();const left=cameraX-320,right=cameraX+W+32
 const visibleActors=[];
 function draw(){
  if(gameState!=='playing'&&gameState!=='dying'&&!rewardSelection)return;
- ctx.clearRect(0,0,W,H);ctx.save();
+ ctx.clearRect(0,0,W,H);
+ if(heroEntry.active){drawHeroEntryCinematic();return;}
+ ctx.save();
  // Only the full-screen camera offset is softened by 15%; gamepad rumble,
  // actor hit reactions, sound, hitstop, and effect timers remain unchanged.
  if(screenShake>0){const cameraShake=screenShake*.85;
@@ -6247,7 +6284,6 @@ function draw(){
   ctx.translate(px,py);ctx.scale(zoom,zoom);ctx.translate(-px,-py);
  }
  drawBackdrop();
- if(heroEntry.active){drawHeroEntryCinematic();ctx.restore();return;}
  ctx.save();ctx.translate(-Math.round(cameraX),0);
  const actors=visibleActors;actors.length=0;
  if(p.x>cameraX-300&&p.x<cameraX+W+300)actors.push(p);
