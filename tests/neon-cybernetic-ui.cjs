@@ -27,6 +27,25 @@ assert(atlas.length>200000,'final atlas retains a crisp painterly icon resolutio
 assert(html.includes("if(src.src.includes('upgrade-icons-v4.webp'))"),'uniform 256px icon frames remain untouched');
 assert(html.includes('sourcePreserved:true'), 'do not downscale the final painted 25-icon atlas');
 assert(css.includes('content:none!important; /* The icon atlas already includes'),'a single neon frame should render, not two overlapping');
+// Mid-combat upgrades use the same full-resolution 25-cell bitmap icons as Hub.
+const largeStart=html.indexOf('<style id="reward-large-icons-v1">');
+const largeEnd=html.indexOf('</style>',largeStart);
+const neonStart=html.indexOf('<style id="z-neon-cybernetic-ui-v3">');
+assert(largeStart>neonStart&&largeEnd>largeStart,'large reward icon styling must override the neon style');
+const large=html.slice(largeStart,largeEnd);
+for(const rule of [
+ '#stageWrap #menu.reward-dialog .choice-grid .upgrade-btn .sym .upgrade-art{',
+ 'width:clamp(100px,26cqh,176px)!important',
+ 'height:clamp(100px,26cqh,176px)!important',
+ 'aspect-ratio:1 / 1!important',
+ 'max-width:72%!important',
+ 'background-size:500% 500%!important',
+ 'align-items:center!important',
+ '#app.tight-hub-stage',
+ '#app.compact-game-stage'
+])assert(large.includes(rule),'reward icon sizing or safe responsive fallback missing: '+rule);
+assert(!large.includes('data:image/svg'),'keep reward and Hub icons in raster art');
+
 console.log('PASS: bitmap magenta/cyan window rails, hub and reward hierarchy, 3-column 16:9 layout, and NEW rank markers');
 
 // The game title and masthead must stay on the approved hand-painted logo art.
