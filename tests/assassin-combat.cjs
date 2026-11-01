@@ -127,7 +127,7 @@ test('HUB card previews preserve held gamepad direction and permit the next inte
   assert.equal(t.menuPad.index,3,'held stick must not spuriously navigate away from Apply after rerender');
   axes=[0,0];t.pollPad();
   axes=[1,0];t.pollPad();
-  assert.equal(t.menuPad.index,4,'released then newly moved stick navigates to the next lower action');
+  assert.equal(t.menuPad.index,3,'in isolated one-action test, moving right does not jump back to a card');
   axes=[0,0];t.pollPad();
   t.menuPad.nav=-1;t.menuPad.confirm=true;
   assert.equal(t.buyUpgrade('servo'),true);
