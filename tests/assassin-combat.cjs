@@ -1902,7 +1902,7 @@ test('reward choices open with no prelit first-card focus or outline',()=>{
   assert.equal(g.getState().gameState,'reward');
   assert.equal(t.menuPad.index,0,'navigation order remains unchanged');
   assert(fake.every(b=>b.focused===0),'no upgrade button auto-focused on reveal');
-  assert(html.includes("if(gameState!=='reward')selectMenuItem(0)"),'reward open omits preset focus');
+  assert(!html.includes("if(gameState!=='reward')selectMenuItem(0)"),'all menus including rewards open without automatic focus');
  }finally{menu.querySelectorAll=old}
 });
 test('reward confirmation glows and holds before granting exactly one upgrade',()=>{
