@@ -5728,13 +5728,17 @@ function spawnDashPierceFx(attacker,target){
  const width=clamp(span+310+modRank('dashspeed')*21,440,820);
  const duration=.29; // all 8 frames are displayed, once per successful dash hit
  fx.push({kind:'dashPierceSprite',x,y:target.y-112,dir,width,
-  life:duration,maxLife:duration});
+  age:0,drawnFrame:-1,life:duration,maxLife:duration});
 }
 function drawDashPierceSprite(f){
  const im=DASH_PIERCE_ART.image;
  if(!DASH_PIERCE_ART.available||!im.complete||!im.naturalWidth)return false;
- const ratio=clamp(1-f.life/f.maxLife,0,.999999);
- const frame=Math.min(7,Math.floor(ratio*8)),cw=im.naturalWidth/4,ch=im.naturalHeight/2;
+ const ratio=clamp((f.age||0)/f.maxLife,0,.999999);
+ const desired=Math.min(7,Math.floor(ratio*8));
+ // Never leap over a source cell when the real frame rate drops or hitstop ends.
+ const frame=Math.min(desired,(f.drawnFrame??-1)+1);
+ f.drawnFrame=frame;
+ const cw=im.naturalWidth/4,ch=im.naturalHeight/2;
  const width=f.width,height=width*(ch/cw);
  ctx.save();
  ctx.translate(f.x,f.y);
@@ -6725,7 +6729,7 @@ function updateEffects(dt){
   heroAfterimages[i].life-=dt;
   if(heroAfterimages[i].life<=0)heroAfterimages.splice(i,1);
  }
- for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx)f.life-=dt;fx=fx.filter(f=>f.life>0);for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
+ for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){f.life-=dt;if(f.kind==='dashPierceSprite'){f.age=(f.age||0)+dt;if((f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02)}}fx=fx.filter(f=>f.life>0);for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
 let modStripCache='',lastHudCombo=-1,hudAccumulator=.12,modsExpanded=false;
 function setModsExpanded(open){
  modsExpanded=!!open;
