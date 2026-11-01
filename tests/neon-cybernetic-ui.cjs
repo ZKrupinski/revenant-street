@@ -31,3 +31,6 @@ console.log('PASS: bitmap magenta/cyan window rails, hub and reward hierarchy, 3
 
 // The game title and masthead must stay on the approved hand-painted logo art.
 require('./title-bi.cjs');
+
+// Hero entrance is part of the initial UI-to-combat transition.
+require('./hero-entry.cjs');
