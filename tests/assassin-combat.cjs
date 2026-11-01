@@ -2670,8 +2670,61 @@ test('dash upgrades expand actual hit range, damage and push',()=>{
   near.hp=far.hp=1000;near.maxHp=far.maxHp=1000;t.setEnemies([near,far]);
   t.attackCheck();results.push([1000-near.hp,1000-far.hp,near.knockVX]);
  }
- assert.equal(results[0][1],0);assert(results[2][1]>0);
+ assert(results[0][1]>0,'the base dash punch splashes a nearby forward enemy even beyond the direct hitbox');
+ assert(results[2][1]>results[0][1],'the ranked dash range and damage make the farther enemy take more damage');
  for(let i=1;i<3;i++){assert(results[i][0]>results[i-1][0]);assert(results[i][2]>results[i-1][2]);}
+});
+test('dash-punch direct strike damages its primary once and hits nearby forward side-lane enemies',()=>{
+ for(const facing of [1,-1]){
+  g.startRun();t.p.x=3500;t.p.y=570;t.p.facing=facing;t.p.mods=[];
+  t.p.dashSmash=true;t.p.attack=.3;t.p.moveName='cross';t.p.comboIdx=0;
+  const primary=t.makeEnemy('raider',t.p.x+facing*100,t.p.y,0);
+  const side=t.makeEnemy('raider',t.p.x+facing*190,t.p.y+65,1);
+  const rear=t.makeEnemy('raider',t.p.x-facing*80,t.p.y+65,2);
+  const far=t.makeEnemy('raider',t.p.x+facing*700,t.p.y+65,3);
+  for(const e of [primary,side,rear,far])e.hp=e.maxHp=500;
+  t.setEnemies([primary,side,rear,far]);t.attackCheck();
+  const primaryDamage=500-primary.hp,sideDamage=500-side.hp;
+  assert(primaryDamage>sideDamage&&sideDamage>0,'direct punch beats side-lane splash in damage');
+  assert.equal(rear.hp,500,'forward blast cannot damage enemies behind the hero');
+  assert.equal(far.hp,500,'out-of-range enemy remains untouched');
+  assert(side.knockVX*facing>0&&side.stun>0,'splash victim receives a forward shove and stagger');
+  assert(t.getFx().filter(f=>f.kind==='dashPierceSprite').length<=1,'one direct punch cannot duplicate its pierced bitmap');
+ }
+});
+test('dash and counter splash only occur on genuine impact, and never strike the main victim twice',()=>{
+ for(const kind of ['dash','counter']){
+  g.startRun();t.p.x=3300;t.p.y=570;t.p.facing=1;t.p.mods=[];t.setEnemies([]);
+  if(kind==='dash'){
+   t.p.dashSmash=true;t.p.attack=.3;t.p.moveName='cross';
+   t.attackCheck();assert.equal(t.getFx().filter(f=>f.kind==='dashPierceSprite').length,0,'dash whiff cannot spawn hit VFX or splash');
+  }else{
+   t.p.riposteStrikeTarget=null;t.attackCheck();
+   assert.equal(t.getFx().filter(f=>f.kind==='parryCounterSprite').length,0,'no free counter splash without a target');
+  }
+  const e=t.makeEnemy('raider',t.p.x+100,t.p.y,0);
+  e.hp=e.maxHp=2000;t.setEnemies([e]);
+  if(kind==='counter')t.p.riposteStrikeTarget=e;
+  t.attackCheck();
+  const damage=2000-e.hp;
+  if(kind==='counter')assert(Math.abs(damage-45)<.001,'counter primary only takes its original 45 HP without second splash');
+  else assert(damage>0&&damage<70,'dash primary does not take additional AoE damage');
+ }
+});
+test('counter splash hits only nearby enemies in front, including side lanes, in either facing',()=>{
+ for(const facing of [-1,1]){
+  g.startRun();t.p.x=3900;t.p.y=570;t.p.facing=facing;t.p.mods=[];
+  const primary=t.makeEnemy('assassin',t.p.x+facing*120,t.p.y,0);
+  const side=t.makeEnemy('raider',t.p.x+facing*205,t.p.y+65,1);
+  const rear=t.makeEnemy('raider',t.p.x-facing*85,t.p.y+65,2);
+  const far=t.makeEnemy('raider',t.p.x+facing*610,t.p.y+65,3);
+  for(const e of [primary,side,rear,far])e.hp=e.maxHp=1000;
+  t.setEnemies([primary,side,rear,far]);t.p.riposteStrikeTarget=primary;t.attackCheck();
+  assert.equal(primary.hp,955,'unchanged primary 45 damage at zero counter rank');
+  assert(side.hp<1000&&side.knockVX*facing>0,'nearby forward side-lane foe is damaged and sent away');
+  assert.equal(rear.hp,1000,'rear foe cannot be caught by forward counter shockwave');
+  assert.equal(far.hp,1000,'enemy outside the forward shockwave keeps full health');
+ }
 });
 test('normal attacks exhaust the ready repertoire without repeats across pauses',()=>{
  g.startRun();t.setEnemies([]);
