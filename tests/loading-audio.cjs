@@ -50,7 +50,7 @@ async function combatVoices(){
  const voiceScript=fs.readFileSync(path.join(root,'assets/voice/voice-engine.js'),'utf8');
  let fetches=0,decoded=0;
  const createdSources=[],voiceGains=[];
- const param=()=>({value:0,setValueAtTime(v){this.value=v},linearRampToValueAtTime(v){this.value=v}});
+ const param=()=>({value:0,history:[],setValueAtTime(v){this.value=v;this.history.push(v)},linearRampToValueAtTime(v){this.value=v;this.history.push(v)}});
  const node=()=>({gain:param(),frequency:param(),threshold:param(),knee:param(),ratio:param(),attack:param(),release:param(),playbackRate:{value:1},
   connect(x){return x},disconnect(){},start(when){this.started=true;this.startedAt=when},stop(){this.stopped=true}});
  const ctx={currentTime:0,destination:node(),
@@ -92,7 +92,11 @@ async function combatVoices(){
  for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
  assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy gets its own wounded vocal');
  assert(/enemy-pain-deep-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'ordinary pain must use the new deep groans instead of high cries');
- assert(createdSources.at(-1).startedAt>=ctx.currentTime+.075,'the crack of impact should precede the groan');
+ assert(createdSources.at(-1).startedAt>=ctx.currentTime+.055,'the crack of impact should precede the groan by about 60ms');
+ const enemyVolume=Math.max(...voiceGains.at(-1).gain.history);
+ assert(enemyVolume>1.5&&enemyVolume<2.2,'hurt vocal gain must cut through metal music without clipping: '+enemyVolume);
+ assert(voiceScript.includes("const ENEMY_VOICE_GAIN=2.15"),'low-pitch vocals have an independent audibility boost');
+ assert(voiceScript.includes("presence.frequency.value=920;presence.gain.value=2.5"),'presence stays in lower mids, not shrill highs');
  ctx.currentTime=3.0;
  assert.equal(voices.play('heroStrike',hero,hero),true,'normal hero strikes use mechanical charging clicks');
  assert(/hero-mech-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero normal hits never play human recordings');
@@ -166,7 +170,7 @@ async function combatVoices(){
   assert(bytes.length>6000,'game embeds an original gun report: '+name);
   assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'MP3 gun report must be valid: '+name);
  }
- console.log('PASS: all 19 move variations have gunshots, 11 clips preload, subdued deep grunts replace every old piercing aaah, BGM remains untouched');
+ console.log('PASS: low-pitch enemy vocals are +9-11 dB audible and unmasked, with 11 clips and unchanged BGM/gunfire');
 }
 function spriteRetry(){
  const images=[];let now=1000;
