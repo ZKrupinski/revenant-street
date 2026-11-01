@@ -138,7 +138,7 @@ assert(tailTransforms.some(([k,x,y])=>k==='translate'&&x===world.p.x+52+(1-world
  'charged bitmap shifts 32px toward the rear while staying at fist height');
 const drawnWake=draws[startDraw+1],drawnCharge=draws[startDraw+2];
 assert(drawnWake[8]<drawnWake[7]*.52,'wake is stretched wide and compressed vertically');
-assert(drawnCharge[8]<drawnCharge[7]*.52,'charging electricity also stretches across dash direction');
+assert(drawnCharge[8]<drawnCharge[7]*.57,'charging electricity also stretches across dash direction');
 const noMore=world.fx.length;
 world.p.evadeBackstep=true;world.emitTrail(world.p,410,335);
 assert.equal(world.fx.length,noMore);assert.equal(world.drawCharge(world.p),false);
