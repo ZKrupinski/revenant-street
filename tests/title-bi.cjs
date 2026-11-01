@@ -62,7 +62,9 @@ assert(buttonOrder.every(i=>i>=0)&&buttonOrder[0]<buttonOrder[1]&&buttonOrder[1]
  'HUB, centered GAME START, and controls are in this order');
 assert(title.includes('class="main-btn title-game-start" data-action="start"><span class="title-start-text">GAME START</span></button>'),
  'center start button keeps its start action and bold flashing text span');
-const titleStyle=html.match(/<style id="project-z-title-art-first-v2">([\\s\\S]*?)<\\/style>/);
+const titleStyleStart=html.indexOf('<style id="project-z-title-art-first-v2">');
+const titleStyleEnd=html.indexOf('</style>',titleStyleStart);
+const titleStyle=titleStyleStart>=0&&titleStyleEnd>titleStyleStart?[null,html.slice(titleStyleStart,titleStyleEnd)]:null;
 assert(titleStyle,'art-first title style exists');
 for(const token of ['.buttons.title-action-row','font:1000','z-title-start-text-blink','steps(1,end)','prefers-reduced-motion'])
  assert(titleStyle[1].includes(token),'title center/blink style missing: '+token);
