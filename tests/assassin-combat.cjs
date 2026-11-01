@@ -127,7 +127,7 @@ test('HUB card previews preserve held gamepad direction and permit the next inte
   assert.equal(t.menuPad.index,3,'held stick must not spuriously navigate away from Apply after rerender');
   axes=[0,0];t.pollPad();
   axes=[1,0];t.pollPad();
-  assert.equal(t.menuPad.index,0,'released then newly moved stick navigates normally');
+  assert.equal(t.menuPad.index,4,'released then newly moved stick navigates to the next lower action');
   axes=[0,0];t.pollPad();
   t.menuPad.nav=-1;t.menuPad.confirm=true;
   assert.equal(t.buyUpgrade('servo'),true);
@@ -168,9 +168,11 @@ test('HUB controller and WASD navigate spatially between button rows, never a fl
   assert.equal(cards[0].focusCount,1);
   t.menuPad.index=6; // economy button underneath middle/right part
   t.hubMenuNavigate(0,-1);
-  assert.equal(t.menuPad.index,1,'UP from economy goes to middle card according to x position');
+  assert.equal(t.menuPad.index,2,'UP from economy goes to the rightmost card directly above');
+  t.hubMenuNavigate(-1,0);
+  assert.equal(t.menuPad.index,1,'LEFT moves to the adjacent card on the same row');
   t.hubMenuNavigate(1,0);
-  assert.equal(t.menuPad.index,2,'RIGHT moves to the adjacent card on the same row');
+  assert.equal(t.menuPad.index,2,'RIGHT returns to the adjacent right card');
   t.hubMenuNavigate(0,1);
   assert.equal(t.menuPad.index,7,'DOWN goes to nearest bottom-row button below the right card');
   t.hubMenuNavigate(-1,0);
@@ -183,8 +185,8 @@ test('HUB controller and WASD navigate spatially between button rows, never a fl
   key('w');
   assert.equal(t.menuPad.index,0,'W means up to item, not previous flat list button');
   key('d');assert.equal(t.menuPad.index,1,'D means right within card row');
-  key('s');assert.equal(t.menuPad.index,6,'S means down to a nearby action');
-  key('a');assert.equal(t.menuPad.index,5,'A means left within the action row');
+  key('s');assert.equal(t.menuPad.index,5,'S means down to the closest bottom action');
+  key('a');assert.equal(t.menuPad.index,4,'A means left within the action row');
  }finally{
   menu.querySelectorAll=oldQuery;menu.querySelector=oldBtnQuery;
   Object.assign(perma,backup);t.heldKeyboard.clear();t.hubMenu();
