@@ -69,6 +69,20 @@ assert(titleStyle,'art-first title style exists');
 for(const token of ['.buttons.title-action-row','font:1000','z-title-start-text-blink','steps(1,end)','prefers-reduced-motion'])
  assert(titleStyle[1].includes(token),'title center/blink style missing: '+token);
 
+// The CTA is physically centered: symmetric side tracks, a larger middle track.
+assert(titleStyle[1].includes('grid-template-columns:minmax(0,1fr) minmax(0,1.27fr) minmax(0,1fr)!important'),
+ 'GAME START must be exactly horizontally centered and wider than side buttons');
+assert(titleStyle[1].includes('height:clamp(47px,7.8cqh,63px)!important'),
+ 'GAME START must be taller than the secondary actions');
+assert(titleStyle[1].includes('font:1000 clamp(20px,2.55cqw,30px)'),
+ 'GAME START must have the largest heavyweight type');
+assert(titleStyle[1].includes('55%,100%{opacity:.48}'),
+ 'GAME START blink should remain readable even in its dim phase');
+assert(html.includes("menuPad.index=$('menu').querySelector('.title-action-row')?1:0;"),
+ 'title confirm defaults to the middle GAME START, without initial focus');
+assert(!html.includes("if(gameState!=='reward')selectMenuItem(0)"),
+ 'no menu may auto-select and light an unrelated button on open');
+
 console.log('PASS: BI landing screen has zero lower text lines and compact readable action buttons');
 
 console.log('PASS: title and header use approved original cybernetic bitmap, with no cropped artwork or missing controls');
