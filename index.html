@@ -3181,6 +3181,60 @@ body{position:fixed;inset:0;touch-action:manipulation}
  #stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen::before{animation:none!important}
 }
 </style>
+<style id="reward-selection-heavy-impact-v2">
+/* Strong visual vibration on actual combat upgrade CONFIRM (not navigation).
+   Shake the entire window for 0.32s, then let the existing .82s
+   pickup cinematic fade into the battlefield. Keep the bitmap UI intact. */
+#stageWrap .overlay.reward-confirming #menu.reward-dialog{
+ animation:zRewardHeavyWindowShock .82s ease-out both!important;
+ will-change:transform,opacity;
+}
+#stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen{
+ animation:zRewardHeavyCardShock .78s ease-out both!important;
+ transform-origin:50% 50%;
+ will-change:transform;
+}
+#stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen::before{
+ animation:zRewardHeavyRimFlash .72s ease-out both!important;
+}
+/* Extra shock pulses at the press, unlike a gentle hover translation. */
+@keyframes zRewardHeavyWindowShock{
+ 0%{opacity:1;transform:translate3d(0,0,0) scale(1)}
+ 6%{opacity:1;transform:translate3d(-16px,8px,0) scale(1.022)}
+ 12%{opacity:1;transform:translate3d(14px,-7px,0) scale(1.017)}
+ 19%{opacity:1;transform:translate3d(-13px,6px,0) scale(1.015)}
+ 26%{opacity:1;transform:translate3d(11px,-5px,0) scale(1.012)}
+ 33%{opacity:1;transform:translate3d(-8px,3px,0) scale(1.01)}
+ 40%{opacity:1;transform:translate3d(5px,-2px,0) scale(1)}
+ 47%{opacity:1;transform:translate3d(0,0,0) scale(1)}
+ 100%{opacity:0;transform:translate3d(0,0,0) scale(.95)}
+}
+@keyframes zRewardHeavyCardShock{
+ 0%{transform:translate3d(0,0,0) rotate(0) scale(1)}
+ 7%{transform:translate3d(-13px,4px,0) rotate(-1.8deg) scale(1.065)}
+ 15%{transform:translate3d(14px,-5px,0) rotate(1.7deg) scale(1.115)}
+ 23%{transform:translate3d(-11px,4px,0) rotate(-1.3deg) scale(1.13)}
+ 31%{transform:translate3d(9px,-3px,0) rotate(.9deg) scale(1.09)}
+ 39%{transform:translate3d(-5px,2px,0) rotate(-.5deg) scale(1.07)}
+ 50%{transform:translate3d(0,0,0) rotate(0) scale(1.052)}
+ 100%{transform:translate3d(0,0,0) rotate(0) scale(1.025)}
+}
+@keyframes zRewardHeavyRimFlash{
+ 0%{opacity:.8;filter:drop-shadow(0 0 6px #d9ffff)}
+ 15%{opacity:1;filter:drop-shadow(0 0 24px #e9ffff) drop-shadow(0 0 43px #39bdff)}
+ 29%{opacity:1;filter:drop-shadow(0 0 17px #d3faff) drop-shadow(0 0 34px #36baff)}
+ 100%{opacity:1;filter:drop-shadow(0 0 11px #b7f7ff) drop-shadow(0 0 21px #32baff)}
+}
+@media(prefers-reduced-motion:reduce){
+ #stageWrap .overlay.reward-confirming #menu.reward-dialog,
+ #stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen{
+  animation:none!important;
+ }
+ #stageWrap .overlay.reward-confirming #menu.reward-dialog .choice-grid>button.upgrade-btn.reward-chosen::before{
+  animation:none!important;
+ }
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -5129,7 +5183,7 @@ const RUMBLE_PROFILES={
  punch:[115,.86,.96],heavy:[220,1,1],parry:[225,1,1],
  hurt:[235,.96,1],execution:[325,1,1],
  dash:[155,.94,1],air:[185,.90,1],
- dashImpact:[375,1,1],slam:[440,1,1],test:[290,1,1]
+ dashImpact:[375,1,1],slam:[440,1,1],upgradeConfirm:[360,1,1],test:[290,1,1]
 };
 let hapticPriorityUntil=-99,footstepRumbleDistance=0,lastFootstepRumbleTime=-99;
 function footstepRumble(dt,distance){
@@ -5246,8 +5300,9 @@ function vibrateImpact(kind='punch',force=false){
  let phoneSent=false;
  // On mobile, prefer an actual paired gamepad to phone vibration.
  if(!padSent&&typeof navigator.vibrate==='function'){
-  const strong=['heavy','parry','execution','hurt','test','slam','dashImpact'].includes(kind);
-  try{phoneSent=!!navigator.vibrate(strong?[48,24,70]:[24,12,28])}catch(_){}
+  const strong=['heavy','parry','execution','hurt','test','slam','dashImpact','upgradeConfirm'].includes(kind);
+  const pattern=kind==='upgradeConfirm'?[95,38,135]:(strong?[48,24,70]:[24,12,28]);
+  try{phoneSent=!!navigator.vibrate(pattern)}catch(_){}
  }
  if(padSent||phoneSent){
   const duration=(RUMBLE_PROFILES[kind]||RUMBLE_PROFILES.punch)[0];
@@ -8006,7 +8061,7 @@ function requestSelectMod(m){
  if(['guard','counter'].includes(m))spawnParryShieldFx(p.x+p.facing*45,p.y-140,p.facing,.56);
  if(['dashrange','dashspeed','rush'].includes(m))fxBurst(p.x-p.facing*48,p.y-90,'blue',1.32);
  if(['jumpheight','jumpspeed'].includes(m))fxBurst(p.x,p.y-30,'gold',1.38);
- sound('parry');playImpactSound('heavy',.83);vibrateImpact('heavy',true);
+ sound('parry');playImpactSound('heavy',.83);vibrateImpact('upgradeConfirm',true);
  return true;
 }
 function updateRewardSelection(dt){
