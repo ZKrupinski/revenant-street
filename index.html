@@ -3019,6 +3019,49 @@ body{position:fixed;inset:0;touch-action:manipulation}
  }
 }
 </style>
+<style id="hub-gamepad-focus-frame-v2">
+/* HUB focus is a transient input state; the gold/green frame is selection/status.
+   The shared menu button rule used translateY(-2px), making focused cards jump. */
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module{
+ transform:none!important;
+ translate:none!important;
+}
+/* Preserve the full-size illustration and give all three cards the same
+   bitmap cyan frame when navigated to with keyboard/gamepad. */
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module::after{
+ content:"";
+ position:absolute;inset:0;z-index:4;
+ pointer-events:none;
+ box-sizing:border-box;
+ border:9px solid transparent;
+ border-image:var(--z-frame-cyan) 36 / 9px / 0 stretch;
+ opacity:0;
+ transition:opacity .10s ease;
+}
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.pad-selected,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.touch-focus,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module:focus-visible{
+ transform:none!important;translate:none!important;
+ outline:none!important;
+ border-image-source:var(--z-frame-cyan)!important;
+ filter:brightness(1.12)!important;
+ box-shadow:inset 0 0 0 2px #9aeaffaa,inset 0 0 12px #5ecfff77,0 0 12px #6fd7ffaf!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.pad-selected::after,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module.touch-focus::after,
+#stageWrap #menu.hub-dialog .hub-modules>button.hub-module:focus-visible::after{
+ opacity:1!important;
+}
+@media(hover:hover) and (pointer:fine){
+ #stageWrap #menu.hub-dialog .hub-modules>button.hub-module:hover{
+  transform:none!important;translate:none!important;
+  border-image-source:var(--z-frame-cyan)!important;
+  filter:brightness(1.12)!important;
+  box-shadow:inset 0 0 0 2px #9aeaffaa,inset 0 0 12px #5ecfff77,0 0 12px #6fd7ffaf!important;
+ }
+ #stageWrap #menu.hub-dialog .hub-modules>button.hub-module:hover::after{opacity:1!important}
+}
+</style>
 </head>
 <body>
 <div id="app">
