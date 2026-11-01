@@ -73,4 +73,35 @@ assert(!html.includes('<style id="project-z-elite-centered-energy-v1">'),
 assert(html.includes("bossEnergyHud.classList.toggle('final-boss-energy',!!activeBoss)"),
  'existing final boss visual style remains active');
 
+// No floating HP or poise bars above ANY enemy sprite (including the boss).
+// A distinct boss HUD is still visible at the top of the screen.
+const bossSource=fs.readFileSync(path.join(root,'assets/boss-hunter.js'),'utf8');
+for(const [label,script] of [
+ ['combat rendering',html],
+ ['painted iron-mask',actorCode],
+ ['painted final Hunter',bossSource]
+]){
+ assert(!/fillRect\([^\n]*?\b(?:e|a)\.hp\s*\/\s*(?:e|a)\.maxHp/.test(script),
+   label+': floating HP rendering must be absent');
+ assert(!/fillRect\([^\n]*?\b(?:e|a)\.poise\s*\/\s*(?:e|a)\.maxPoise/.test(script),
+   label+': floating poise rendering must be absent');
+}
+assert(!html.includes('bw*clamp(e.hp/e.maxHp'),'enemy head HP bars must be removed from every sprite path');
+assert(!html.includes('bw*clamp(a.hp/a.maxHp'),'generic enemy and old boss HP bars must also be gone');
+assert(html.includes("bossEnergyHud.hidden=gameState!=='playing'||!activeBoss"),
+ 'only the top-screen final boss HP HUD should remain');
+assert(html.includes("clamp(100*activeBoss.hp/Math.max(1,activeBoss.maxHp),0,100)"),
+ 'real boss HP tracking must remain intact');
+for(const [name,code] of [
+ ['intruder',html.slice(html.indexOf('function drawIntruderCombat('),html.indexOf('function drawIntruderSpecialWarnings('))],
+ ['masked grunt',html.slice(html.indexOf('function drawMaskedGrunt('),html.indexOf('function getAssassinMove('))],
+ ['assassin',html.slice(html.indexOf('function drawAssassin('),html.indexOf('function prepareTransparentHeroCells('))],
+ ['guard',html.slice(html.indexOf('function drawRiotGuard('),html.indexOf('function enemyStatusIcons('))],
+ ['iron mask',actorCode],
+ ['final boss',bossSource]
+]){
+ assert(code.includes('fillText('),name+': attack warning telegraphs and labels stay visible');
+}
+assert(html.includes('drawEnemyStatusIcons(e)'),'status-effect symbols are still rendered');
+
 console.log('PASS: actual hooded Iron Mask melee/range AI runs charge 1-8 and attack 1-8; ordinary hits cannot cancel its animation');
