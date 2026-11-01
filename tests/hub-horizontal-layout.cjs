@@ -80,6 +80,26 @@ for(const rule of [
 ])assert(finalFit.css.includes(rule),'short 16:9 stage must win over earlier higher-specificity selectors: '+rule);
 
 
+// v10: the largest icon that FITS the residual art cell, not the whole stage.
+const iconFit=getStyle('hub-icons-art-first-v10');
+assert(iconFit.position>finalFit.position,
+ 'art-first Hub layout must supersede earlier 100px clamps');
+for(const rule of [
+ 'grid-template-rows:minmax(0,1fr) max-content!important',
+ 'container-name:hub-art-space!important;container-type:size!important',
+ 'grid-column:1!important;grid-row:1!important',
+ 'width:min(150px,92cqh,86cqw)!important',
+ 'height:min(150px,92cqh,86cqw)!important',
+ 'grid-template-rows:max-content max-content max-content!important',
+ 'grid-column:1!important;grid-row:2!important',
+ 'grid-column:1!important;grid-row:3!important',
+ 'min-height:27px!important',
+ '#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-art-slot>.hub-emblem,',
+ '#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module>.hub-art-slot>.hub-emblem{'
+])assert(iconFit.css.includes(rule),'Hub icon or reserved text rows missing: '+rule);
+assert(!iconFit.css.includes('position:absolute!important'),
+ 'do not put icon or button atop the title and numeric stat');
+
 const begin=html.indexOf("function hubMenu(upgraded='");
 const end=html.indexOf('function buyUpgrade(',begin);
 assert(begin>=0&&end>begin,'Hub template must exist');
