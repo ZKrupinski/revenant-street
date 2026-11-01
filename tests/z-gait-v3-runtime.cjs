@@ -66,7 +66,9 @@ assert(index.includes('HERO_GHOST_MOBILE?4:6'),'mobile ghost count stays capped'
 try{
  const cp=require('node:child_process');
  const source=path.join(root,'assets/project-z-hero/z-idle-hair-safe.webp');
- const bytes=cp.execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-i',source,'-f','rawvideo','-pix_fmt','rgba','-'],{maxBuffer:8*1024*1024});
+ let bytes;
+ try{bytes=cp.execFileSync('convert',[source,'-depth','8','rgba:-'],{maxBuffer:8*1024*1024})}
+ catch(err){bytes=cp.execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-i',source,'-f','rawvideo','-pix_fmt','rgba','-'],{maxBuffer:8*1024*1024})}
  const cellW=240,cellH=254,atlasW=cellW*4;
  assert(bytes.length>=atlasW*cellH*2*4,'idle WEBP decoded to RGBA');
  const real=Array.from({length:8},(_,i)=>{
