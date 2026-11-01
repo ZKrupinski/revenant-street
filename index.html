@@ -3338,6 +3338,38 @@ body{position:fixed;inset:0;touch-action:manipulation}
 <script src="./assets/attacks-20.js?v=923cd5b7"></script>
 <script src="./assets/voice/voice-engine.js?v=20261101-natural-human-voice-v3"></script>
 <script>const EMBEDDED_ASSETS=window.RZ_ASSETS;</script>
+<script id="z-startup-recovery-v1">
+/* Startup watchdog: expose failures instead of leaving an empty neon frame. */
+(function(){
+ const errors=[];
+ const capture=function(message){if(message&&errors.length<4)errors.push(String(message).slice(0,220));};
+ window.addEventListener('error',function(event){
+   capture(event.message || event.error?.message || ('리소스 로딩 실패: '+(event.target?.src||'')));
+ },true);
+ window.addEventListener('unhandledrejection',function(event){
+   capture(event.reason?.message||event.reason||'초기화 Promise 실패');
+ });
+ document.addEventListener('DOMContentLoaded',function(){
+   setTimeout(function(){
+     const menu=document.getElementById('menu');
+     if(!menu||menu.innerHTML.trim())return; // Successful titleMenu populates this.
+     const detail=document.createElement('p');
+     detail.textContent=errors[0]||'게임 초기화가 완료되지 않았습니다. 새 파일로 다시 실행해 주세요.';
+     detail.style.cssText='font:700 12px/1.5 Arial,sans-serif;color:#ffc6ce;overflow-wrap:anywhere';
+     const label=document.createElement('h2');
+     label.textContent='GAME START ERROR';
+     label.style.cssText='font:900 23px/1.1 Arial,sans-serif;color:#fbe8e8;margin:5px 0 12px';
+     const button=document.createElement('button');
+     button.textContent='다시 불러오기';
+     button.style.cssText='padding:12px 22px;background:#aa3152;color:white;font-weight:900;border:1px solid #f987a1;margin-top:12px';
+     button.addEventListener('click',function(){location.reload()});
+     menu.style.cssText+=';display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px';
+     menu.appendChild(label);menu.appendChild(detail);menu.appendChild(button);
+   },1200);
+ });
+})();
+</script>
+
 <script>
 (()=>{'use strict';
 const $=id=>document.getElementById(id), canvas=$('game'),ctx=canvas.getContext('2d');
