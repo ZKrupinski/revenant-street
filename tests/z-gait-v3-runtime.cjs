@@ -19,4 +19,46 @@ for(const kind of ['walk','run']){
  assert.equal(validation[kind].feet.length,8);
  assert.ok(validation[kind].frame_sizes.every(pair=>pair[0]>180&&pair[1]>320),kind+' has small/cut frames');
 }
-console.log('PASS: original-Z V3 walk/run and backwards walk share intact 8-frame atlases with reverse steps');
+
+// Regression: an entirely transparent painted fist in a single idle cell
+// is repaired from neighbouring ORIGINAL poses without touching hair or feet.
+const idleBegin=index.indexOf('function repairIdleFistAlpha(');
+const idleEnd=index.indexOf('function loadZMove(',idleBegin);
+assert(idleBegin>0&&idleEnd>idleBegin,'original idle fist alpha repair is present');
+assert(index.includes('repairIdleFistAlpha(frames);'),'pre-matted idle runs alpha repair during atlas loading');
+const w=80,h=100;
+const images=Array.from({length:8},()=>{
+ const data=new Uint8ClampedArray(w*h*4);
+ // A painted right glove, identical across a subtle breathing motion.
+ for(let y=39;y<50;y++)for(let x=59;x<70;x++){
+  const k=(y*w+x)*4;
+  data[k]=145;data[k+1]=110;data[k+2]=89;data[k+3]=255;
+ }
+ // Non-hand hair/boots should never be modified by the patch.
+ for(let y=2;y<15;y++)for(let x=28;x<52;x++){
+  const k=(y*w+x)*4;data[k]=22;data[k+1]=24;data[k+2]=27;data[k+3]=255;
+ }
+ return data;
+});
+for(let y=39;y<50;y++)for(let x=59;x<70;x++)images[3][(y*w+x)*4+3]=0;
+const originalFrame3=new Uint8ClampedArray(images[3]);
+const frames=images.map(data=>({
+ canvas:{width:w,height:h,getContext(){return {
+  getImageData(){return {data:new Uint8ClampedArray(data)}},
+  putImageData(img){data.set(img.data)}
+ }}}
+}));
+const vm=require('node:vm');
+const world={frames,Math,Uint8Array,window:{}};
+vm.createContext(world);
+vm.runInContext(index.slice(idleBegin,idleEnd)+'\nthis.result=repairIdleFistAlpha(frames);',world);
+assert(world.result.repairedPixels>=100,'missing glove pixels are restored');
+assert(world.result.patches.some(v=>v.frame===3),'only damaged idle pose is repaired');
+assert.equal(images[3][(44*w+64)*4+3],255,'fist now fully opaque');
+assert.equal(images[3][(6*w+35)*4+3],originalFrame3[(6*w+35)*4+3],'hair stays original');
+for(let i=0;i<8;i++)if(i!==3)assert.equal(images[i][(44*w+64)*4+3],255,'healthy pose unchanged');
+assert(index.includes("const idle=key==='idle'"),'idle has dedicated ghost capture');
+assert(index.includes("ghost.idle?.20"),'idle trails remain much softer than combat');
+assert(index.includes('HERO_GHOST_MOBILE?4:6'),'mobile ghost count stays capped');
+
+console.log('PASS: original-Z V3 gait, intact idle fist repair, subtle idle ghosts, and backwards walk share intact 8-frame atlases with reverse steps');
