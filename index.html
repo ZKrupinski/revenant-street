@@ -2075,7 +2075,7 @@ let intruderEntryImage=new Image();intruderEntryImage.src='./assets/enemies/redh
 // ONLY. Every subsequent combat action is rendered from this enemy's own art.
 const INTRUDER_MOTION_KEYS=['idle','run','attack','hit','death','special'];
 const intruderMotionImages=Object.fromEntries(INTRUDER_MOTION_KEYS.map(key=>{
- const image=new Image();image.src='./assets/enemies/redhood-intruder/'+(key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.webp':key+'.png');
+ const image=new Image();image.src='./assets/enemies/redhood-intruder/'+(key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.webp':key==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':key+'.png');
  return [key,image];
 }));
 // Per-frame bottommost opaque pixel, measured from the original transparent
@@ -2311,9 +2311,9 @@ function prepareIntruderSpriteCrops(){
    throw Error('빨간 후드 스프라이트 '+name+'의 커팅 영역을 확인해주세요.');
   diagnostic.atlases++;
   if(name==='난입')continue;
-  if(name==='hit'||name==='death'||name==='attack'){
-   // Hit, rebuilt death and repaired attack atlases retain complete original
-   // pixels. Death crossed the row seam and extended attack fists originally
+  if(name==='hit'||name==='death'||name==='attack'||name==='special'){
+   // Hit, death, full-fist attack and Crimson Dive have repaired, separated
+   // original bitmap frames: never trim away restored gloves or cape.  Death crossed the row seam and extended attack fists originally
    // crossed the column seams. Both are now physically reassembled as
    // separate high-resolution 8-frame WebP sheets, so eroded-core cleanup
    // is not allowed to delete detached boots or gloved fists.
@@ -2348,7 +2348,7 @@ const INTRUDER_FRAME_FOOT={
  attack:[598,598,598,598,598,598,598,598],
  hit:[439,440,441,440,419,421,421,419],
  death:[536,536,536,536,536,536,536,536],
- special:[440,443,409,436,410,418,407,417]
+ special:[522,525,491,518,492,500,489,499]
 };
 // 8 fps ping-pong keeps the peak flash from harshly jumping back to the dim pose.
 const OFFSCREEN_ARROW_SEQUENCE=[0,1,2,3,2,1];
@@ -4047,7 +4047,20 @@ function startRun(){resetInputs();resetPlayer();
  setModsExpanded(false);wave=0;fx=[];floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;parrySlowTarget=null;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
  // A previous menu button cannot be treated as a fresh combat press.
  menuPad.armed=false;menuPad.confirm=false;
- if(/(?:[?&])elite=preview(?:&|$)/.test(window.location?.search||'')){
+ if(/(?:[?&])intruder=(preview|entry)(?:&|$)/.test(window.location?.search||'')){
+  // Real red-hood QA: preview tests aerial attack; entry tests foreground leap.
+  const entryQA=/(?:[?&])intruder=entry(?:&|$)/.test(window.location?.search||'');
+  wave=1;p.x=700;p.y=570;cameraX=clamp(p.x-425,0,STAGE_WIDTH-W);
+  const red=makeEnemy('intruder',p.x+320,p.y,enemySerial++);
+  red.entryDuration=.98;red.entryAge=entryQA?0:red.entryDuration;
+  red.entryLandingPlayed=!entryQA;red.entrySide=1;
+  red.supportTeam=true;red.supportGroup='redhood-qa';
+  red.supportTeamMaxHp=red.maxHp;red.supportTeamSize=1;red.encountered=true;
+  red.specialCooldown=entryQA?1.2:0;
+  red.cooldown=.25;red.renderX=red.x;red.renderY=red.y;
+  enemies=[red];squadIndex=1;supportTriggered=true;
+  flash(entryQA?'RED HOOD / 난입 4프레임 검수':'RED HOOD / 공중 특수공격 8프레임 검수',2);
+ }else if(/(?:[?&])elite=preview(?:&|$)/.test(window.location?.search||'')){
   // Real combat QA: show the real Iron Mask sprite/AI immediately, at full scale.
   // Normal gameplay is unchanged when this explicit preview URL is absent.
   wave=1;p.x=700;p.y=560;cameraX=clamp(p.x-420,0,STAGE_WIDTH-W);

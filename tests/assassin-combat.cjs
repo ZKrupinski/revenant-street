@@ -1519,7 +1519,7 @@ test('Red hood grunt enters from the camera on one eight-frame bitmap sheet',()=
  assert(html.includes("intruderEntryImage.src='./assets/enemies/redhood-ambush-entry-8.webp'"));
  assert(html.includes("['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)]"));
  for(const action of ['idle','run','attack','hit','death','special'])
-  assert(html.includes("image.src='./assets/enemies/redhood-intruder/'+(key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.webp':key+'.png')"));
+  assert(html.includes("image.src='./assets/enemies/redhood-intruder/'+(key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.webp':key==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':key+'.png')"));
  assert(html.includes("...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임'"));
 });
 test('Crimson intruder drops into an ongoing squad as reinforcements and joins the fight',()=>{
