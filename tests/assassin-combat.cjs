@@ -5,7 +5,7 @@ const nodes=new Map(),ctx=new Proxy({},{get:()=>()=>{}});
 function node(id){if(!nodes.has(id))nodes.set(id,{style:{setProperty(){}},classList:{_s:new Set(),add(...ks){ks.forEach(k=>this._s.add(k))},remove(...ks){ks.forEach(k=>this._s.delete(k))},toggle(k,on){if(on===undefined)on=!this._s.has(k);on?this._s.add(k):this._s.delete(k);return !!on},contains(k){return this._s.has(k)}},getBoundingClientRect:()=>({left:0,top:0,right:1280,bottom:720,width:1280,height:720}),getContext:()=>ctx,addEventListener(){},appendChild(){},querySelector:()=>node('child'),querySelectorAll:()=>[]});return nodes.get(id)}
 const world={console,location:{search:'?intro=off'},setTimeout(){return 1},clearTimeout(){},document:{getElementById:node,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('canvas')},Image:class{addEventListener(){}},navigator:{getGamepads:()=>[]},localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},addEventListener(){},RZAssassinArt:{load:()=>({ready:false}),warm(){},status:()=>({})}};world.window=world;vm.createContext(world);
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
-vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={intruderEntering,intruderEntryFrame,drawIntruderEntry,drawIntruderCombat,intruderVisualMove,intruderMotionImages,INTRUDER_FRAME_FOOT,intruderCombatFrame,updateIntruderSpecial,zCellSamplingSpec,hubMenu,selectHubModule,permanentBaseStats,renderTitleBaseStats,prepareHubReset,cancelHubReset,resetHubUpgrades,buyUpgrade,HUB_COST,HUB_MODULES,HUB_MAX_LEVEL,hubUpgradeCost,hubRefreshCost,hubAvailableModules,refreshHubOffers,hubEconomyMenu,scoreRunBonus,awardRunShards,recordStyleDamage,runResultMarkup,getRunStats:()=>runStats,completeMenu,deadMenu,offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,offscreenEnemyTargets,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCounterCameraTime:()=>counterCameraTime,getRiposteCinematicTime:()=>riposteCinematicTime,getCameraX:()=>cameraX,triggerCounterCamera,counterCameraZoomGoal,counterCameraWorldAnchor,spawnRiposteAfterimages,getHeroAfterimages:()=>heroAfterimages,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,spawnIntruderSupport,intruderSupportCount,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
+vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={intruderEntering,intruderEntryFrame,drawIntruderEntry,drawIntruderCombat,intruderVisualMove,intruderMotionImages,INTRUDER_FRAME_FOOT,intruderCombatFrame,updateIntruderSpecial,zCellSamplingSpec,hubMenu,selectHubModule,focusHubApplyAfterSelection,permanentBaseStats,renderTitleBaseStats,prepareHubReset,cancelHubReset,resetHubUpgrades,buyUpgrade,HUB_COST,HUB_MODULES,HUB_MAX_LEVEL,hubUpgradeCost,hubRefreshCost,hubAvailableModules,refreshHubOffers,hubEconomyMenu,scoreRunBonus,awardRunShards,recordStyleDamage,runResultMarkup,getRunStats:()=>runStats,completeMenu,deadMenu,offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,offscreenEnemyTargets,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCounterCameraTime:()=>counterCameraTime,getRiposteCinematicTime:()=>riposteCinematicTime,getCameraX:()=>cameraX,triggerCounterCamera,counterCameraZoomGoal,counterCameraWorldAnchor,spawnRiposteAfterimages,getHeroAfterimages:()=>heroAfterimages,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,spawnIntruderSupport,intruderSupportCount,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('Rebel Hub shows entire actual base stat roster and requires a separate apply',()=>{
@@ -29,6 +29,40 @@ test('Rebel Hub shows entire actual base stat roster and requires a separate app
   assert.equal(t.selectHubModule('reflex'),true);
   assert(node('menu').innerHTML.includes('0.375초'));
  }finally{Object.assign(perma,backup);t.hubMenu()}
+});
+test('choosing a Hub item shifts keyboard and gamepad highlight to Apply without purchasing',()=>{
+ const perma=g.getState().perma,backup={...perma},menu=node('menu');
+ const oldQuery=menu.querySelector,oldAll=menu.querySelectorAll;
+ const item=(action)=>({disabled:false,dataset:action==='apply'?{action:'hubApply'}:{perma:action},
+  focused:0,clicks:0,selected:false,
+  classList:{toggle(k,on){if(k==='pad-selected')this.selected=on}},
+  focus(){this.focused++},click(){this.clicks++}});
+ const cards=[item('core'),item('servo'),item('reflex')],apply=item('apply');
+ menu.querySelector=selector=>selector==='[data-action="hubApply"]'?apply:null;
+ menu.querySelectorAll=()=>[...cards,apply];
+ try{
+  Object.assign(perma,{core:0,servo:0,reflex:0,shards:10,hubRefreshes:0});
+  t.hubMenu();
+  assert.equal(t.selectHubModule('servo'),true);
+  assert.equal(t.menuPad.index,3,'controller selection must jump beyond three cards to Apply');
+  assert.equal(apply.focused,1,'keyboard focus moves to Apply');
+  assert.equal(apply.classList.selected,true,'highlight follows focus onto Apply');
+  assert(cards.every(c=>!c.classList.selected),'old card focus is cleared');
+  assert.equal(perma.shards,10,'selecting a card alone must never spend shards');
+  t.menuPad.readyAt=0;
+  assert.equal(t.menuConfirm(),true,'the next confirm activates focused Apply');
+  assert.equal(apply.clicks,1);
+  assert.equal(perma.shards,10,'focus move and mock confirmation cannot auto-buy');
+  perma.shards=0;
+  assert.equal(t.selectHubModule('core'),true);
+  assert(node('menu').innerHTML.includes('data-action="hubApply" aria-disabled="true"'),
+    'unaffordable Apply retains visible disabled state while remaining focusable');
+  assert.equal(t.menuPad.index,3,'selection still moves to Apply without enough shards');
+  assert.equal(t.buyUpgrade(),false,'an unavailable upgrade does not charge negative shards');
+ }finally{
+  menu.querySelector=oldQuery;menu.querySelectorAll=oldAll;
+  Object.assign(perma,backup);t.hubMenu();
+ }
 });
 test('Permanent save reset needs double confirmation and clears upgrades, refresh history and all shards',()=>{
  const perma=g.getState().perma,backup={...perma};
