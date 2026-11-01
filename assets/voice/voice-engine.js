@@ -1,17 +1,17 @@
 /* Project Z combat accent sounds: synthesized firearm mechanism foley for
- * protagonist ATTACKS and separate CC0 human groans/yells for enemies.
+ * protagonist ATTACKS and UNPITCHED CC0 human pain recordings for enemies.
  * Asset credits / provenance: assets/voice/LICENSE.md.
  * All samples are decoded before gameplay; original impact SFX and BGM are
  * on independent buses and are never attenuated by these effects. */
 (() => {
  'use strict';
  const CLIPS={
-  // Dark remastered CC0 pain vocals: short, bass-heavy and restrained.
-  // The old high pitched drawn-out "aaah" yell is never played at runtime.
-  enemyA:'./assets/voice/enemy-pain-deep-a.mp3',
-  enemyB:'./assets/voice/enemy-pain-deep-b.mp3',
-  enemyShout:'./assets/voice/enemy-shout-deep.mp3',
-  enemyDeath:'./assets/voice/enemy-death-deep.mp3',
+  // Original human male CC0 recordings. The prior 0.67–0.72 pitch/formant
+  // remaster sounded like animal growls and is no longer loaded at runtime.
+  enemyA:'./assets/voice/hero-grunt-a.wav',
+  enemyB:'./assets/voice/hero-grunt-b.wav',
+  enemyShout:'./assets/voice/voice-yell.wav',
+  enemyDeath:'./assets/voice/voice-yell.wav',
   // Foley, not gunfire: short firearm slide, bolt and charging-lever clicks.
   mechA:'./assets/voice/hero-mech-a.mp3',
   mechB:'./assets/voice/hero-mech-b.mp3',
@@ -25,9 +25,9 @@
  // Match the game's global SFX 70% mix; this is post-compressor and
  // never touches the separate HTMLAudioElement background soundtrack.
  const NON_BGM_SFX_LEVEL=.70;
- // Dark samples were mastered quietly; amplify ONLY enemy vocals so they
- // cut through music and fist impacts without raising hero Foley or BGM.
- const ENEMY_VOICE_GAIN=2.15;
+ // Preserve normal human formants; no exaggerated 2.15x roar gain.
+ // Impact transients remain foreground on an independent bus.
+ const ENEMY_VOICE_GAIN=1.35;
  let context=null,loading=null,master=null,gunBus=null,lastCrowd=-99;
  const SHOT_FAMILIES=['shotPistol','shotRevolver','shotRifle','shotHeavy'];
  // Attack motions deterministically choose their own timbre and pitch;
@@ -122,7 +122,7 @@
    // A lethal scream must never be lost because a grunt just played.
    const fatal=kind==='heroDeath'||kind==='enemyDeath'||kind==='bossDeath';
    if(!fatal&&now-(actor._voiceAt??-99)<(kind==='heroPower'?.14:cooldown))return false;
-   if(kind==='enemyHurt'&&now-lastCrowd<.105)return false;
+   if(kind==='enemyHurt'&&now-lastCrowd<.16)return false;
    const important=isHero||boss||kind==='enemyDeath';
    if(active.size>=4) {
     // In crowds a fresh painful hit replaces an old quiet grunt instead of
@@ -134,8 +134,8 @@
     try{victim.source.stop()}catch(_){}
     active.delete(victim);
    }
-   // No piercing yell on any enemy hurt/death/shout path. Every vocal
-   // uses a subdued, low-formant, remastered take of the original CC0 male.
+   // Unaltered human source takes; only light EQ and ±small pitch variation.
+   // Never select the prior low-formant beastlike remasters.
    const file=kind==='heroPower'?'mechPower':
     (kind==='heroStrike'||kind==='heroMove')?(Math.random()<.5?'mechA':'mechB'):
     kind==='bossDeath'||kind==='enemyDeath'?'enemyDeath':
@@ -153,27 +153,29 @@
    }
    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
    source.buffer=buffer;
-   // Samples are already pitched down and formant-shifted offline. Do not
-   // pitch-shift them another full octave during play or make them cartoonish.
-   const characterPitch=isHero?(kind==='heroPower'?.92:1.03):boss?.94:actor.type==='elite'?.98:
-    actor.type==='guard'?.99:actor.type==='assassin'?1.03:1;
-   const rate=Math.max(.86,Math.min(1.11,characterPitch*(.97+Math.random()*.06)));
+   // Keep human vowel formants recognizable: no deep pitch-shift, even on
+   // bosses. Slight character differences should remain clearly human.
+   const characterPitch=isHero?(kind==='heroPower'?.92:1.03):boss?.98:actor.type==='elite'?.99:
+    actor.type==='guard'?1.00:actor.type==='assassin'?1.035:1.01;
+   const rate=Math.max(.95,Math.min(1.075,characterPitch*(.985+Math.random()*.03)));
    source.playbackRate.value=rate;
-   // Give low, restrained agony its own audible foreground presence while
-   // keeping all punches, metal mechanisms and background music unchanged.
+   // Natural, short human exertion responses sit behind the sharp impact.
+   // Their bus never ducks music or replaces mechanical Foley.
    const strengths={heroStrike:.94,heroPower:1.07,heroMove:.29,
-    enemyHurt:.86,enemyShout:.77,enemyDeath:.96,bossShout:.90,bossDeath:1.02};
+    enemyHurt:.86,enemyShout:.68,enemyDeath:.83,bossShout:.75,bossDeath:.90};
    const position=isHero?1:Math.max(.62,1-Math.abs(actor.x-hero.x)/2350);
    const volume=(strengths[kind]||.7)*position*(isHero?1:ENEMY_VOICE_GAIN);
-   filter.type='lowpass';filter.frequency.value=isHero?7600:boss?3100:3400;
-   // Small lower-mid presence bump avoids piercing highs but restores
-   // consonant/body detail masked by the fast metal soundtrack.
+   filter.type='lowpass';filter.frequency.value=isHero?7600:boss?5200:5600;
+   // Restore natural voice articulation instead of muffled animal-like bass.
    const presence=isHero?null:context.createBiquadFilter();
-   if(presence){presence.type='peaking';presence.frequency.value=920;presence.gain.value=2.5;}
+   if(presence){presence.type='peaking';presence.frequency.value=1800;presence.gain.value=2.0;}
    const maxDuration=kind==='heroMove'?.19:kind==='heroStrike'?.42:kind==='heroPower'?.72:
-    kind==='enemyHurt'?.33:kind==='enemyShout'?.64:kind==='bossShout'?.72:
-    kind==='enemyDeath'?1.05:kind==='bossDeath'?1.12:2.2;
-   const duration=Math.min(maxDuration,buffer.duration/rate);
+    kind==='enemyHurt'?.30:kind==='enemyShout'?.55:kind==='bossShout'?.66:
+    kind==='enemyDeath'?.82:kind==='bossDeath'?.95:2.2;
+   // Move immediately to the first audible human consonant/breath,
+   // not leading silence; no artificial deep growl/tail is generated.
+   const offset=isHero?0:sampleOnset(buffer);
+   const duration=Math.min(maxDuration,(buffer.duration-offset)/rate);
    if(!(duration>.02))return false;
    // Let the independent punch crack play first; groans follow ~75ms later.
    const delay=kind==='enemyHurt'||kind==='enemyDeath'||kind==='bossDeath'?.06:0;
@@ -189,7 +191,7 @@
    gain.connect(master);
    const entry={source,important};active.add(entry);
    source.onended=()=>{active.delete(entry);source.disconnect();filter.disconnect();presence?.disconnect();gain.disconnect()};
-   source.start(at,0,duration*rate);
+   source.start(at,offset,duration*rate);
    source.stop(at+duration+.015);
    actor._voiceAt=now;
    if(kind==='enemyHurt')lastCrowd=now;
