@@ -590,7 +590,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:14p
 #menu.hub-dialog .hub-action-row button{min-height:38px;padding:5px 10px;border-radius:4px;
  font:900 11px Arial,'Malgun Gothic',sans-serif;white-space:nowrap}
 #menu.hub-dialog .hub-apply{background:#c9344b;border:1px solid #fa8a88;color:white}
-#menu.hub-dialog .hub-apply:disabled{background:#293b4a;color:#98aab7}
+#menu.hub-dialog .hub-apply:disabled,#menu.hub-dialog .hub-apply[aria-disabled="true"]{background:#293b4a;color:#98aab7}
 #menu.hub-dialog .hub-reset{background:#1c3346;border:1px solid #647e90;color:#e4ebf2}
 #menu.hub-dialog .hub-reset:disabled{opacity:.5}
 #menu.hub-dialog .hub-danger{background:#ad3443;border:1px solid #ff9c9d;color:white}
@@ -7914,9 +7914,23 @@ function hubStatsMarkup(){
    </div>`;
  }).join('')}</div></section>`;
 }
+// Selecting a module is still only a preview. After replacing the card DOM,
+// steer real keyboard focus and the gamepad selection to APPLY, not another card.
+function focusHubApplyAfterSelection(){
+ const menu=$('menu'),apply=menu.querySelector('[data-action="hubApply"]');
+ if(!apply)return false;
+ const items=menuButtons(),index=items.indexOf(apply);
+ if(index<0)return false;
+ menuPad.index=index;
+ items.forEach((item,i)=>item.classList.toggle('pad-selected',i===index));
+ apply.focus?.({preventScroll:true});
+ return true;
+}
 function selectHubModule(key){
  if(gameState!=='hub'||!hubAvailableModules().some(m=>m.id===key))return false;
- hubSelected=key;hubResetArmed=false;hubMenu();return true;
+ hubSelected=key;hubResetArmed=false;hubMenu();
+ focusHubApplyAfterSelection();
+ return true;
 }
 function hubMenu(upgraded=''){
  gameState='hub';$('bossHud').hidden=true;setStatus('REBEL HUB');
@@ -7955,7 +7969,7 @@ function hubMenu(upgraded=''){
      `<strong>${selected.title} Lv.${perma[upgraded]} 적용 완료!</strong> 이 기기에 저장했습니다.`:
      `선택: <strong>${selected.title}</strong> · 카드를 누르면 미리보기만 변경됩니다.`}</div>
    <div class="hub-action-row">
-    <button type="button" class="hub-apply" data-action="hubApply"${perma.shards<selectedCost||hubResetArmed||perma[hubSelected]>=HUB_MAX_LEVEL?' disabled':''}>◆ ${selectedCost} 강화 적용</button>
+    <button type="button" class="hub-apply" data-action="hubApply" aria-disabled="${perma.shards<selectedCost||hubResetArmed||perma[hubSelected]>=HUB_MAX_LEVEL}">◆ ${selectedCost} 강화 적용</button>
     <button type="button" class="hub-reset" data-action="hubRefresh"${perma.shards<rerollCost||hubResetArmed?' disabled':''}>목록 갱신 ◆ ${rerollCost}</button>
     ${reset}</div>
    <div class="hub-saved-note">${hubResetArmed?`<b>저장 데이터 전체 초기화:</b> 강화 레벨·보유 샤드·갱신 기록 모두 0, 환불 없음`:
