@@ -2880,6 +2880,22 @@ body{position:fixed;inset:0;touch-action:manipulation}
  z-index:1!important; /* Bitmap base, shaft and knob remain visually above hit zone. */
 }
 </style>
+<style id="hub-shard-economy-ui">
+#menu .run-result-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0;padding:12px;background:#101c29ee;border:1px solid #506478;border-radius:6px;font:800 12px/1.5 Arial,'Malgun Gothic',sans-serif}
+#menu .run-result-grid span{padding:6px 8px;background:#1a2936;border-radius:3px}
+#menu .hub-economy-screen{max-width:1060px;margin:0 auto}
+#menu .hub-economy-screen h2{font-size:clamp(20px,3vw,34px);margin:3px 0 10px}
+#menu .hub-economy-columns{display:grid;grid-template-columns:1.15fr 1fr;gap:16px}
+#menu .hub-economy-columns section{padding:10px;background:#0c1725ed;border:1px solid #50657c}
+#menu .hub-economy-columns h3{font-size:14px;color:#d5eaff;margin:0 0 6px}
+#menu .hub-economy-columns table{width:100%;border-collapse:collapse;font:800 11px/1.2 Arial,'Malgun Gothic',sans-serif}
+#menu .hub-economy-columns th,#menu .hub-economy-columns td{border-bottom:1px solid #374b61;padding:4px;text-align:left}
+#menu .hub-economy-columns p{font-size:11px;line-height:1.4;color:#bbcedc;margin:6px 0 0}
+#menu .hub-cost-table{column-count:2}
+#menu .hub-action-row{flex-wrap:wrap}
+#menu .hub-action-row button{min-height:48px}
+@media(max-width:670px){#menu .hub-economy-columns{grid-template-columns:1fr}#menu .run-result-grid{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <div id="app">
@@ -7738,6 +7754,26 @@ function refreshHubOffers(){
  perma.shards-=cost;perma.hubRefreshes++;hubSelected=hubAvailableModules()[0].id;
  save();hubMenu();sound('parry');return true;
 }
+function hubEconomyMenu(){
+ if(gameState!=='hub')return false;
+ const rewardRows=[
+ ['생존 기본 보상','런 종료', '◆1'],
+ ['처치 보상','4명당', '◆1'],
+ ['공격 보상','적중과 연동된 공격 20회당', '◆1'],
+ ['스타일 보상','가중 피해 점수 500점당', '◆1'],
+ ['완주 보너스','최종 지역 클리어', '◆3']
+ ];
+ const rewardCells=rewardRows.map(([name,rule,shards])=>`<tr><th scope="row">${name}</th><td>${rule}</td><td>${shards}</td></tr>`).join('');
+ const levels=Array.from({length:HUB_MAX_LEVEL},(_,i)=>`<tr><th scope="row">Lv.${i+1}</th><td>◆${hubUpgradeCost(i)}</td></tr>`).join('');
+ showMenu(`<div class="hub-economy-screen"><div class="eyebrow">PROJECT Z / SHARDS ECONOMY</div><h2>전투 보상 · 강화 비용표</h2>
+ <div class="hub-economy-columns"><section><h3>런 종료 샤드 보상</h3><table><thead><tr><th>항목</th><th>기준</th><th>지급</th></tr></thead><tbody>${rewardCells}</tbody></table>
+ <p>스타일 점수 = 점프 광역 피해 ×1.0 + 대쉬 연계 피해 ×1.25 + 패링 연계 피해 ×1.55. 실제 피해만 반영합니다.</p>
+ <p>공격 보상은 공격 입력과 유효 적중을 함께 계산합니다. 스타일 랭크: C 0~499 / B 500~1199 / A 1200~2399 / S 2400점 이상.</p></section>
+ <section><h3>영구 강화 레벨별 가격</h3><table class="hub-cost-table"><thead><tr><th>도달 레벨</th><th>필요 샤드</th></tr></thead><tbody>${levels}</tbody></table>
+ <p>목록 갱신: 첫 ◆1, 이후 ◆2·3·4·5(최대 ◆5). 저장 초기화 시 보유 샤드와 강화 레벨 모두 0, 환불 없음.</p></section></div>
+ <div class="buttons"><button type="button" class="main-btn" data-action="hub">HUB로 돌아가기</button></div></div>`);
+ return true;
+}
 const HUB_STAT_INFO=[
  ['hp','최대 체력',v=>v+' HP'],['damage','추가 공격력',v=>'+'+v],
  ['parry','패링 지속시간',v=>v.toFixed(3)+'초'],['stamina','스태미나',v=>v],
@@ -7824,7 +7860,8 @@ function hubMenu(upgraded=''){
     ${reset}</div>
    <div class="hub-saved-note">${hubResetArmed?`<b>저장 데이터 전체 초기화:</b> 강화 레벨·보유 샤드·갱신 기록 모두 0, 환불 없음`:
      `3개 목록 중 선택 · 갱신하면 샤드 소모 후 다른 3개 표시 · 강화 시 누진 비용`}</div>
-   <div class="hub-buttons"><button type="button" class="main-btn" data-action="start">▶ 재출격</button>
+   <div class="hub-buttons"><button type="button" class="secondary-btn" data-action="hubEconomy">전투 보상 · 강화 비용표</button>
+    <button type="button" class="main-btn" data-action="start">▶ 재출격</button>
     <button type="button" class="secondary-btn" data-action="title">타이틀</button></div>
   </div>
   <div class="hub-footer-guide" role="note"><span class="hub-footer-guide-text">패드 스틱·십자키 / WASD 이동 · X/Y/A/B 아무 버튼으로 선택</span></div>
@@ -7931,7 +7968,7 @@ window.addEventListener('blur',suspendGame);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame()});
 
 $('menu').addEventListener('focusin',e=>{const items=menuButtons(),i=items.indexOf(e.target);if(i<0)return;menuPad.index=i;items.forEach((b,n)=>b.classList.toggle('pad-selected',n===i))});
-$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){hubResetArmed=false;hubMenu()}else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)selectHubModule(b.dataset.perma)});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){hubResetArmed=false;hubMenu()}else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='hubEconomy')hubEconomyMenu();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma)selectHubModule(b.dataset.perma)});
 $('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activeModStacks().length+(p.mod==='neuro'?1:0))};
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){
