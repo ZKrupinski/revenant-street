@@ -56,5 +56,10 @@ new_death="key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.w
 text=test.read_text()
 if old_death in text:test.write_text(text.replace(old_death,new_death))
 elif new_death not in text:raise RuntimeError('Death fixture asset-path assertion missing')
+old_src="kind==='death'?'death-fullbody.webp':kind==='attack'?'attack-fullfist.webp':kind+'.png'"
+new_src="kind==='death'?'death-fullbody.webp':kind==='attack'?'attack-fullfist.webp':kind==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':kind+'.png'"
+text=test.read_text()
+if old_src in text:test.write_text(text.replace(old_src,new_src))
+elif new_src not in text:raise RuntimeError('Support roster sprite assertion missing')
 
 print('PASS: red hood real-game atlas swapped, sprite extraction kept complete, QA routes ready')
