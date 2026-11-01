@@ -28,3 +28,6 @@ assert(html.includes("if(src.src.includes('upgrade-icons-v4.webp'))"),'uniform 2
 assert(html.includes('sourcePreserved:true'), 'do not downscale the final painted 25-icon atlas');
 assert(css.includes('content:none!important; /* The icon atlas already includes'),'a single neon frame should render, not two overlapping');
 console.log('PASS: bitmap magenta/cyan window rails, hub and reward hierarchy, 3-column 16:9 layout, and NEW rank markers');
+
+// The game title and masthead must stay on the approved hand-painted logo art.
+require('./title-bi.cjs');
