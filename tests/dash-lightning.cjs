@@ -82,6 +82,7 @@ console.log('PASS: 8-frame transparent lightning, decoded on start, first dash h
 // interrupted before impact by the enemy hurt/stun code.
 const combat={
  gameState:'playing',hitStop:0.2,
+ runStats:{attacks:0,hits:0,style:{jump:0,dash:0,parry:0}},
  p:{x:100,y:550,z:0,facing:1,stun:0,downTimer:0,getupTimer:0,
   hp:100,stamina:100,moveDX:0,attack:0,parry:0,dodge:0,inv:0,
   riposteChasing:false,dashFollowWindow:0,recentMoves:[],comboIdx:0},
