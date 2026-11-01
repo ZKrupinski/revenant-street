@@ -2,10 +2,22 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+const crypto=require('node:crypto');
+const png=fs.readFileSync(path.join(__dirname,'..','assets/vfx/project_z_parry_counter_user_8f.png'));
+assert.equal(png.length,1696725,'the user-approved original PNG is present at its exact byte size');
+assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
+assert.equal(png.readUInt32BE(16),1774,'source columns must not be resized or repainted');
+assert.equal(png.readUInt32BE(20),887,'source rows must not be resized or repainted');
+assert.equal(png[25],6,'original RGBA alpha data remains intact');
+const gitBlob=crypto.createHash('sha1').update('blob '+png.length+'\0').update(png).digest('hex');
+assert.equal(gitBlob,'0706091f8a7c592f4a9d880fc4599792d627e9fa',
+ 'exact original Git blob SHA must match the approved upload, no re-generation');
+
 assert(html.includes("src:'./assets/vfx/project_z_parry_counter_user_8f.png'"));
 assert(html.includes("spawnParryCounterFx(p,e,skill.visual); // true parry follow-up contact only"));
 assert(html.includes("if(f.kind==='parryCounterSprite'){drawParryCounterSprite(f);continue;}"));
-assert(html.includes("()=>ensureBitmapDecoded(PARRY_COUNTER_ART.image),true]"),'optional art must not block game startup');
+assert(html.includes("['패링 반격 원본 8프레임 비트맵',()=>ensureBitmapDecoded(PARRY_COUNTER_ART.image)]"),
+ 'approved user artwork is a required and decoded battle resource');
 const start=html.indexOf('const PARRY_COUNTER_ART='),end=html.indexOf('function heelLandingShockwave(',start);
 assert(start>0&&end>start);
 const draws=[],moves=[];
