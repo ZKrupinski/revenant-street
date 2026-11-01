@@ -2631,7 +2631,7 @@ test('new PA-K punch is a loud transient on its own audio bus and never ducks mu
 {
  const rules=[
   "const GROUND_SLAM_ART={",
-  "src:'./assets/vfx/project-z-ground-slam-8f.webp'",
+  "src:'./assets/vfx/project_z_ground_slam_8f_transparent.png'",
   "columns:4,rows:2,frames:8,footX:.5,footY:.8",
   "function spawnGroundSlamFx(x,y,intensity=1,source='hero')",
   "kind:'groundSlamSprite'",
