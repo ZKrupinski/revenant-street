@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.join(__dirname,'..'),script=fs.readFileSync(path.join(root,'assets/voice/voice-engine.js'),'utf8');
 for(const name of ['index.html','play-fixed-20261102.html'])
- assert(fs.readFileSync(path.join(root,name),'utf8').includes('voice-engine.js?v=20261102-enemy-archetype-voices-v6-hitmix'),'both entrypoints bust voice cache');
+ assert(fs.readFileSync(path.join(root,name),'utf8').includes('voice-engine.js?v=20261103-enemyonly-v4'),'both entrypoints bust voice cache');
 assert(!script.includes("enemyShout:'./assets/voice/voice-yell.wav'"));
 assert(!script.includes("enemyDeath:'./assets/voice/voice-yell.wav'"));
 const recorded=[],loads=[];
@@ -14,7 +14,7 @@ const world={window:{},Math,fetch:async url=>{loads.push(url);return{ok:true,arr
 vm.createContext(world);vm.runInContext(script,world);
 (async()=>{
  const api=world.window.__zCombatVoice;await api.prepare(context);
- assert.equal(loads.length,9,'preload 2 enemy grunts, not the shrill yell');
+ assert.equal(loads.length,2,'preload only two original enemy grunts, not legacy gunshot or mech sounds');
  assert(!loads.some(url=>url.includes('voice-yell')||url.includes('voice-roar')));
  const hero={x:100},names=['raider','assassin','guard','intruder','elite','boss'],identities=new Set();
  for(let i=0;i<names.length;i++){
