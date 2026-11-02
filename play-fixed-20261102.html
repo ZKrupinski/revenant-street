@@ -5672,7 +5672,7 @@ function playImpactSound(kind='punch',intensity=1){
   const now=audio.currentTime,priority=kind==='counter'||kind==='parry';
   if(!priority&&now-lastImpactAudio<.052)return false;
   if(!priority)lastImpactAudio=now;
-  const key=priority?'counter':kind==='parry'?'parry':
+  const key=kind==='counter'?'counter':kind==='parry'?'parry':
     ['heavy','execution','dashImpact','slam'].includes(kind)?'heavy':
     ((impactDrumVariant++&1)?'punchB':'punchA');
   const buffer=impactSfxBuffers[key];if(!buffer)return false;
