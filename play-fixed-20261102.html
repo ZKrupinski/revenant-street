@@ -5636,13 +5636,13 @@ function playCombatVoice(kind,actor=p){
 function playCombatGunfire(kind='normal',move=p.moveName){
  return !mute&&gameState==='playing'&&!!window.__zCombatVoice?.fire(kind,move);
 }
-// PROJECT Z ORIGINAL FOLEY V4: five completely NEW recordings, no old combat samples.
+// PROJECT Z ORIGINAL FOLEY V4 / WEIGHT V5 MASTER: five newly generated sources with more body.
 const Z_IMPACT_SFX_URLS=Object.freeze({
- punchA:'./assets/sfx/z-ballistic-rifle-20261103.mp3?v=originalV4',
- punchB:'./assets/sfx/z-ballistic-sidearm-20261103.mp3?v=originalV4',
- heavy:'./assets/sfx/z-ballistic-heavy-20261103.mp3?v=originalV4',
- parry:'./assets/sfx/z-ballistic-parry-20261103.mp3?v=originalV4',
- counter:'./assets/sfx/z-ballistic-counter-20261103.mp3?v=originalV4'
+ punchA:'./assets/sfx/z-ballistic-rifle-20261103-weight-v5.mp3?v=weightV5',
+ punchB:'./assets/sfx/z-ballistic-sidearm-20261103-weight-v5.mp3?v=weightV5',
+ heavy:'./assets/sfx/z-ballistic-heavy-20261103-weight-v5.mp3?v=weightV5',
+ parry:'./assets/sfx/z-ballistic-parry-20261103-weight-v5.mp3?v=weightV5',
+ counter:'./assets/sfx/z-ballistic-counter-20261103-weight-v5.mp3?v=weightV5'
 });
 const impactSfxBuffers=Object.create(null);
 let impactSfxPromise=null,impactSfxContext=null,impactBus=null,lastImpactAudio=-99,impactDrumVariant=0;
@@ -5693,7 +5693,7 @@ function playImpactSound(kind='punch',intensity=1){
    const comp=audio.createDynamicsCompressor(),output=audio.createGain();
    comp.threshold.value=-16;comp.knee.value=5;comp.ratio.value=5.5;
    comp.attack.value=.002;comp.release.value=.20;
-   output.gain.value=.98*NON_BGM_SFX_LEVEL*IMPACT_SFX_TRIM;
+   output.gain.value=1.11*NON_BGM_SFX_LEVEL*IMPACT_SFX_TRIM;
    comp.connect(output).connect(audio.destination);impactBus=comp;
   }
   // Never discard a parry/counter because a crowd is being hit.
@@ -5740,7 +5740,7 @@ function playImpactSound(kind='punch',intensity=1){
   return true;
  }catch(_){return false}
 }
-window.__zImpactAudioStatus=()=>({version:'original-mirelo-v4-20261103',ready:Object.keys(impactSfxBuffers).length===5,
+window.__zImpactAudioStatus=()=>({version:'ballistic-weight-v5-20261103',ready:Object.keys(impactSfxBuffers).length===5,
  loaded:Object.keys(impactSfxBuffers).length,playing:impactVoices.length});
 // Single active controller, compatible with current Gamepad.vibrationActuator
 // and older hapticActuators. Controllers and mobile browsers may omit both.
