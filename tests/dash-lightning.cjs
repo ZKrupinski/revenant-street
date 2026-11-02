@@ -150,5 +150,5 @@ world.p.dodge=.18;world.p.dodgeX=-1;world.p.dashSparkSeq++;world.p.dashSparkDist
 world.emitTrail(world.p,600,440);
 assert(world.fx.slice(noMore).some(f=>f.dir===-1),'mirror for left dash');
 assert(html.includes("if(p.dodge>0&&!p.evadeBackstep&&p.stun<=0)emitDashTrailFx(p,movementStartX,p.x)"));
-assert(html.includes("if(p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p)"));
+assert(html.includes("if(layer!=='back'&&p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p)"),'dash charge stays in front of characters in hybrid mode');
 console.log('PASS: trailing and fist-seeking electrical sprites on forward dash only');
