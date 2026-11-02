@@ -56,6 +56,9 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  const html=fs.readFileSync(path.join(root,filename),'utf8');
  assert(html.includes("project_z_upgrade_'+k+'_8f.png?v=20261102-clean-alpha-active-v2"),'fresh six PNG cache');
  assert(html.includes('const Z_ENEMY_STATUS_VFX=['),'persistent enemy ailments');
+ assert(html.includes("const Z_ELEMENT_IMPACT_SPRITES=Object.freeze({fire:'nova',shock:'chain',bleed:'leech',ice:'guard'})"),'shared transparent element art');
+ assert(html.includes('const sprite=Z_ELEMENT_IMPACT_SPRITES[ef.mod]'),'contact pop uses transparent PNG rather than filtered legacy burst');
+ assert(html.includes('drawUpgradeVfxLoop(Z_ELEMENT_IMPACT_SPRITES[mod]'),'equipped hero elemental aura uses transparent PNG');
  assert(html.includes("drawUpgradeVfxLoop(state.sprite"),'reuse actual 8F bitmap during status timer');
  assert(html.includes('for(const e of enemies)'),'enemy-side effect rather than hero-only');
  assert(html.includes("drawUpgradeVfxLoop('guard',x"),'ambient guard cue');
@@ -94,5 +97,24 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  world.paintStatuses();assert(draws.length<=2,'limit multiple status VFX per enemy');
  draws.length=0;enemy.dead=true;
  world.paintStatuses();assert.equal(draws.length,0,'do not render persistent VFX on corpses');
+ // Transient element hit feedback must also use the new clean RGBA strips.
+ world.attributeFx=[{mod:'fire',x:432,y:438,life:.25,maxLife:.4,scale:1.1}];
+ world.paintStatuses();assert.equal(draws.length,1,'draw impact PNG');
+ assert.strictEqual(draws[0][0],effects.nova.image,'no legacy filtered gold bitmap on fire impact');
+ draws.length=0;
+ world.attributeFx=[{mod:'ice',x:432,y:438,life:.25,maxLife:.4,scale:1.1}];
+ world.paintStatuses();assert.strictEqual(draws[0][0],effects.guard.image,'ice impact uses clean bitmap');
+ // Test installed powers on the hero independently of enemy timer state.
+ world.attributeFx=[];
+ world.p={mods:['shock','fire'],hp:80,maxHp:100,facing:1};
+ world.modRank=id=>world.p.mods.filter(m=>m===id).length;
+ const heroStart=html.indexOf('function drawHeroModAura(');
+ const heroEnd=html.indexOf('// Road art:',heroStart);
+ assert(heroStart>0&&heroEnd>heroStart,'isolate equipped elemental hero cues');
+ vm.runInContext(html.slice(heroStart,heroEnd)+'\\nthis.paintHeroAura=drawHeroModAura;',world);
+ draws.length=0;
+ world.paintHeroAura(500,600,0);
+ assert.equal(draws.length,1,'only one soft aura per hero per frame');
+ assert([effects.chain.image,effects.nova.image].includes(draws[0][0]),'hero aura uses clean 8F RGBA art');
 }
-console.log('PASS: 48 independent RGBA frames with clear margins; four ongoing enemy statuses, combat buff effects and both game entrypoints');
+console.log('PASS: 48 independent RGBA frames; persistent ailments, clean element hits and subtle hero bitmap auras in both game entrypoints');
