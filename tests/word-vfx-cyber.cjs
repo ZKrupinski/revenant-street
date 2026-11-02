@@ -36,7 +36,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  vm.createContext(world);
  vm.runInContext(html.slice(begin,end)+'\nthis.spawn=spawnCombatWordFx;this.drawHud=drawCombatWordHud;',world);
  assert(world.spawn('critical',{x:430,y:500}));assert.equal(world.fx.length,1);
- let word=world.fx[0];assert.equal(word.maxLife,1.42);
+ let word=world.fx[0];assert(Math.abs(word.maxLife-1.42)<1e-8,'critical total duration');
  assert.equal(word.x,420,'world coordinates never affect HUD position');
  for(let i=0;i<8;i++){word.age=i*.86/8;world.drawHud();}
  assert.equal(drawn.length,8,'every authored pose displayed once');
@@ -45,7 +45,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  word.age=1.12;world.drawHud();assert.equal(drawn.at(-1)[1],7*272,'final frame held');
  word.age=1.40;world.drawHud();assert(ctx && drawn.at(-1),'faded without throwing');
  assert(world.spawn('execution',{x:1234,y:670}));assert.equal(world.fx.length,1,'only one HUD mark at a time');
- assert.equal(world.fx[0].maxLife,1.60);
+ assert(Math.abs(world.fx[0].maxLife-1.60)<1e-8,'execution total duration');
  world.fx=[];world.drawHud();assert.equal(canvas.style.display,'none','hide when inactive');
 }
 console.log('PASS: anchored pause-left transparent wordmark, all 8 slower frames, hold/fade, higher critical baseline, old text gone, parry edge safety');
