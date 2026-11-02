@@ -7008,13 +7008,13 @@ const Z_COMBAT_WORD_ART={
 };
 Z_COMBAT_WORD_ART.image.onload=()=>{
  const im=Z_COMBAT_WORD_ART.image;
- Z_COMBAT_WORD_ART.ready=im.naturalWidth===2560&&im.naturalHeight===384;
+ Z_COMBAT_WORD_ART.ready=im.naturalWidth===2816&&im.naturalHeight===384;
  Z_COMBAT_WORD_ART.missing=!Z_COMBAT_WORD_ART.ready;
 };
 Z_COMBAT_WORD_ART.image.onerror=()=>{
  Z_COMBAT_WORD_ART.ready=false;Z_COMBAT_WORD_ART.missing=true;
 };
-Z_COMBAT_WORD_ART.image.src='./assets/vfx/project_z_execution_critical_cyber_8f_clean.png?v=20261102-cyberword-2';
+Z_COMBAT_WORD_ART.image.src='./assets/vfx/project_z_execution_critical_8f_slant_safe_v3.png?v=20261102-slant-safe-3';
 // Keep raster wordmarks and directional parry effects inside the actual
 // zoomed camera viewport, including a safety margin for screen shake.
 function zClampVfxX(worldX,leftExtent,rightExtent){
@@ -7085,7 +7085,11 @@ function drawCombatWordFx(f){
  const frame=desired===0||desired===7?desired:Math.min(desired,Math.max(1,(f.drawnFrame??0)+1));
  f.drawnFrame=frame;
  const cw=im.naturalWidth/8,ch=im.naturalHeight/2,row=f.word==='execution'?0:1;
- const width=cfg.width,height=width*ch/cw;
+ // 352px cel has 40px of each-side protective space around the
+ // untouched 272px art plus 23px extrapolated slanted left stroke.
+ // Draw at 1:1 inside the 320px HUD canvas: original painted letters
+ // keep their old size, with the new fringe tapering before x=0.
+ const width=cfg.width+32,height=width*ch/cw;
  hudCtx.drawImage(im,frame*cw,row*ch,cw,ch,(canvas.width-width)*.5,(canvas.height-height)*.5,width,height);
  let dx=0,dy=0,alpha=1,scaleX=1,scaleY=1;
  if(age<cfg.enter){
