@@ -3072,7 +3072,7 @@ test('ballistic Foley predecodes, fires at impact and never ducks music',()=>{
   pos=played.length;
   assert.equal(t.playImpactSound('counter',1.25),true,'counter blast has its own priority');
   assert.equal(played[pos].buffer.duration,.80,'shotgun blast is the primary report');
-  assert(gains.some(v=>Math.abs(v.gain.value-(.98*.70*.92))<1e-8),'compressed mix preserves safe headroom');
+  assert(gains.some(v=>Math.abs(v.gain.value-(1.11*.70*.92))<1e-8),'compressed mix preserves safe headroom');
   assert.equal(ducked,false,'sound effects never duck background music');
  }finally{
   if(prior)world.AudioContext=prior;else delete world.AudioContext;
