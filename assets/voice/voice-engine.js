@@ -5,19 +5,11 @@
  * on independent buses and are never attenuated by these effects. */
 (() => {
  'use strict';
+ // Previous protagonist gunshots and mechanical attack sounds are retired.
+ // Only the existing CC0 enemy human reaction recordings remain in this engine.
  const CLIPS={
-  // Only two short CC0 human grunts. Old long screams and animal-like
-  // pitch-shifted remasters are archival, never loaded or played.
   enemyA:'./assets/voice/hero-grunt-a.wav',
-  enemyB:'./assets/voice/hero-grunt-b.wav',
-  // Foley, not gunfire: short firearm slide, bolt and charging-lever clicks.
-  mechA:'./assets/voice/hero-mech-a.mp3',
-  mechB:'./assets/voice/hero-mech-b.mp3',
-  mechPower:'./assets/voice/hero-mech-power.mp3',
-  shotPistol:'./assets/voice/shot-pistol.mp3',
-  shotRevolver:'./assets/voice/shot-revolver.mp3',
-  shotRifle:'./assets/voice/shot-rifle.mp3',
-  shotHeavy:'./assets/voice/shot-heavy.mp3'
+  enemyB:'./assets/voice/hero-grunt-b.wav'
  };
  const buffers=Object.create(null),active=new Set(),activeShots=new Set();
  // Match the game's global SFX 70% mix; this is post-compressor and
@@ -136,11 +128,11 @@
   if(entry.actor?._voiceEntry===entry)entry.actor._voiceEntry=null;
  }
  function play(kind,actor,hero){
-  if(!context||!buffers.mechA||!actor||!hero)return false;
+  if(!context||!buffers.enemyA||!actor||!hero)return false;
   try{
    const now=context.currentTime,isHero=actor===hero;
    const profile=isHero?null:(ENEMY_ARCHETYPES[actor.type]||ENEMY_ARCHETYPES.raider);
-   if(isHero&&kind!=='heroStrike'&&kind!=='heroPower'&&kind!=='heroMove')return false;
+   if(isHero)return false; // Original mechanical and pistol SFX are retired.
    if(!isHero&&Math.abs(actor.x-hero.x)>1100)return false;
    const fatal=!isHero&&(kind==='enemyDeath'||kind==='bossDeath');
    const cooldown=kind==='enemyHurt'?.48:
