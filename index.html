@@ -5635,13 +5635,13 @@ function playCombatVoice(kind,actor=p){
 function playCombatGunfire(kind='normal',move=p.moveName){
  return !mute&&gameState==='playing'&&!!window.__zCombatVoice?.fire(kind,move);
 }
-// PROJECT Z ORIGINAL FOLEY V4 / WEIGHT V5 MASTER: five newly generated sources with more body.
+// PROJECT Z AUDIO V6: attack-derived steel rack for parry/jump/dash; deeper counter blast for impacts.
 const Z_IMPACT_SFX_URLS=Object.freeze({
  punchA:'./assets/sfx/z-ballistic-rifle-20261103-weight-v5.mp3?v=weightV5',
  punchB:'./assets/sfx/z-ballistic-sidearm-20261103-weight-v5.mp3?v=weightV5',
  heavy:'./assets/sfx/z-ballistic-heavy-20261103-weight-v5.mp3?v=weightV5',
- parry:'./assets/sfx/z-ballistic-parry-20261103-weight-v5.mp3?v=weightV5',
- counter:'./assets/sfx/z-ballistic-counter-20261103-weight-v5.mp3?v=weightV5'
+ parry:'./assets/sfx/z-rack-from-sidearm-attack-v6.mp3?v=impactV6',
+ counter:'./assets/sfx/z-counter-explosive-v6.mp3?v=impactV6'
 });
 const impactSfxBuffers=Object.create(null);
 let impactSfxPromise=null,impactSfxContext=null,impactBus=null,lastImpactAudio=-99,impactDrumVariant=0;
@@ -5732,14 +5732,14 @@ function playImpactSound(kind='punch',intensity=1){
   }
   // Play only ONE pristine original generated clip per strike, no layered older audio.
   const duration=key==='counter'?1.13:key==='heavy'?1.03:key==='parry'?.70:.78;
-  const level=key==='counter'?1.64:key==='parry'?1.32:key==='heavy'?1.23:1.08;
+  const level=key==='counter'?1.89:key==='parry'?1.63:key==='heavy'?1.23:1.08;
   layer(key,0,1,level,duration,12500,45);
   if(!voice.sources.length)return false;
   impactVoices.push(voice);
   return true;
  }catch(_){return false}
 }
-window.__zImpactAudioStatus=()=>({version:'ballistic-weight-v5-20261103',ready:Object.keys(impactSfxBuffers).length===5,
+window.__zImpactAudioStatus=()=>({version:'rack-explosion-v6-20261103',ready:Object.keys(impactSfxBuffers).length===5,
  loaded:Object.keys(impactSfxBuffers).length,playing:impactVoices.length});
 // Single active controller, compatible with current Gamepad.vibrationActuator
 // and older hapticActuators. Controllers and mobile browsers may omit both.
@@ -5887,14 +5887,14 @@ function stopGamepadRumble(){
  }}catch(_){}
  try{navigator.vibrate?.(0)}catch(_){}
 }
-function applyImpactFeedback(target,heavy=false,kind='punch'){
+function applyImpactFeedback(target,heavy=false,kind='punch',withAudio=true){
  target.bodyShakeDuration=heavy?.24:.18;
  target.bodyShakeTime=target.bodyShakeDuration;
  target.bodyShakePower=heavy?14:9;
  screenShake=Math.max(screenShake,heavy?24:16);
  screenTint=Math.max(screenTint,heavy?.22:.105);
  hitStop=Math.max(hitStop,heavy?.105:.072);
- playImpactSound(kind,heavy?1.15:1);
+ if(withAudio)playImpactSound(kind,heavy?1.15:1);
  vibrateImpact(target===p?'hurt':kind,kind==='dashImpact');
 }
 function actorShakeOffset(a){
@@ -6523,7 +6523,7 @@ function startAttack(){
  if(p.dashFollowWindow>0&&!p.evadeBackstep&&p.z<=16){
   const dashDir=p.dodgeX||p.facing;
   p.dashFollowWindow=0;p.dodge=0;p.evadeBackstep=false;
-  p.dashSmash=true;p.counterBoost=false;p.airAttack=false;
+  p.dashSmash=true;p._dashExplosionPlayed=false;p.counterBoost=false;p.airAttack=false;
   p.facing=dashDir;p.moveName='cross';loadZMove('cross');
   p.attackDuration=.53/(1+modRank('haste')*.08);
   p.attack=p.attackDuration;p.hitDone=false;p.attackQueued=false;
@@ -6664,6 +6664,7 @@ function dodge(fromBuffer=false){
  p.motionKey='';p.motionTime=0;p.animAge=0;
  loadZMove(backInput?'dodge':'dash');
  fxBurst(p.x-p.facing*22,p.y-24,'blue',exhausted?.26:.42);
+ playImpactSound('parry',.90); // V6: new loud rack on every accepted dash
  void 0 /* prior arcade attack tone disabled */;void 0 /* previous mechanical cue disabled */;
  return true;
 }
@@ -6693,7 +6694,9 @@ function jump(){
  p.dashSmash=false;p.dashFollowWindow=0;
  p.jumpTime=0;p.moveName='jumpstart';
  p.vz=jumpMobilityStats().impulse;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;
- p.airKickUsed=false; /* No synthetic pitch chirp at jump start. */
+ p.airKickUsed=false;
+ playImpactSound('parry',.85); // V6: same mechanical rack when jumping
+ /* No synthetic pitch chirp at jump start. */
 }
 function execute(target){
  if(gameState!=='playing'||p.stun>0||!target||target.dead||target.groggy<=0)return false;
@@ -6828,7 +6831,7 @@ function hurtEnemy(e,dmg,poise){
   }
   hitStop=Math.max(hitStop,.12);screenShake=Math.max(screenShake,19);
   if(e.type!=='intruder')fxBurst(e.x,e.y-118,'gold',specialStats('dashspeed').visual,true);
-  playImpactSound('heavy',1.1);
+  // The dash blast is fired once at the contact beat, not once per victim.
  }
  const basicContact=p.attack>0&&!p.dashSmash&&!p.counterBoost&&!p.airAttack&&!p.riposteStrikeTarget;
  const contactPush=e.type==='boss'?12:clamp(drive*(basicContact?.28:.21)+(smash?17:9),22,basicContact?72:61);
@@ -6836,7 +6839,7 @@ function hurtEnemy(e,dmg,poise){
  // No trailing visual interpolation after a fresh basic-attack impact.
  // Hit-stop now freezes both bodies AFTER the victim has already recoiled.
  if(basicContact)e.renderX=e.x;
- if(e.type!=='intruder')fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:smash?1.65:1.2);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');applyImpactFeedback(e,smash||p.dashSmash,p.dashSmash?'dashImpact':smash?'heavy':'punch');p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
+ if(e.type!=='intruder')fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:smash?1.65:1.2);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');applyImpactFeedback(e,smash||p.dashSmash,p.dashSmash?'dashImpact':smash?'heavy':'punch',!(p.dashSmash||p.airAttack));p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
  if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=e.type==='boss'?1.30:e.type==='elite'?2.4:3.6;e.stun=e.groggy;if(e.type!=='intruder')fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
  if(e.type==='elite'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.14;e.eliteCooldown=Math.min(e.eliteCooldown,1.6);fxBurst(e.x,e.y-150,'red',1.8);floatText('CRIMSON OVERDRIVE',e.x,e.y-255,'#ff8494')}
  if(e.type==='intruder'&&e.hp>0&&e.hp<e.maxHp*.42&&e.phase===1){
@@ -7286,8 +7289,8 @@ function heelLandingShockwave(powered=false){
  spawnModBitmap('gold',p.x,p.y-36,skill.visual*.45,
   'brightness(1.45) saturate(1.2)',.30);
  if(fx.at(-1)?.kind==='modBitmap')fx.at(-1).specialAttackFx=true;
- playImpactSound('heavy',powered?1.4:1.1);
- /* Slam gun report already comes from the heavy impact bus. */
+ playImpactSound('counter',powered?1.35:1.08);
+ /* New V6 explosion is played once on the heel landing beat. */
  vibrateImpact('slam',true);
  for(const enemy of impacted){
   const fromX=enemy.x,fromY=enemy.y;
@@ -7389,7 +7392,7 @@ function attackCheck(){
   spawnModBitmap('gold',e.x,e.y-133,skill.visual*.75,'brightness(1.6) saturate(1.4)',.35);
    if(fx.at(-1)?.kind==='modBitmap')fx.at(-1).specialAttackFx=true;
   floatText('CRUSH COUNTER!',e.x,e.y-220,'#ffe098');
-  playImpactSound('counter',1.25);vibrateImpact('dashImpact',true);
+  playImpactSound('counter',1.35);vibrateImpact('dashImpact',true);
   p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
   return;
  }
@@ -7405,6 +7408,11 @@ function attackCheck(){
  const reach=p.dashSmash?specialStats('dashspeed').range:p.counterBoost?220:armed?([134,145,170][p.comboIdx]||135):(baseReach[p.moveName]||100);
  const poise={jab:21,cross:29,hook:38,uppercut:53,backfist:32,hammerfist:62,spinning_elbow:58,rising_elbow:49,superman_punch:68,shovel_hook:41,frontkick:43,lowkick:34,roundkick:57,axe_kick:65,sidekick:58,spinning_heel:72,crescent_kick:56,diagonal_airkick:74,rising_headbutt:62,forward_headbutt:54,airkick:78};
  let hits=0;
+ // Fire exactly one V6 explosion at the dash punch strike frame.
+ if(p.dashSmash&&!p._dashExplosionPlayed){
+  p._dashExplosionPlayed=true;
+  playImpactSound('counter',1.30);
+ }
  const directTargets=new Set();
  let dashImpactX=0,dashImpactY=0;
  for(const e of enemies){if(e.dead||e.inv>0)continue;const dx=e.x-p.x,dy=Math.abs(e.y-p.y);const contactReach=Math.max(reach,bodyHalfX(p)+bodyHalfX(e)+20);if((dx*p.facing)>-25&&(dx*p.facing)<contactReach&&dy<(p.dashSmash?specialStats('dashspeed').lane:p.airAttack?78:56)&&(p.airAttack?p.z<225:Math.abs(e.z-p.z)<82)){let dmg=damage;
