@@ -5635,16 +5635,13 @@ function playCombatVoice(kind,actor=p){
 function playCombatGunfire(kind='normal',move=p.moveName){
  return !mute&&gameState==='playing'&&!!window.__zCombatVoice?.fire(kind,move);
 }
-// BALLISTIC FOLEY V3: real-recording-style gun reports at the DAMAGE frame.
-// Reuse the preloaded original gunshot recordings, never the cartoon drum/oscillator cues.
-// Separate BGM bus remains untouched; all samples decode before entering combat.
+// PROJECT Z ORIGINAL FOLEY V4: five completely NEW recordings, no old combat samples.
 const Z_IMPACT_SFX_URLS=Object.freeze({
- punchA:'./assets/voice/shot-pistol.mp3?v=ballistic20261103',
- punchB:'./assets/voice/shot-revolver.mp3?v=ballistic20261103',
- heavy:'./assets/voice/shot-heavy.mp3?v=ballistic20261103',
- parry:'./assets/sfx/shotgun-rack-v2.wav?v=ballistic20261103',
- counter:'./assets/voice/shot-heavy.mp3?v=ballistic20261103',
- crack:'./assets/voice/shot-rifle.mp3?v=ballistic20261103'
+ punchA:'./assets/sfx/z-ballistic-rifle-20261103.mp3?v=originalV4',
+ punchB:'./assets/sfx/z-ballistic-sidearm-20261103.mp3?v=originalV4',
+ heavy:'./assets/sfx/z-ballistic-heavy-20261103.mp3?v=originalV4',
+ parry:'./assets/sfx/z-ballistic-parry-20261103.mp3?v=originalV4',
+ counter:'./assets/sfx/z-ballistic-counter-20261103.mp3?v=originalV4'
 });
 const impactSfxBuffers=Object.create(null);
 let impactSfxPromise=null,impactSfxContext=null,impactBus=null,lastImpactAudio=-99,impactDrumVariant=0;
@@ -5655,7 +5652,7 @@ function prepareImpactSfx(context=audio){
  if(impactSfxPromise&&impactSfxContext===context)return impactSfxPromise;
  impactSfxContext=context;
  impactSfxPromise=Promise.all(Object.entries(Z_IMPACT_SFX_URLS).map(async([key,url])=>{
-  const r=await fetch(url,{cache:'force-cache'});
+  const r=await fetch(url,{cache:'reload'});
   if(!r.ok)throw Error('전투 사운드 로드 실패: '+key);
   const decoded=await context.decodeAudioData(await r.arrayBuffer());
   if(!decoded||!decoded.duration)throw Error('전투 사운드 디코딩 실패: '+key);
@@ -5733,30 +5730,16 @@ function playImpactSound(kind='punch',intensity=1){
    source.start(at,offset,duration*rate);
    source.stop(at+duration+.015);
   }
-  if(key==='punchA'||key==='punchB'){
-   // Dry pistol/revolver muzzle report, not a drum or playful bass boing.
-   layer(key,0,key==='punchA'?1:.985,1.10,.35,7900,75);
-   layer('crack',.007,1,.18,.095,6300,150);
-  }else if(key==='heavy'){
-   layer('heavy',0,.96,1.30,.58,7800,58);
-   layer('crack',.008,1,.32,.15,7300,140);
-   layer('heavy',.038,.96,.24,.40,850,45);
-  }else if(key==='parry'){
-   // Shotgun bolt/rack lock: dense mechanical steel with dry physical impact.
-   layer('parry',0,1,1.44,.44,5800,85);
-   layer('punchB',.012,1,.28,.11,3900,90);
-  }else{
-   // Counter: foreground shotgun blast, sharp report, deep pressure-wave tail.
-   layer('counter',0,.95,1.82,.72,8500,48);
-   layer('crack',.009,1,.70,.20,7700,130);
-   layer('counter',.046,.93,.48,.57,1050,42);
-  }
+  // Play only ONE pristine original generated clip per strike, no layered older audio.
+  const duration=key==='counter'?1.13:key==='heavy'?1.03:key==='parry'?.70:.78;
+  const level=key==='counter'?1.64:key==='parry'?1.32:key==='heavy'?1.23:1.08;
+  layer(key,0,1,level,duration,12500,45);
   if(!voice.sources.length)return false;
   impactVoices.push(voice);
   return true;
  }catch(_){return false}
 }
-window.__zImpactAudioStatus=()=>({ready:Object.keys(impactSfxBuffers).length===6,
+window.__zImpactAudioStatus=()=>({version:'original-mirelo-v4-20261103',ready:Object.keys(impactSfxBuffers).length===5,
  loaded:Object.keys(impactSfxBuffers).length,playing:impactVoices.length});
 // Single active controller, compatible with current Gamepad.vibrationActuator
 // and older hapticActuators. Controllers and mobile browsers may omit both.
@@ -6341,7 +6324,7 @@ function startRun(){cancelCombatHudEntrance();pendingHubAutoRefresh=false;resetI
   wave=2;p.x=30400;p.y=560;cameraX=clamp(p.x-450,0,STAGE_WIDTH-W);
   spawnWave();flash('HUNTER / 최종 보스 미리보기',2);
  }else if(!heroEntry.active)flash('CHAPTER 01 : 침수된 거리',2);
- if(!heroEntry.active)sound('attack')}
+ if(!heroEntry.active)void 0 /* prior arcade attack tone disabled */}
 function spawnNextEncounter(){
  if(wave!==1&&wave!==2)return false;
  const spots=SQUAD_SPOTS[wave]||[],i=squadIndex;
@@ -6553,7 +6536,7 @@ function startAttack(){
   p.stamina=Math.max(0,p.stamina-16);p.animAge=0;
   p.recentMoves.push('cross');if(p.recentMoves.length>5)p.recentMoves.shift();
   // Protect the whole committed lunge punch and a short recovery from enemy interrupts.
-  p.inv=Math.max(p.inv,p.attackDuration+.14);runStats.attacks++;triggerStrikeCamera('dash');vibrateImpact('dash');sound('attack');playCombatVoice('heroPower');
+  p.inv=Math.max(p.inv,p.attackDuration+.14);runStats.attacks++;triggerStrikeCamera('dash');vibrateImpact('dash');void 0 /* prior arcade attack tone disabled */;void 0 /* previous mechanical cue disabled */;
   return;
  }
  p.dashSmash=false;
@@ -6567,7 +6550,7 @@ function startAttack(){
   p.airKickPhase='charge';p.airKickLaunched=false;p.attackDriveRemaining=0;
   p.hitDone=false;p.attackQueued=false;p.comboWindow=0;
   p.vz=0;p.inv=Math.max(p.inv,.14);
-  runStats.attacks++;triggerStrikeCamera('air');vibrateImpact('air');sound('attack');playCombatVoice('heroPower');return;
+  runStats.attacks++;triggerStrikeCamera('air');vibrateImpact('air');void 0 /* prior arcade attack tone disabled */;void 0 /* previous mechanical cue disabled */;return;
  }
  p.airKickPhase='';
  const finisher=p.riposteWindow>0?null:findExecutionTarget();
@@ -6585,7 +6568,7 @@ function startAttack(){
   loadZMove('run');runStats.attacks++;
   triggerStrikeCamera('dash');strikeCameraTime=.74;strikeCameraTarget=1.35;
   fxBurst(p.x-p.facing*34,p.y-55,'blue',1.25);
-  flash('JUST PARRY → CHASE FINISH!',.95);sound('attack');playCombatVoice('heroPower');return;
+  flash('JUST PARRY → CHASE FINISH!',.95);void 0 /* prior arcade attack tone disabled */;void 0 /* previous mechanical cue disabled */;return;
  }
  const step=p.comboWindow>0?(p.comboIdx+1)%4:0;
  const move=pickComboMove(step,p.moveName,p.weapon>0);
@@ -6681,7 +6664,7 @@ function dodge(fromBuffer=false){
  p.motionKey='';p.motionTime=0;p.animAge=0;
  loadZMove(backInput?'dodge':'dash');
  fxBurst(p.x-p.facing*22,p.y-24,'blue',exhausted?.26:.42);
- sound('attack');playCombatVoice('heroPower');
+ void 0 /* prior arcade attack tone disabled */;void 0 /* previous mechanical cue disabled */;
  return true;
 }
 function consumeBufferedDash(){
@@ -6723,7 +6706,7 @@ function execute(target){
  hurtEnemy(target,target.type==='boss'?260:999,100);
  screenShake=25;screenTint=.6;hitStop=.15;
  if(target.type!=='intruder')fxBurst(target.x,target.y-130,target.type==='boss'?'red':'gold',2.4);
- spawnCombatWordFx('execution',target);vibrateImpact('execution',true);playCombatVoice('heroPower'); /* The hit itself drives the ballistic report. */return true
+ spawnCombatWordFx('execution',target);vibrateImpact('execution',true);void 0 /* previous mechanical cue disabled */; /* The hit itself drives the ballistic report. */return true
 }
 function awardEnemyKill(e){
  if(e.killAwarded)return;
@@ -7679,7 +7662,7 @@ function control(dt,pad){
     p.inv=Math.max(p.inv,.53);p.animAge=0;p.comboWindow=0;
     strikeCameraTime=.68;strikeCameraTarget=1.36;
     fxBurst(p.x+p.facing*70,p.y-125,'gold',1.35);
-    sound('attack');
+    void 0 /* prior arcade attack tone disabled */;
    }
   }
   if(p.riposteChasing){
@@ -7687,7 +7670,7 @@ function control(dt,pad){
    // collision-safe chase travel keeps its existing independent speed.
    p.riposteRunCycle=(p.riposteRunCycle||0)+dt*16;
    if(time-(p._lastGunMotionAt??-99)>1.20){
-    p._lastGunMotionAt=time;playCombatVoice('heroMove');
+    p._lastGunMotionAt=time;void 0 /* previous movement click disabled */;
    }
    p.moveDX=0;p.moveDY=0; // dedicated pursuit owns locomotion this tick
    return;
@@ -7764,13 +7747,13 @@ function control(dt,pad){
  // Softer occasional slide action on locomotion; avoid a loud click per step.
  if(distanceTraveled>1.2&&p.attack<=0&&p.dodge<=0&&p.parry<=0&&
    p.downTimer<=0&&p.getupTimer<=0&&time-(p._lastGunMotionAt??-99)>1.20){
-  p._lastGunMotionAt=time;playCombatVoice('heroMove');
+  p._lastGunMotionAt=time;void 0 /* previous movement click disabled */;
  }
  // Hold the raised heel briefly, then commit to a fast downward strike.
  if(p.airAttack&&p.attack>0&&p.stun<=0){
   const age=p.attackDuration-p.attack;
   if(age>=.22&&!p.airKickLaunched){
-   p.airKickLaunched=true;p.airKickPhase='dive';p.vz=-1150;sound('attack');
+   p.airKickLaunched=true;p.airKickPhase='dive';p.vz=-1150;void 0 /* prior arcade attack tone disabled */;
   }
  }else if(p.stun>0){p.airKickPhase='';p.airAttack=false}
  if(p.z>0||p.vz>0){
@@ -8416,7 +8399,7 @@ function update(dt){
   heroEntry.elapsed=Math.min(heroEntry.duration,previous+dt);
   time+=dt*.24;
   if(!heroEntry.landed&&heroEntry.elapsed>=heroEntry.revealAt){
-   heroEntry.landed=true;sound('attack');vibrateImpact('heavy',true);
+   heroEntry.landed=true;void 0 /* prior arcade attack tone disabled */;vibrateImpact('heavy',true);
   }
   if(heroEntry.elapsed>=heroEntry.duration){
    heroEntry.active=false;
