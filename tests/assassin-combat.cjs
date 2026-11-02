@@ -2935,7 +2935,11 @@ test('dash upgrades expand actual hit range, damage and push',()=>{
   t.p.dashSmash=true;t.p.attack=.3;t.p.moveName='cross';t.p.comboIdx=0;
   const near=t.makeEnemy('raider',t.p.x+100,t.p.y,0),far=t.makeEnemy('raider',t.p.x+265,t.p.y,1);
   near.hp=far.hp=1000;near.maxHp=far.maxHp=1000;t.setEnemies([near,far]);
-  t.attackCheck();results.push([1000-near.hp,1000-far.hp,near.knockVX]);
+  t.p.critDrought=0;
+  const savedRandom=Math.random;
+  try{Math.random=()=>.999;t.attackCheck();}
+  finally{Math.random=savedRandom;}
+  results.push([1000-near.hp,1000-far.hp,near.knockVX]);
  }
  assert(results[0][1]>0,'the base dash punch splashes a nearby forward enemy even beyond the direct hitbox');
  assert(results[2][1]>results[0][1],'the ranked dash range and damage make the farther enemy take more damage');
