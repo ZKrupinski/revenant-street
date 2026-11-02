@@ -7029,8 +7029,8 @@ function zClampVfxX(worldX,leftExtent,rightExtent){
 const Z_COMBAT_WORD_TIMING=Object.freeze({
  // 15-20% quicker overall; stage 0 is a line-only approach,
  // poses 1..6 form the complete stationary text animation, pose 7 is exit.
- execution:{enter:.15,shake:.075,text:1.39,hold:.20,exit:.40,width:320},
- critical:{enter:.135,shake:.07,text:1.24,hold:.17,exit:.37,width:320}
+ execution:{enter:.15,shake:.145,text:1.39,hold:.20,exit:.40,width:320},
+ critical:{enter:.135,shake:.135,text:1.24,hold:.17,exit:.37,width:320}
 });
 const zCombatWordQueue=[];
 function zStartCombatWord(kind){
@@ -7087,21 +7087,27 @@ function drawCombatWordFx(f){
  const cw=im.naturalWidth/8,ch=im.naturalHeight/2,row=f.word==='execution'?0:1;
  const width=cfg.width,height=width*ch/cw;
  hudCtx.drawImage(im,frame*cw,row*ch,cw,ch,(canvas.width-width)*.5,(canvas.height-height)*.5,width,height);
- let dx=0,dy=0,alpha=1;
+ let dx=0,dy=0,alpha=1,scaleX=1,scaleY=1;
  if(age<cfg.enter){
   const t=zCombatWordEaseOut(age/cfg.enter);
   dx=-Math.min(150,drawW*.52)*(1-t);alpha=t;
  }else if(age<wordStart){
-  const t=(age-cfg.enter)/cfg.shake,k=1-t;
-  dx=Math.sin(t*Math.PI*4)*4.2*k;
-  dy=Math.sin(t*Math.PI*2)*1.8*k;
+  // Pronounced spring impact on arrival, then two quick shrinking shudders.
+  // This happens ONLY on the line-only cel; the lettering stays rock solid.
+  const t=clamp((age-cfg.enter)/cfg.shake,0,1);
+  const decay=Math.pow(1-t,1.2);
+  dx=11.5*Math.sin(t*Math.PI*5)*decay;
+  dy=4.4*Math.sin(t*Math.PI*4+.6)*decay;
+  const punch=Math.sin(t*Math.PI)*Math.pow(1-t,.65);
+  scaleX=1+.06*punch;
+  scaleY=1-.045*punch;
  }else if(age>=exitStart){
   const t=clamp((age-exitStart)/cfg.exit,0,1);
   const columnWidth=pause.parentElement?.offsetWidth||drawW*.72;
   dx=(drawW+columnWidth+64)*zCombatWordEaseIn(t);
   alpha=1-t;
  }
- canvas.style.transform='translate3d('+dx.toFixed(2)+'px,'+dy.toFixed(2)+'px,0)';
+ canvas.style.transform='translate3d('+dx.toFixed(2)+'px,'+dy.toFixed(2)+'px,0) scale('+scaleX.toFixed(3)+','+scaleY.toFixed(3)+')';
  canvas.style.opacity=alpha.toFixed(3);
  return true;
 }
