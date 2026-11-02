@@ -257,7 +257,7 @@ async function uiBitmapPreload(){
  assert(html.includes("['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)]"));
  assert(html.includes("...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임',()=>ensureBitmapDecoded(intruderMotionImages[k])])"));
  assert(html.includes("const INTRUDER_MOTION_KEYS=['idle','run','attack','hit','death','special']"));
- assert(html.includes("['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)]"));
+ assert(!html.includes("['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)]"),'removed defensive bubble image must not be preloaded');
  assert(html.includes("['아케이드 조작 버튼 4종·눌림 8프레임',()=>ensureBitmapDecoded(arcadeButtonsImage)]"));
  assert(html.includes("['왼쪽 아케이드 스틱 베이스',()=>ensureBitmapDecoded(joystickBaseImage)]"));
  assert(html.includes("['왼쪽 아케이드 스틱 금속 봉',()=>ensureBitmapDecoded(joystickShaftImage)]"));
