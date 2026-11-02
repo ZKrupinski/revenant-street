@@ -4,6 +4,7 @@ on:
     paths:
       - 'assets/vfx/project_z_upgrade_**'
       - 'tests/upgrade-vfx-six.cjs'
+      - 'tests/loading-audio.cjs'
       - 'index.html'
       - 'play-fixed-20261102.html'
       - '.github/workflows/upgrade-vfx-six.yml'
