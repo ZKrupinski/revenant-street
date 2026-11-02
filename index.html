@@ -5635,16 +5635,21 @@ function playCombatVoice(kind,actor=p){
 function playCombatGunfire(kind='normal',move=p.moveName){
  return !mute&&gameState==='playing'&&!!window.__zCombatVoice?.fire(kind,move);
 }
-// PROJECT Z AUDIO V6: attack-derived steel rack for parry/jump/dash; deeper counter blast for impacts.
+// PROJECT Z AUDIO V7: six non-repeating gunshots, true steel slide Foley, reverberant deep counter.
 const Z_IMPACT_SFX_URLS=Object.freeze({
  punchA:'./assets/sfx/z-ballistic-rifle-20261103-weight-v5.mp3?v=weightV5',
  punchB:'./assets/sfx/z-ballistic-sidearm-20261103-weight-v5.mp3?v=weightV5',
+ punchC:'./assets/sfx/z-combat-v7-rifle-c.mp3?v=audioV7',
+ punchD:'./assets/sfx/z-combat-v7-rifle-d.mp3?v=audioV7',
+ punchE:'./assets/sfx/z-combat-v7-pistol-e.mp3?v=audioV7',
+ punchF:'./assets/sfx/z-combat-v7-magnum-f.mp3?v=audioV7',
  heavy:'./assets/sfx/z-ballistic-heavy-20261103-weight-v5.mp3?v=weightV5',
- parry:'./assets/sfx/z-rack-from-sidearm-attack-v6.mp3?v=impactV6',
- counter:'./assets/sfx/z-counter-explosive-v6.mp3?v=impactV6'
+ parry:'./assets/sfx/z-combat-v7-slide-a.mp3?v=audioV7',
+ parryAlt:'./assets/sfx/z-combat-v7-slide-b.mp3?v=audioV7',
+ counter:'./assets/sfx/z-combat-v7-counter-reverb.mp3?v=audioV7'
 });
 const impactSfxBuffers=Object.create(null);
-let impactSfxPromise=null,impactSfxContext=null,impactBus=null,lastImpactAudio=-99,impactDrumVariant=0;
+let impactSfxPromise=null,impactSfxContext=null,impactBus=null,lastImpactAudio=-99,impactAttackBag=[],impactLastAttackKey='',impactParryVariant=0;
 let lastImpactHaptic=-999999;
 const impactVoices=[];
 function prepareImpactSfx(context=audio){
@@ -5677,6 +5682,23 @@ function impactOnset(buffer){
  }catch(_){}
  return 0;
 }
+// Six genuine gunshot recordings shuffled as a bag; never repeat a clip inside
+// the bag or across shuffle boundaries, even during a long combo.
+const Z_ATTACK_REPORT_KEYS=Object.freeze(['punchA','punchB','punchC','punchD','punchE','punchF']);
+function nextImpactAttackKey(){
+ if(!impactAttackBag.length){
+  const bag=Array.from(Z_ATTACK_REPORT_KEYS);
+  for(let i=bag.length-1;i>0;i--){
+   const j=Math.floor(Math.random()*(i+1));
+   [bag[i],bag[j]]=[bag[j],bag[i]];
+  }
+  if(bag[0]===impactLastAttackKey)[bag[0],bag[1]]=[bag[1],bag[0]];
+  impactAttackBag=bag;
+ }
+ const selected=impactAttackBag.shift();
+ impactLastAttackKey=selected;
+ return selected;
+}
 function playImpactSound(kind='punch',intensity=1){
  if(mute||!audio||!impactSfxBuffers.counter)return false;
  try{
@@ -5684,9 +5706,9 @@ function playImpactSound(kind='punch',intensity=1){
   const now=audio.currentTime,priority=kind==='counter'||kind==='parry';
   if(!priority&&now-lastImpactAudio<.048)return false;
   if(!priority)lastImpactAudio=now;
-  const key=kind==='counter'?'counter':kind==='parry'?'parry':
+  const key=kind==='counter'?'counter':kind==='parry'?(impactParryVariant++&1?'parryAlt':'parry'):
     ['heavy','execution','dashImpact','slam'].includes(kind)?'heavy':
-    ((impactDrumVariant++&1)?'punchB':'punchA');
+    nextImpactAttackKey();
   if(!impactSfxBuffers[key])return false;
   if(!impactBus){
    const comp=audio.createDynamicsCompressor(),output=audio.createGain();
@@ -5714,7 +5736,9 @@ function playImpactSound(kind='punch',intensity=1){
    source.buffer=buffer;source.playbackRate.value=rate;
    hp.type='highpass';hp.frequency.value=highpass;
    lp.type='lowpass';lp.frequency.value=lowpass;
-   const peak=level*strength,attack=Math.min(.003,duration*.1),release=Math.min(.080,duration*.31);
+   const peak=level*strength,attack=Math.min(.003,duration*.1);
+   const release=key==='counter'?Math.min(.34,duration*.20):
+    (key==='parry'||key==='parryAlt')?Math.min(.16,duration*.24):Math.min(.080,duration*.31);
    gain.gain.setValueAtTime(.0001,at);
    gain.gain.linearRampToValueAtTime(peak,at+attack);
    gain.gain.setValueAtTime(peak,Math.max(at+attack,at+duration-release));
@@ -5730,16 +5754,17 @@ function playImpactSound(kind='punch',intensity=1){
    source.start(at,offset,duration*rate);
    source.stop(at+duration+.015);
   }
-  // Play only ONE pristine original generated clip per strike, no layered older audio.
-  const duration=key==='counter'?1.13:key==='heavy'?1.03:key==='parry'?.70:.78;
-  const level=key==='counter'?1.89:key==='parry'?1.63:key==='heavy'?1.23:1.08;
-  layer(key,0,1,level,duration,12500,45);
+  // One complete gun report, one two-stroke steel slide, or one reverberant counter.
+  const isRack=key==='parry'||key==='parryAlt';
+  const duration=key==='counter'?2.28:key==='heavy'?1.03:isRack?1.20:.83;
+  const level=key==='counter'?2.05:isRack?1.98:key==='heavy'?1.23:1.17;
+  layer(key,0,1,level,duration,isRack?9500:12500,isRack?80:45);
   if(!voice.sources.length)return false;
   impactVoices.push(voice);
   return true;
  }catch(_){return false}
 }
-window.__zImpactAudioStatus=()=>({version:'rack-explosion-v6-20261103',ready:Object.keys(impactSfxBuffers).length===5,
+window.__zImpactAudioStatus=()=>({version:'six-shots-steel-slide-reverb-v7-20261103',ready:Object.keys(impactSfxBuffers).length===10,
  loaded:Object.keys(impactSfxBuffers).length,playing:impactVoices.length});
 // Single active controller, compatible with current Gamepad.vibrationActuator
 // and older hapticActuators. Controllers and mobile browsers may omit both.
@@ -5747,7 +5772,7 @@ const RUMBLE_PROFILES={
  // Browsers cap motor intensity at 1.0. Reserve the longest MAXIMUM
  // dual-motor pulses for dash punch impact and vertical heel-slam landing.
  footwalk:[65,.40,.50],footrun:[85,.61,.73],
- punch:[115,.86,.96],heavy:[220,1,1],parry:[225,1,1],
+ punch:[115,.86,.96],heavy:[220,1,1],parry:[225,1,1],counter:[590,1,1],
  hurt:[235,.96,1],execution:[325,1,1],
  dash:[155,.94,1],air:[185,.90,1],
  dashImpact:[375,1,1],slam:[440,1,1],upgradeConfirm:[360,1,1],test:[290,1,1]
@@ -7392,7 +7417,7 @@ function attackCheck(){
   spawnModBitmap('gold',e.x,e.y-133,skill.visual*.75,'brightness(1.6) saturate(1.4)',.35);
    if(fx.at(-1)?.kind==='modBitmap')fx.at(-1).specialAttackFx=true;
   floatText('CRUSH COUNTER!',e.x,e.y-220,'#ffe098');
-  playImpactSound('counter',1.35);vibrateImpact('dashImpact',true);
+  playImpactSound('counter',1.35);vibrateImpact('counter',true);
   p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
   return;
  }
