@@ -7,6 +7,18 @@ const world={console,location:{search:'?intro=off'},setTimeout(){return 1},clear
 for(const script of scripts.slice(0,-1))vm.runInContext(script,world);
 vm.runInContext(scripts.at(-1).replace('titleMenu();requestAnimationFrame(loop);',`window.test={intruderEntering,intruderEntryFrame,drawIntruderEntry,drawIntruderCombat,intruderVisualMove,intruderMotionImages,INTRUDER_FRAME_FOOT,intruderCombatFrame,updateIntruderSpecial,zCellSamplingSpec,hubMenu,selectHubModule,focusHubApplyAfterSelection,permanentBaseStats,renderTitleBaseStats,prepareHubReset,cancelHubReset,resetHubUpgrades,buyUpgrade,HUB_COST,HUB_MODULES,HUB_MAX_LEVEL,hubUpgradeCost,hubRefreshCost,hubAvailableModules,refreshHubOffers,hubEconomyMenu,scoreRunBonus,awardRunShards,recordStyleDamage,runResultMarkup,getRunStats:()=>runStats,completeMenu,deadMenu,offscreenArrowFrameAt,requestSelectMod,getRewardSelection:()=>rewardSelection,p,COMBO_ROTATION,dashMobilityStats,jumpMobilityStats,zArtState,pickComboMove,specialStats,upgradeDescription,MOD_META,MOD_UI_ORDER,MOD_ICON_INDEX,modIconMarkup,makeEnemy,updateEnemies,hurtEnemy,startAttack,enemyAttack,getAssassinMove,getMaskedMove,maskedFrame,anchorMaskedFrames,updateEliteAI,zOneShotFrame,zStride,currentZFrameIndex,getZMove,keyDown,keyUp,menuPad,menuConfirm,hubMenuNavigate,heldKeyboard,keys,getRiotGuardState,getRiotGuardFrame,offscreenEnemyTarget,offscreenEnemyTargets,groundY,modRank,rewardMenu,selectMod,updateHud,setModsExpanded,updateModToggle,pollPad,attackCheck,control,jump,dodge,heelLandingShockwave,updateComboCamera,followComboCamera,normalCameraTargetX,registerComboCameraHit,getCameraZoom:()=>cameraZoom,getStrikeCameraTime:()=>strikeCameraTime,getCounterCameraTime:()=>counterCameraTime,getRiposteCinematicTime:()=>riposteCinematicTime,getCameraX:()=>cameraX,triggerCounterCamera,counterCameraZoomGoal,counterCameraWorldAnchor,spawnRiposteAfterimages,getHeroAfterimages:()=>heroAfterimages,getCameraX:()=>cameraX,update,getGameTime:()=>time,getSlowMotion:()=>slowMotion,getSlowVictim:()=>parrySlowTarget,getHitStop:()=>hitStop,spawnWave,spawnNextEncounter,spawnIntruderSupport,intruderSupportCount,SQUAD_SPOTS,SQUAD_ROSTERS,STAGE_WIDTH,WAVE_GATES,encounterRoster,waveEnemyTotals,getSquad:()=>squadIndex,setSquad:v=>squadIndex=v,setCameraX:v=>cameraX=v,setWave:v=>wave=v,applyImpactFeedback,actorShakeOffset,playImpactSound,sound,vibrateImpact,gamepadRumble,activeRumbleActuator,gamepadHapticDiagnostics,updateRumbleDiagnostics,testGamepadRumble,stopGamepadRumble,footstepRumble,RUMBLE_PROFILES,setHapticTime:v=>time=v,getHapticPriorityUntil:()=>hapticPriorityUntil,parry,pauseToggle,setEnemies:v=>enemies=v,getEnemies:()=>enemies,getFx:()=>fx};titleMenu();`),world);
 const g=world.__revenant,t=world.test;let checks=0;
+// Crit-safe damage comparisons must override RNG inside the game's VM realm.
+const withNormalHit=(fn)=>{
+ const original=vm.runInContext('Math.random',world);
+ world.__normalHitRng=()=>.999;
+ vm.runInContext('Math.random=__normalHitRng',world);
+ try{return fn();}
+ finally{
+  world.__normalHitRng=original;
+  vm.runInContext('Math.random=__normalHitRng',world);
+  delete world.__normalHitRng;
+ }
+};
 const test=(name,fn)=>{fn();checks++;console.log('PASS',name)};
 test('Rebel Hub shows entire actual base stat roster and requires a separate apply',()=>{
  const perma=g.getState().perma,backup={...perma};
@@ -2061,9 +2073,7 @@ test('upgrades may stack repeatedly and have genuine attack damage benefit',()=>
   t.p.facing=1;t.p.moveName='jab';t.p.comboIdx=0;t.p.counterBoost=false;t.p.hitDone=false;
   // Compare the power modifier at fixed normal-hit damage, not random crit RNG.
   t.p.critDrought=0;
-  const originalRandom=Math.random;
-  try{Math.random=()=>.999;t.attackCheck();}
-  finally{Math.random=originalRandom;}
+  withNormalHit(()=>t.attackCheck());
   return 1000-e.hp;
  };
  const basic=hit();
@@ -2936,9 +2946,7 @@ test('dash upgrades expand actual hit range, damage and push',()=>{
   const near=t.makeEnemy('raider',t.p.x+100,t.p.y,0),far=t.makeEnemy('raider',t.p.x+265,t.p.y,1);
   near.hp=far.hp=1000;near.maxHp=far.maxHp=1000;t.setEnemies([near,far]);
   t.p.critDrought=0;
-  const savedRandom=Math.random;
-  try{Math.random=()=>.999;t.attackCheck();}
-  finally{Math.random=savedRandom;}
+  withNormalHit(()=>t.attackCheck());
   results.push([1000-near.hp,1000-far.hp,near.knockVX]);
  }
  assert(results[0][1]>0,'the base dash punch splashes a nearby forward enemy even beyond the direct hitbox');
