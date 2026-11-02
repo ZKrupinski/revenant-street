@@ -20,9 +20,9 @@ for(const entry of ['index.html','play-fixed-20261102.html']){
  for(const phrase of ["playImpactSound('parry',1.65)","playImpactSound('counter',1.25)",
  "Object.keys(impactSfxBuffers).length===5","version:'ballistic-weight-v5-20261103'"])
   assert(html.includes(phrase),entry+' '+phrase);
- const a=html.indexOf('// PROJECT Z ORIGINAL FOLEY V4:'),b=html.indexOf('// Single active controller',a);
+ const a=html.indexOf('// PROJECT Z ORIGINAL FOLEY V4 / WEIGHT V5 MASTER:'),b=html.indexOf('// Single active controller',a);
  const engine=html.slice(a,b);
- assert(a>0&&b>a,'original V4 loaded');
+ assert(a>0&&b>a,'weight V5 original master loaded');
  assert(!engine.includes('createOscillator')&&!engine.includes('impact-drum')&&!engine.includes('shotgun-rack-v2')&&!engine.includes('/assets/voice/shot-'),'retired original fight sounds');
  assert(!engine.includes('__revenantBgm'),'BGM must never be ducked');
  assert(engine.includes('layer(key,0,1,level,duration,12500,45)'),'single fresh sample per impact, without prior recording layers');
