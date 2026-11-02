@@ -2,19 +2,19 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..');
 const expected=[
- ['basic contact render +80% versus original',"const elapsed=f.age-f.delay,w=f.width*1.80;"],
- ['elemental burst +65%',"const width=(130+progress*55)*ef.scale*1.65;"],
- ['enemy element timers +45%',"const width=(164+Math.min(rank,6)*8)*state.scale*1.45;"],
+ ['basic contact render +35% versus original',"const elapsed=f.age-f.delay,w=f.width*1.35;"],
+ ['elemental burst +28%',"const width=(130+progress*55)*ef.scale*1.28;"],
+ ['enemy element timers +18%',"const width=(164+Math.min(rank,6)*8)*state.scale*1.18;"],
  ['angled enemy status cue', "state.sprite==='nova'?1.31:0"],
- ['mint heal +68%',"const cell=im.naturalWidth/8,width=170*f.scale*1.68,"],
- ['upgrade skill hit +68%',"const cw=im.naturalWidth/8,width=218*f.scale*1.68,"],
- ['ground slam +57%',"const width=clamp(530*f.scale,230,910)*1.57,"],
- ['dash pierce +60%',"const width=f.width*1.60,height=width*(ch/cw);"],
- ['dash wake +45%',"const width=f.width*(gathering?.82+age*.38:1)*1.45;"],
- ['dash charging +45%',"const width=(220+progress*112)*1.45,"],
- ['parry riposte +65%',"const width=f.width*1.65,height=width*(sh/sw)*.81;"],
- ['original ten-frame parry impact +50%',"const w=318*1.50,h=296*1.50;"],
- ['ground slam backup +57%',"const w=230*f.scale*1.57;"]
+ ['mint heal +25%',"const cell=im.naturalWidth/8,width=170*f.scale*1.25,"],
+ ['upgrade skill hit +30%',"const cw=im.naturalWidth/8,width=218*f.scale*1.30,"],
+ ['ground slam ORIGINAL',"const width=clamp(530*f.scale,230,910),"],
+ ['dash pierce ORIGINAL',"const width=f.width,height=width*(ch/cw);"],
+ ['dash wake ORIGINAL',"const width=f.width*(gathering?.82+age*.38:1);"],
+ ['dash charging ORIGINAL',"const width=220+progress*112,"],
+ ['parry riposte ORIGINAL',"const width=f.width,height=width*(sh/sw)*.81;"],
+ ['parry success ORIGINAL',"const w=318,h=296;"],
+ ['ground slam backup ORIGINAL',"const w=230*f.scale;"]
 ];
 for(const file of ['index.html','play-fixed-20261102.html']){
  const html=fs.readFileSync(path.join(root,file),'utf8');
@@ -24,13 +24,17 @@ for(const file of ['index.html','play-fixed-20261102.html']){
  assert(html.includes('const tilt=groundSpread?1.31'),'floor-burst effect visibly rotates against enemy');
  assert(html.includes('fx[i].contactEnemy===e'),'big effects replace overlapping previous effects');
  assert(!html.includes('drawUpgradeVfxLoop(Z_ELEMENT_IMPACT_SPRITES[mod]'),'no overlapping hero elemental aura');
+ assert(html.includes("const w=318,h=296;"),'special parry effect uses original display');
+ assert(html.includes("const width=clamp(530*f.scale,230,910),"),'ground slam does not use extra zoom');
+ assert(html.includes("const width=f.width,height=width*(ch/cw);"),'dash pierce original scale');
+ assert(html.includes("const width=f.width,height=width*(sh/sw)*.81;"),'parry counter original scale');
  const sourceFrames=[
   'const sw=atlas.naturalWidth/8,sh=atlas.naturalHeight/5,',
   'const cw=bitmap.naturalWidth/4,ch=bitmap.naturalHeight/2;',
   'const cw=im.naturalWidth/4,ch=im.naturalHeight/2;',
   'const col=frame%4,row=Math.floor(frame/4);',
   'const cw=im.naturalWidth/8,displayH=width*(im.naturalHeight/cw);',
-  'const cell=im.naturalWidth/8,width=170*f.scale*1.68,'
+  'const cell=im.naturalWidth/8,width=170*f.scale*1.25,'
  ];
  for(const code of sourceFrames)assert(html.includes(code),file+': preserves strict original sprite-sheet source crops: '+code);
  assert(!html.includes("spawnUpgradeVfx('guard'"),'guard bubble cannot return when zooming bitmap art');
