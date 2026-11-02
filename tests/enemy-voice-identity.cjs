@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.join(__dirname,'..'),script=fs.readFileSync(path.join(root,'assets/voice/voice-engine.js'),'utf8');
 for(const name of ['index.html','play-fixed-20261102.html'])
- assert(fs.readFileSync(path.join(root,name),'utf8').includes('voice-engine.js?v=20261102-enemy-archetype-voices-v5'),'both entrypoints bust voice cache');
+ assert(fs.readFileSync(path.join(root,name),'utf8').includes('voice-engine.js?v=20261102-enemy-archetype-voices-v6-hitmix'),'both entrypoints bust voice cache');
 assert(!script.includes("enemyShout:'./assets/voice/voice-yell.wav'"));
 assert(!script.includes("enemyDeath:'./assets/voice/voice-yell.wav'"));
 const recorded=[],loads=[];
