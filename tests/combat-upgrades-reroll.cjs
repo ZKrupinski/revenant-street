@@ -37,6 +37,7 @@ for(const name of ['index.html','play-fixed-20261102.html']){
   menuReady:()=>true,rewardMenu:(reason,rerolled)=>{world.lastMenu={reason,rerolled}},
   updateHud:()=>{},sound:()=>{}
  };
+ world.modRank=id=>world.p.mods.filter(m=>m===id).length;
  vm.createContext(world);
  vm.runInContext(html.slice(start,end)+"\nthis.testApi={gainCombatUpgradeCharge,canOpenCombatUpgrade,openCombatUpgrade,chooseCombatUpgradeOffers,combatRerollCost,refreshCombatUpgradeOffers,get:()=>combatUpgrades,setSelection:x=>{rewardSelection=x},setReason:x=>{upgradeReason=x}};",world);
  const api=world.testApi;
