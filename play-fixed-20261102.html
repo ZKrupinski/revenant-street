@@ -5179,6 +5179,37 @@ function activeModStacks(){const counts=new Map();for(const id of p.mods)counts.
 let upgradeReason='wave',nextUpgradeMilestone=0,rewardSelection=null;
 const UPGRADE_MILESTONES=[5,11,17,23,31,39];
 let attributeFx=[];
+
+// Independent 8-frame transparent bitmap strips (one separate PNG per upgrade).
+const Z_UPGRADE_VFX_NAMES=['chain','nova','leech','power','crit','guard'];
+const Z_UPGRADE_VFX=Object.fromEntries(Z_UPGRADE_VFX_NAMES.map(k=>[k,{image:new Image(),ready:false,error:false,drawn:0}]));
+const Z_UPGRADE_VFX_PRELOAD=Promise.all(Z_UPGRADE_VFX_NAMES.map(k=>new Promise((resolve,reject)=>{
+ const entry=Z_UPGRADE_VFX[k],im=entry.image;
+ im.onload=()=>{entry.ready=im.naturalWidth===2048&&im.naturalHeight===256;
+  if(entry.ready)resolve(k);else{entry.error=true;reject(Error('강화 비트맵 크기 오류: '+k));}};
+ im.onerror=()=>{entry.error=true;reject(Error('강화 비트맵 누락: '+k));};
+ im.src='./assets/vfx/project_z_upgrade_'+k+'_8f.png?v=20261102-independent-six-v1';
+}))).then(()=>null,e=>e);
+window.__zUpgradeVfxStatus=()=>Object.fromEntries(Z_UPGRADE_VFX_NAMES.map(k=>[k,{
+ ready:Z_UPGRADE_VFX[k].ready,error:Z_UPGRADE_VFX[k].error,drawn:Z_UPGRADE_VFX[k].drawn
+}]));
+function spawnUpgradeVfx(k,x,y,scale=1,dir=1,rotation=0,duration=.33){
+ if(!Z_UPGRADE_VFX[k])return false;
+ if(fx.length>=94)fx.splice(0,fx.length-78);
+ fx.push({kind:'upgradeVfxSprite',upgrade:k,x,y,scale,dir,rotation,life:duration,maxLife:duration});
+ return true;
+}
+function drawUpgradeVfx(f){
+ const entry=Z_UPGRADE_VFX[f.upgrade],im=entry?.image;
+ if(!entry?.ready||!im.complete||!im.naturalWidth)return false;
+ const progress=clamp(1-f.life/f.maxLife,0,.99999),frame=Math.min(7,Math.floor(progress*8));
+ const cw=im.naturalWidth/8,width=218*f.scale,height=width*im.naturalHeight/cw;
+ ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.dir||1,1);ctx.rotate(f.rotation||0);
+ ctx.globalAlpha=progress>.77?clamp((1-progress)/.23,0,1):1;
+ ctx.drawImage(im,frame*cw,0,cw,im.naturalHeight,-width*.5,-height*.5,width,height);
+ ctx.restore();entry.drawn++;return true;
+}
+
 // Only sprite-based VFX: use the existing hand-painted burst PNGs and
 // shield image; never create geometric/vector strokes for abilities.
 function spawnModBitmap(color,x,y,scale=1,filter='',life=.28){
@@ -5191,7 +5222,7 @@ function spawnModLink(color,x1,y1,x2,y2,scale=1,filter='',life=.22){
 }
 function combatStrengthFx(e,critical){
  const power=modRank('power'),impact=modRank('impact'),momentum=modRank('momentum');
- if(power)spawnModBitmap('gold',e.x,e.y-124,.87+power*.11,'brightness(1.18)',.21);
+ if(power)spawnUpgradeVfx('power',e.x,e.y-115,.91+power*.12,p.facing,-.04,.33);
  if(impact){
   spawnModBitmap('red',e.x+p.facing*23,e.y-112,1.02+impact*.09,'saturate(1.45)',.25);
   screenShake=Math.max(screenShake,Math.min(22,12+impact*1.3));
@@ -5201,7 +5232,7 @@ function combatStrengthFx(e,critical){
   spawnModBitmap('gold',e.x,e.y-111,intensity,'saturate(1.1)',.19);
  }
  if(critical){
-  spawnModBitmap('gold',e.x,e.y-137,1.55+modRank('crit')*.13,'brightness(1.5)',.35);
+  spawnUpgradeVfx('crit',e.x,e.y-129,1.10+modRank('crit')*.10,p.facing,-.04,.35);
   screenShake=Math.max(screenShake,19);
  }
 }
@@ -5991,6 +6022,9 @@ async function requestRunStart(){
    if(status)status.textContent=`준비 ${done}/${total} — ${name}`;
    if(bar)bar.style.width=`${Math.floor(100*done/total)}%`;
   });
+  $('loadStatus').textContent='강화 전용 6종 × 8프레임 비트맵 디코딩 중';
+  const zUpgradeLoadError=await Z_UPGRADE_VFX_PRELOAD;
+  if(zUpgradeLoadError)throw zUpgradeLoadError;
   $('loadStatus').textContent='업그레이드 아이콘 정사각 프레임 25개 재정렬 중';
   await new Promise(resolve=>setTimeout(resolve,0));
   if(!buildSquareUpgradeIconAtlas())throw Error('업그레이드 아이콘 원본을 읽지 못했습니다');
@@ -7020,15 +7054,19 @@ function attackCheck(){
  const priorHealHp=p.hp;
  p.hp=clamp(p.hp+dmg*modRank('leech')*.02,0,p.maxHp);
  if(p.hp>priorHealHp+.05){
-  spawnModLink('red',e.x,e.y-133,p.x,p.y-119,.98,'hue-rotate(326deg) brightness(1.4)',.25);
-  spawnModBitmap('red',p.x,p.y-120,.55+modRank('leech')*.07,'hue-rotate(320deg)',.25);
+  const vx=p.x-e.x,vy=p.y-e.y;
+  spawnUpgradeVfx('leech',(e.x+p.x)/2,(e.y+p.y)/2-128,
+   clamp(Math.hypot(vx,vy)/185,.65,1.7),p.facing,Math.atan2(vy,vx),.39);
+  spawnUpgradeVfx('leech',p.x,p.y-120,.70+modRank('leech')*.07,-p.facing,0,.29);
  }
  if(modRank('chain')&&Math.random()<Math.min(.85,modRank('chain')*.25)){
   for(const nearby of enemies.filter(o=>o!==e&&!o.dead&&Math.abs(o.x-e.x)<195&&Math.abs(o.y-e.y)<80).slice(0,2+modRank('chain'))){
    nearby.hp-=8+modRank('chain')*7;nearby.shock=Math.max(nearby.shock,.65);
    nearby.shockPower=Math.max(nearby.shockPower||1,modRank('chain'));
-   spawnModLink('blue',e.x,e.y-135,nearby.x,nearby.y-125,1.05,'brightness(1.45)',.24);
-   spawnModBitmap('blue',nearby.x,nearby.y-118,1.02+modRank('chain')*.07,'brightness(1.35)',.28);
+   const ax=nearby.x-e.x,ay=nearby.y-e.y;
+   spawnUpgradeVfx('chain',(e.x+nearby.x)/2,(e.y+nearby.y)/2-127,
+    clamp(Math.hypot(ax,ay)/175,.70,1.75),ax>=0?1:-1,Math.atan2(ay,ax),.30);
+   spawnUpgradeVfx('chain',nearby.x,nearby.y-118,.82+modRank('chain')*.09,ax>=0?1:-1,0,.32);
   }
  }
  if(modRank('nova')&&p.novaCooldown<=0){
@@ -7036,9 +7074,9 @@ function attackCheck(){
   for(const nearby of enemies.filter(o=>o!==e&&!o.dead&&Math.hypot(o.x-e.x,(o.y-e.y)*1.6)<165+modRank('nova')*13)){
    nearby.hp-=11+modRank('nova')*8;
    nearby.knockVX+=(nearby.x>=e.x?1:-1)*(170+modRank('nova')*40);
-   fxBurst(nearby.x,nearby.y-100,'gold',1.25);
+   spawnUpgradeVfx('nova',nearby.x,nearby.y-100,.83+modRank('nova')*.06,p.facing,0,.32);
   }
-  spawnModBitmap('gold',e.x,e.y-112,1.75+modRank('nova')*.17,'brightness(1.25)',.35);
+  spawnUpgradeVfx('nova',e.x,e.y-112,1.20+modRank('nova')*.11,p.facing,0,.36);
   screenShake=Math.max(screenShake,Math.min(21,10+modRank('nova')*1.3));
  }}}
  // Like the landing slam, the dash finisher radiates to nearby forward
@@ -7108,7 +7146,7 @@ function enemyAttack(e){
  const damageTaken=dmg*clamp(1-modRank('guard')*.09-perma.armor*.04,.36,1);
  p.hp=Math.max(0,p.hp-damageTaken);p.hitFlash=.19;
  if(modRank('guard')){
-  spawnModBitmap('blue',p.x,p.y-132,1.06+modRank('guard')*.08,'saturate(.26) brightness(1.5)',.26);
+  spawnUpgradeVfx('guard',p.x,p.y-132,1.13+modRank('guard')*.07,p.facing,0,.35);
  }
  p.receivedHits=(p.receivedHits||0)+1;
  const heavy=e.type==='boss'||eliteCleave||
@@ -7902,7 +7940,7 @@ function updateEffects(dt,realDt=dt){
   heroAfterimages[i].life-=heroAfterimages[i].counterEcho?realDt*.83:dt;
   if(heroAfterimages[i].life<=0)heroAfterimages.splice(i,1);
  }
- for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){const fxDt=f.kind==='parrySuccess10'||f.kind==='basicHitSprite'?realDt:f.kind==='parryCounterSprite'?realDt*.78:dt;
+ for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){const fxDt=f.kind==='parrySuccess10'||f.kind==='basicHitSprite'||f.kind==='upgradeVfxSprite'?realDt:f.kind==='parryCounterSprite'?realDt*.78:dt;
   f.life-=fxDt;if(f.kind==='basicHitSprite')f.age+=fxDt;if(f.kind==='dashPierceSprite'||f.kind==='parryCounterSprite'){f.age=(f.age||0)+fxDt;if((f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02)}}fx=fx.filter(f=>f.life>0);for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
 let modStripCache='',lastHudCombo=-1,hudAccumulator=.12,modsExpanded=false;
 function setModsExpanded(open){
@@ -8343,7 +8381,8 @@ function parrySuccessSourceRect(w,h,frame){
  return {sx:x0+padX,sy:y0+padY,sw:tileW-2*padX,sh:tileH-2*padY};
 }
 function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+820;for(const f of fx){if(f.x<left||f.x>right)continue;
- if(f.kind==='basicHitSprite'){drawBasicContactFx(f);continue;}
+ if(f.kind==='upgradeVfxSprite'){drawUpgradeVfx(f);continue;}
+  if(f.kind==='basicHitSprite'){drawBasicContactFx(f);continue;}
  if(f.kind==='dashPierceSprite'){drawDashPierceSprite(f);continue;}
   if(f.kind==='parryCounterSprite'){drawParryCounterSprite(f);continue;}
   if(f.kind==='dashTrailSprite'){drawDashTrailSprite(f);continue;}
@@ -8576,7 +8615,8 @@ function selectMod(m){
  upgradeReason='wave';
  const info=MOD_META[m],rank=modRank(m);
  floatText(info.icon+' x'+rank,p.x,p.y-244,info.color);
- spawnModBitmap(m==='shock'||m==='ice'||m==='haste'||m==='guard'?'blue':
+ if(Z_UPGRADE_VFX[m])spawnUpgradeVfx(m,p.x,p.y-126,1.18,p.facing,0,.43);
+ else spawnModBitmap(m==='shock'||m==='ice'||m==='haste'||m==='guard'?'blue':
    m==='bleed'||m==='leech'?'red':'gold',p.x,p.y-124,
    m==='vital'?1.03:1.27,'brightness(1.17)',.39);
  sound('parry');setStatus('COMBAT LIVE');updateHud();

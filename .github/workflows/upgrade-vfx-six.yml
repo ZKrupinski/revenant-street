@@ -1,0 +1,21 @@
+name: Project Z standalone upgrade VFX QA
+on:
+  push:
+    paths:
+      - 'assets/vfx/project_z_upgrade_**'
+      - 'tests/upgrade-vfx-six.cjs'
+      - 'index.html'
+      - 'play-fixed-20261102.html'
+      - '.github/workflows/upgrade-vfx-six.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/upgrade-vfx-six.cjs
+      - run: node tests/basic-hit-five-variants.cjs
+      - run: node tests/loading-audio.cjs
