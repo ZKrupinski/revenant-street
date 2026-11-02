@@ -5642,15 +5642,14 @@ const Z_IMPACT_SFX_URLS=Object.freeze({
  punchB:'./assets/sfx/z-ballistic-sidearm-20261103-weight-v5.mp3?v=weightV5',
  punchC:'./assets/sfx/z-combat-v7-rifle-c.mp3?v=audioV7',
  punchD:'./assets/sfx/z-combat-v7-rifle-d.mp3?v=audioV7',
- punchE:'./assets/sfx/z-combat-v7-pistol-e.mp3?v=audioV7',
- punchF:'./assets/sfx/z-combat-v7-magnum-f.mp3?v=audioV7',
+ punchE:'./assets/sfx/z-combat-v7c-rifle-e.mp3?v=audioV7c',
+ punchF:'./assets/sfx/z-combat-v7c-rifle-f.mp3?v=audioV7c',
  heavy:'./assets/sfx/z-ballistic-heavy-20261103-weight-v5.mp3?v=weightV5',
- parry:'./assets/sfx/z-combat-v7-slide-a.mp3?v=audioV7',
- parryAlt:'./assets/sfx/z-combat-v7-slide-b.mp3?v=audioV7',
- counter:'./assets/sfx/z-combat-v7-counter-reverb.mp3?v=audioV7'
+ parry:'./assets/sfx/z-combat-v7b-slide-b.mp3?v=audioV7b',
+ counter:'./assets/sfx/z-combat-v7b-counter-loud-reverb.mp3?v=audioV7b'
 });
 const impactSfxBuffers=Object.create(null);
-let impactSfxPromise=null,impactSfxContext=null,impactBus=null,lastImpactAudio=-99,impactAttackBag=[],impactLastAttackKey='',impactParryVariant=0;
+let impactSfxPromise=null,impactSfxContext=null,impactBus=null,lastImpactAudio=-99,impactAttackBag=[],impactLastAttackKey='';
 let lastImpactHaptic=-999999;
 const impactVoices=[];
 function prepareImpactSfx(context=audio){
@@ -5707,7 +5706,7 @@ function playImpactSound(kind='punch',intensity=1){
   const now=audio.currentTime,priority=kind==='counter'||kind==='parry';
   if(!priority&&now-lastImpactAudio<.048)return false;
   if(!priority)lastImpactAudio=now;
-  const key=kind==='counter'?'counter':kind==='parry'?(impactParryVariant++&1?'parryAlt':'parry'):
+  const key=kind==='counter'?'counter':kind==='parry'?'parry':
     ['heavy','execution','dashImpact','slam'].includes(kind)?'heavy':
     nextImpactAttackKey();
   if(!impactSfxBuffers[key])return false;
@@ -5739,7 +5738,7 @@ function playImpactSound(kind='punch',intensity=1){
    lp.type='lowpass';lp.frequency.value=lowpass;
    const peak=level*strength,attack=Math.min(.003,duration*.1);
    const release=key==='counter'?Math.min(.34,duration*.20):
-    (key==='parry'||key==='parryAlt')?Math.min(.16,duration*.24):Math.min(.080,duration*.31);
+    key==='parry'?Math.min(.16,duration*.24):Math.min(.080,duration*.31);
    gain.gain.setValueAtTime(.0001,at);
    gain.gain.linearRampToValueAtTime(peak,at+attack);
    gain.gain.setValueAtTime(peak,Math.max(at+attack,at+duration-release));
@@ -5756,16 +5755,16 @@ function playImpactSound(kind='punch',intensity=1){
    source.stop(at+duration+.015);
   }
   // One complete gun report, one two-stroke steel slide, or one reverberant counter.
-  const isRack=key==='parry'||key==='parryAlt';
+  const isRack=key==='parry';
   const duration=key==='counter'?2.28:key==='heavy'?1.03:isRack?1.20:.83;
-  const level=key==='counter'?2.05:isRack?1.98:key==='heavy'?1.23:1.17;
+  const level=key==='counter'?2.17:isRack?2.20:key==='heavy'?1.23:1.17;
   layer(key,0,1,level,duration,isRack?9500:12500,isRack?80:45);
   if(!voice.sources.length)return false;
   impactVoices.push(voice);
   return true;
  }catch(_){return false}
 }
-window.__zImpactAudioStatus=()=>({version:'six-shots-steel-slide-reverb-v7-20261103',ready:Object.keys(impactSfxBuffers).length===10,
+window.__zImpactAudioStatus=()=>({version:'six-shots-steel-slide-reverb-v7c-20261103',ready:Object.keys(impactSfxBuffers).length===9,
  loaded:Object.keys(impactSfxBuffers).length,playing:impactVoices.length});
 // Single active controller, compatible with current Gamepad.vibrationActuator
 // and older hapticActuators. Controllers and mobile browsers may omit both.
