@@ -3631,7 +3631,7 @@ function syncTitleLandscapeHint(){
  const portrait=window.matchMedia?.('(orientation: portrait)')?.matches??window.innerHeight>window.innerWidth;
  const fs=!!(document.fullscreenElement||document.webkitFullscreenElement);
  const mobile=isMobileImmersiveDevice();
- note.hidden=!mobile||!portrait||!fs||zLandscapeSupported;
+ note.hidden=!mobile||!portrait||zLandscapeSupported;
 }
 function lockGameLandscape(){
  if(!isMobileImmersiveDevice()||!(document.fullscreenElement||document.webkitFullscreenElement)||zLandscapePending)return;

@@ -1,5 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.join(__dirname,'..');
+(async()=>{
 for(const name of ['index.html','play-fixed-20261102.html']){
  const html=fs.readFileSync(path.join(root,name),'utf8');
  assert(html.includes("orientation.lock('landscape')"),'real landscape orientation lock');
@@ -63,3 +64,4 @@ for(const name of ['index.html','play-fixed-20261102.html']){
  assert.equal(vm.runInContext('zFullscreenPending',world2),false,'failed fullscreen re-triable');
 }
 console.log('PASS: title-first touch fullscreen, Android landscape lock, desktop unchanged, exit unlock and unsupported browser fallback');
+})().catch(err=>{console.error(err);process.exitCode=1});
