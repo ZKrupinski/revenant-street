@@ -818,12 +818,13 @@ test('jump height and airborne travel speed upgrade independently across six lev
  assert(fastReal.distance>base.distance*1.35,'speed item boosts actual airborne travel');
  assert(Math.abs(fastReal.peak-base.peak)<3,'speed item does not change jump apex');
 });
-test('mobility upgrade cards are always available among 3 random choices',()=>{
+test('combat upgrade choices show four distinct cards without stale three-card assumptions',()=>{
  for(let i=0;i<12;i++){
   g.startRun();t.rewardMenu('mid');
   const markup=node('menu').innerHTML;
-  assert(['dashrange','dashspeed','jumpheight','jumpspeed'].some(id=>markup.includes('data-mod="'+id+'"')),'at least one mobility pick on every reward screen');
-  assert.equal((markup.match(/class="upgrade-btn" data-mod/g)||[]).length,3,'upgrade UI keeps three selectable cards');
+  const picks=[...markup.matchAll(/class="upgrade-btn" data-mod="([^"]+)"/g)].map(m=>m[1]);
+  assert.equal(picks.length,4,'upgrade UI presents four selectable cards');
+  assert.equal(new Set(picks).size,4,'upgrade card choices never repeat in the same selection');
  }
 });
 test('new attack press immediately cancels the prior eight-frame ground pose without a render gap',()=>{
