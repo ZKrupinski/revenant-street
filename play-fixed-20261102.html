@@ -8361,11 +8361,14 @@ function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+82
   const a=parrySuccessImage,progress=clamp(1-f.life/f.maxLife,0,.9999),frame=Math.min(9,Math.floor(progress*10));
   if(a.complete&&a.naturalWidth===1536&&a.naturalHeight===1024){
    const crop=parrySuccessSourceRect(a.naturalWidth,a.naturalHeight,frame);
-   const w=210,h=w*crop.sh/crop.sw; // slightly smaller, same source aspect ratio
+   // The 5x2 AVIF atlas has tall portrait CELLS (around 307x512px).
+   // Those cells made the intended parry impact appear pinched horizontally.
+   // Restore its balanced silhouette on screen without recutting any frames.
+   const w=318,h=296;
    ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.face,1);
    // Screen compositing keys out black; inset avoids interpolation from neighboring cells.
    ctx.globalCompositeOperation='screen';ctx.globalAlpha=Math.min(1,f.life/.07);
-   ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.18,-h*.5,w,h);
+   ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.32,-h*.5,w,h);
    ctx.restore();
   }
   continue;
