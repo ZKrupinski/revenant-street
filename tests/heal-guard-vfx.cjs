@@ -72,7 +72,7 @@ for(const file of ['index.html','play-fixed-20261102.html']){
   healing.life=healing.maxLife*(1-(frame+.2)/8);
   assert.equal(world.drawHeal(healing),true);
   assert.equal(draws.at(-1)[1],frame*160,'8 successive 160px source cells');
-  assert(Math.abs(draws.at(-1)[7]-(170*healing.scale*1.20))<1e-6,'healing becomes 20% larger while keeping the exact RGBA frame crop');
+  assert(Math.abs(draws.at(-1)[7]-(170*healing.scale*1.68))<1e-6,'healing becomes 68% larger while keeping the exact RGBA frame crop');
  }
  assert.equal(world.spawnHeal(1,'burst'),false,'healing FX is rate-limited');
  world.time=12;

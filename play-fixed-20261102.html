@@ -5354,7 +5354,7 @@ function drawHealVfx(f){
  const im=Z_HEAL_ART.image;
  if(!Z_HEAL_ART.ready||!im.complete||!im.naturalWidth)return false;
  const progress=clamp(1-f.life/Math.max(.001,f.maxLife),0,.999999),frame=Math.min(7,Math.floor(progress*8));
- const cell=im.naturalWidth/8,width=170*f.scale*1.20,height=width*im.naturalHeight/cell;
+ const cell=im.naturalWidth/8,width=170*f.scale*1.68,height=width*im.naturalHeight/cell;
  const opacity=(f.mode==='regen'?.57:.76)*(progress>.67?clamp((1-progress)/.33,0,1):1);
  ctx.save();ctx.globalAlpha=opacity;ctx.translate(f.x,f.y);
  ctx.drawImage(im,frame*cell,0,cell,im.naturalHeight,-width*.5,-height*.5,width,height);
@@ -5370,7 +5370,7 @@ function drawUpgradeVfx(f){
  const entry=Z_UPGRADE_VFX[f.upgrade],im=entry?.image;
  if(!entry?.ready||!im.complete||!im.naturalWidth)return false;
  const progress=clamp(1-f.life/f.maxLife,0,.99999),frame=Math.min(7,Math.floor(progress*8));
- const cw=im.naturalWidth/8,width=218*f.scale*1.15,height=width*im.naturalHeight/cw;
+ const cw=im.naturalWidth/8,width=218*f.scale*1.68,height=width*im.naturalHeight/cw;
  ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.dir||1,1);ctx.rotate(f.rotation||0);
  ctx.globalAlpha=progress>.77?clamp((1-progress)/.23,0,1):1;
  ctx.drawImage(im,frame*cw,0,cw,im.naturalHeight,-width*.5,-height*.5,width,height);
@@ -5455,7 +5455,7 @@ function drawModEnergy(){
   for(let i=0;i<max;i++){
    const index=(Math.floor(time*1.25+(e.slot||0))+i)%active.length;
    const state=active[index],rank=Math.min(6,e[state.power]||1);
-   const width=(164+Math.min(rank,6)*8)*state.scale*1.12;
+   const width=(164+Math.min(rank,6)*8)*state.scale*1.45;
    const cycle=time*(state.status==='shock'?1.9:state.status==='burn'?1.35:1.05)+
     (e.slot||0)*.13+i*.19;
    const pulse=.38+.14*Math.abs(Math.sin(time*4.1+(e.slot||0)+i));
@@ -5470,7 +5470,7 @@ function drawModEnergy(){
   const sprite=Z_ELEMENT_IMPACT_SPRITES[ef.mod];
   if(!sprite)continue;
   const progress=clamp(1-ef.life/Math.max(.001,ef.maxLife),0,.99999);
-  const width=(130+progress*55)*ef.scale*1.16;
+  const width=(130+progress*55)*ef.scale*1.65;
   drawUpgradeVfxLoop(sprite,ef.x,ef.y,width,(1-progress)*.68,progress);
  }
 }
@@ -5479,7 +5479,7 @@ function drawHeroModAura(x,y,z){
  // No idle guard bubble: actual damage prevention makes a tiny one-shot ping.
  if(modRank('haste')&&(p.attack>0||p.running||Math.abs(p.vx||0)>90)){
   const cycle=(time+.5)%1.75;
-  if(cycle<.35)drawUpgradeVfxLoop('chain',x-p.facing*42,y-z-98,82,
+  if(cycle<.35)drawUpgradeVfxLoop('chain',x-p.facing*42,y-z-98,108,
    .27*(1-cycle/.39),cycle/.35,p.facing);
  }
  // Regeneration is painted only on confirmed HP gain, never as an aura.
@@ -5491,7 +5491,7 @@ function drawHeroModAura(x,y,z){
   const phase=time*1.35,mod=equipped[Math.floor(phase)%equipped.length];
   const rank=modRank(mod),offset=mod==='shock'?-31:mod==='ice'?0:24;
   drawUpgradeVfxLoop(Z_ELEMENT_IMPACT_SPRITES[mod],x+p.facing*offset,
-   y-z-126,(100+rank*9)*1.12,.18+.06*Math.abs(Math.sin(time*4.8)),phase%1,p.facing);
+   y-z-126,(100+rank*9)*1.40,.18+.06*Math.abs(Math.sin(time*4.8)),phase%1,p.facing);
  }
 }
 // Road art: keep all standing feet on the foreground road, not the raised
@@ -6851,7 +6851,7 @@ function drawGroundSlamSprite(f){
  const cw=bitmap.naturalWidth/4,ch=bitmap.naturalHeight/2;
  // The source artwork is wide and shallow: maintain this aspect without
  // scaling it vertically independently of the ground perspective.
- const width=clamp(530*f.scale,230,910)*1.20,height=width*(ch/cw);
+ const width=clamp(530*f.scale,230,910)*1.57,height=width*(ch/cw);
  const footAnchor=height*.8;
  const alpha=ratio>.77?Math.max(0,(1-ratio)/.23):1;
  ctx.save();ctx.globalAlpha=alpha;
@@ -6891,7 +6891,7 @@ function drawDashPierceSprite(f){
  const frame=Math.min(desired,(f.drawnFrame??-1)+1);
  f.drawnFrame=frame;
  const cw=im.naturalWidth/4,ch=im.naturalHeight/2;
- const width=f.width*1.18,height=width*(ch/cw);
+ const width=f.width*1.60,height=width*(ch/cw);
  ctx.save();
  ctx.translate(f.x,f.y);
  ctx.scale(f.dir,1); // same sprite pierces both right- and left-facing victims
@@ -6935,7 +6935,7 @@ function drawDashTrailSprite(f){
  const active=gathering&&f.seq===p.dashSparkSeq;
  const x=active?f.x+(p.x+f.dir*72-f.x)*ease:f.x; // Converge near fist, farther back than before.
  const y=active?f.y+(p.y-146-f.y)*ease:f.y;
- const width=f.width*(gathering?.82+age*.38:1)*1.12;
+ const width=f.width*(gathering?.82+age*.38:1)*1.45;
  // Stretch along the dash lane, preserving the authored bitmap's transparent edges.
  const height=width*(ch/cw)*(gathering?.88:.70);
  ctx.save();ctx.translate(x,y);ctx.scale(f.dir,1);
@@ -6953,7 +6953,7 @@ function drawDashChargeSprite(attacker){
  const progress=clamp(1-attacker.dodge/Math.max(.01,attacker.dodgeDuration),0,.999);
  const frame=Math.min(7,Math.floor(progress*8));
  const cw=im.naturalWidth/4,ch=im.naturalHeight/2;
- const width=(220+progress*112)*1.12,height=width*(ch/cw)*.82;
+ const width=(220+progress*112)*1.45,height=width*(ch/cw)*.82;
  ctx.save();ctx.translate(attacker.x+dir*(52+progress*26),attacker.y-146);
  ctx.scale(dir,1);ctx.globalAlpha=.50+progress*.27;
  ctx.drawImage(im,(frame%4)*cw,Math.floor(frame/4)*ch,cw,ch,
@@ -7010,7 +7010,8 @@ function spawnBasicContactFx(enemy,move,critical=false){
  const elbow=move.includes('elbow'),low=move==='lowkick'||move==='shovel_hook';
  const upper=move==='uppercut'||move==='rising_elbow';
  const bodyY=low?65:head||upper?155:kick?103:elbow?125:133;
- const x=enemy.x-dir*Math.min(50,Math.max(16,bodyHalfX(enemy)*.66));
+ // Put the main blast beyond the victim's center toward the hero's attack direction.
+ const x=enemy.x+dir*Math.min(54,Math.max(24,bodyHalfX(enemy)*.48));
  const y=enemy.y-Math.max(0,enemy.z||0)-bodyY;
  const power=(kick||elbow||head?1.08:move==='jab'?.90:1)*(critical?1.13:1);
  const angles=[-.2,.10,-.43,.40,-.06],lengths=[.9,1.04,1.27,1.18,1.03];
@@ -7019,9 +7020,9 @@ function spawnBasicContactFx(enemy,move,critical=false){
   const variant=randomHitVariant(enemy),main=i===0;
   // Show all eight bitmap cells long enough to be legible in fast combat.
   const delay=main?0:rnd(.012,.028),duration=main?rnd(.30,.35):rnd(.22,.27);
-  fx.push({kind:'basicHitSprite',x:x+rnd(-7,7)+(main?0:-dir*18),
+  fx.push({kind:'basicHitSprite',x:x+rnd(-7,7)+(main?0:dir*20),
    y:y+rnd(-10,10)+(main?0:rnd(-23,21)),dir:-dir,
-   vx:-dir*(main?rnd(42,80):rnd(55,115)),vy:rnd(-52,42),
+   vx:dir*(main?rnd(22,52):rnd(42,90)),vy:rnd(-52,42),
    width:(main?rnd(228,262):rnd(105,128))*power*lengths[variant],
    rotation:angles[variant]+rnd(-.12,.12),alpha:main?1:rnd(.68,.88),
    variant,delay,duration,age:0,life:duration+delay,maxLife:duration+delay});
@@ -7035,7 +7036,7 @@ function drawBasicContactFx(f){
  const fallback=PARRY_COUNTER_ART.image;
  const backup=img.burst_gold||img.burst_red||img.burst_blue;
  if(!painted&&(!fallback?.complete||!fallback.naturalWidth)&&(!backup?.complete||!backup.naturalWidth))return;
- const elapsed=f.age-f.delay,w=f.width*1.18;
+ const elapsed=f.age-f.delay,w=f.width*1.80;
  ctx.save();
  ctx.translate(f.x+f.vx*elapsed,f.y+f.vy*elapsed);
  ctx.scale(f.dir,1);ctx.rotate(f.rotation);
@@ -7080,7 +7081,7 @@ function drawParryCounterSprite(f){
  const sx=Math.round(col*im.naturalWidth/4),sy=Math.round(row*im.naturalHeight/2);
  const ex=Math.round((col+1)*im.naturalWidth/4),ey=Math.round((row+1)*im.naturalHeight/2);
  const sw=ex-sx,sh=ey-sy;
- const width=f.width*1.15,height=width*(sh/sw)*.81;
+ const width=f.width*1.65,height=width*(sh/sw)*.81;
  ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.dir,1);
  ctx.globalAlpha=ratio>.81?clamp((1-ratio)/.19,0,1):1;
  // Anchor the left-side ignition around the player's forward hand;
@@ -8593,7 +8594,7 @@ function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+82
   if(!drawGroundSlamSprite(f)){
    // Existing painted bitmap fallback while the new resource is unavailable.
    const old=img.burst_gold;
-   if(old?.complete&&old.naturalWidth){ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,.7);const w=230*f.scale*1.20;ctx.drawImage(old,f.x-w*.5,f.y-w*.37,w,w*.55);ctx.restore()}
+   if(old?.complete&&old.naturalWidth){ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,.7);const w=230*f.scale*1.57;ctx.drawImage(old,f.x-w*.5,f.y-w*.37,w,w*.55);ctx.restore()}
   }
   continue;
  }
@@ -8624,7 +8625,7 @@ function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+82
    // The 5x2 AVIF atlas has tall portrait CELLS (around 307x512px).
    // Those cells made the intended parry impact appear pinched horizontally.
    // Restore its balanced silhouette on screen without recutting any frames.
-   const w=318*1.12,h=296*1.12;
+   const w=318*1.50,h=296*1.50;
    ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.face,1);
    // Screen compositing keys out black; inset avoids interpolation from neighboring cells.
    ctx.globalCompositeOperation='screen';ctx.globalAlpha=Math.min(1,f.life/.07);

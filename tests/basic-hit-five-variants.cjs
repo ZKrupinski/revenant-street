@@ -45,7 +45,18 @@ for(const file of ['index.html','play-fixed-20261102.html']){
   assert.equal(draw.composite,'screen','raster visible over fighters');
   assert(draw.filter.includes('brightness(2.1)'),'brighten pixel art');
   assert.equal(draw.args[3],160);assert.equal(draw.args[4],104);
-  assert(Math.abs(draw.args[7]-f.width*1.18)<1e-6,'five painted hit variants are enlarged by 18% without expanding the sampled source cell');
+  assert(Math.abs(draw.args[7]-f.width*1.80)<1e-6,'five painted hit variants are 80% larger than original without changing source cells');
+ }
+ // Right and left attacks must stamp effects on the far, enemy-facing side,
+ // then drift further in the strike direction, never backward toward the hero.
+ for(const facing of [1,-1]){
+  world.p.facing=facing;
+  assert(vm.runInContext("spawnBasicContactFx(enemy,'hook',false)",world));
+  const sprites=fx.splice(0);
+  assert(sprites.length>=1);
+  assert((sprites[0].x-enemy.x)*facing>=20,'main blast centered toward enemy front');
+  assert(sprites[0].vx*facing>0,'impact bitmap travels in strike direction');
+  if(sprites[1])assert((sprites[1].x-enemy.x)*facing>20,'secondary spark follows the strike');
  }
  assert(world.window.__zHitFxStatus().drawn>=5,'live render instrumentation');
 }
