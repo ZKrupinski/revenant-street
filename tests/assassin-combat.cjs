@@ -3056,22 +3056,28 @@ test('ballistic Foley predecodes, fires at impact and never ducks music',()=>{
  }
  world.AudioContext=FakeAC;let ducked=false;
  world.__revenantBgm={duckImpact(){ducked=true}};
- t.seedImpactAudio(new FakeAC(),{punchA:{duration:.33},punchB:{duration:.36},heavy:{duration:.60},
-  parry:{duration:.43},counter:{duration:.80},crack:{duration:.52}});
+ t.seedImpactAudio(new FakeAC(),{punchA:{duration:.33},punchB:{duration:.36},
+  punchC:{duration:.41},punchD:{duration:.42},punchE:{duration:.43},punchF:{duration:.44},
+  heavy:{duration:.60},parry:{duration:.46},parryAlt:{duration:.49},counter:{duration:2.1}});
  try{
+  const heard=[];
+  for(let i=0;i<6;i++){
+   const pos=played.length;
+   assert.equal(t.playImpactSound('punch'),true,'six shuffled original gunshots play on contact');
+   heard.push(played[pos].buffer.duration);
+   assert.equal(t.playImpactSound('punch'),false,'normal rapid hit is capped');
+   context.currentTime+=.11;
+  }
+  assert.equal(new Set(heard).size,6,'six attack shots are distinct without repetition');
   let pos=played.length;
-  assert.equal(t.playImpactSound('punch'),true);
-  assert.equal(played[pos].buffer.duration,.33,'pistol report is primary attack impact');
-  assert.equal(t.playImpactSound('punch'),false,'normal rapid hit is capped');
-  context.currentTime+=.1;pos=played.length;
   assert.equal(t.playImpactSound('heavy',1.2),true);
   assert.equal(played[pos].buffer.duration,.60,'heavy shot is foremost');
   pos=played.length;
   assert.equal(t.playImpactSound('parry',1.65),true,'parry rack bypasses impact cooldown');
-  assert.equal(played[pos].buffer.duration,.43,'mechanical shotgun rack is foremost');
+  assert([.46,.49].includes(played[pos].buffer.duration),'new metal slide action is foremost');
   pos=played.length;
   assert.equal(t.playImpactSound('counter',1.25),true,'counter blast has its own priority');
-  assert.equal(played[pos].buffer.duration,.80,'shotgun blast is the primary report');
+  assert.equal(played[pos].buffer.duration,2.1,'long reverberant explosion is the primary report');
   assert(gains.some(v=>Math.abs(v.gain.value-(1.11*.70*.92))<1e-8),'compressed mix preserves safe headroom');
   assert.equal(ducked,false,'sound effects never duck background music');
  }finally{
