@@ -3535,7 +3535,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
    source frames intact throughout the enter/exit transition. */
 #hud .hud-right{overflow:visible!important}
 #hud #combatWordHud{
- position:absolute;right:calc(100% - 10px);top:0;
+ position:absolute;right:43px;top:0;
  width:clamp(138px,24cqw,320px)!important;height:auto!important;
  aspect-ratio:8/5;max-width:none;display:none;pointer-events:none;
  opacity:0;transform:translate3d(0,0,0);
@@ -7029,8 +7029,8 @@ function zClampVfxX(worldX,leftExtent,rightExtent){
 const Z_COMBAT_WORD_TIMING=Object.freeze({
  // 15-20% quicker overall; stage 0 is a line-only approach,
  // poses 1..6 form the complete stationary text animation, pose 7 is exit.
- execution:{enter:.18,shake:.09,text:1.65,hold:.24,exit:.47,width:320},
- critical:{enter:.16,shake:.08,text:1.48,hold:.20,exit:.43,width:320}
+ execution:{enter:.15,shake:.075,text:1.39,hold:.20,exit:.40,width:320},
+ critical:{enter:.135,shake:.07,text:1.24,hold:.17,exit:.37,width:320}
 });
 const zCombatWordQueue=[];
 function zStartCombatWord(kind){
@@ -7064,6 +7064,9 @@ function drawCombatWordFx(f){
  canvas.style.display='block';
  const rect=canvas.getBoundingClientRect(),drawW=rect.width||290,drawH=rect.height||drawW*5/8;
  canvas.style.top=Math.round(pause.offsetTop+pause.offsetHeight*.5-drawH*.5)+'px';
+ // The right edge of the painted panel is 8px left of PAUSE itself.
+ // Do not anchor to the far left of the full credits/combo HUD column.
+ canvas.style.right=Math.round((pause.offsetWidth||35)+8)+'px';
  hudCtx.clearRect(0,0,canvas.width,canvas.height);
  const cfg=Z_COMBAT_WORD_TIMING[f.word],age=f.age||0;
  // Only line-only cels can move. All word-bearing cels are stationary.

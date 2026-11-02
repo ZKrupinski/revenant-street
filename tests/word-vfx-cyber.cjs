@@ -10,12 +10,12 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  const html=fs.readFileSync(path.join(root,filename),'utf8');
  for(const needle of [
   'id="combatWordHud" width="320" height="200"',
-  'right:calc(100% - 10px)',
+  'right:43px',
   'width:clamp(138px,24cqw,320px)',
   'Z_COMBAT_WORD_ART.ready=im.naturalWidth===2560&&im.naturalHeight===384;',
   "src='./assets/vfx/project_z_execution_critical_cyber_8f_clean.png?v=20261102-cyberword-2'",
-  'execution:{enter:.18,shake:.09,text:1.65,hold:.24,exit:.47,width:320}',
-  'critical:{enter:.16,shake:.08,text:1.48,hold:.20,exit:.43,width:320}',
+  'execution:{enter:.15,shake:.075,text:1.39,hold:.20,exit:.40,width:320}',
+  'critical:{enter:.135,shake:.07,text:1.24,hold:.17,exit:.37,width:320}',
   'drawCombatWordHud();',
   "if(f.kind==='combatWordSprite')continue;",
   "spawnCombatWordFx('execution',target)",
@@ -32,7 +32,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  assert(a>0&&b>a);
  const draws=[],ctx={clearRect(){},drawImage(...args){draws.push(args)}};
  const canvas={width:320,height:200,style:{},getContext:()=>ctx,getBoundingClientRect:()=>({width:320,height:200})};
- const pause={offsetTop:85,offsetHeight:32,parentElement:{offsetWidth:190}};
+ const pause={offsetTop:85,offsetHeight:32,offsetWidth:35,parentElement:{offsetWidth:190}};
  const nodes={combatWordHud:canvas,pauseButton:pause};
  const env={Z_COMBAT_WORD_ART:{image:{naturalWidth:2560,naturalHeight:384,complete:true},ready:true,missing:false},
   window:{},fx:[],p:{x:500,y:560},gameState:'playing',Math,
@@ -41,20 +41,20 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  vm.runInContext(html.slice(a,b)+'\nthis.spawn=spawnCombatWordFx;this.render=drawCombatWordHud;this.start=zStartCombatWord;this.queue=zCombatWordQueue;',env);
  assert(env.spawn('critical',{x:1210,y:580}),'critical begins');
  let f=env.fx[0];
- assert(Math.abs(f.maxLife-2.35)<1e-9,'critical shortened to 2.35s');
+ assert(Math.abs(f.maxLife-1.985)<1e-9,'critical runs 1.985s');
  const paint=t=>{f.age=t;env.render();return {draw:draws.at(-1),offset:parseFloat(canvas.style.transform.slice(12)),opacity:Number(canvas.style.opacity),f:f.drawnFrame}};
  const steps=[
-  [0,0,true],[.07,0,true],[.16,0,true],[.20,0,true],
-  [.24,1,false],[.50,2,false],[.75,3,false],[1.04,4,false],
-  [1.33,4,false],[1.43,5,false],[1.76,6,false],
-  [1.92,7,true],[2.19,7,true],[2.35,7,true]
+  [0,0,true],[.06,0,true],[.14,0,true],[.19,0,true],
+  [.21,1,false],[.42,2,false],[.64,3,false],[.84,4,false],
+  [1.15,4,false],[1.22,5,false],[1.42,6,false],
+  [1.62,7,true],[1.80,7,true],[1.985,7,true]
  ];
  for(const [t,expected,moving] of steps){
   const out=paint(t);
   assert.equal(out.f,expected,'critical original frame at '+t);
   if(!moving)assert(Math.abs(out.offset)<1e-7,'word-bearing frame must never move, time '+t);
   if(t===0)assert.equal(out.opacity,0,'initial line is transparent');
-  if(t===2.35)assert.equal(out.opacity,0,'exit line disappears at far right');
+  if(t===1.985)assert.equal(out.opacity,0,'exit line disappears at far right');
   assert.equal(out.draw[3],320,'full protected sprite cell width');
   assert.equal(out.draw[4],192,'full protected sprite cell height');
   assert(out.draw[5]>=0&&out.draw[5]+out.draw[7]<=320,'sprite alpha padding stays within HUD canvas');
@@ -66,12 +66,13 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  assert.deepEqual(Array.from(env.queue),['execution','critical']);
  env.fx=[];env.start(env.queue.shift());f=env.fx[0];
  assert.equal(f.word,'execution');
- assert(Math.abs(f.maxLife-2.63)<1e-9,'execution shortened to 2.63s');
+ assert(Math.abs(f.maxLife-2.215)<1e-9,'execution runs 2.215s');
  f.drawnFrame=-1;
- for(const [t,frame] of [[0,0],[.27,1],[.56,2],[.85,3],[1.12,4],[1.43,4],[1.70,5],[1.96,6],[2.17,7]]){
+ for(const [t,frame] of [[0,0],[.23,1],[.47,2],[.70,3],[.94,4],[1.24,4],[1.37,5],[1.62,6],[1.84,7]]){
   const o=paint(t);assert.equal(o.f,frame,'execution frame at '+t);
  }
  env.fx=[];env.queue.length=0;env.render();
  assert.equal(canvas.style.display,'none','wordmark clears when inactive');
+ assert.equal(canvas.style.right,'43px','wordmarks exactly 8px left of pause, not at center HUD');
 }
 console.log('PASS: clean padded 8x2 raster sprites, line-only arrival/exit, text-only stationary animation, faster timeline, rightward move, crit/parry retained');
