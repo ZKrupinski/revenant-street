@@ -1,0 +1,64 @@
+name: Project Z V6 rack-from-attack and explosive counter master
+on:
+  push:
+    paths:
+      - .github/workflows/build-z-combat-v6.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  make-v6-sfx:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Install audio tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Extract the audible metal-action tail FROM the new basic-attack sidearm recording
+        shell: bash
+        run: |
+          set -euo pipefail
+          source=assets/sfx/z-ballistic-sidearm-20261103-weight-v5.mp3
+          target=assets/sfx/z-rack-from-sidearm-attack-v6.mp3
+          test -s "$source"
+          # Cut the post-report physical chamber/slide action, not the original obsolete rack.
+          ffmpeg -nostdin -y -hide_banner -loglevel error -i "$source" \
+            -af "atrim=start=0.13:end=0.96,asetpts=PTS-STARTPTS,highpass=f=220,lowpass=f=7200,equalizer=f=1500:t=q:w=1.2:g=2.3,acompressor=threshold=0.10:ratio=2.1:attack=2:release=90:makeup=2.4,volume=1.75,alimiter=limit=0.91:level=false,afade=t=out:st=0.66:d=0.17" \
+            -ar 44100 -ac 2 -codec:a libmp3lame -b:a 192k "$target"
+          test "$(wc -c < "$target")" -gt 13000
+          echo "Original attack sound (sidearm) / extracted and boosted chamber click:"
+          ffmpeg -hide_banner -nostdin -i "$source" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          ffmpeg -hide_banner -nostdin -i "$target" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 "$target"
+      - name: Enhance existing new V5 counter blast with a filtered low-frequency pressure tail
+        shell: bash
+        run: |
+          set -euo pipefail
+          source=assets/sfx/z-ballistic-counter-20261103-weight-v5.mp3
+          target=assets/sfx/z-counter-explosive-v6.mp3
+          test -s "$source"
+          # Reinforce its OWN original boom, never reuse a discarded old sample.
+          ffmpeg -nostdin -y -hide_banner -loglevel error -i "$source" \
+            -filter_complex "[0:a]asplit=3[dry][sub][snap];[dry]volume=0.96[main];[sub]lowpass=f=235,volume=2.15,adelay=19|19[boom];[snap]highpass=f=1150,lowpass=f=6700,volume=0.32[crack];[main][boom][crack]amix=inputs=3:normalize=0,acompressor=threshold=0.26:ratio=2.4:attack=4:release=105:makeup=1.4,volume=1.42,alimiter=limit=0.86:level=false,volume=1.05,alimiter=limit=0.91:level=false[a]" \
+            -map "[a]" -ar 44100 -ac 2 -codec:a libmp3lame -b:a 192k "$target"
+          test "$(wc -c < "$target")" -gt 20000
+          echo "Previous V5 counter / reinforced V6 explosion:"
+          ffmpeg -hide_banner -nostdin -i "$source" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          ffmpeg -hide_banner -nostdin -i "$target" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 "$target"
+      - name: Commit separate V6 source-derived game-ready MP3 assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/sfx/z-rack-from-sidearm-attack-v6.mp3 assets/sfx/z-counter-explosive-v6.mp3
+          if ! git diff --cached --quiet; then
+            git commit -m "Audio: isolate louder metallic attack rack and enhance original counter blast"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
