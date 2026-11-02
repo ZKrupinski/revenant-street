@@ -3530,6 +3530,14 @@ body{position:fixed;inset:0;touch-action:manipulation}
 #app.compact-game-stage #stageWrap #menu.reward-dialog>.reward-reroll-row .reward-refresh{min-height:21px!important;font-size:9px!important;padding:2px 5px!important}
 #app.compact-game-stage #stageWrap #menu.reward-dialog>.reward-reroll-row .reward-balance{font-size:9px!important}
 </style>
+<style id="project-z-combat-word-hud-v2">
+/* Dedicated fixed-position, hand-painted 8-frame wordmark, left of PAUSE. */
+#hud .hud-right{overflow:visible!important}
+#hud #combatWordHud{position:absolute;right:calc(100% + 8px);top:0;
+ width:clamp(105px,14.5cqw,185px)!important;height:auto!important;
+ aspect-ratio:8/5;max-width:none;display:none;pointer-events:none;
+ z-index:5;object-fit:contain}
+</style>
 </head>
 <body>
 <div id="app">
@@ -3548,7 +3556,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
         <div class="mod-wrap" id="modWrap"><div class="mod-strip" id="modStrip" aria-label="선택한 전투 속성"><span class="empty-mod">속성 미장착</span></div><button type="button" class="mod-toggle" id="modToggle" aria-expanded="false" aria-controls="modStrip" hidden>추가 효과 보기</button></div>
       </div>
       <div class="hud-center"><div class="chapter" id="chapter">01 / 침수된 거리</div><div class="wave-label" id="waveLabel">WAVE 01 — 침입자</div><div class="kill-count" id="enemyCount" aria-live="polite">현재 적 04명 · 턴 잔여 04명</div><div class="squad-progress" role="progressbar" aria-label="이번 턴 적 처치 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="enemyProgress"><div id="enemyProgressFill"></div></div><div class="squad-status" id="enemyStatus">무리 01 시작</div></div>
-      <div class="hud-right"><div class="currency" title="전투로 획득하는 크레딧">₩ <b id="credits">0000</b> <small style="color:#ffe68f">◆ <b id="shardCount">0</b></small></div><div class="combo" id="combo">0 <small>HITS</small></div><button class="small-button" id="pauseButton" aria-label="일시정지">Ⅱ</button></div>
+      <div class="hud-right"><div class="currency" title="전투로 획득하는 크레딧">₩ <b id="credits">0000</b> <small style="color:#ffe68f">◆ <b id="shardCount">0</b></small></div><div class="combo" id="combo">0 <small>HITS</small></div><canvas id="combatWordHud" width="320" height="200" aria-hidden="true"></canvas><button class="small-button" id="pauseButton" aria-label="일시정지">Ⅱ</button></div>
     </div>
     <div class="boss-hud" id="bossHud" hidden><div class="boss-title"><span id="bossName">ELITE HUNTER</span><span>PHASE <b id="bossPhase">01</b></span></div><div class="boss-track"><div id="bossFill"></div></div></div>
     <div class="game-message" id="gameMessage" aria-live="polite"></div>
@@ -7012,46 +7020,61 @@ function zClampVfxX(worldX,leftExtent,rightExtent){
  const low=left+leftExtent,high=right-rightExtent;
  return low<=high?clamp(worldX,low,high):(low+high)*.5;
 }
-const Z_COMBAT_WORD_HEAD_OFFSETS=Object.freeze({
- boss:425,elite:345,intruder:345,guard:300,assassin:290,raider:270
+// Wordmarks are screen-fixed HUD sprites rather than world-bound hit labels.
+const Z_COMBAT_WORD_TIMING=Object.freeze({
+ execution:{frames:.98,hold:.30,fade:.32,width:282},
+ critical:{frames:.86,hold:.26,fade:.30,width:264}
 });
 function spawnCombatWordFx(name,target){
  if(!target||!Z_COMBAT_WORD_ART.ready)return false;
- const kind=name==='execution'?'execution':'critical',duration=kind==='execution'?.50:.40;
- // Smaller, slower eight-frame wordmark floats above the victim's head,
- // leaving the face and body uncovered even for elite/intruder/boss art.
- const x=target.x??p.x;
- const head=Z_COMBAT_WORD_HEAD_OFFSETS[target.type]??270;
- const y=(target.y??p.y)-Math.max(0,target.z||0)-head-28;
- const width=kind==='execution'?382:320;
- const active=fx.filter(f=>f.kind==='combatWordSprite');
- if(active.length>=10){const oldest=active[0],index=fx.indexOf(oldest);if(index>=0)fx.splice(index,1);}
- fx.push({kind:'combatWordSprite',word:kind,x,y,width,life:duration,maxLife:duration,
-  age:0,drawnFrame:-1,specialAttackFx:true});
+ const kind=name==='execution'?'execution':'critical',settings=Z_COMBAT_WORD_TIMING[kind];
+ // Reset the previous wordmark rather than stacking and obscuring HUD values.
+ for(let i=fx.length-1;i>=0;i--)if(fx[i].kind==='combatWordSprite')fx.splice(i,1);
+ const duration=settings.frames+settings.hold+settings.fade;
+ fx.push({kind:'combatWordSprite',word:kind,x:p.x,y:p.y,
+  life:duration,maxLife:duration,age:0,drawnFrame:-1,
+  animDuration:settings.frames,fadeDuration:settings.fade,holdDuration:settings.hold});
  return true;
 }
 function drawCombatWordFx(f){
- const im=Z_COMBAT_WORD_ART.image;
- if(!Z_COMBAT_WORD_ART.ready||!im.complete)return false;
- const progress=clamp((f.age||0)/f.maxLife,0,.999999);
- // Do not skip adjacent source frames during mobile hit-stop / FPS drops.
- const desired=Math.min(7,Math.floor(progress*8));
+ const im=Z_COMBAT_WORD_ART.image,canvas=$('combatWordHud');
+ if(!canvas||!Z_COMBAT_WORD_ART.ready||!im.complete)return false;
+ const pause=$('pauseButton'),hudCtx=canvas.getContext('2d');
+ if(!pause||!hudCtx)return false;
+ canvas.style.display='block';
+ // Pin vertically to the PAUSE button center; CSS anchors immediately left.
+ canvas.style.top=Math.round(pause.offsetTop+pause.offsetHeight*.5-
+   canvas.getBoundingClientRect().height*.5)+'px';
+ hudCtx.clearRect(0,0,canvas.width,canvas.height);
+ const age=f.age||0;
+ const progress=clamp(age/Math.max(.001,f.animDuration),0,.999999);
+ // Play eight distinct original frames, then hold the final pose before fading.
+ const desired=age>=f.animDuration?7:Math.min(7,Math.floor(progress*8));
  const frame=Math.min(desired,(f.drawnFrame??-1)+1);
  f.drawnFrame=frame;
- const cw=im.naturalWidth/8,ch=im.naturalHeight/2;
- const w=f.width,h=w*ch/cw;
+ const remaining=f.maxLife-age;
+ const alpha=Math.min(1,clamp(age/.16,0,1),clamp(remaining/f.fadeDuration,0,1));
  const row=f.word==='execution'?0:1;
- ctx.save();
- ctx.globalAlpha=1;
- const drawX=zClampVfxX(f.x,w*.5,w*.5);
- ctx.drawImage(im,frame*cw,row*ch,cw,ch,drawX-w*.5,f.y-h*.5,w,h);
- ctx.restore();
+ const cw=im.naturalWidth/8,ch=im.naturalHeight/2;
+ const w=Z_COMBAT_WORD_TIMING[f.word].width,h=w*ch/cw;
+ hudCtx.save();hudCtx.globalAlpha=alpha;
+ hudCtx.drawImage(im,frame*cw,row*ch,cw,ch,(canvas.width-w)*.5,(canvas.height-h)*.5,w,h);
+ hudCtx.restore();
  return true;
+}
+function drawCombatWordHud(){
+ const canvas=$('combatWordHud');
+ if(!canvas)return;
+ // Execution and critical share a single pause-adjacent HUD slot.
+ const word=fx.findLast(f=>f.kind==='combatWordSprite'&&f.life>0);
+ if(word&&gameState==='playing')drawCombatWordFx(word);
+ else{canvas.getContext('2d')?.clearRect(0,0,canvas.width,canvas.height);canvas.style.display='none';}
 }
 window.__zCombatWordStatus=()=>({
  ready:Z_COMBAT_WORD_ART.ready,missing:Z_COMBAT_WORD_ART.missing,
  source:Z_COMBAT_WORD_ART.image.src,
- active:fx.filter(f=>f.kind==='combatWordSprite').length
+ active:fx.filter(f=>f.kind==='combatWordSprite').length,
+ placement:'pause-left-hud'
 });
 
 // Five original painted transparent bitmap hit variants: 8 frames each.
@@ -7329,8 +7352,10 @@ function attackCheck(){
  const directTargets=new Set();
  let dashImpactX=0,dashImpactY=0;
  for(const e of enemies){if(e.dead||e.inv>0)continue;const dx=e.x-p.x,dy=Math.abs(e.y-p.y);const contactReach=Math.max(reach,bodyHalfX(p)+bodyHalfX(e)+20);if((dx*p.facing)>-25&&(dx*p.facing)<contactReach&&dy<(p.dashSmash?specialStats('dashspeed').lane:p.airAttack?78:56)&&(p.airAttack?p.z<225:Math.abs(e.z-p.z)<82)){let dmg=damage;
- const critChance=Math.min(.65,modRank('crit')*.10);
- const critical=Math.random()<critChance;
+ // Base game crits are visible even at rank 0; repeated ordinary hits get pity.
+ const critChance=Math.min(.72,.22+modRank('crit')*.10);
+ const critical=Math.random()<critChance||(p.critDrought||0)>=4;
+ p.critDrought=critical?0:(p.critDrought||0)+1;
  if(critical){dmg*=1.8;spawnCombatWordFx('critical',e)}
  if(p.mods.includes('fire')){dmg*=1+.15*modRank('fire');e.burn=Math.max(e.burn||0,2.7+.65*modRank('fire'));e.burnPower=modRank('fire')}
  if(p.mods.includes('ice')){dmg*=.94;e.freeze=Math.max(e.freeze,1.2+modRank('ice')*.55);e.freezePower=modRank('ice')}
@@ -8728,7 +8753,7 @@ function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);
  if(f.kind==='upgradeVfxSprite'){drawUpgradeVfx(f);continue;}
   if(f.kind==='healVfxSprite'){drawHealVfx(f);continue;}
   if(f.kind==='basicHitSprite'){drawBasicContactFx(f);continue;}
- if(f.kind==='combatWordSprite'){drawCombatWordFx(f);continue;}
+ if(f.kind==='combatWordSprite')continue; // Draw once in fixed HUD, outside world camera.
  if(f.kind==='dashPierceSprite'){drawDashPierceSprite(f);continue;}
   if(f.kind==='parryCounterSprite'){drawParryCounterSprite(f);continue;}
   if(f.kind==='dashTrailSprite'){drawDashTrailSprite(f);continue;}
@@ -8812,7 +8837,7 @@ function draw(){
  if(Z_VFX_MODE==='front')drawEffects('all');
  else if(Z_VFX_MODE==='hybrid')drawEffects('front',vfxSelection);
  // No overhead damage numbers, status chips or combat warning text.
- ctx.restore();syncZSprite();
+ ctx.restore();syncZSprite();drawCombatWordHud();
  if(screenTint>0){ctx.globalAlpha=screenTint*.32;ctx.fillStyle='#ff335d';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}
  ctx.restore();
  if(gameState==='dying'){
