@@ -5399,6 +5399,7 @@ const Z_ENEMY_STATUS_VFX=[
  {status:'bleed',sprite:'leech',power:'bleedPower',offset:115,scale:0.55},
  {status:'freeze',sprite:'guard',power:'freezePower',offset:128,scale:0.65}
 ];
+const Z_ELEMENT_IMPACT_SPRITES=Object.freeze({fire:'nova',shock:'chain',bleed:'leech',ice:'guard'});
 function drawUpgradeVfxLoop(name,x,y,width,opacity,cycle,dir=1){
  const entry=Z_UPGRADE_VFX[name],im=entry?.image;
  if(!entry?.ready||!im?.complete||!im.naturalWidth)return false;
@@ -5431,17 +5432,15 @@ function drawModEnergy(){
    if(drawUpgradeVfxLoop(state.sprite,x,y,width,pulse,cycle,e.face||1))painted++;
   }
  }
- // A brief contact pop still uses the existing icon art, but it does not
- // replace the persistent per-enemy effect while damage/status is active.
+ // Paint the immediate element contact from the same transparent 8F
+ // effects used by ongoing enemy statuses, not filtered legacy smoke/bursts.
  for(const ef of attributeFx){
   if(ef.x<left||ef.x>right)continue;
-  const meta=MOD_META[ef.mod],image=img[meta.source];
-  if(!image?.complete||!image.naturalWidth)continue;
-  const portion=clamp(ef.life/ef.maxLife,0,1);
-  const size=(1.45-portion*.5)*100*ef.scale;
-  ctx.save();ctx.globalAlpha=portion*.54;ctx.filter=meta.filter;
-  ctx.translate(ef.x,ef.y);ctx.rotate(ef.rotation);
-  ctx.drawImage(image,-size/2,-size/2,size,size);ctx.restore();
+  const sprite=Z_ELEMENT_IMPACT_SPRITES[ef.mod];
+  if(!sprite)continue;
+  const progress=clamp(1-ef.life/Math.max(.001,ef.maxLife),0,.99999);
+  const width=(130+progress*55)*ef.scale;
+  drawUpgradeVfxLoop(sprite,ef.x,ef.y,width,(1-progress)*.68,progress);
  }
 }
 function drawHeroModAura(x,y,z){
@@ -5463,11 +5462,15 @@ function drawHeroModAura(x,y,z){
   if(cycle<.53)drawUpgradeVfxLoop('guard',x,y-z-112,108,
    .17*(1-cycle/.6),cycle/.53,p.facing);
  }
- for(const [i,mod] of [...new Set(p.mods)].filter(k=>['fire','shock','bleed','ice'].includes(k)).entries()){
-  const meta=MOD_META[mod],a=img[meta.source];if(!a?.complete||!a.naturalWidth)continue;
-  const sz=125+(Math.sin(time*5+i)*11);
-  ctx.save();ctx.globalAlpha=.14+.055*Math.sin(time*4+i);ctx.filter=meta.filter;
-  ctx.drawImage(a,x-sz*.5,y-z-126-sz*.5,sz,sz);ctx.restore();
+ // Equipped elemental modules retain a subtle, single painted cue on
+ // the hero. Afflicted enemies show a stronger loop for the actual status.
+ // Rotate multiple equipped elements rather than stacking opaque flashes.
+ const equipped=[...new Set(p.mods)].filter(id=>Z_ELEMENT_IMPACT_SPRITES[id]);
+ if(equipped.length){
+  const phase=time*1.35,mod=equipped[Math.floor(phase)%equipped.length];
+  const rank=modRank(mod),offset=mod==='shock'?-31:mod==='ice'?0:24;
+  drawUpgradeVfxLoop(Z_ELEMENT_IMPACT_SPRITES[mod],x+p.facing*offset,
+   y-z-126,100+rank*9,.18+.06*Math.abs(Math.sin(time*4.8)),phase%1,p.facing);
  }
 }
 // Road art: keep all standing feet on the foreground road, not the raised
