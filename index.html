@@ -5359,6 +5359,22 @@ function drawHealVfx(f){
  ctx.drawImage(im,frame*cell,0,cell,im.naturalHeight,-width*.5,-height*.5,width,height);
  ctx.restore();Z_HEAL_ART.drawn++;return true;
 }
+// Orient floor-origin PNGs upright, with the painted blast colliding against
+// the incoming side of the enemy instead of floating over an actor's center.
+// Only one active upgrade burst per victim prevents opaque overlap.
+function spawnEnemyContactVfx(kind,e,scale=1,duration=.32,face=p.facing){
+ if(!e||e.dead||!Z_UPGRADE_VFX[kind])return false;
+ const dir=face<0?-1:1,groundSpread=kind==='nova'||kind==='power';
+ const x=(e.renderX??e.x)+dir*(groundSpread?35:-clamp(bodyHalfX(e)*.32,15,43));
+ const y=(e.renderY??e.y)-(e.z||0)-(kind==='nova'?120:125);
+ const tilt=groundSpread?1.31:kind==='leech'?.22:kind==='crit'?-.10:0;
+ for(let i=fx.length-1;i>=0;i--){
+  if(fx[i].kind==='upgradeVfxSprite'&&fx[i].contactEnemy===e)fx.splice(i,1);
+ }
+ const added=spawnUpgradeVfx(kind,x,y,scale,dir,tilt,duration);
+ if(added)fx[fx.length-1].contactEnemy=e;
+ return added;
+}
 function spawnUpgradeVfx(k,x,y,scale=1,dir=1,rotation=0,duration=.33){
  if(!Z_UPGRADE_VFX[k])return false;
  if(fx.length>=94)fx.splice(0,fx.length-78);
@@ -5388,30 +5404,39 @@ function spawnModLink(color,x1,y1,x2,y2,scale=1,filter='',life=.22){
 }
 function combatStrengthFx(e,critical){
  const power=modRank('power'),impact=modRank('impact'),momentum=modRank('momentum');
- if(power)spawnUpgradeVfx('power',e.x,e.y-115,.91+power*.12,p.facing,-.04,.33);
+ if(power)spawnEnemyContactVfx('power',e,.91+power*.12,.33);
  if(impact){
-  spawnUpgradeVfx('crit',e.x+p.facing*23,e.y-112,.52+impact*.08,p.facing,0,.23);
+  spawnEnemyContactVfx('crit',e,.52+impact*.08,.23);
   screenShake=Math.max(screenShake,Math.min(22,12+impact*1.3));
  }
  if(momentum&&p.hits>=3){
   const intensity=Math.min(1.6,.70+p.hits*.065+momentum*.07);
-  spawnUpgradeVfx('power',e.x,e.y-111,intensity*.63,p.facing,0,.24);
+  spawnEnemyContactVfx('power',e,intensity*.63,.24);
  }
  if(critical){
-  spawnUpgradeVfx('crit',e.x,e.y-129,1.10+modRank('crit')*.10,p.facing,-.04,.35);
+  spawnEnemyContactVfx('crit',e,1.10+modRank('crit')*.10,.35);
   screenShake=Math.max(screenShake,19);
  }
 }
 function createModImpact(e){
  // Attribute sheets fire only for equipped elements, not for unrelated
  // passive buffs or dormant chain/nova effects.
- const statusMods=['fire','shock','bleed','ice'];
- for(const mod of statusMods){
-  const lv=modRank(mod);if(!lv)continue;
+ const equipped=['fire','shock','bleed','ice'].filter(mod=>modRank(mod)>0);
+ // All elemental damage and status combinations remain active; choose one
+ // illustrated contact per strike, rotating the equipped looks across hits.
+ if(equipped.length){
+  const idx=(e._elementImpactStep||0)%equipped.length;
+  e._elementImpactStep=(e._elementImpactStep||0)+1;
+  const mod=equipped[idx],lv=modRank(mod),dir=p.facing<0?-1:1;
   const scale=(mod==='shock'?1.22:mod==='fire'?1.10:1)+Math.min(5,lv-1)*.11;
   const duration=mod==='shock'?.35:mod==='ice'?.44:.41;
-  attributeFx.push({x:e.x+rnd(-9,9),y:e.y-(mod==='ice'?103:mod==='bleed'?120:138),
-   mod,life:duration,maxLife:duration,rotation:rnd(-.32,.32),scale});
+  attributeFx=attributeFx.filter(ef=>ef.target!==e);
+  attributeFx.push({
+   x:(e.renderX??e.x)+dir*(mod==='fire'?35:-20),
+   y:(e.renderY??e.y)-(e.z||0)-(mod==='ice'?110:124),
+   mod,dir,target:e,life:duration,maxLife:duration,
+   rotation:mod==='fire'?1.31:mod==='bleed'?.18:0,scale
+  });
  }
  if(attributeFx.length>58)attributeFx.splice(0,attributeFx.length-58);
  if(p.mod==='neuro'){
@@ -5430,13 +5455,13 @@ const Z_ENEMY_STATUS_VFX=[
 ];
 // Old circular guard sprite is never shown for an ice attack.
 const Z_ELEMENT_IMPACT_SPRITES=Object.freeze({fire:'nova',shock:'chain',bleed:'leech',ice:'chain'});
-function drawUpgradeVfxLoop(name,x,y,width,opacity,cycle,dir=1){
+function drawUpgradeVfxLoop(name,x,y,width,opacity,cycle,dir=1,rotation=0){
  const entry=Z_UPGRADE_VFX[name],im=entry?.image;
  if(!entry?.ready||!im?.complete||!im.naturalWidth)return false;
  const frame=Math.min(7,Math.floor((((cycle%1)+1)%1)*8));
  const cw=im.naturalWidth/8,displayH=width*(im.naturalHeight/cw);
  ctx.save();ctx.globalAlpha=clamp(opacity,0,.82);
- ctx.translate(x,y);ctx.scale(dir||1,1);
+ ctx.translate(x,y);ctx.scale(dir||1,1);ctx.rotate(rotation);
  ctx.drawImage(im,frame*cw,0,cw,im.naturalHeight,-width*.5,-displayH*.5,width,displayH);
  ctx.restore();entry.drawn++;return true;
 }
@@ -5444,13 +5469,13 @@ function drawModEnergy(){
  const left=cameraX-180,right=cameraX+W+180;
  // Each afflicted opponent keeps a visible painted energy animation, tied to
  // the actual remaining burn/shock/bleed/freeze timer, including during stagger.
- // Up to two layers per enemy and ten total in view avoid overdraw in crowds.
+ // One angled status cue per enemy avoids layers of giant body-center artwork.
  let painted=0;
  for(const e of enemies){
   if(e.dead||e.x<left||e.x>right||painted>=10)continue;
   const active=Z_ENEMY_STATUS_VFX.filter(s=>e[s.status]>0);
   if(!active.length)continue;
-  const max=Math.min(2,active.length,10-painted);
+  const max=Math.min(1,active.length,10-painted);
   for(let i=0;i<max;i++){
    const index=(Math.floor(time*1.25+(e.slot||0))+i)%active.length;
    const state=active[index],rank=Math.min(6,e[state.power]||1);
@@ -5458,8 +5483,10 @@ function drawModEnergy(){
    const cycle=time*(state.status==='shock'?1.9:state.status==='burn'?1.35:1.05)+
     (e.slot||0)*.13+i*.19;
    const pulse=.38+.14*Math.abs(Math.sin(time*4.1+(e.slot||0)+i));
-   const x=e.renderX??e.x,y=(e.renderY??e.y)-(e.z||0)-state.offset+i*12;
-   if(drawUpgradeVfxLoop(state.sprite,x,y,width,pulse,cycle,e.face||1))painted++;
+   const dir=e.face||1,x=(e.renderX??e.x)+dir*(state.sprite==='nova'?32:27);
+   const y=(e.renderY??e.y)-(e.z||0)-state.offset;
+   if(drawUpgradeVfxLoop(state.sprite,x,y,width,pulse*.75,cycle,dir,
+    state.sprite==='nova'?1.31:0))painted++;
   }
  }
  // Paint the immediate element contact from the same transparent 8F
@@ -5470,7 +5497,8 @@ function drawModEnergy(){
   if(!sprite)continue;
   const progress=clamp(1-ef.life/Math.max(.001,ef.maxLife),0,.99999);
   const width=(130+progress*55)*ef.scale*1.65;
-  drawUpgradeVfxLoop(sprite,ef.x,ef.y,width,(1-progress)*.68,progress);
+  drawUpgradeVfxLoop(sprite,ef.x,ef.y,width,(1-progress)*.68,progress,
+   ef.dir||1,ef.rotation||0);
  }
 }
 function drawHeroModAura(x,y,z){
@@ -5481,17 +5509,8 @@ function drawHeroModAura(x,y,z){
   if(cycle<.35)drawUpgradeVfxLoop('chain',x-p.facing*42,y-z-98,108,
    .27*(1-cycle/.39),cycle/.35,p.facing);
  }
- // Regeneration is painted only on confirmed HP gain, never as an aura.
- // Equipped elemental modules retain a subtle, single painted cue on
- // the hero. Afflicted enemies show a stronger loop for the actual status.
- // Rotate multiple equipped elements rather than stacking opaque flashes.
- const equipped=[...new Set(p.mods)].filter(id=>Z_ELEMENT_IMPACT_SPRITES[id]);
- if(equipped.length){
-  const phase=time*1.35,mod=equipped[Math.floor(phase)%equipped.length];
-  const rank=modRank(mod),offset=mod==='shock'?-31:mod==='ice'?0:24;
-  drawUpgradeVfxLoop(Z_ELEMENT_IMPACT_SPRITES[mod],x+p.facing*offset,
-   y-z-126,(100+rank*9)*1.40,.18+.06*Math.abs(Math.sin(time*4.8)),phase%1,p.facing);
- }
+ // Elemental attacks now appear only on enemy contact, never as a
+ // ground-splash aura covering the protagonist. Haste trails remain.
 }
 // Road art: keep all standing feet on the foreground road, not the raised
 // sidewalk/buildings in the upper half of the 720p backdrop.
@@ -7260,8 +7279,8 @@ function attackCheck(){
  if(p.hp>priorHealHp+.05){
   spawnHealVfx(p.hp-priorHealHp,'leech');
   const vx=p.x-e.x,vy=p.y-e.y;
-  spawnUpgradeVfx('leech',(e.x+p.x)/2,(e.y+p.y)/2-128,
-   clamp(Math.hypot(vx,vy)/185,.65,1.7),p.facing,Math.atan2(vy,vx),.39);
+  spawnEnemyContactVfx('leech',e,
+   clamp(Math.hypot(vx,vy)/185,.65,1.7),.39);
   // The red drain stops at the victim; a separate mint pulse shows actual healing.
  }
  if(modRank('chain')&&Math.random()<Math.min(.85,modRank('chain')*.25)){
@@ -7271,7 +7290,7 @@ function attackCheck(){
    const ax=nearby.x-e.x,ay=nearby.y-e.y;
    spawnUpgradeVfx('chain',(e.x+nearby.x)/2,(e.y+nearby.y)/2-127,
     clamp(Math.hypot(ax,ay)/175,.70,1.75),ax>=0?1:-1,Math.atan2(ay,ax),.30);
-   spawnUpgradeVfx('chain',nearby.x,nearby.y-118,.82+modRank('chain')*.09,ax>=0?1:-1,0,.32);
+   spawnEnemyContactVfx('chain',nearby,.82+modRank('chain')*.09,.32,ax>=0?1:-1);
   }
  }
  if(modRank('nova')&&p.novaCooldown<=0){
@@ -7279,9 +7298,9 @@ function attackCheck(){
   for(const nearby of enemies.filter(o=>o!==e&&!o.dead&&Math.hypot(o.x-e.x,(o.y-e.y)*1.6)<165+modRank('nova')*13)){
    nearby.hp-=11+modRank('nova')*8;
    nearby.knockVX+=(nearby.x>=e.x?1:-1)*(170+modRank('nova')*40);
-   spawnUpgradeVfx('nova',nearby.x,nearby.y-100,.83+modRank('nova')*.06,p.facing,0,.32);
+   spawnEnemyContactVfx('nova',nearby,.83+modRank('nova')*.06,.32);
   }
-  spawnUpgradeVfx('nova',e.x,e.y-112,1.20+modRank('nova')*.11,p.facing,0,.36);
+  spawnEnemyContactVfx('nova',e,1.20+modRank('nova')*.11,.36);
   screenShake=Math.max(screenShake,Math.min(21,10+modRank('nova')*1.3));
  }}}
  // Like the landing slam, the dash finisher radiates to nearby forward
@@ -8796,7 +8815,9 @@ function selectMod(m){
  floatText(info.icon+' x'+rank,p.x,p.y-244,info.color);
  if(m==='guard'||m==='counter'){
   // Defensive upgrades are reflected in the HUD, not a body-sized aura.
- }else if(Z_UPGRADE_VFX[m])spawnUpgradeVfx(m,p.x,p.y-126,1.18,p.facing,0,.43);
+ }else if(Z_UPGRADE_VFX[m]){
+  // Show offensive art on the next real enemy impact, not during hero-center selection.
+ }
  else if(m!=='vital'&&m!=='regen')spawnModBitmap(m==='shock'||m==='ice'||m==='haste'?'blue':
    m==='bleed'||m==='leech'?'red':'gold',p.x,p.y-124,
    1.27,'brightness(1.17)',.39);
