@@ -3509,6 +3509,26 @@ body{position:fixed;inset:0;touch-action:manipulation}
  #stageWrap .z-combat-ui-arrive{animation:none!important}
 }
 </style>
+
+<style id="combat-upgrade-growth-v2">
+#stageWrap #menu.reward-dialog>.choice-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:clamp(3px,.85cqw,11px)!important}
+#stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn{padding:clamp(4px,.95cqw,12px)!important}
+#stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn .upgrade-art{width:clamp(34px,13cqh,96px)!important;height:clamp(34px,13cqh,96px)!important}
+#stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>strong{font-size:clamp(11px,2.3cqh,20px)!important;line-height:1.1!important;margin:clamp(2px,.5cqh,5px) 0 0!important}
+#stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>small{font-size:clamp(9px,1.55cqh,13px)!important;line-height:1.2!important}
+#stageWrap #menu.reward-dialog>.reward-reroll-row{display:flex!important;flex:none!important;align-items:center;justify-content:space-between;min-height:clamp(26px,4.6cqh,40px)!important;gap:8px;margin:clamp(3px,.55cqh,8px) 0 0!important}
+#stageWrap #menu.reward-dialog>.reward-reroll-row .reward-balance{font:900 clamp(10px,1.6cqh,15px)/1 Arial,'Malgun Gothic',sans-serif;color:#ffe3a0;white-space:nowrap}
+#stageWrap #menu.reward-dialog>.reward-reroll-row .reward-refresh{min-height:clamp(25px,4.1cqh,38px);padding:4px 10px;border:2px solid #77d4f5;background:#102539 var(--z-neon-panel) center/cover;color:#ecfaff;font:900 clamp(10px,1.7cqh,15px)/1 Arial,'Malgun Gothic',sans-serif;white-space:nowrap}
+#stageWrap #menu.reward-dialog>.reward-reroll-row .reward-refresh:disabled{opacity:.42;cursor:not-allowed}
+#stageWrap #menu.reward-dialog>.reward-reroll-row .reward-refresh.pad-selected,#stageWrap #menu.reward-dialog>.reward-reroll-row .reward-refresh:focus-visible{outline:2px solid #a5f3ff;outline-offset:1px}
+#app.compact-game-stage #stageWrap #menu.reward-dialog>.choice-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:2px!important}
+#app.compact-game-stage #stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn{padding:2px!important}
+#app.compact-game-stage #stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn .upgrade-art{width:clamp(19px,11cqh,34px)!important;height:clamp(19px,11cqh,34px)!important}
+#app.compact-game-stage #stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>strong{font-size:clamp(8px,1.9cqh,11px)!important}
+#app.compact-game-stage #stageWrap #menu.reward-dialog>.reward-reroll-row{min-height:22px!important;margin:1px 0 0!important;gap:2px}
+#app.compact-game-stage #stageWrap #menu.reward-dialog>.reward-reroll-row .reward-refresh{min-height:21px!important;font-size:9px!important;padding:2px 5px!important}
+#app.compact-game-stage #stageWrap #menu.reward-dialog>.reward-reroll-row .reward-balance{font-size:9px!important}
+</style>
 </head>
 <body>
 <div id="app">
@@ -5229,8 +5249,68 @@ function upgradeDescription(id,rank){
 }
 function activeModStacks(){const counts=new Map();for(const id of p.mods)counts.set(id,(counts.get(id)||0)+1);return MOD_UI_ORDER.filter(id=>counts.has(id)).map(id=>({id,n:counts.get(id),meta:MOD_META[id]}))}
 
-let upgradeReason='wave',nextUpgradeMilestone=0,rewardSelection=null;
-const UPGRADE_MILESTONES=[5,11,17,23,31,39];
+let upgradeReason='wave',rewardSelection=null;
+
+let combatUpgrades={charge:0,threshold:76,earned:0,lastAt:-100,rerolls:0,lastOffers:[],shown:{},offered:[]};
+const COMBAT_UPGRADE_COOLDOWN=9;
+function gainCombatUpgradeCharge(points){
+ if(gameState!=='playing'||heroEntry.active||!Number.isFinite(points)||points<=0)return;
+ combatUpgrades.charge=Math.min(combatUpgrades.threshold+75,combatUpgrades.charge+points);
+}
+function canOpenCombatUpgrade(){
+ return gameState==='playing'&&!heroEntry.active&&!deathCinematic.active&&p.hp>0&&
+ combatUpgrades.charge>=combatUpgrades.threshold&&time-combatUpgrades.lastAt>=COMBAT_UPGRADE_COOLDOWN&&
+ p.attack<=0&&p.parry<=0&&!p.riposteChasing&&!p.airAttack&&
+ slowMotion<=0&&riposteCinematicTime<=0&&enemies.some(e=>!e.dead);
+}
+function openCombatUpgrade(){
+ if(!canOpenCombatUpgrade())return false;
+ combatUpgrades.charge=Math.max(0,combatUpgrades.charge-combatUpgrades.threshold);
+ combatUpgrades.earned++;
+ combatUpgrades.threshold=Math.min(148,76+combatUpgrades.earned*12);
+ combatUpgrades.lastAt=time;
+ gameState='reward';rewardMenu('mid');return true;
+}
+const COMBAT_UPGRADE_GROUPS={
+ dashrange:'mobility',dashspeed:'mobility',jumpheight:'mobility',jumpspeed:'mobility',rush:'mobility',haste:'mobility',
+ fire:'element',shock:'element',bleed:'element',ice:'element',chain:'element',nova:'element',
+ counter:'defense',vital:'defense',regen:'defense',leech:'defense',guard:'defense',
+ power:'offense',crit:'offense',impact:'offense',momentum:'offense'
+};
+function chooseCombatUpgradeOffers(){
+ const pool=Object.entries(MOD_META).filter(([id])=>modRank(id)<MOD_LEVEL_CAP)
+  .map(([id,meta])=>({id,meta}));
+ const last=new Set(combatUpgrades.lastOffers),picks=[],chosen=new Set();
+ const take=(items)=>{
+  const remaining=items.filter(o=>!chosen.has(o.id));
+  if(!remaining.length)return false;
+  const scored=remaining.map(o=>{
+   const group=COMBAT_UPGRADE_GROUPS[o.id]||'other';
+   const diversity=!picks.some(x=>COMBAT_UPGRADE_GROUPS[x.id]===group);
+   const score=Math.random()*1.6+(last.has(o.id)?-3.5:2.5)+
+    (diversity?1.2:0)+(modRank(o.id)>0?.35:0)-
+    Math.min(6,combatUpgrades.shown[o.id]||0)*.7;
+   return {o,score};
+  }).sort((a,b)=>b.score-a.score);
+  const pick=scored[0].o;picks.push(pick);chosen.add(pick.id);return true;
+ };
+ take(pool.filter(o=>modRank(o.id)===0));
+ take(pool.filter(o=>modRank(o.id)>0));
+ while(picks.length<4&&take(pool)){}
+ combatUpgrades.lastOffers=picks.map(o=>o.id);
+ combatUpgrades.offered=picks.map(o=>o.id);
+ for(const o of picks)combatUpgrades.shown[o.id]=(combatUpgrades.shown[o.id]||0)+1;
+ return picks;
+}
+function combatRerollCost(){return 70+combatUpgrades.rerolls*45}
+function refreshCombatUpgradeOffers(){
+ if(gameState!=='reward'||rewardSelection||!menuReady()||combatUpgrades.rerolls>=5)return false;
+ const cost=combatRerollCost();
+ if(p.credits<cost)return false;
+ p.credits-=cost;combatUpgrades.rerolls++;
+ rewardMenu(upgradeReason,true);updateHud();sound('parry');return true;
+}
+
 let attributeFx=[];
 
 // Independent 8-frame transparent bitmap strips (one separate PNG per upgrade).
@@ -5909,7 +5989,7 @@ function resetPlayer(){deathCinematic.active=false;deathCinematic.elapsed=0;
  cameraRecenterClock=0;cameraRecenterHold=0;cameraRecenterBlend=0;
  resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p._voiceAt=-99;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.dodgeDuration=.30;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
  p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
- p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];nextUpgradeMilestone=0;upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.comboMoveCycle=[];p.comboMoveCursor=0;p.comboMoveCount=0;p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.dashSparkDistance=0;p.dashSparkCount=0;p.dashSparkSeq=0;p.backstepping=false;p.evadeBackstep=false;p.evadeExhausted=false;p.dashBufferedUntil=0;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;runStats={attacks:0,hits:0,style:{jump:0,dash:0,parry:0}};runRewardClaimed=false;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
+ p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];combatUpgrades={charge:0,threshold:76,earned:0,lastAt:-100,rerolls:0,lastOffers:[],shown:{},offered:[]};upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.comboMoveCycle=[];p.comboMoveCursor=0;p.comboMoveCount=0;p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.dashSparkDistance=0;p.dashSparkCount=0;p.dashSparkSeq=0;p.backstepping=false;p.evadeBackstep=false;p.evadeExhausted=false;p.dashBufferedUntil=0;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;runStats={attacks:0,hits:0,style:{jump:0,dash:0,parry:0}};runRewardClaimed=false;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 // All game UI bitmap assets must be fetched and DECODED before starting.
 // A separate <img> for the CSS sprite primes the same exact browser URL cache;
@@ -6539,6 +6619,7 @@ function awardEnemyKill(e){
  e.killAwarded=true;
  const money=e.type==='boss'?300:e.type==='elite'?135:e.type==='intruder'?110:e.type==='guard'?65:45;
  p.credits+=money;
+ gainCombatUpgradeCharge(e.type==='boss'?60:e.type==='elite'||e.type==='intruder'?38:26);
  const textValue='+₩'+money;
  floatText(textValue,e.x,e.y-210,'#ffdc8d');
  fxBurst(e.x,e.y-120,'gold',.85);
@@ -6546,6 +6627,7 @@ function awardEnemyKill(e){
 function hurtEnemy(e,dmg,poise){
  if(e.dead||intruderEntering(e))return;
  runStats.hits++;
+ gainCombatUpgradeCharge(9+(p.dashSmash?9:0)+(p.airAttack?12:0)+(p.counterBoost?15:0));
  // A new real hit (including the pursuit finisher) cancels the parry-only
  // viewport restraint; regular heavy launches keep their original physics.
  e.parryScreenDir=0;e.parryScreenEdge=null;
@@ -7180,6 +7262,7 @@ function enemyAttack(e){
   p.parry=Math.max(p.parry,.30);p.parryDuration=Math.max(p.parryDuration,.34);
   p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteChaseTime=0;
   p.riposteWindow=1.85;p.riposteTarget=e;p.inv=Math.max(p.inv,.35);
+  gainCombatUpgradeCharge(22);
   p.parryRecoilDuration=.24;p.parryRecoilTime=.24;
   p.parryRecoilRemaining=e.type==='boss'?25:19;
   // Replace the inflated shield / blue bitmap / golden burst stack with the user's ten-frame sprite.
@@ -7974,13 +8057,8 @@ function updateEnemies(dt,parryVictimScale=1){
    }
   }
  }
- // Additional power picks every handful of kills; no wave restart.
- // Count a milestone only once and never interrupt the boss duel.
- if(gameState==='playing'&&wave<=2&&nextUpgradeMilestone<UPGRADE_MILESTONES.length&&
-    runKills>=UPGRADE_MILESTONES[nextUpgradeMilestone]&&enemies.some(e=>!e.dead)){
-  nextUpgradeMilestone++;
-  gameState='reward';rewardMenu('mid');return;
- }
+ // Combat feats unlock upgrades, rather than fixed kill milestones.
+ if(openCombatUpgrade())return;
  if(gameState==='playing'&&!enemies.some(e=>!e.dead)&&
     (wave===3||squadIndex>=(SQUAD_SPOTS[wave]?.length||0))){
   if(!waveClearNotified){waveClearNotified=true;flash('구역 확보 — 오른쪽으로 전진!',2.4,'phase-clear')}
@@ -8556,31 +8634,22 @@ function loop(t){
  }
  requestAnimationFrame(loop);
 }
-function rewardMenu(reason='wave'){
+function rewardMenu(reason='wave',rerolled=false){
  upgradeReason=reason;
+ if(!rerolled)combatUpgrades.rerolls=0;
  setStatus(reason==='mid'?'POWER UP AVAILABLE':'WAVE CLEAR');
  $('hint').hidden=true;$('bossHud').hidden=true;
- const pool=Object.entries(MOD_META).filter(([id])=>modRank(id)<MOD_LEVEL_CAP)
-  .map(([id,meta])=>({id,meta})); 
- const shuffle=a=>a.slice().sort(()=>Math.random()-.5);
- const owned=shuffle(pool.filter(o=>modRank(o.id)>0));
- const fresh=shuffle(pool.filter(o=>modRank(o.id)===0));
- const cardsOffered=[];
- const special=shuffle(pool.filter(o=>['counter'].includes(o.id)))[0];
- const mobility=shuffle(pool.filter(o=>['dashrange','dashspeed','jumpheight','jumpspeed'].includes(o.id)))[0];
- if(special)cardsOffered.push(special);
- if(mobility&&!cardsOffered.some(o=>o.id===mobility.id))cardsOffered.push(mobility);
- if(owned.length&&!cardsOffered.some(o=>o.id===owned[0].id))cardsOffered.push(owned[0]);
- for(const pick of fresh)if(cardsOffered.length<3&&!cardsOffered.some(o=>o.id===pick.id))cardsOffered.push(pick);
- for(const pick of [...owned.slice(1),...fresh])if(cardsOffered.length<3&&!cardsOffered.some(p=>p.id===pick.id))cardsOffered.push(pick);
+ const cardsOffered=chooseCombatUpgradeOffers();
  const cards=cardsOffered.map(({id,meta})=>{
   const level=modRank(id),stack=level?'중첩 강화':'NEW';
   return `<button class="upgrade-btn" data-mod="${id}" aria-label="${meta.title}: 현재 레벨 ${level}, 강화 후 레벨 ${level+1}"><span class="sym">${modIconMarkup(id)}</span><strong>${meta.title} <small class="${level?'up-levelup':'up-new'}">${stack}</small></strong><span class="up-progression level-transition"><span class="level-now">현재 Lv.${level}</span><span class="level-arrow" aria-hidden="true">→</span><span class="level-after">강화 후 Lv.${level+1}</span></span><small>${upgradeDescription(id,level)} / 최대 Lv.${MOD_LEVEL_CAP}</small></button>`;
  }).join('');
- const headline=reason==='mid'?'전투 중 파워업':'구역 클리어 파워업';
- const explanation=reason==='mid'?'재화 없이 1개 선택하면 전투가 이어집니다. 기존 강화도 중첩 가능.':
- '무료 선택 · 체력 +20 회복 · 다음 지역으로 이동. 모든 강화는 최대 6레벨까지 중첩됩니다.';
- showMenu(`<div class="eyebrow">PROJECT Z / CYBERNETIC GROWTH</div><h2>${headline}</h2><p>${explanation}</p><div class="choice-grid">${cards}</div><div class="overline">CURRENT GROWTH — ${p.mods.length} STACKS · LEVEL ${level}</div><div class="pad-hint">WASD·패드 스틱/십자키로 선택 · 패드 A/B/X/Y 또는 키보드 화살표 아무 키로 확정 · 창이 뜨면 버튼을 놓고 다시 눌러주세요</div>`);
+ const headline=reason==='mid'?'전투 성과 파워업':'구역 클리어 파워업';
+ const explanation=reason==='mid'?'적중·처치·패링으로 획득 · 4개 중 하나 무료 선택 · 최대 Lv.6':
+ '구역 완료 보너스 · 4개 중 하나 무료 선택 · 체력 +20 회복';
+ const cost=combatRerollCost(),canReroll=p.credits>=cost&&combatUpgrades.rerolls<5;
+ const rerollLabel=combatUpgrades.rerolls>=5?'이번 강화 갱신 한도':'후보 갱신 ₩'+cost;
+ showMenu(`<div class="eyebrow">PROJECT Z / CYBERNETIC GROWTH</div><h2>${headline}</h2><p>${explanation}</p><div class="choice-grid">${cards}</div><div class="reward-reroll-row"><span class="reward-balance">보유 ₩${p.credits.toLocaleString("ko-KR")} · 갱신 ${combatUpgrades.rerolls}/5</span><button type="button" class="reward-refresh" data-action="rewardRefresh" ${canReroll?"":"disabled"}>${rerollLabel}</button></div><div class="overline">CURRENT GROWTH — ${p.mods.length} STACKS · LEVEL ${level}</div><div class="pad-hint">방향키·패드로 선택 후 별도 입력으로 확정 · 후보 갱신은 ₩ 차감</div>`);
  $('menu').classList.add('reward-entrance');
  // Gentle hardware pulse if supported; the card/window visual shake is independent.
  vibrateImpact('punch',true);
@@ -9087,7 +9156,7 @@ $('menu').addEventListener('pointerdown',e=>{
 });
 $('menu').addEventListener('pointerup',()=>{hubPointerFocusPending=false});
 $('menu').addEventListener('pointercancel',()=>{hubPointerFocusPending=false;hubTouchPointerPending=false});
-$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if($('menu').querySelector('.hub-shard-notice-mask')&&a!=='hubShardNoticeClose')return;if(a==='hubShardNoticeClose')closeHubShardNotice();else if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){enterHubFromMenu();}else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='hubEconomy')hubEconomyMenu();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma){const touched=hubTouchPointerPending||e.pointerType==='touch';hubTouchPointerPending=false;hubPointerFocusPending=false;selectHubModule(b.dataset.perma,touched)}});
+$('menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||!menuReady())return;const a=b.dataset.action;if($('menu').querySelector('.hub-shard-notice-mask')&&a!=='hubShardNoticeClose')return;if(a==='hubShardNoticeClose')closeHubShardNotice();else if(a==='start')requestRunStart();else if(a==='guide')guideMenu();else if(a==='guideResume')guideMenu(true);else if(a==='rumbleTest'){void testGamepadRumble()}else if(a==='sound'){mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON';b.textContent=mute?'🔇 사운드 켜기':'🔊 사운드 끄기'}else if(a==='pauseMenu'){gameState='playing';pauseToggle();}else if(a==='title')titleMenu();else if(a==='resume')pauseToggle();else if(a==='hub'){enterHubFromMenu();}else if(a==='hubApply')buyUpgrade();else if(a==='hubRefresh')refreshHubOffers();else if(a==='rewardRefresh')refreshCombatUpgradeOffers();else if(a==='hubEconomy')hubEconomyMenu();else if(a==='hubReset')prepareHubReset();else if(a==='hubResetConfirm')resetHubUpgrades();else if(a==='hubResetCancel')cancelHubReset();else if(b.dataset.mod)requestSelectMod(b.dataset.mod);else if(b.dataset.perma){const touched=hubTouchPointerPending||e.pointerType==='touch';hubTouchPointerPending=false;hubPointerFocusPending=false;selectHubModule(b.dataset.perma,touched)}});
 $('modToggle').onclick=()=>{setModsExpanded(!modsExpanded);updateModToggle(activeModStacks().length+(p.mod==='neuro'?1:0))};
 $('pauseButton').onclick=pauseToggle;$('muteButton').onclick=()=>{mute=!mute;$('muteButton').textContent=mute?'SOUND: OFF':'SOUND: ON'};
 for(const b of document.querySelectorAll('.touch-controls button')){
