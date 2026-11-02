@@ -3040,46 +3040,37 @@ test('unavailable attacks are skipped and failed inputs do not consume moves',()
  for(let i=0;i<9;i++){t.p.stamina=100;t.p.attack=0;t.startAttack();moves.push(t.p.moveName)}
  for(let i=0;i<9;i+=3)assert.equal(new Set(moves.slice(i,i+3)).size,3);
 });
-test('new PA-K punch is a loud transient on its own audio bus and never ducks music',()=>{
- const previousAC=world.AudioContext,previousBgm=world.__revenantBgm;
- const filters=[],gains=[],compressors=[];let ctx,ducked=false;
- const param=()=>({value:0,max:0,
-  setValueAtTime(v){this.value=v;this.max=Math.max(this.max,v)},
-  linearRampToValueAtTime(v){this.value=v;this.max=Math.max(this.max,v)},
-  exponentialRampToValueAtTime(v){this.value=v;this.max=Math.max(this.max,v)}});
- const node=()=>({gain:param(),frequency:param(),Q:param(),threshold:param(),knee:param(),ratio:param(),attack:param(),release:param(),
-  connect(other){return other},disconnect(){},start(){},stop(){}});
- class FakeAudioContext{
-  constructor(){ctx=this;this.currentTime=12;this.sampleRate=44100;this.destination=node();this.state='running'}
-  createDynamicsCompressor(){const n=node();compressors.push(n);return n}
-  createGain(){const n=node();gains.push(n);return n}
-  createOscillator(){return node()}
-  createBufferSource(){return node()}
-  createBiquadFilter(){const n=node();filters.push(n);return n}
-  createBuffer(_,length,rate){return{sampleRate:rate,getChannelData:()=>new Float32Array(length)}}
+test('rounded drum and cannon playback is unclipped, predecoded, and never ducks the music',()=>{
+ const prior=world.AudioContext,priorMusic=world.__revenantBgm,played=[],gains=[];
+ const p=()=>({value:0,setValueAtTime(v){this.value=v},linearRampToValueAtTime(v){this.value=v}});
+ const node=()=>({gain:p(),threshold:{value:0},knee:{value:0},ratio:{value:0},
+  attack:{value:0},release:{value:0},playbackRate:{value:1},
+  connect(x){return x},disconnect(){},stop(){}});
+ let context;
+ class FakeAC{
+  constructor(){context=this;this.currentTime=12;this.state='running';this.destination=node();}
+  createDynamicsCompressor(){return node()}
+  createGain(){const v=node();gains.push(v);return v}
+  createBufferSource(){const v=node();v.start=()=>played.push(v);return v}
  }
- world.AudioContext=FakeAudioContext;
+ world.AudioContext=FakeAC;let ducked=false;
  world.__revenantBgm={duckImpact(){ducked=true}};
+ vm.runInContext("audio=new AudioContext();Object.assign(impactSfxBuffers,{punchA:{duration:.83},punchB:{duration:.83},heavy:{duration:1.12},parry:{duration:.83},counter:{duration:1.55}});lastImpactAudio=-99;",world);
  try{
-  assert.equal(t.playImpactSound('punch',1),true);
-  const firstSnap=filters.find(f=>f.type==='highpass');
-  assert(firstSnap&&firstSnap.frequency.value>=1800,'ordinary punch needs instant audible snap');
-  assert(gains.some(g=>g.gain.max>=.9),'foreground punch transient keeps its original input envelope');
-  assert(gains.some(g=>Math.abs(g.gain.value-(.98*.70*.92))<1e-8),'impact master output is gently softened by 8%');
-  ctx.currentTime+=.14;
-  assert.equal(t.playImpactSound('heavy',1.35),true);
-  assert(filters.filter(f=>f.type==='highpass').length>=2,'heavy punch needs a second hard transient');
-  assert(gains.some(g=>g.gain.max>1.3),'heavy attack transient must exceed normal strike');
-  assert.equal(compressors.length,1,'reuse master limiter and prevent stacking clipping');
-  const toneStart=gains.length;t.sound('attack');
-  assert(gains.slice(toneStart).some(g=>Math.abs(g.gain.max-(.07*.70))<1e-8),'synthetic attack tone is set to 70%');
-  const breakStart=gains.length;t.sound('break');
-  assert(gains.slice(breakStart).some(g=>Math.abs(g.gain.max-(.19*.70*.92))<1e-8),'break impact peak is reduced by 8%');
-  assert(gains.slice(breakStart).some(g=>Math.abs(g.gain.value-(.22*.70*.92))<1e-8),'break noise is reduced by 8%');
-  assert.equal(ducked,false,'impact must not adjust music volume');
+  assert.equal(t.playImpactSound('punch'),true);
+  assert.equal(played.at(-1).buffer.duration,.83,'punch uses rounded original drum file');
+  assert.equal(t.playImpactSound('punch'),false,'no stacked noise on double hits');
+  context.currentTime+=.1;
+  assert.equal(t.playImpactSound('heavy',1.2),true);
+  assert.equal(played.at(-1).buffer.duration,1.12,'heavy drum low body and tail');
+  assert.equal(t.playImpactSound('counter',1.25),true,'cannon bypasses rapid-hit cooldown');
+  assert.equal(played.at(-1).buffer.duration,1.55,'deep cannon has long tail');
+  assert(gains.some(v=>Math.abs(v.gain.value-(.90*.70*.92))<1e-8),'safe bus master headroom');
+  assert.equal(ducked,false,'sound must never duck BGM');
  }finally{
-  if(previousAC)world.AudioContext=previousAC;else delete world.AudioContext;
-  if(previousBgm)world.__revenantBgm=previousBgm;else delete world.__revenantBgm;
+  if(prior)world.AudioContext=prior;else delete world.AudioContext;
+  if(priorMusic)world.__revenantBgm=priorMusic;else delete world.__revenantBgm;
+  vm.runInContext("audio=null;impactBus=null;impactVoices.length=0;Object.keys(impactSfxBuffers).forEach(k=>delete impactSfxBuffers[k]);",world);
  }
 });
 // The same 4x2 bitmap ground slam is wired to hero landing, elite special

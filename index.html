@@ -5627,7 +5627,7 @@ function prepareCombatVoices(){
  if(!AC||!window.__zCombatVoice)return Promise.resolve(false);
  if(!audio)audio=new AC();
  if(audio.state==='suspended')void audio.resume?.().catch?.(()=>{});
- return window.__zCombatVoice.prepare(audio);
+ return Promise.all([window.__zCombatVoice.prepare(audio),prepareImpactSfx(audio)]).then(()=>true);
 }
 function playCombatVoice(kind,actor=p){
  return !mute&&gameState==='playing'&&!!window.__zCombatVoice?.play(kind,actor,p);
@@ -5635,106 +5635,73 @@ function playCombatVoice(kind,actor=p){
 function playCombatGunfire(kind='normal',move=p.moveName){
  return !mute&&gameState==='playing'&&!!window.__zCombatVoice?.fire(kind,move);
 }
-// HEAVY IMPACT ENGINE: filtered percussion, deep sub-hit, crack transients,
-// and real device rumble. Audio is unlocked by the normal combat user gesture.
-let impactBus=null,impactNoiseBuf=null,lastImpactAudio=-99,lastImpactHaptic=-999999;
+// NEW ORIGINAL PERCUSSION IMPACTS: soft drums and a long cannon riposte.
+// All samples are predecoded before gameplay; BGM gain is never touched.
+const Z_IMPACT_SFX_URLS=Object.freeze({
+ punchA:'./assets/sfx/drum-punch-a.mp3?v=drum20261102',
+ punchB:'./assets/sfx/drum-punch-b.mp3?v=drum20261102',
+ heavy:'./assets/sfx/drum-heavy.mp3?v=drum20261102',
+ parry:'./assets/sfx/shield-parry.mp3?v=drum20261102',
+ counter:'./assets/sfx/cannon-riposte.mp3?v=drum20261102'
+});
+const impactSfxBuffers=Object.create(null);
+let impactSfxPromise=null,impactSfxContext=null,impactBus=null,lastImpactAudio=-99,lastImpactHaptic=-999999,impactDrumVariant=0;
+const impactVoices=[];
+function prepareImpactSfx(context=audio){
+ if(!context||typeof fetch!=='function')return Promise.reject(Error('타격음 디코딩을 시작할 수 없습니다'));
+ if(impactSfxPromise&&impactSfxContext===context)return impactSfxPromise;
+ impactSfxContext=context;
+ impactSfxPromise=Promise.all(Object.entries(Z_IMPACT_SFX_URLS).map(async([key,url])=>{
+  const r=await fetch(url);
+  if(!r.ok)throw Error('타격음 로드 실패: '+key);
+  const decoded=await context.decodeAudioData(await r.arrayBuffer());
+  if(!decoded||!decoded.duration)throw Error('타격음 디코딩 실패: '+key);
+  impactSfxBuffers[key]=decoded;
+ })).then(()=>true).catch(e=>{
+  impactSfxPromise=null;
+  Object.keys(impactSfxBuffers).forEach(k=>delete impactSfxBuffers[k]);
+  throw e;
+ });
+ return impactSfxPromise;
+}
 function playImpactSound(kind='punch',intensity=1){
- if(mute)return false;
+ if(mute||!audio||!impactSfxBuffers.counter)return false;
  try{
-  const AC=window.AudioContext||window.webkitAudioContext;
-  if(!AC)return false;
-  if(!audio)audio=new AC();
-  if(audio.state==='suspended')audio.resume?.().catch?.(()=>{});
-  const t=audio.currentTime;
-  // One rich impact per collision cluster, not five sounds piling up on mobs.
-  if(t-lastImpactAudio<.048)return false;
-  lastImpactAudio=t;
+  if(audio.state==='suspended')void audio.resume?.().catch?.(()=>{});
+  const now=audio.currentTime,priority=kind==='counter';
+  if(!priority&&now-lastImpactAudio<.052)return false;
+  if(!priority)lastImpactAudio=now;
+  const key=priority?'counter':kind==='parry'?'parry':
+    ['heavy','execution','dashImpact','slam'].includes(kind)?'heavy':
+    ((impactDrumVariant++&1)?'punchB':'punchA');
+  const buffer=impactSfxBuffers[key];if(!buffer)return false;
   if(!impactBus){
    const compressor=audio.createDynamicsCompressor();
-   compressor.threshold.value=-13;compressor.knee.value=6;compressor.ratio.value=7;
-   compressor.attack.value=.004;compressor.release.value=.16;
-   const output=audio.createGain();output.gain.value=.98*NON_BGM_SFX_LEVEL*IMPACT_SFX_TRIM;
-   compressor.connect(output).connect(audio.destination);
-   impactBus=compressor;
+   compressor.threshold.value=-9;compressor.knee.value=8;compressor.ratio.value=2.5;
+   compressor.attack.value=.005;compressor.release.value=.21;
+   const output=audio.createGain();
+   output.gain.value=.90*NON_BGM_SFX_LEVEL*IMPACT_SFX_TRIM;
+   compressor.connect(output).connect(audio.destination);impactBus=compressor;
   }
-  const heavy=['heavy','execution','dashImpact','slam'].includes(kind);
-  const parrySound=kind==='parry';
-  const strength=Math.max(.65,Math.min(1.6,intensity));
-  const duration=heavy?.39:.27;
-  if(!impactNoiseBuf||impactNoiseBuf.sampleRate!==audio.sampleRate){
-   const len=Math.ceil(audio.sampleRate*.29);
-   impactNoiseBuf=audio.createBuffer(1,len,audio.sampleRate);
-   const data=impactNoiseBuf.getChannelData(0);
-   let filtered=0;
-   for(let i=0;i<len;i++){
-    filtered=filtered*.58+(Math.random()*2-1)*.42;
-    data[i]=filtered;
-   }
+  while(impactVoices.length>=4){
+   const prior=impactVoices.shift();try{prior.source.stop()}catch(_){}
   }
-  // Sub-bass body blow, dropping pitch like a struck heavy drum.
-  const bass=audio.createOscillator(),low=audio.createGain();
-  bass.type='sine';
-  bass.frequency.setValueAtTime(parrySound?176:heavy?115:148,t);
-  bass.frequency.exponentialRampToValueAtTime(parrySound?58:heavy?37:51,t+duration);
-  low.gain.setValueAtTime(.0001,t);
-  low.gain.linearRampToValueAtTime((heavy?1.0:.82)*strength,t+.004);
-  low.gain.exponentialRampToValueAtTime(.0001,t+duration);
-  bass.connect(low).connect(impactBus);bass.start(t);bass.stop(t+duration+.01);
-  bass.onended=()=>{bass.disconnect();low.disconnect()};
-  // Audible low-mid body on phone speakers as well as the deep sub layer.
-  const body=audio.createOscillator(),bodyGain=audio.createGain();
-  body.type='triangle';body.frequency.setValueAtTime(heavy?245:320,t);
-  body.frequency.exponentialRampToValueAtTime(heavy?96:130,t+duration*.8);
-  bodyGain.gain.setValueAtTime(.0001,t);bodyGain.gain.linearRampToValueAtTime((heavy?.76:.60)*strength,t+.002);
-  bodyGain.gain.exponentialRampToValueAtTime(.0001,t+duration*.85);
-  body.connect(bodyGain).connect(impactBus);body.start(t);body.stop(t+duration);
-  body.onended=()=>{body.disconnect();bodyGain.disconnect()};
-  // Saturated low-mid crunch still reads on small mobile speakers.
-  const crunch=audio.createOscillator(),cg=audio.createGain(),cf=audio.createBiquadFilter();
-  crunch.type='sawtooth';crunch.frequency.setValueAtTime(heavy?185:235,t);
-  crunch.frequency.exponentialRampToValueAtTime(heavy?78:105,t+duration*.83);
-  cf.type='lowpass';cf.frequency.value=heavy?750:920;
-  cg.gain.setValueAtTime(.0001,t);
-  cg.gain.linearRampToValueAtTime((heavy?.40:.29)*strength,t+.003);
-  cg.gain.exponentialRampToValueAtTime(.0001,t+duration*.65);
-  crunch.connect(cf).connect(cg).connect(impactBus);
-  crunch.start(t);crunch.stop(t+duration);
-  crunch.onended=()=>{crunch.disconnect();cf.disconnect();cg.disconnect()};
-  // Near-instant high-frequency 'PAK!' attack, in front of the low-body thud.
-  // Percussion is foregrounded directly; the soundtrack gain never changes.
-  const snap=audio.createBufferSource(),snapFilter=audio.createBiquadFilter(),snapGain=audio.createGain();
-  snap.buffer=impactNoiseBuf;snapFilter.type='highpass';
-  snapFilter.frequency.value=parrySound?2400:heavy?1550:1900;
-  snapGain.gain.setValueAtTime(.0001,t);
-  snapGain.gain.linearRampToValueAtTime((parrySound?.85:heavy?1.12:.95)*strength,t+.0018);
-  snapGain.gain.exponentialRampToValueAtTime(.0001,t+(heavy?.067:.048));
-  snap.connect(snapFilter).connect(snapGain).connect(impactBus);
-  snap.start(t);snap.stop(t+(heavy?.075:.055));
-  snap.onended=()=>{snap.disconnect();snapFilter.disconnect();snapGain.disconnect()};
-  // A short armor-crack and gritty debris after the initial pop.
-  for(const [freq,vol,end] of [[heavy?480:660,heavy?.94:.76,.19],[parrySound?2200:1900,parrySound?.75:.65,.072],[heavy?3200:2700,heavy?.42:.30,.10]]){
-   const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();
-   source.buffer=impactNoiseBuf;
-   filter.type='bandpass';filter.frequency.value=freq;filter.Q.value=.75;
-   gain.gain.setValueAtTime(.0001,t);
-   gain.gain.linearRampToValueAtTime(vol*strength,t+.003);
-   gain.gain.exponentialRampToValueAtTime(.0001,t+end);
-   source.connect(filter).connect(gain).connect(impactBus);
-   source.start(t);source.stop(t+end+.015);
-   source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect()};
-  }
-  // Metallic click over parries; bass and filtered crunch dominate regular hits.
-  if(parrySound){
-   const metal=audio.createOscillator(),mg=audio.createGain();
-   metal.type='triangle';metal.frequency.setValueAtTime(1200,t);
-   metal.frequency.exponentialRampToValueAtTime(470,t+.085);
-   mg.gain.setValueAtTime(.18,t);mg.gain.exponentialRampToValueAtTime(.0001,t+.10);
-   metal.connect(mg).connect(impactBus);metal.start(t);metal.stop(t+.11);
-   metal.onended=()=>{metal.disconnect();mg.disconnect()};
-  }
+  const source=audio.createBufferSource(),gain=audio.createGain();source.buffer=buffer;
+  source.playbackRate.value=key==='punchB'?.965:1;
+  const level=key==='counter'?1.23:key==='parry'?.88:key==='heavy'?1.02:.88;
+  const volume=level*Math.max(.65,Math.min(1.35,intensity)),duration=buffer.duration/source.playbackRate.value;
+  gain.gain.setValueAtTime(.0001,now);gain.gain.linearRampToValueAtTime(volume,now+.006);
+  gain.gain.setValueAtTime(volume,now+Math.max(.012,duration-.048));
+  gain.gain.linearRampToValueAtTime(.0001,now+duration);
+  source.connect(gain).connect(impactBus);
+  const voice={source};impactVoices.push(voice);
+  source.onended=()=>{const i=impactVoices.indexOf(voice);if(i>=0)impactVoices.splice(i,1);source.disconnect();gain.disconnect()};
+  source.start(now);source.stop(now+duration+.004);
   return true;
  }catch(_){return false}
 }
+window.__zImpactAudioStatus=()=>({ready:Object.keys(impactSfxBuffers).length===5,
+ loaded:Object.keys(impactSfxBuffers).length,playing:impactVoices.length});
 // Single active controller, compatible with current Gamepad.vibrationActuator
 // and older hapticActuators. Controllers and mobile browsers may omit both.
 const RUMBLE_PROFILES={
@@ -7351,7 +7318,7 @@ function applyForwardSpecialSplash(kind,impactX,impactY,directTargets,fullDamage
 }
 function attackCheck(){
  if(p.riposteStrikeTarget){
-  playCombatGunfire('counter','superman_punch');
+  // Cannon playback occurs only after a confirmed counter hit.
   const e=p.riposteStrikeTarget;p.riposteStrikeTarget=null;
   if(e.dead||!enemies.includes(e))return;
   // Counter damage and splash grow with its own upgrade; never reserve an HP floor.
@@ -7387,7 +7354,7 @@ function attackCheck(){
   spawnModBitmap('gold',e.x,e.y-133,skill.visual*.75,'brightness(1.6) saturate(1.4)',.35);
    if(fx.at(-1)?.kind==='modBitmap')fx.at(-1).specialAttackFx=true;
   floatText('CRUSH COUNTER!',e.x,e.y-220,'#ffe098');
-  playImpactSound('heavy',1.65);vibrateImpact('dashImpact',true);
+  playImpactSound('counter',1.25);vibrateImpact('dashImpact',true);
   p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
   return;
  }

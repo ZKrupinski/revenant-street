@@ -94,7 +94,8 @@
    const offset=sampleOnset(buffer),rate=source.playbackRate.value;
    const length=Math.min(power?.80:.52,Math.max(.03,(buffer.duration-offset)/rate));
    if(!(length>.02))return false;
-   const volume=kind==='execution'?1.42:kind==='slam'?1.36:power?1.22:.98;
+   // Keep mechanical gunshots subtle under the new rounded drum hits.
+   const volume=kind==='execution'?1.42:kind==='slam'?1.36:power?1.22:.29;
    gain.gain.setValueAtTime(.0001,now);
    gain.gain.linearRampToValueAtTime(volume,now+.006);
    gain.gain.setValueAtTime(volume,Math.max(now+.006,now+length-.065));

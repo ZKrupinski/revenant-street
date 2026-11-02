@@ -151,7 +151,7 @@ async function combatVoices(){
   assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'mechanical effect is mp3: '+file);
  }
  assert(html.includes("playCombatGunfire(p.dashSmash?'heavy':'normal',p.moveName)"),'all ordinary move attacks must fire at their contact frame');
- assert(html.includes("playCombatGunfire('counter','superman_punch')"),'parry counter fires');
+ assert(html.includes("playImpactSound('counter',1.25)"),'confirmed counter fires original cannon instead of gunshot');
  assert(html.includes("playCombatGunfire('execution','uppercut')"),'execution fires');
  assert(html.includes("playCombatGunfire('slam','axe_kick')"),'powered landing fires');
  assert(html.includes("playCombatVoice('heroMove')"),'movement cycles occasional quiet metallic mechanisms');
