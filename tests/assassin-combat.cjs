@@ -2322,7 +2322,7 @@ test('user uploaded ten-frame parry artwork is embedded intact and uses 5x2 scre
  const blob=require('node:crypto').createHash('sha1').update('blob '+avif.length+'\0').update(avif).digest('hex');
  assert.equal(blob,'6182b78d4426ffe678e36306d65c5e23ee29c9be','must match the validated uploaded ten-frame asset');
  assert(html.includes('spawnParrySuccessFx(p.x+p.facing*42,p.y-132,p.facing);'),'impact is anchored near hero forearm');
- assert(html.includes('const w=318,h=296'),'the corrected ten-frame burst keeps a balanced wide silhouette');
+ assert(html.includes('const w=318*1.12,h=296*1.12'),'the corrected ten-frame burst grows 12% without changing its source ratio');
  assert(html.includes("ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.32,-h*.5,w,h)"));
  assert(html.includes("ctx.globalCompositeOperation='screen'"),'solid black frame background must not become a rectangle');
  const first=html.indexOf('function parrySuccessSourceRect(w,h,frame){');

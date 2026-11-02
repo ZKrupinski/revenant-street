@@ -41,6 +41,7 @@ for(let i=0;i<8;i++){
  assert.equal(a[3],Math.round((col+1)*1774/4)-a[1]);
  assert.equal(a[4],Math.round((row+1)*887/2)-a[2]);
  assert.equal(a.length,9);
+ assert(Math.abs(a[7]-(fx.width*1.15))<1e-6,'parry follow-up PNG is 15% larger while source crop remains pixel-exact');
  assert(a[7]>a[8],'counter blast is spread toward enemy, not tall smoke');
 }
 env.spawn({x:500,y:560,facing:-1},{x:320,y:560});

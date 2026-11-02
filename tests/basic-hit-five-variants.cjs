@@ -45,6 +45,7 @@ for(const file of ['index.html','play-fixed-20261102.html']){
   assert.equal(draw.composite,'screen','raster visible over fighters');
   assert(draw.filter.includes('brightness(2.1)'),'brighten pixel art');
   assert.equal(draw.args[3],160);assert.equal(draw.args[4],104);
+  assert(Math.abs(draw.args[7]-f.width*1.18)<1e-6,'five painted hit variants are enlarged by 18% without expanding the sampled source cell');
  }
  assert(world.window.__zHitFxStatus().drawn>=5,'live render instrumentation');
 }
