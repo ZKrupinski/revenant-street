@@ -13,7 +13,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  assert(src.includes("project_z_upgrade_'+k+'_8f.png?v=20261102-clean-alpha-active-v2"));
  assert(src.includes('await Z_UPGRADE_VFX_PRELOAD'),'must load six images before combat');
  assert(src.includes("if(f.kind==='upgradeVfxSprite'){drawUpgradeVfx(f);continue;}"));
- assert(src.includes("f.kind==='basicHitSprite'||f.kind==='upgradeVfxSprite'?realDt"));
+ assert(src.includes("f.kind==='basicHitSprite'||f.kind==='upgradeVfxSprite'||f.kind==='combatWordSprite'?realDt"),'bitmap hit, upgrade, and animated combat words use real time');
  assert(src.includes('frame*cw,0,cw,im.naturalHeight'),'frame cropping');
  for(const marker of [
   "spawnEnemyContactVfx('chain',nearby","spawnEnemyContactVfx('nova',e",
