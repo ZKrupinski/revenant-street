@@ -5329,6 +5329,36 @@ const Z_UPGRADE_VFX_PRELOAD=Promise.all(Z_UPGRADE_VFX_NAMES.map(k=>new Promise((
 window.__zUpgradeVfxStatus=()=>Object.fromEntries(Z_UPGRADE_VFX_NAMES.map(k=>[k,{
  ready:Z_UPGRADE_VFX[k].ready,error:Z_UPGRADE_VFX[k].error,drawn:Z_UPGRADE_VFX[k].drawn
 }]));
+// Dedicated transparent eight-frame mint healing artwork: absolutely no
+// ambient bubble. Only emit when an HP increase is confirmed.
+const Z_HEAL_ART={image:new Image(),ready:false,missing:false,drawn:0};
+Z_HEAL_ART.image.onload=()=>{Z_HEAL_ART.ready=Z_HEAL_ART.image.naturalWidth===1280&&Z_HEAL_ART.image.naturalHeight===160;Z_HEAL_ART.missing=!Z_HEAL_ART.ready};
+Z_HEAL_ART.image.onerror=()=>{Z_HEAL_ART.ready=false;Z_HEAL_ART.missing=true};
+Z_HEAL_ART.image.src='./assets/vfx/project_z_heal_mint_8f.png?v=20261102-soft-healing-v1';
+window.__zHealVfxStatus=()=>({ready:Z_HEAL_ART.ready,missing:Z_HEAL_ART.missing,drawn:Z_HEAL_ART.drawn});
+function spawnHealVfx(amount,mode='burst'){
+ if(!(amount>.001)||gameState==='dying')return false;
+ const intervals={regen:1.15,leech:.42,finisher:.20,burst:.08};
+ const stamps=p._healFxAt||(p._healFxAt={});
+ if(time-(stamps[mode]??-100)<(intervals[mode]??.08))return false;
+ stamps[mode]=time;
+ if(fx.length>=96)fx.splice(0,fx.length-79);
+ const scale=mode==='regen'?.64:mode==='leech'?.70:Math.min(1.22,.83+amount*.008);
+ const duration=mode==='regen'?.44:.42;
+ fx.push({kind:'healVfxSprite',x:p.x,y:p.y-111,scale,mode,life:duration,maxLife:duration});
+ if((mode==='burst'||mode==='finisher')&&amount>=3)floatText('+'+Math.round(amount)+' HP',p.x,p.y-219,'#8dffcb');
+ return true;
+}
+function drawHealVfx(f){
+ const im=Z_HEAL_ART.image;
+ if(!Z_HEAL_ART.ready||!im.complete||!im.naturalWidth)return false;
+ const progress=clamp(1-f.life/Math.max(.001,f.maxLife),0,.999999),frame=Math.min(7,Math.floor(progress*8));
+ const cell=im.naturalWidth/8,width=170*f.scale,height=width*im.naturalHeight/cell;
+ const opacity=(f.mode==='regen'?.57:.76)*(progress>.67?clamp((1-progress)/.33,0,1):1);
+ ctx.save();ctx.globalAlpha=opacity;ctx.translate(f.x,f.y);
+ ctx.drawImage(im,frame*cell,0,cell,im.naturalHeight,-width*.5,-height*.5,width,height);
+ ctx.restore();Z_HEAL_ART.drawn++;return true;
+}
 function spawnUpgradeVfx(k,x,y,scale=1,dir=1,rotation=0,duration=.33){
  if(!Z_UPGRADE_VFX[k])return false;
  if(fx.length>=94)fx.splice(0,fx.length-78);
@@ -5444,23 +5474,13 @@ function drawModEnergy(){
 }
 function drawHeroModAura(x,y,z){
  if(!p.mods.length)return;
- // Persistent but restrained feedback for defensive / mobility modules.
- // The bitmap stays behind the hero; heavy flashes happen only on contact.
- if(modRank('guard')){
-  const cycle=(time+1.0)%3.2;
-  if(cycle<.66)drawUpgradeVfxLoop('guard',x,y-z-125,178+modRank('guard')*6,
-   (.20+.08*Math.sin(cycle/0.66*Math.PI))*(1-cycle/.75),cycle/.66,p.facing);
- }
+ // No idle guard bubble: actual damage prevention makes a tiny one-shot ping.
  if(modRank('haste')&&(p.attack>0||p.running||Math.abs(p.vx||0)>90)){
   const cycle=(time+.5)%1.75;
   if(cycle<.35)drawUpgradeVfxLoop('chain',x-p.facing*42,y-z-98,82,
    .27*(1-cycle/.39),cycle/.35,p.facing);
  }
- if(modRank('regen')&&p.hp<p.maxHp){
-  const cycle=time%3.6;
-  if(cycle<.53)drawUpgradeVfxLoop('guard',x,y-z-112,108,
-   .17*(1-cycle/.6),cycle/.53,p.facing);
- }
+ // Regeneration is painted only on confirmed HP gain, never as an aura.
  // Equipped elemental modules retain a subtle, single painted cue on
  // the hero. Afflicted enemies show a stronger loop for the actual status.
  // Rotate multiple equipped elements rather than stacking opaque flashes.
@@ -6033,7 +6053,7 @@ function resetPlayer(){deathCinematic.active=false;deathCinematic.elapsed=0;
  comboCameraFocusX=0;comboCameraPulse=0;comboCameraLastSnap=-99;
  strikeCameraTime=0;strikeCameraTarget=1;
  cameraRecenterClock=0;cameraRecenterHold=0;cameraRecenterBlend=0;
- resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p._voiceAt=-99;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.dodgeDuration=.30;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
+ resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p.regenAccumulated=0;p._healFxAt={};p._voiceAt=-99;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.dodgeDuration=.30;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
  p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
  p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];combatUpgrades={charge:0,threshold:76,earned:0,lastAt:-100,rerolls:0,lastOffers:[],shown:{},offered:[]};upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.comboMoveCycle=[];p.comboMoveCursor=0;p.comboMoveCount=0;p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.dashSparkDistance=0;p.dashSparkCount=0;p.dashSparkSeq=0;p.backstepping=false;p.evadeBackstep=false;p.evadeExhausted=false;p.dashBufferedUntil=0;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;runStats={attacks:0,hits:0,style:{jump:0,dash:0,parry:0}};runRewardClaimed=false;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
@@ -6128,6 +6148,7 @@ function requiredSceneArt(preview=false){
   ['대쉬 후 번개 관통 8프레임 비트맵',()=>ensureBitmapDecoded(DASH_PIERCE_ART.image)],
    // The exact 8-frame user artwork must be fully decoded before battle begins.
    ['패링 반격 원본 8프레임 비트맵',()=>ensureBitmapDecoded(PARRY_COUNTER_ART.image)],
+  ['치료 민트 8프레임 비트맵',()=>ensureBitmapDecoded(Z_HEAL_ART.image)],
   ['좌우 방향 화살표 8프레임',()=>ensureBitmapDecoded(offscreenArrow)],
   ['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)],
   ...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임',()=>ensureBitmapDecoded(intruderMotionImages[k])]),
@@ -6653,7 +6674,9 @@ function execute(target){
  p.facing=target.x>=p.x?1:-1;p.inv=.9;p.z=0;p.vz=0;
  p.moveName='uppercut';p.attackDuration=.48;p.attack=.48;p.hitDone=true;runStats.attacks++;
  p.attackQueued=false;p.comboWindow=0;
- p.hp=clamp(p.hp+14,0,p.maxHp);p.credits+=target.type==='boss'?190:65;
+ const hpBeforeFinisher=p.hp;
+ p.hp=clamp(p.hp+14,0,p.maxHp);spawnHealVfx(p.hp-hpBeforeFinisher,'finisher');
+ p.credits+=target.type==='boss'?190:65;
  hurtEnemy(target,target.type==='boss'?260:999,100);
  screenShake=25;screenTint=.6;hitStop=.15;
  fxBurst(target.x,target.y-130,target.type==='boss'?'red':'gold',2.4);
@@ -7235,10 +7258,11 @@ function attackCheck(){
  const priorHealHp=p.hp;
  p.hp=clamp(p.hp+dmg*modRank('leech')*.02,0,p.maxHp);
  if(p.hp>priorHealHp+.05){
+  spawnHealVfx(p.hp-priorHealHp,'leech');
   const vx=p.x-e.x,vy=p.y-e.y;
   spawnUpgradeVfx('leech',(e.x+p.x)/2,(e.y+p.y)/2-128,
    clamp(Math.hypot(vx,vy)/185,.65,1.7),p.facing,Math.atan2(vy,vx),.39);
-  spawnUpgradeVfx('leech',p.x,p.y-120,.70+modRank('leech')*.07,-p.facing,0,.29);
+  // The red drain stops at the victim; a separate mint pulse shows actual healing.
  }
  if(modRank('chain')&&Math.random()<Math.min(.85,modRank('chain')*.25)){
   for(const nearby of enemies.filter(o=>o!==e&&!o.dead&&Math.abs(o.x-e.x)<195&&Math.abs(o.y-e.y)<80).slice(0,2+modRank('chain'))){
@@ -7327,8 +7351,8 @@ function enemyAttack(e){
  if(p.inv>0||p.dodge>0)return;const dmg=e.damage*(eliteCleave?1.65:1)*(e.bossDamageMult||1);
  const damageTaken=dmg*clamp(1-modRank('guard')*.09-perma.armor*.04,.36,1);
  p.hp=Math.max(0,p.hp-damageTaken);p.hitFlash=.19;
- if(modRank('guard')){
-  spawnUpgradeVfx('guard',p.x,p.y-132,1.13+modRank('guard')*.07,p.facing,0,.35);
+ if(modRank('guard')&&damageTaken<dmg*clamp(1-perma.armor*.04,.36,1)-.01){
+  spawnUpgradeVfx('guard',p.x,p.y-126,.42+Math.min(6,modRank('guard'))*.024,p.facing,0,.21);
  }
  p.receivedHits=(p.receivedHits||0)+1;
  const heavy=e.type==='boss'||eliteCleave||
@@ -7588,10 +7612,13 @@ function control(dt,pad){
  p.hp=clamp(p.hp+regen*.55*dt,0,p.maxHp);
  if(regen&&p.hp>wasHp){
   p.regenPulseClock=(p.regenPulseClock||0)+dt;
-  if(p.regenPulseClock>=.9){p.regenPulseClock=0;
-   spawnUpgradeVfx('guard',p.x,p.y-130,.46+regen*.065,p.facing,0,.36);
+  p.regenAccumulated=(p.regenAccumulated||0)+(p.hp-wasHp);
+  if(p.regenPulseClock>=1.35){
+   p.regenPulseClock=0;
+   spawnHealVfx(p.regenAccumulated,'regen');
+   p.regenAccumulated=0;
   }
- }else p.regenPulseClock=0;
+ }else {p.regenPulseClock=0;p.regenAccumulated=0;}
  p.novaCooldown=Math.max(0,(p.novaCooldown||0)-dt);
  p.comboWindow=Math.max(0,p.comboWindow-dt);
  p.hitTimeout=Math.max(0,p.hitTimeout-dt);if(p.hitTimeout===0)p.hits=0;
@@ -8559,6 +8586,7 @@ function parrySuccessSourceRect(w,h,frame){
 }
 function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+820;for(const f of fx){if(f.x<left||f.x>right)continue;
  if(f.kind==='upgradeVfxSprite'){drawUpgradeVfx(f);continue;}
+  if(f.kind==='healVfxSprite'){drawHealVfx(f);continue;}
   if(f.kind==='basicHitSprite'){drawBasicContactFx(f);continue;}
  if(f.kind==='dashPierceSprite'){drawDashPierceSprite(f);continue;}
   if(f.kind==='parryCounterSprite'){drawParryCounterSprite(f);continue;}
@@ -8769,24 +8797,23 @@ function updateRewardSelection(dt){
 }
 function selectMod(m){
  if(!MOD_META[m]||modRank(m)>=MOD_LEVEL_CAP)return;
- const intermediate=upgradeReason==='mid';
+ const intermediate=upgradeReason==='mid',hpBeforeUpgrade=p.hp;
  p.mods.push(m);
  p.mod=(p.mods.includes('shock')&&p.mods.includes('bleed'))?'neuro':
   [...new Set(p.mods.filter(k=>['fire','shock','bleed','ice'].includes(k)))].join('+')||'none';
- if(m==='vital'){p.maxHp+=25;p.hp+=25;
-  spawnModBitmap('gold',p.x,p.y-131,1.38+modRank('vital')*.05,'hue-rotate(87deg)',.50);
- }
+ if(m==='vital'){p.maxHp+=25;p.hp+=25;}
  p.hp=clamp(p.hp+(intermediate?12:20),0,p.maxHp);
+ spawnHealVfx(p.hp-hpBeforeUpgrade,'burst');
  p.weapon=0;p.maxWeapon=18;p.stamina=100;level++;
  gameState='playing';hideMenu();
  if(!intermediate)spawnWave();
  upgradeReason='wave';
  const info=MOD_META[m],rank=modRank(m);
  floatText(info.icon+' x'+rank,p.x,p.y-244,info.color);
- if(Z_UPGRADE_VFX[m])spawnUpgradeVfx(m,p.x,p.y-126,1.18,p.facing,0,.43);
- else spawnModBitmap(m==='shock'||m==='ice'||m==='haste'||m==='guard'?'blue':
+ if(Z_UPGRADE_VFX[m])spawnUpgradeVfx(m,p.x,p.y-126,m==='guard'?.49:1.18,p.facing,0,m==='guard'?.22:.43);
+ else if(m!=='vital'&&m!=='regen')spawnModBitmap(m==='shock'||m==='ice'||m==='haste'?'blue':
    m==='bleed'||m==='leech'?'red':'gold',p.x,p.y-124,
-   m==='vital'?1.03:1.27,'brightness(1.17)',.39);
+   1.27,'brightness(1.17)',.39);
  sound('parry');setStatus('COMBAT LIVE');updateHud();
 }
 function completeMenu(){

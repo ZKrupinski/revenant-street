@@ -5,6 +5,7 @@ on:
       - 'assets/vfx/project_z_upgrade_**'
       - 'tests/upgrade-vfx-six.cjs'
       - 'tests/upgrade-vfx-active.cjs'
+      - 'tests/heal-guard-vfx.cjs'
       - 'tests/loading-audio.cjs'
       - 'index.html'
       - 'play-fixed-20261102.html'
@@ -20,5 +21,6 @@ jobs:
           node-version: '22'
       - run: node tests/upgrade-vfx-six.cjs
       - run: node tests/upgrade-vfx-active.cjs
+      - run: node tests/heal-guard-vfx.cjs
       - run: node tests/basic-hit-five-variants.cjs
       - run: node tests/loading-audio.cjs

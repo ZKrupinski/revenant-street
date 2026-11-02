@@ -61,9 +61,9 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  assert(html.includes('drawUpgradeVfxLoop(Z_ELEMENT_IMPACT_SPRITES[mod]'),'equipped hero elemental aura uses transparent PNG');
  assert(html.includes("drawUpgradeVfxLoop(state.sprite"),'reuse actual 8F bitmap during status timer');
  assert(html.includes('for(const e of enemies)'),'enemy-side effect rather than hero-only');
- assert(html.includes("drawUpgradeVfxLoop('guard',x"),'ambient guard cue');
+ assert(!html.includes("drawUpgradeVfxLoop('guard',x"),'remove passive floating shield aura');
  assert(html.includes("spawnUpgradeVfx('chain',p.x-p.facing*24"),'haste active on attack');
- assert(html.includes("spawnUpgradeVfx('guard',p.x,p.y-130"),'regen visibly triggers');
+ assert(html.includes("spawnHealVfx(p.regenAccumulated,'regen')"),'regen uses actual HP and a mint recovery pulse');
  assert(html.includes("spawnUpgradeVfx('crit',e.x+p.facing*23"),'impact affects enemy');
  assert(html.includes("spawnUpgradeVfx('power',e.x,e.y-111"),'momentum affects enemy');
  assert(html.includes("if(f.kind==='upgradeVfxSprite'){drawUpgradeVfx(f);continue;}"),'existing effect renderer retained');

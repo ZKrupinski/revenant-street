@@ -35,6 +35,8 @@ jobs:
         run: node tests/startup-performance.cjs
       - name: Combat and animation regression tests
         run: node tests/assassin-combat.cjs
+      - name: One-shot guard and mint healing sprite regression
+        run: node tests/heal-guard-vfx.cjs
       - name: Shared hand-painted ground slam 8F PNG regression
         run: node tests/ground-slam-bitmap.cjs
       - name: Dash lightning pierce 8F bitmap and on-hit regression
