@@ -3040,7 +3040,7 @@ test('unavailable attacks are skipped and failed inputs do not consume moves',()
  for(let i=0;i<9;i++){t.p.stamina=100;t.p.attack=0;t.startAttack();moves.push(t.p.moveName)}
  for(let i=0;i<9;i+=3)assert.equal(new Set(moves.slice(i,i+3)).size,3);
 });
-test('rounded drum and cannon playback is unclipped, predecoded, and never ducks the music',()=>{
+test('drum and shotgun Foley stays predecoded and never ducks the music',()=>{
  const prior=world.AudioContext,priorMusic=world.__revenantBgm,played=[],gains=[];
  const p=()=>({value:0,setValueAtTime(v){this.value=v},linearRampToValueAtTime(v){this.value=v}});
  const node=()=>({gain:p(),threshold:{value:0},knee:{value:0},ratio:{value:0},
@@ -3055,17 +3055,19 @@ test('rounded drum and cannon playback is unclipped, predecoded, and never ducks
  }
  world.AudioContext=FakeAC;let ducked=false;
  world.__revenantBgm={duckImpact(){ducked=true}};
- t.seedImpactAudio(new FakeAC(),{punchA:{duration:.83},punchB:{duration:.83},heavy:{duration:1.12},parry:{duration:.83},counter:{duration:1.55}});
+ t.seedImpactAudio(new FakeAC(),{punchA:{duration:.33},punchB:{duration:.36},heavy:{duration:.50},parry:{duration:.43},counter:{duration:.76}});
  try{
   assert.equal(t.playImpactSound('punch'),true);
-  assert.equal(played.at(-1).buffer.duration,.83,'punch uses rounded original drum file');
+  assert.equal(played.at(-1).buffer.duration,.33,'punch uses new rounded drum');
   assert.equal(t.playImpactSound('punch'),false,'no stacked noise on double hits');
   context.currentTime+=.1;
   assert.equal(t.playImpactSound('heavy',1.2),true);
-  assert.equal(played.at(-1).buffer.duration,1.12,'heavy drum low body and tail');
-  assert.equal(t.playImpactSound('counter',1.25),true,'cannon bypasses rapid-hit cooldown');
-  assert.equal(played.at(-1).buffer.duration,1.55,'deep cannon has long tail');
-  assert(gains.some(v=>Math.abs(v.gain.value-(.90*.70*.92))<1e-8),'safe bus master headroom');
+  assert.equal(played.at(-1).buffer.duration,.50,'heavy drum has half-second low body');
+  assert.equal(t.playImpactSound('parry',1.65),true,'shotgun rack bypasses regular-hit cooldown');
+  assert.equal(played.at(-1).buffer.duration,.43,'shotgun pump action');
+  assert.equal(t.playImpactSound('counter',1.25),true,'shotgun blast bypasses rapid-hit cooldown');
+  assert.equal(played.at(-1).buffer.duration,.76,'shotgun report has a tight, shorter tail');
+  assert(gains.some(v=>Math.abs(v.gain.value-(.88*.70*.92))<1e-8),'safe bus headroom with louder compressed Foley');
   assert.equal(ducked,false,'sound must never duck BGM');
  }finally{
   if(prior)world.AudioContext=prior;else delete world.AudioContext;
