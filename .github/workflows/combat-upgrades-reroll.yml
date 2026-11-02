@@ -1,0 +1,20 @@
+name: Combat upgrades + paid reroll QA
+on:
+  push:
+    paths:
+      - 'index.html'
+      - 'play-fixed-20261102.html'
+      - 'tests/combat-upgrades-reroll.cjs'
+      - '.github/workflows/combat-upgrades-reroll.yml'
+  workflow_dispatch:
+jobs:
+  combat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/combat-upgrades-reroll.cjs
+      - run: node tests/basic-hit-five-variants.cjs
+      - run: node tests/upgrade-vfx-six.cjs
