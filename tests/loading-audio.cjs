@@ -150,10 +150,10 @@ async function combatVoices(){
   assert(bytes.length>6000,'mechanical Foley is shipped locally: '+file);
   assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'mechanical effect is mp3: '+file);
  }
- assert(html.includes("if(p.dashSmash||p.airAttack)playCombatGunfire('heavy',p.moveName)"),'normal hits use drums, special moves keep gunshots');
+ assert(html.includes("Gun reports are contact-triggered by playImpactSound"),'normal and special hits use one ballistic impact bus without double firing');
  assert(html.includes("playImpactSound('counter',1.25)"),'confirmed counter fires dedicated shotgun blast');
- assert(html.includes("playCombatGunfire('execution','uppercut')"),'execution fires');
- assert(html.includes("playCombatGunfire('slam','axe_kick')"),'powered landing fires');
+ assert(html.includes("playCombatVoice('heroPower'); /* The hit itself drives the ballistic report. */"),'execution mechanism remains but does not double the gunshot');
+ assert(html.includes("Slam gun report already comes from the heavy impact bus"),'powered landing gun report is integrated into impact bus');
  assert(html.includes("playCombatVoice('heroMove')"),'movement cycles occasional quiet metallic mechanisms');
  const motions=['jab','roundkick','spinning_elbow','sidekick','uppercut',
   'spinning_heel','hammerfist','rising_headbutt','cross','axe_kick',
@@ -186,7 +186,7 @@ async function combatVoices(){
   assert(bytes.length>6000,'game embeds an original gun report: '+name);
   assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'MP3 gun report must be valid: '+name);
  }
- console.log('PASS: distinct enemy voice profiles, long elite deaths, unchanged BGM/gunfire/impacts');
+ console.log('PASS: enemy voice profiles, live ballistic impact routing, unchanged BGM');
 }
 function spriteRetry(){
  const images=[];let now=1000;
