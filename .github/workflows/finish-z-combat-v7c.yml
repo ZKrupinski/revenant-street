@@ -1,0 +1,87 @@
+name: Level-match final two basic attack gunshots and reject weak take
+on:
+  push:
+    paths: ['.github/workflows/finish-z-combat-v7c.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  finish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Install audio tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Import final two fresh gunshot takes, level-match against rifle attack recordings
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::group::Audited, normalized rifle-e"
+          curl -fsSL --retry 3 --connect-timeout 25 --max-time 100 \
+            "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_235207_8f191d4d-9e16-4cbe-b2b9-3bd88610ef64.mp3" -o "/tmp/rifle-e-raw.mp3"
+          test "$(wc -c < "/tmp/rifle-e-raw.mp3")" -gt 7000
+          ffmpeg -nostdin -hide_banner -i "/tmp/rifle-e-raw.mp3" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/rifle-e-raw.mp3" \
+            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-63dB,highpass=f=48,bass=g=3.2:f=108:w=.7,lowpass=f=12000,acompressor=threshold=0.14:ratio=2.6:attack=4:release=120:makeup=1.6,loudnorm=I=-15:LRA=7:TP=-1.2,alimiter=limit=0.90:level=false,apad,atrim=duration=1.38,afade=t=out:st=1.23:d=.15" \
+            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k "assets/sfx/z-combat-v7c-rifle-e.mp3"
+          report=$(ffmpeg -nostdin -hide_banner -i "assets/sfx/z-combat-v7c-rifle-e.mp3" -af volumedetect -f null - 2>&1)
+          mean=$(printf '%s\n' "$report" | sed -n 's/.*mean_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          peak=$(printf '%s\n' "$report" | sed -n 's/.*max_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          echo "rifle-e mean=$mean peak=$peak"
+          test -n "$mean" && test -n "$peak"
+          if ! awk -v p="$peak" -v m="$mean" 'BEGIN{exit !(p > -10 && m > -24)}'; then
+            echo "AI source lacks enough body, use a NEW EQ/pitch variation of the successfully recorded rifle rifle-c"
+            ffmpeg -nostdin -y -hide_banner -loglevel error -i "assets/sfx/z-combat-v7-rifle-c.mp3" \
+              -af "asetrate=44100*0.955,aresample=44100,highpass=f=45,bass=g=2.2:f=118:w=.7,equalizer=f=420:t=q:w=1:g=-1.0,alimiter=limit=0.87:level=false,apad,atrim=duration=1.38,afade=t=out:st=1.23:d=.15" \
+              -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k "assets/sfx/z-combat-v7c-rifle-e.mp3"
+          fi
+          report=$(ffmpeg -nostdin -hide_banner -i "assets/sfx/z-combat-v7c-rifle-e.mp3" -af volumedetect -f null - 2>&1)
+          mean=$(printf '%s\n' "$report" | sed -n 's/.*mean_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          peak=$(printf '%s\n' "$report" | sed -n 's/.*max_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          echo "FINAL rifle-e mean=$mean dB peak=$peak dB"
+          awk -v p="$peak" -v m="$mean" 'BEGIN{exit !(p > -10 && m > -24)}'
+          test "$(wc -c < "assets/sfx/z-combat-v7c-rifle-e.mp3")" -gt 15000
+          echo "::endgroup::"
+          echo "::group::Audited, normalized rifle-f"
+          curl -fsSL --retry 3 --connect-timeout 25 --max-time 100 \
+            "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_235206_7ce56d40-0989-4489-8348-0ef9192a8be1.mp3" -o "/tmp/rifle-f-raw.mp3"
+          test "$(wc -c < "/tmp/rifle-f-raw.mp3")" -gt 7000
+          ffmpeg -nostdin -hide_banner -i "/tmp/rifle-f-raw.mp3" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/rifle-f-raw.mp3" \
+            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-63dB,highpass=f=48,bass=g=3.2:f=108:w=.7,lowpass=f=12000,acompressor=threshold=0.14:ratio=2.6:attack=4:release=120:makeup=1.6,loudnorm=I=-15:LRA=7:TP=-1.2,alimiter=limit=0.90:level=false,apad,atrim=duration=1.38,afade=t=out:st=1.23:d=.15" \
+            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k "assets/sfx/z-combat-v7c-rifle-f.mp3"
+          report=$(ffmpeg -nostdin -hide_banner -i "assets/sfx/z-combat-v7c-rifle-f.mp3" -af volumedetect -f null - 2>&1)
+          mean=$(printf '%s\n' "$report" | sed -n 's/.*mean_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          peak=$(printf '%s\n' "$report" | sed -n 's/.*max_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          echo "rifle-f mean=$mean peak=$peak"
+          test -n "$mean" && test -n "$peak"
+          if ! awk -v p="$peak" -v m="$mean" 'BEGIN{exit !(p > -10 && m > -24)}'; then
+            echo "AI source lacks enough body, use a NEW EQ/pitch variation of the successfully recorded rifle rifle-d"
+            ffmpeg -nostdin -y -hide_banner -loglevel error -i "assets/sfx/z-combat-v7-rifle-d.mp3" \
+              -af "asetrate=44100*1.055,aresample=44100,highpass=f=45,bass=g=3.0:f=95:w=.7,equalizer=f=660:t=q:w=1:g=1.0,alimiter=limit=0.87:level=false,apad,atrim=duration=1.38,afade=t=out:st=1.23:d=.15" \
+              -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k "assets/sfx/z-combat-v7c-rifle-f.mp3"
+          fi
+          report=$(ffmpeg -nostdin -hide_banner -i "assets/sfx/z-combat-v7c-rifle-f.mp3" -af volumedetect -f null - 2>&1)
+          mean=$(printf '%s\n' "$report" | sed -n 's/.*mean_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          peak=$(printf '%s\n' "$report" | sed -n 's/.*max_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          echo "FINAL rifle-f mean=$mean dB peak=$peak dB"
+          awk -v p="$peak" -v m="$mean" 'BEGIN{exit !(p > -10 && m > -24)}'
+          test "$(wc -c < "assets/sfx/z-combat-v7c-rifle-f.mp3")" -gt 15000
+          echo "::endgroup::"
+      - name: Commit final comparable-level attacks
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/sfx/z-combat-v7c-rifle-e.mp3 assets/sfx/z-combat-v7c-rifle-f.mp3
+          if ! git diff --cached --quiet; then
+            git commit -m "Audio V7c: provide six consistently loud gunshot attack clips"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
