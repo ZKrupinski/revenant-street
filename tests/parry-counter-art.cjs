@@ -24,7 +24,7 @@ const draws=[],moves=[];
 const ctx={save(){},restore(){},translate(x,y){moves.push(['translate',x,y])},
  scale(x,y){moves.push(['scale',x,y])},drawImage(...args){draws.push(args)}};
 const env={Image:class {constructor(){this.complete=false;this.naturalWidth=1774;this.naturalHeight=887}set src(v){this._src=v;this.complete=true;this.onload?.()}get src(){return this._src}},
- ctx,fx:[],clamp:(v,a,b)=>Math.min(b,Math.max(a,v))};
+ ctx,fx:[],window:{},clamp:(v,a,b)=>Math.min(b,Math.max(a,v))};
 vm.createContext(env);
 vm.runInContext(html.slice(start,end)+'\nthis.spawn=spawnParryCounterFx;this.draw=drawParryCounterSprite;',env);
 assert.equal(env.PARRY_COUNTER_ART?.available,undefined); // lexical const stays isolated
