@@ -115,7 +115,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  draws.length=0;
  world.paintHeroAura(500,600,0);
  assert.equal(draws.length,0,'no painted attack explosions at the protagonist torso');
- world.p.mods.push('haste');world.p.running=true;
+ world.p.mods.push('haste');world.p.running=true;world.time=10.1;
  world.paintHeroAura(500,600,0);
  assert.equal(draws.length,1,'small trail on running haste still works');
  assert.strictEqual(draws[0][0],effects.chain.image);
