@@ -45,8 +45,8 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  const paint=t=>{f.age=t;env.render();return {draw:draws.at(-1),offset:parseFloat(canvas.style.transform.slice(12)),opacity:Number(canvas.style.opacity),f:f.drawnFrame}};
  const steps=[
   [0,0,true],[.07,0,true],[.16,0,true],[.20,0,true],
-  [.24,1,false],[.48,2,false],[.74,3,false],[1.04,4,false],
-  [1.33,4,false],[1.40,5,false],[1.66,6,false],
+  [.24,1,false],[.50,2,false],[.75,3,false],[1.04,4,false],
+  [1.33,4,false],[1.43,5,false],[1.76,6,false],
   [1.92,7,true],[2.19,7,true],[2.35,7,true]
  ];
  for(const [t,expected,moving] of steps){
@@ -68,7 +68,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  assert.equal(f.word,'execution');
  assert(Math.abs(f.maxLife-2.63)<1e-9,'execution shortened to 2.63s');
  f.drawnFrame=-1;
- for(const [t,frame] of [[0,0],[.27,1],[.50,2],[.78,3],[1.09,4],[1.43,4],[1.56,5],[1.85,6],[2.17,7]]){
+ for(const [t,frame] of [[0,0],[.27,1],[.56,2],[.85,3],[1.12,4],[1.43,4],[1.70,5],[1.96,6],[2.17,7]]){
   const o=paint(t);assert.equal(o.f,frame,'execution frame at '+t);
  }
  env.fx=[];env.queue.length=0;env.render();
