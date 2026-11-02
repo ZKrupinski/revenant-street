@@ -23,57 +23,42 @@ jobs:
           curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 25 --max-time 120 -sS \
             -o "/tmp/ballistic-rifle-original.mp3" "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_155131_90c8fedd-1a65-4608-9abf-93dbf69117bd.mp3"
           test "$(wc -c < "/tmp/ballistic-rifle-original.mp3")" -gt 7000
-          ffprobe -v error -show_entries format=duration -of csv=p=0 "/tmp/ballistic-rifle-original.mp3"
-          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/ballistic-rifle-original.mp3" \
-            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-38dB,highpass=f=48,lowpass=f=13000,acompressor=threshold=-10dB:ratio=1.6:attack=3:release=100,apad,atrim=duration=0.75,afade=t=out:st=0.63:d=0.12,alimiter=limit=0.90" \
-            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 128k "assets/sfx/z-ballistic-rifle-20261103.mp3"
-          test "$(wc -c < "assets/sfx/z-ballistic-rifle-20261103.mp3")" -gt 9000
-          ffprobe -v error -show_entries stream=sample_rate,channels -show_entries format=duration \
-            -of default=noprint_wrappers=1 "assets/sfx/z-ballistic-rifle-20261103.mp3"
+          # Keep the new original generated sound intact; trim onset/tail in WebAudio.
+          cp "/tmp/ballistic-rifle-original.mp3" "assets/sfx/z-ballistic-rifle-20261103.mp3"
+          test "$(wc -c < "assets/sfx/z-ballistic-rifle-20261103.mp3")" -gt 7000
+          file "assets/sfx/z-ballistic-rifle-20261103.mp3"
           echo "== Fetch sidearm (new Mirelo original) =="
           curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 25 --max-time 120 -sS \
             -o "/tmp/ballistic-sidearm-original.mp3" "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_155130_5f32c76a-ffa8-437c-a2ed-649973b174ae.mp3"
           test "$(wc -c < "/tmp/ballistic-sidearm-original.mp3")" -gt 7000
-          ffprobe -v error -show_entries format=duration -of csv=p=0 "/tmp/ballistic-sidearm-original.mp3"
-          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/ballistic-sidearm-original.mp3" \
-            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-38dB,highpass=f=48,lowpass=f=13000,acompressor=threshold=-10dB:ratio=1.6:attack=3:release=100,apad,atrim=duration=0.78,afade=t=out:st=0.66:d=0.12,alimiter=limit=0.90" \
-            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 128k "assets/sfx/z-ballistic-sidearm-20261103.mp3"
-          test "$(wc -c < "assets/sfx/z-ballistic-sidearm-20261103.mp3")" -gt 9000
-          ffprobe -v error -show_entries stream=sample_rate,channels -show_entries format=duration \
-            -of default=noprint_wrappers=1 "assets/sfx/z-ballistic-sidearm-20261103.mp3"
+          # Keep the new original generated sound intact; trim onset/tail in WebAudio.
+          cp "/tmp/ballistic-sidearm-original.mp3" "assets/sfx/z-ballistic-sidearm-20261103.mp3"
+          test "$(wc -c < "assets/sfx/z-ballistic-sidearm-20261103.mp3")" -gt 7000
+          file "assets/sfx/z-ballistic-sidearm-20261103.mp3"
           echo "== Fetch heavy (new Mirelo original) =="
           curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 25 --max-time 120 -sS \
             -o "/tmp/ballistic-heavy-original.mp3" "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_155131_e4686cec-0f02-4472-8ec8-045bee610a71.mp3"
           test "$(wc -c < "/tmp/ballistic-heavy-original.mp3")" -gt 7000
-          ffprobe -v error -show_entries format=duration -of csv=p=0 "/tmp/ballistic-heavy-original.mp3"
-          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/ballistic-heavy-original.mp3" \
-            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-38dB,highpass=f=48,lowpass=f=13000,acompressor=threshold=-10dB:ratio=1.6:attack=3:release=100,apad,atrim=duration=1.02,afade=t=out:st=0.90:d=0.12,alimiter=limit=0.90" \
-            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 128k "assets/sfx/z-ballistic-heavy-20261103.mp3"
-          test "$(wc -c < "assets/sfx/z-ballistic-heavy-20261103.mp3")" -gt 9000
-          ffprobe -v error -show_entries stream=sample_rate,channels -show_entries format=duration \
-            -of default=noprint_wrappers=1 "assets/sfx/z-ballistic-heavy-20261103.mp3"
+          # Keep the new original generated sound intact; trim onset/tail in WebAudio.
+          cp "/tmp/ballistic-heavy-original.mp3" "assets/sfx/z-ballistic-heavy-20261103.mp3"
+          test "$(wc -c < "assets/sfx/z-ballistic-heavy-20261103.mp3")" -gt 7000
+          file "assets/sfx/z-ballistic-heavy-20261103.mp3"
           echo "== Fetch parry (new Mirelo original) =="
           curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 25 --max-time 120 -sS \
             -o "/tmp/ballistic-parry-original.mp3" "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_155131_36635d3c-8eb6-47e7-b84a-4d075f33bbc5.mp3"
           test "$(wc -c < "/tmp/ballistic-parry-original.mp3")" -gt 7000
-          ffprobe -v error -show_entries format=duration -of csv=p=0 "/tmp/ballistic-parry-original.mp3"
-          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/ballistic-parry-original.mp3" \
-            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-38dB,highpass=f=48,lowpass=f=13000,acompressor=threshold=-10dB:ratio=1.6:attack=3:release=100,apad,atrim=duration=0.69,afade=t=out:st=0.57:d=0.12,alimiter=limit=0.90" \
-            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 128k "assets/sfx/z-ballistic-parry-20261103.mp3"
-          test "$(wc -c < "assets/sfx/z-ballistic-parry-20261103.mp3")" -gt 9000
-          ffprobe -v error -show_entries stream=sample_rate,channels -show_entries format=duration \
-            -of default=noprint_wrappers=1 "assets/sfx/z-ballistic-parry-20261103.mp3"
+          # Keep the new original generated sound intact; trim onset/tail in WebAudio.
+          cp "/tmp/ballistic-parry-original.mp3" "assets/sfx/z-ballistic-parry-20261103.mp3"
+          test "$(wc -c < "assets/sfx/z-ballistic-parry-20261103.mp3")" -gt 7000
+          file "assets/sfx/z-ballistic-parry-20261103.mp3"
           echo "== Fetch counter (new Mirelo original) =="
           curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 25 --max-time 120 -sS \
             -o "/tmp/ballistic-counter-original.mp3" "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_155129_deda267a-6872-43f2-b586-bce93e641be0.mp3"
           test "$(wc -c < "/tmp/ballistic-counter-original.mp3")" -gt 7000
-          ffprobe -v error -show_entries format=duration -of csv=p=0 "/tmp/ballistic-counter-original.mp3"
-          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/ballistic-counter-original.mp3" \
-            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-38dB,highpass=f=48,lowpass=f=13000,acompressor=threshold=-10dB:ratio=1.6:attack=3:release=100,apad,atrim=duration=1.15,afade=t=out:st=1.03:d=0.12,alimiter=limit=0.90" \
-            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 128k "assets/sfx/z-ballistic-counter-20261103.mp3"
-          test "$(wc -c < "assets/sfx/z-ballistic-counter-20261103.mp3")" -gt 9000
-          ffprobe -v error -show_entries stream=sample_rate,channels -show_entries format=duration \
-            -of default=noprint_wrappers=1 "assets/sfx/z-ballistic-counter-20261103.mp3"
+          # Keep the new original generated sound intact; trim onset/tail in WebAudio.
+          cp "/tmp/ballistic-counter-original.mp3" "assets/sfx/z-ballistic-counter-20261103.mp3"
+          test "$(wc -c < "assets/sfx/z-ballistic-counter-20261103.mp3")" -gt 7000
+          file "assets/sfx/z-ballistic-counter-20261103.mp3"
       - name: Commit actual audio files, not links to the old samples
         shell: bash
         run: |
