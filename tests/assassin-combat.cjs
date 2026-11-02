@@ -1697,7 +1697,7 @@ test('fire, bleed, shock and ice apply distinct combat statuses and visible bitm
  t.updateEnemies(.5);
  assert(e.hp<before,'burn and bleed should damage target continuously');
  const game=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
- assert(game.includes('function drawModEnergy()'));
+ assert(game.includes("function drawModEnergy(layer='all',selection=null)"));
  assert(game.includes('function createModImpact(e)'));
  assert(game.includes('id="modStrip"'));
 });
@@ -2326,7 +2326,7 @@ test('user uploaded ten-frame parry artwork is embedded intact and uses 5x2 scre
  assert(html.includes("ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.32,-h*.5,w,h)"));
  assert(html.includes("ctx.globalCompositeOperation='screen'"),'solid black frame background must not become a rectangle');
  const first=html.indexOf('function parrySuccessSourceRect(w,h,frame){');
- const last=html.indexOf('function drawEffects(){',first);
+ const last=html.indexOf('function drawEffects(',first);
  assert(first>=0&&last>first,'crop source helper must precede rendering');
  const sourceRect=vm.runInNewContext(html.slice(first,last)+'\nparrySuccessSourceRect');
  for(let frame=0;frame<10;frame++){

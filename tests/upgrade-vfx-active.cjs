@@ -80,7 +80,8 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  const ctx={save(){},restore(){},translate(){},rotate(){},scale(){},
   drawImage(...args){draws.push(args)},globalAlpha:1,filter:'none'};
  const world={Z_UPGRADE_VFX:effects,ctx,clamp:(x,a,b)=>Math.max(a,Math.min(b,x)),
-  enemies:[enemy],attributeFx:[],time:11,cameraX:0,W:1280,Math,MOD_META:{},img:{}};
+  enemies:[enemy],attributeFx:[],time:11,cameraX:0,W:1280,Math,MOD_META:{},img:{},
+   zDrawInLayer:(layer,isFront)=>layer==='all'||(layer==='front')===!!isFront};
  vm.createContext(world);
  vm.runInContext(html.slice(start,end)+'\nthis.paintStatuses=drawModEnergy;',world);
  world.paintStatuses();assert(draws.length===1,'shock remains visible while afflicted');
