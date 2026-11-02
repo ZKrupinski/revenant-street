@@ -23,7 +23,7 @@ const world={
  },
  ctx:{save(){},restore(){},rotate(){},translate(x,y){transforms.push(['translate',x,y])},
   scale(x,y){transforms.push(['scale',x,y])},drawImage(...args){draws.push(args)}},
- fx:[],clamp:(v,min,max)=>Math.min(max,Math.max(min,v)),modRank:()=>0
+ fx:[],window:{},clamp:(v,min,max)=>Math.min(max,Math.max(min,v)),modRank:()=>0
 };
 vm.createContext(world);
 world.p={x:250,y:550,dodge:.25,dodgeDuration:.32,dodgeX:1,evadeBackstep:false,dashSparkDistance:0,dashSparkCount:0,dashSparkSeq:1};
