@@ -3579,7 +3579,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 <script src="./assets/elite-ironmask.js?v=newhood-special-1f83b64-v2"></script>
 <script src="./assets/boss-hunter.js?v=fe00bed9"></script>
 <script src="./assets/attacks-20.js?v=923cd5b7"></script>
-<script src="./assets/voice/voice-engine.js?v=20261102-enemy-archetype-voices-v5"></script>
+<script src="./assets/voice/voice-engine.js?v=20261102-enemy-archetype-voices-v6-hitmix"></script>
 <script>const EMBEDDED_ASSETS=window.RZ_ASSETS;</script>
 <script id="z-startup-recovery-v1">
 /* Startup watchdog: expose failures instead of leaving an empty neon frame. */
@@ -4010,7 +4010,7 @@ const INTRUDER_FRAME_FOOT={
 const OFFSCREEN_ARROW_SEQUENCE=[0,1,2,3,2,1];
 function offscreenArrowFrameAt(seconds){return OFFSCREEN_ARROW_SEQUENCE[Math.floor(Math.max(0,seconds)*8)%OFFSCREEN_ARROW_SEQUENCE.length]}
 // 4x2 real transparent PNG sprite sheet: spark-filled metal shield impact.
-let parryShieldImage=new Image();parryShieldImage.src='./assets/fx/parry-shield.png';
+// Removed obsolete parryShieldImage bubble; success-only parry art uses parrySuccessImage.
 // Artist-supplied ten-frame blue parry burst (original 5x2 sheet, black keyed by screen blend).
 const parrySuccessImage=new Image();parrySuccessImage.src='data:image/avif;base64,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';
 // Preload the CSS-backed upgrade atlas too; its decoded pixels are reused by the cards/HUD.
@@ -5427,9 +5427,10 @@ const Z_ENEMY_STATUS_VFX=[
  {status:'shock',sprite:'chain',power:'shockPower',offset:132,scale:0.57},
  {status:'burn',sprite:'nova',power:'burnPower',offset:110,scale:0.59},
  {status:'bleed',sprite:'leech',power:'bleedPower',offset:115,scale:0.55},
- {status:'freeze',sprite:'guard',power:'freezePower',offset:128,scale:0.65}
+ {status:'freeze',sprite:'chain',power:'freezePower',offset:128,scale:0.36}
 ];
-const Z_ELEMENT_IMPACT_SPRITES=Object.freeze({fire:'nova',shock:'chain',bleed:'leech',ice:'guard'});
+// Old circular guard sprite is never shown for an ice attack.
+const Z_ELEMENT_IMPACT_SPRITES=Object.freeze({fire:'nova',shock:'chain',bleed:'leech',ice:'chain'});
 function drawUpgradeVfxLoop(name,x,y,width,opacity,cycle,dir=1){
  const entry=Z_UPGRADE_VFX[name],im=entry?.image;
  if(!entry?.ready||!im?.complete||!im.naturalWidth)return false;
@@ -5557,9 +5558,9 @@ const DEATH_CINEMATIC_DURATION=2.75,DEATH_COLLAPSE_DURATION=2.15;
 const deathCinematic={elapsed:0,active:false};
 let perma={core:0,servo:0,reflex:0,armor:0,sprint:0,lift:0,shards:0,hubRefreshes:0,hubAutoRefreshes:0};
 try{const stored=JSON.parse(localStorage.getItem('revenant-perma-v1')||'null');if(stored)for(const key of Object.keys(perma)){const value=stored[key];if(Number.isSafeInteger(value)&&value>=0)perma[key]=value}}catch(_){}
-// All WebAudio SFX (gunfire, reloads, impacts, menu and battle tones) play
-// at 70% of their previous amplitude; HTMLAudioElement BGM is untouched.
+// Keep voices and UI tones steady; only percussion impact SFX are softened.
 const NON_BGM_SFX_LEVEL=.70;
+const IMPACT_SFX_TRIM=.92;
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),near=(a,b,d)=>Math.abs(a-b)<=d;
 function save(){try{localStorage.setItem('revenant-perma-v1',JSON.stringify(perma))}catch(_){}}
 // Permanent shard settlement: once per run, using scored confirmed damage.
@@ -5597,7 +5598,7 @@ function runResultMarkup(result){
  ' + 공격 ◆'+result.attackShards+' + 스타일 ◆'+result.styleShards+
  ' + 완주 ◆'+result.clearShards+'</span></div>';
 }
-function sound(type='hit'){if(mute)return;try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!audio)audio=new AC();if(audio.state==='suspended')audio.resume();const t=audio.currentTime;const o=audio.createOscillator(),g=audio.createGain();o.type=type==='execution'?'sawtooth':'triangle';let f=type==='parry'?1050:type==='hurt'?90:type==='break'?60:type==='execution'?270:type==='attack'?160:230;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(Math.max(35,f*.25),t+.14);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime((type==='break'?.19:.07)*NON_BGM_SFX_LEVEL,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+(type==='execution'?.43:.18));o.connect(g).connect(audio.destination);o.start(t);o.stop(t+(type==='execution'?.44:.19));if(['hit','break','execution','parry'].includes(type)){const len=Math.floor(audio.sampleRate*.15);const buf=audio.createBuffer(1,len,audio.sampleRate);const dat=buf.getChannelData(0);for(let i=0;i<len;i++)dat[i]=(Math.random()*2-1)*Math.exp(-i/len*5);const n=audio.createBufferSource(),fl=audio.createBiquadFilter(),gn=audio.createGain();n.buffer=buf;fl.type='lowpass';fl.frequency.value=type==='parry'?2200:980;gn.gain.value=(type==='break'?.22:.11)*NON_BGM_SFX_LEVEL;n.connect(fl).connect(gn).connect(audio.destination);n.start(t)}}catch(e){}}
+function sound(type='hit'){if(mute)return;try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!audio)audio=new AC();if(audio.state==='suspended')audio.resume();const t=audio.currentTime;const o=audio.createOscillator(),g=audio.createGain();o.type=type==='execution'?'sawtooth':'triangle';let f=type==='parry'?1050:type==='hurt'?90:type==='break'?60:type==='execution'?270:type==='attack'?160:230;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(Math.max(35,f*.25),t+.14);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime((type==='break'?.19:.07)*NON_BGM_SFX_LEVEL*(type==='hit'||type==='hurt'||type==='break'?IMPACT_SFX_TRIM:1),t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+(type==='execution'?.43:.18));o.connect(g).connect(audio.destination);o.start(t);o.stop(t+(type==='execution'?.44:.19));if(['hit','break','execution','parry'].includes(type)){const len=Math.floor(audio.sampleRate*.15);const buf=audio.createBuffer(1,len,audio.sampleRate);const dat=buf.getChannelData(0);for(let i=0;i<len;i++)dat[i]=(Math.random()*2-1)*Math.exp(-i/len*5);const n=audio.createBufferSource(),fl=audio.createBiquadFilter(),gn=audio.createGain();n.buffer=buf;fl.type='lowpass';fl.frequency.value=type==='parry'?2200:980;gn.gain.value=(type==='break'?.22:.11)*NON_BGM_SFX_LEVEL*IMPACT_SFX_TRIM;n.connect(fl).connect(gn).connect(audio.destination);n.start(t)}}catch(e){}}
 // Decode all enemy vocals, mechanical slides and gunshots before gameplay.
 function prepareCombatVoices(){
  const AC=window.AudioContext||window.webkitAudioContext;
@@ -5630,7 +5631,7 @@ function playImpactSound(kind='punch',intensity=1){
    const compressor=audio.createDynamicsCompressor();
    compressor.threshold.value=-13;compressor.knee.value=6;compressor.ratio.value=7;
    compressor.attack.value=.004;compressor.release.value=.16;
-   const output=audio.createGain();output.gain.value=.98*NON_BGM_SFX_LEVEL;
+   const output=audio.createGain();output.gain.value=.98*NON_BGM_SFX_LEVEL*IMPACT_SFX_TRIM;
    compressor.connect(output).connect(audio.destination);
    impactBus=compressor;
   }
@@ -6107,7 +6108,6 @@ function ensureBitmapDecoded(image){
 function resetFailedUiBitmaps(){
  const sources=[
   {get:()=>offscreenArrow,set:im=>{offscreenArrow=im},url:'./assets/ui/edge-arrows-animated.webp'},
-  {get:()=>parryShieldImage,set:im=>{parryShieldImage=im},url:'./assets/fx/parry-shield.png'},
   {get:()=>upgradeIconsImage,set:im=>{upgradeIconsImage=im},url:'./assets/ui/upgrade-icons-v4.webp',css:true},
   {get:()=>arcadeButtonsImage,set:im=>{arcadeButtonsImage=im},url:'./assets/ui/arcade-action-buttons-v1.webp',css:'arcade'},
   {get:()=>joystickBaseImage,set:im=>{joystickBaseImage=im},url:'./assets/ui/z-arcade-stick-base-centerhole.webp',css:'joystickBase'},
@@ -6143,7 +6143,6 @@ function requiredSceneArt(preview=false){
   ...assetNames.filter(k=>EMBEDDED_ASSETS[k]).map(k=>['내장 비트맵 '+k,()=>ensureBitmapDecoded(img[k])]),
   ['배경 디코딩',()=>ensureBitmapDecoded(img.street_pano)],
   ['주인공 머플러 제거 등장 8프레임',()=>ensureBitmapDecoded(heroEntry.image)],
-  ['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)],
   ['패링 성공 10프레임 원본 이펙트',()=>ensureBitmapDecoded(parrySuccessImage)],
   ['지면강타 8프레임 비트맵',()=>ensureBitmapDecoded(GROUND_SLAM_ART.image)],
   ['대쉬 후 번개 관통 8프레임 비트맵',()=>ensureBitmapDecoded(DASH_PIERCE_ART.image)],
@@ -7352,9 +7351,8 @@ function enemyAttack(e){
  if(p.inv>0||p.dodge>0)return;const dmg=e.damage*(eliteCleave?1.65:1)*(e.bossDamageMult||1);
  const damageTaken=dmg*clamp(1-modRank('guard')*.09-perma.armor*.04,.36,1);
  p.hp=Math.max(0,p.hp-damageTaken);p.hitFlash=.19;
- if(modRank('guard')&&damageTaken<dmg*clamp(1-perma.armor*.04,.36,1)-.01){
-  spawnUpgradeVfx('guard',p.x,p.y-126,.42+Math.min(6,modRank('guard'))*.024,p.facing,0,.21);
- }
+ // Damage reduction still works; no bubble or shield image is spawned.
+
  p.receivedHits=(p.receivedHits||0)+1;
  const heavy=e.type==='boss'||eliteCleave||
    (e.type==='intruder'&&e.specialPhase==='recovery')||
@@ -7370,7 +7368,6 @@ function enemyAttack(e){
  p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteWindow=0;p.riposteTarget=null;
  playCombatVoice(p.hp<=0?'heroDeath':'heroHurt');p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)startDeathCinematic()}
 function fxBurst(x,y,color='red',scale=1){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8)})}
-function spawnParryShieldFx(x,y,face=1,scale=1){fx.push({kind:'parryShield',x,y,face,scale,life:.52,maxLife:.52})}
 function spawnParrySuccessFx(x,y,face=1){fx.push({kind:'parrySuccess10',x,y,face,life:.27,maxLife:.27})}
 function floatText(text,x,y,color){if(floating.length>=45)floating.splice(0,floating.length-36);floating.push({text,x,y,color,life:1.05})}
 function messageUpdate(dt){if(messageTime>0){messageTime-=dt;if(messageTime<=0)$('gameMessage').classList.remove('active')}}
@@ -8636,20 +8633,6 @@ function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+82
   }
   continue;
  }
- if(f.kind==='parryShield'){
-  const a=parryShieldImage,progress=clamp(1-f.life/f.maxLife,0,.9999),frame=Math.min(7,Math.floor(progress*8));
-  const size=285*f.scale;
-  ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.face,1);
-  ctx.globalAlpha=Math.min(1,f.life/.08);
-  if(a.complete&&a.naturalWidth>=4&&a.naturalHeight>=2){
-   const fw=a.naturalWidth/4,fh=a.naturalHeight/2;
-   ctx.drawImage(a,(frame%4)*fw,Math.floor(frame/4)*fh,fw,fh,-size*.5,-size*.5,size,size);
-  }else{
-   const fallback=img.burst_blue;
-   if(fallback?.complete&&fallback.naturalWidth)ctx.drawImage(fallback,-size*.43,-size*.43,size*.86,size*.86);
-  }
-  ctx.restore();continue;
- }
  let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}if(p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p);for(const f of floating){if(f.x<left||f.x>right)continue;ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;ctx.lineWidth=4;ctx.strokeStyle='#10131c';ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);ctx.restore()}}
 const visibleActors=[];
 function draw(){
@@ -8780,8 +8763,8 @@ function requestSelectMod(m){
   ['bleed','leech','fire','crit'].includes(m)?'red':'gold';
  const x=p.x+(['dashrange','dashspeed','rush'].includes(m)?p.facing*80:0);
  const y=p.y-(['jumpheight','jumpspeed'].includes(m)?55:130);
- spawnModBitmap(colour,x,y,1.55,'brightness(1.5) saturate(1.25)',.82);
- if(['guard','counter'].includes(m))spawnParryShieldFx(p.x+p.facing*45,p.y-140,p.facing,.56);
+ // No oversized defensive halo on the upgrade selection animation.
+ if(!['guard','counter'].includes(m))spawnModBitmap(colour,x,y,1.55,'brightness(1.5) saturate(1.25)',.82);
  if(['dashrange','dashspeed','rush'].includes(m))fxBurst(p.x-p.facing*48,p.y-90,'blue',1.32);
  if(['jumpheight','jumpspeed'].includes(m))fxBurst(p.x,p.y-30,'gold',1.38);
  sound('parry');playImpactSound('heavy',.83);vibrateImpact('upgradeConfirm',true);
@@ -8811,7 +8794,9 @@ function selectMod(m){
  upgradeReason='wave';
  const info=MOD_META[m],rank=modRank(m);
  floatText(info.icon+' x'+rank,p.x,p.y-244,info.color);
- if(Z_UPGRADE_VFX[m])spawnUpgradeVfx(m,p.x,p.y-126,m==='guard'?.49:1.18,p.facing,0,m==='guard'?.22:.43);
+ if(m==='guard'||m==='counter'){
+  // Defensive upgrades are reflected in the HUD, not a body-sized aura.
+ }else if(Z_UPGRADE_VFX[m])spawnUpgradeVfx(m,p.x,p.y-126,1.18,p.facing,0,.43);
  else if(m!=='vital'&&m!=='regen')spawnModBitmap(m==='shock'||m==='ice'||m==='haste'?'blue':
    m==='bleed'||m==='leech'?'red':'gold',p.x,p.y-124,
    1.27,'brightness(1.17)',.39);
@@ -9269,6 +9254,6 @@ canvas.style.visibility='hidden';syncGameViewport();titleMenu();requestAnimation
 })();
 
 </script>
-<script src="./assets/industrial-combat-bgm.js?v=20261030-steady-bgm-pop5"></script>
+<script src="./assets/industrial-combat-bgm.js?v=20261102-bgm-mix-plus"></script>
 </body>
 </html>

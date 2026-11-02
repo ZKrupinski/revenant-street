@@ -2441,7 +2441,7 @@ test('parry shield is a real eight-frame transparent PNG',()=>{
  const png=fs.readFileSync(path.join(__dirname,'../assets/fx/parry-shield.png'));
  assert.equal(png.subarray(1,4).toString(),'PNG');
  assert.equal(png.readUInt32BE(16),512);assert.equal(png.readUInt32BE(20),256);
- assert(html.includes("parryShieldImage.src='./assets/fx/parry-shield.png'"));
+ assert(!html.includes('parryShieldImage.src='),'old defensive bubble image is not loaded by gameplay');
 });
 test('all twenty distinct bitmap attack atlases are archived locally and playable',()=>{
  const attacks=[
@@ -3045,7 +3045,7 @@ test('new PA-K punch is a loud transient on its own audio bus and never ducks mu
   const firstSnap=filters.find(f=>f.type==='highpass');
   assert(firstSnap&&firstSnap.frequency.value>=1800,'ordinary punch needs instant audible snap');
   assert(gains.some(g=>g.gain.max>=.9),'foreground punch transient keeps its original input envelope');
-  assert(gains.some(g=>Math.abs(g.gain.value-(.98*.70))<1e-8),'impact master output uses exactly 70% previous gain');
+  assert(gains.some(g=>Math.abs(g.gain.value-(.98*.70*.92))<1e-8),'impact master output is gently softened by 8%');
   ctx.currentTime+=.14;
   assert.equal(t.playImpactSound('heavy',1.35),true);
   assert(filters.filter(f=>f.type==='highpass').length>=2,'heavy punch needs a second hard transient');
@@ -3054,8 +3054,8 @@ test('new PA-K punch is a loud transient on its own audio bus and never ducks mu
   const toneStart=gains.length;t.sound('attack');
   assert(gains.slice(toneStart).some(g=>Math.abs(g.gain.max-(.07*.70))<1e-8),'synthetic attack tone is set to 70%');
   const breakStart=gains.length;t.sound('break');
-  assert(gains.slice(breakStart).some(g=>Math.abs(g.gain.max-(.19*.70))<1e-8),'break tone peak is set to 70%');
-  assert(gains.slice(breakStart).some(g=>Math.abs(g.gain.value-(.22*.70))<1e-8),'break noise body is set to 70%');
+  assert(gains.slice(breakStart).some(g=>Math.abs(g.gain.max-(.19*.70*.92))<1e-8),'break impact peak is reduced by 8%');
+  assert(gains.slice(breakStart).some(g=>Math.abs(g.gain.value-(.22*.70*.92))<1e-8),'break noise is reduced by 8%');
   assert.equal(ducked,false,'impact must not adjust music volume');
  }finally{
   if(previousAC)world.AudioContext=previousAC;else delete world.AudioContext;

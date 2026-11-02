@@ -18,10 +18,12 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  for(const marker of [
   "spawnUpgradeVfx('chain',nearby.x","spawnUpgradeVfx('nova',e.x",
   "spawnUpgradeVfx('leech',(e.x+p.x)/2","spawnUpgradeVfx('power',e.x",
-  "spawnUpgradeVfx('crit',e.x","spawnUpgradeVfx('guard',p.x"
+  "spawnUpgradeVfx('crit',e.x"
  ])assert(src.includes(marker),'wired: '+marker);
  assert(src.includes("spawnHealVfx(p.hp-priorHealHp,'leech')"),'actual HP gains show mint healing at hero');
- assert(src.includes("if(Z_UPGRADE_VFX[m])spawnUpgradeVfx(m"),'on upgrade selection');
+ assert(!src.includes("spawnUpgradeVfx('guard'"),'no shield sprite from defense or ice');
+ assert(!src.includes("spawnParryShieldFx("),'no old parry bubble path');
+ assert(src.includes("else if(Z_UPGRADE_VFX[m])spawnUpgradeVfx(m"),'visual upgrade selection still active for other modules');
  assert(src.includes('window.__zUpgradeVfxStatus'),'status exposed');
 }
 console.log('PASS: six RGBA upgrade 8F bitmaps plus the separate real-HP mint leech recovery hook');

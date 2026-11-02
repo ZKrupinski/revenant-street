@@ -40,11 +40,13 @@ for(const file of ['index.html','play-fixed-20261102.html']){
   "spawnHealVfx(p.hp-hpBeforeFinisher,'finisher')",
   "spawnHealVfx(p.hp-priorHealHp,'leech')",
   "spawnHealVfx(p.regenAccumulated,'regen')",
-  "if(modRank('guard')&&damageTaken<dmg*clamp(1-perma.armor*.04,.36,1)-.01)",
-  "spawnUpgradeVfx('guard',p.x,p.y-126,.42",
   "if(!(amount>.001)||gameState==='dying')return false"
  ])assert(html.includes(fragment),'missing real-HP healing / tiny reactive guard feature: '+fragment);
  assert(!html.includes("drawUpgradeVfxLoop('guard',x"),'passive guard orb must disappear');
+ assert(!html.includes("spawnUpgradeVfx('guard'"),'no defensive VFX even on enemy contact or upgrade');
+ assert(!html.includes("spawnParryShieldFx("),'shield selection bubble removed');
+ assert(!html.includes("f.kind==='parryShield'"),'obsolete shield renderer removed');
+ assert(html.includes("const damageTaken=dmg*clamp(1-modRank('guard')*.09"),'armor mechanics untouched');
  assert(!html.includes("spawnUpgradeVfx('guard',p.x,p.y-130"),'regen cannot fake a shield glow');
  const start=html.indexOf('const Z_HEAL_ART='),end=html.indexOf('function spawnUpgradeVfx(',start);
  assert(start>0&&end>start,'isolated healing artwork and draw functions');
@@ -78,4 +80,4 @@ for(const file of ['index.html','play-fixed-20261102.html']){
  world.gameState='dying';
  assert.equal(world.spawnHeal(10,'finisher'),false,'no green pulse over death cinematic');
 }
-console.log('PASS: 8 clean transparent mint healing frames, accurate HP-only triggers, no persistent guard aura, guarded damage ping and preload on both entrypoints');
+console.log('PASS: 8 clean transparent mint healing frames, accurate HP-only triggers, no defensive shield artwork at any time and preload on both entrypoints');

@@ -56,7 +56,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  const html=fs.readFileSync(path.join(root,filename),'utf8');
  assert(html.includes("project_z_upgrade_'+k+'_8f.png?v=20261102-clean-alpha-active-v2"),'fresh six PNG cache');
  assert(html.includes('const Z_ENEMY_STATUS_VFX=['),'persistent enemy ailments');
- assert(html.includes("const Z_ELEMENT_IMPACT_SPRITES=Object.freeze({fire:'nova',shock:'chain',bleed:'leech',ice:'guard'})"),'shared transparent element art');
+ assert(html.includes("const Z_ELEMENT_IMPACT_SPRITES=Object.freeze({fire:'nova',shock:'chain',bleed:'leech',ice:'chain'})"),'shared transparent element art');
  assert(html.includes('const sprite=Z_ELEMENT_IMPACT_SPRITES[ef.mod]'),'contact pop uses transparent PNG rather than filtered legacy burst');
  assert(html.includes('drawUpgradeVfxLoop(Z_ELEMENT_IMPACT_SPRITES[mod]'),'equipped hero elemental aura uses transparent PNG');
  assert(html.includes("drawUpgradeVfxLoop(state.sprite"),'reuse actual 8F bitmap during status timer');
@@ -92,7 +92,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  draws.length=0;enemy.burn=0;enemy.bleed=1;enemy.bleedPower=2;
  world.paintStatuses();assert.strictEqual(draws.at(-1)[0],effects.leech.image);
  draws.length=0;enemy.bleed=0;enemy.freeze=1;enemy.freezePower=2;
- world.paintStatuses();assert.strictEqual(draws.at(-1)[0],effects.guard.image);
+ world.paintStatuses();assert.strictEqual(draws.at(-1)[0],effects.chain.image);
  draws.length=0;enemy.shock=enemy.burn=enemy.bleed=enemy.freeze=1;
  world.paintStatuses();assert(draws.length<=2,'limit multiple status VFX per enemy');
  draws.length=0;enemy.dead=true;
@@ -103,7 +103,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  assert.strictEqual(draws[0][0],effects.nova.image,'no legacy filtered gold bitmap on fire impact');
  draws.length=0;
  world.attributeFx=[{mod:'ice',x:432,y:438,life:.25,maxLife:.4,scale:1.1}];
- world.paintStatuses();assert.strictEqual(draws[0][0],effects.guard.image,'ice impact uses clean bitmap');
+ world.paintStatuses();assert.strictEqual(draws[0][0],effects.chain.image,'ice impact avoids old guard/shield bitmap');
  // Test installed powers on the hero independently of enemy timer state.
  world.attributeFx=[];
  world.p={mods:['shock','fire'],hp:80,maxHp:100,facing:1};

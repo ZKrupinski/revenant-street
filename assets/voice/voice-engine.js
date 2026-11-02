@@ -78,7 +78,7 @@
     const comp=context.createDynamicsCompressor(),out=context.createGain();
     comp.threshold.value=-10;comp.knee.value=5;comp.ratio.value=3.5;
     comp.attack.value=.002;comp.release.value=.13;
-    out.gain.value=1.05*NON_BGM_SFX_LEVEL;comp.connect(out).connect(context.destination);
+    out.gain.value=.98*NON_BGM_SFX_LEVEL;comp.connect(out).connect(context.destination);
     gunBus=comp;
    }
    // Never mute a shot because three enemies are simultaneously groaning.

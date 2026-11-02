@@ -34,7 +34,7 @@ async function audio(){
  download.resolve({ok:true,blob:async()=>({size:100})});await ready;
  assert.equal(bgm.getState().ready,true);assert.equal(bgm.getState().source,'blob:complete');
  await bgm.beginPlayback();for(let i=0;i<8;i++){now+=180;tick()}
- assert(Math.abs(bgm.getState().volume-.29)<.001);
+ assert(Math.abs(bgm.getState().volume-.33)<.001);
  // Hits must not have any route to lower music; only upgrade screens fade.
  assert.equal(typeof bgm.duckImpact,'undefined','combat hit ducking API is removed');
  const combatLevel=bgm.getState().volume;
@@ -43,7 +43,7 @@ async function audio(){
  assert(!fs.readFileSync(path.join(root,'assets/industrial-combat-bgm.js'),'utf8').includes('NON_BGM_SFX_LEVEL'),'effect mix factor must never enter soundtrack engine');
  assert(!html.includes('__revenantBgm?.duckImpact'),'impact sounds must never touch BGM volume');
  state='reward';for(let i=0;i<8;i++){now+=180;tick()}
- assert(Math.abs(bgm.getState().volume-.21)<.001);assert.equal(plays,1,'upgrade must preserve playback');
+ assert(Math.abs(bgm.getState().volume-.24)<.001);assert.equal(plays,1,'upgrade must preserve playback');
  await bgm.prepare();assert.equal(fetches,1,'restart reuses full audio');
 }
 async function combatVoices(){
@@ -143,7 +143,7 @@ async function combatVoices(){
   'character-specific pitch shapes vocal identity');
  assert(voiceScript.includes("const offset=isHero?0:sampleOnset(buffer)"),
   'start at the audible male breath or consonant instead of leading silence');
- assert(html.includes('voice-engine.js?v=20261102-enemy-archetype-voices-v5'),
+ assert(html.includes('voice-engine.js?v=20261102-enemy-archetype-voices-v6-hitmix'),
   'browser cache must not replay the old, animal-like voice engine');
  for(const file of ['hero-mech-a.mp3','hero-mech-b.mp3','hero-mech-power.mp3']){
   const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
@@ -175,8 +175,8 @@ async function combatVoices(){
   ctx.currentTime+=.25;
   assert.equal(voices.fire(kind,'uppercut'),true,kind+' strong fire must never be crowded out');
  }
- assert(voiceGains.some(x=>Math.abs(x.gain.value-1.05*.70)<.000001),'independent gunfire bus must output 70% of prior amplitude');
- assert(1.05*.70>.58*.70,'original relative gunfire-over-vocal mix is retained');
+ assert(voiceGains.some(x=>Math.abs(x.gain.value-.98*.70)<.000001),'independent gunfire bus must output 70% of prior amplitude');
+ assert(.98*.70>.58*.70,'original relative gunfire-over-vocal mix is retained');
  ctx.currentTime+=1.5;
  for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
  assert.equal(voices.play('heroMove',hero,hero),true,'walk and run occasionally rack a slide');

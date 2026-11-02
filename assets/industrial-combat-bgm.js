@@ -73,8 +73,8 @@
   function gameMusicVolume() {
     try {
       const state = window.__revenant?.getMusicState?.();
-      if (state === 'playing') return .29;
-      if (state === 'reward') return .21;
+      if (state === 'playing') return .33;
+      if (state === 'reward') return .24;
     } catch (_) {}
     return 0;
   }
