@@ -10,7 +10,7 @@ for(const id of all){
 for(const filename of ['index.html','play-fixed-20261102.html']){
  const src=fs.readFileSync(path.join(root,filename),'utf8');
  assert(src.includes("const Z_UPGRADE_VFX_NAMES=['chain','nova','leech','power','crit','guard']"));
- assert(src.includes("project_z_upgrade_'+k+'_8f.png?v=20261102-independent-six-v1"));
+ assert(src.includes("project_z_upgrade_'+k+'_8f.png?v=20261102-clean-alpha-active-v2"));
  assert(src.includes('await Z_UPGRADE_VFX_PRELOAD'),'must load six images before combat');
  assert(src.includes("if(f.kind==='upgradeVfxSprite'){drawUpgradeVfx(f);continue;}"));
  assert(src.includes("f.kind==='basicHitSprite'||f.kind==='upgradeVfxSprite'?realDt"));

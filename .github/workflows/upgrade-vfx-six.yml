@@ -18,5 +18,6 @@ jobs:
         with:
           node-version: '22'
       - run: node tests/upgrade-vfx-six.cjs
+      - run: node tests/upgrade-vfx-active.cjs
       - run: node tests/basic-hit-five-variants.cjs
       - run: node tests/loading-audio.cjs

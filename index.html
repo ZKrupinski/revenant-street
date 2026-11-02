@@ -5321,7 +5321,7 @@ const Z_UPGRADE_VFX_PRELOAD=Promise.all(Z_UPGRADE_VFX_NAMES.map(k=>new Promise((
  im.onload=()=>{entry.ready=im.naturalWidth===2048&&im.naturalHeight===256;
   if(entry.ready)resolve(k);else{entry.error=true;reject(Error('강화 비트맵 크기 오류: '+k));}};
  im.onerror=()=>{entry.error=true;reject(Error('강화 비트맵 누락: '+k));};
- im.src='./assets/vfx/project_z_upgrade_'+k+'_8f.png?v=20261102-independent-six-v1';
+ im.src='./assets/vfx/project_z_upgrade_'+k+'_8f.png?v=20261102-clean-alpha-active-v2';
 }))).then(()=>null,e=>e);
 window.__zUpgradeVfxStatus=()=>Object.fromEntries(Z_UPGRADE_VFX_NAMES.map(k=>[k,{
  ready:Z_UPGRADE_VFX[k].ready,error:Z_UPGRADE_VFX[k].error,drawn:Z_UPGRADE_VFX[k].drawn
@@ -5357,12 +5357,12 @@ function combatStrengthFx(e,critical){
  const power=modRank('power'),impact=modRank('impact'),momentum=modRank('momentum');
  if(power)spawnUpgradeVfx('power',e.x,e.y-115,.91+power*.12,p.facing,-.04,.33);
  if(impact){
-  spawnModBitmap('red',e.x+p.facing*23,e.y-112,1.02+impact*.09,'saturate(1.45)',.25);
+  spawnUpgradeVfx('crit',e.x+p.facing*23,e.y-112,.52+impact*.08,p.facing,0,.23);
   screenShake=Math.max(screenShake,Math.min(22,12+impact*1.3));
  }
  if(momentum&&p.hits>=3){
   const intensity=Math.min(1.6,.70+p.hits*.065+momentum*.07);
-  spawnModBitmap('gold',e.x,e.y-111,intensity,'saturate(1.1)',.19);
+  spawnUpgradeVfx('power',e.x,e.y-111,intensity*.63,p.facing,0,.24);
  }
  if(critical){
   spawnUpgradeVfx('crit',e.x,e.y-129,1.10+modRank('crit')*.10,p.facing,-.04,.35);
@@ -5386,39 +5386,79 @@ function createModImpact(e){
  }
 }
 const MOD_STATUS_STATES=[['burn','fire'],['shock','shock'],['bleed','bleed'],['freeze','ice']];
+
+// Painted 8-frame upgrade effects can also be sampled as lightweight looping
+// frames while the underlying gameplay status is active. Never draw vector FX.
+const Z_ENEMY_STATUS_VFX=[
+ {status:'shock',sprite:'chain',power:'shockPower',offset:132,scale:0.57},
+ {status:'burn',sprite:'nova',power:'burnPower',offset:110,scale:0.59},
+ {status:'bleed',sprite:'leech',power:'bleedPower',offset:115,scale:0.55},
+ {status:'freeze',sprite:'guard',power:'freezePower',offset:128,scale:0.65}
+];
+function drawUpgradeVfxLoop(name,x,y,width,opacity,cycle,dir=1){
+ const entry=Z_UPGRADE_VFX[name],im=entry?.image;
+ if(!entry?.ready||!im?.complete||!im.naturalWidth)return false;
+ const frame=Math.min(7,Math.floor((((cycle%1)+1)%1)*8));
+ const cw=im.naturalWidth/8,displayH=width*(im.naturalHeight/cw);
+ ctx.save();ctx.globalAlpha=clamp(opacity,0,.82);
+ ctx.translate(x,y);ctx.scale(dir||1,1);
+ ctx.drawImage(im,frame*cw,0,cw,im.naturalHeight,-width*.5,-displayH*.5,width,displayH);
+ ctx.restore();entry.drawn++;return true;
+}
 function drawModEnergy(){
- const left=cameraX-230,right=cameraX+W+230;
+ const left=cameraX-180,right=cameraX+W+180;
+ // Each afflicted opponent keeps a visible painted energy animation, tied to
+ // the actual remaining burn/shock/bleed/freeze timer, including during stagger.
+ // Up to two layers per enemy and ten total in view avoid overdraw in crowds.
+ let painted=0;
  for(const e of enemies){
-  if(e.dead||e.x<left||e.x>right)continue;
-  for(const [status,mod] of MOD_STATUS_STATES){
-   if(!(e[status]>0))continue;
-   const meta=MOD_META[mod],image=img[meta.source];
-   if(!image?.complete||!image.naturalWidth)continue;
-   const stacks=Math.min(6,Math.max(1,e[mod==='ice'?'freezePower':mod==='shock'?'shockPower':mod==='fire'?'burnPower':'bleedPower']||1));
-   const size=(mod==='shock'?92:mod==='ice'?85:mod==='fire'?88:76)+stacks*5;
-   const offset=mod==='ice'?82:mod==='bleed'?114:mod==='shock'?136:138;
-   const flutter=mod==='fire'?Math.sin(time*11+e.slot)*8:mod==='shock'?Math.sin(time*27+e.slot)*4:0;
-   const pulse=mod==='shock'?.15+.15*Math.abs(Math.sin(time*21+e.slot)):
-     mod==='fire'?.14+.08*Math.abs(Math.sin(time*11+e.slot)):
-     mod==='bleed'?.13+.05*Math.sin(time*8+e.slot):.15+.04*Math.sin(time*6+e.slot);
-   ctx.save();ctx.globalAlpha=pulse;ctx.filter=meta.filter;
-   ctx.drawImage(image,e.x-size/2,e.y-offset+flutter-size/2,size,size);
-   ctx.restore();
+  if(e.dead||e.x<left||e.x>right||painted>=10)continue;
+  const active=Z_ENEMY_STATUS_VFX.filter(s=>e[s.status]>0);
+  if(!active.length)continue;
+  const max=Math.min(2,active.length,10-painted);
+  for(let i=0;i<max;i++){
+   const index=(Math.floor(time*1.25+(e.slot||0))+i)%active.length;
+   const state=active[index],rank=Math.min(6,e[state.power]||1);
+   const width=(164+Math.min(rank,6)*8)*state.scale;
+   const cycle=time*(state.status==='shock'?1.9:state.status==='burn'?1.35:1.05)+
+    (e.slot||0)*.13+i*.19;
+   const pulse=.38+.14*Math.abs(Math.sin(time*4.1+(e.slot||0)+i));
+   const x=e.renderX??e.x,y=(e.renderY??e.y)-(e.z||0)-state.offset+i*12;
+   if(drawUpgradeVfxLoop(state.sprite,x,y,width,pulse,cycle,e.face||1))painted++;
   }
  }
+ // A brief contact pop still uses the existing icon art, but it does not
+ // replace the persistent per-enemy effect while damage/status is active.
  for(const ef of attributeFx){
   if(ef.x<left||ef.x>right)continue;
   const meta=MOD_META[ef.mod],image=img[meta.source];
   if(!image?.complete||!image.naturalWidth)continue;
   const portion=clamp(ef.life/ef.maxLife,0,1);
-  const size=(1.45-portion*.5)*126*ef.scale;
-  ctx.save();ctx.globalAlpha=portion*.86;ctx.filter=meta.filter;
+  const size=(1.45-portion*.5)*100*ef.scale;
+  ctx.save();ctx.globalAlpha=portion*.54;ctx.filter=meta.filter;
   ctx.translate(ef.x,ef.y);ctx.rotate(ef.rotation);
   ctx.drawImage(image,-size/2,-size/2,size,size);ctx.restore();
  }
 }
 function drawHeroModAura(x,y,z){
  if(!p.mods.length)return;
+ // Persistent but restrained feedback for defensive / mobility modules.
+ // The bitmap stays behind the hero; heavy flashes happen only on contact.
+ if(modRank('guard')){
+  const cycle=(time+1.0)%3.2;
+  if(cycle<.66)drawUpgradeVfxLoop('guard',x,y-z-125,178+modRank('guard')*6,
+   (.20+.08*Math.sin(cycle/0.66*Math.PI))*(1-cycle/.75),cycle/.66,p.facing);
+ }
+ if(modRank('haste')&&(p.attack>0||p.running||Math.abs(p.vx||0)>90)){
+  const cycle=(time+.5)%1.75;
+  if(cycle<.35)drawUpgradeVfxLoop('chain',x-p.facing*42,y-z-98,82,
+   .27*(1-cycle/.39),cycle/.35,p.facing);
+ }
+ if(modRank('regen')&&p.hp<p.maxHp){
+  const cycle=time%3.6;
+  if(cycle<.53)drawUpgradeVfxLoop('guard',x,y-z-112,108,
+   .17*(1-cycle/.6),cycle/.53,p.facing);
+ }
  for(const [i,mod] of [...new Set(p.mods)].filter(k=>['fire','shock','bleed','ice'].includes(k)).entries()){
   const meta=MOD_META[mod],a=img[meta.source];if(!a?.complete||!a.naturalWidth)continue;
   const sz=125+(Math.sin(time*5+i)*11);
@@ -6509,8 +6549,8 @@ function startAttack(){
  const impactStep=isKick?1.20:move==='superman_punch'?1.14:1;
  p.attackDriveTotal=Math.min(315,Math.round((advance[move]||32)*(hasInput?3.12:2.83)*impactStep*(1+modRank('rush')*.2)));
  p.attackDriveRemaining=p.attackDriveTotal;
- if(modRank('rush'))spawnModLink('blue',p.x-p.facing*56,p.y-118,p.x+p.facing*75,p.y-118,.75+modRank('rush')*.06,'brightness(1.2)',.19);
- if(modRank('haste'))spawnModBitmap('blue',p.x-p.facing*24,p.y-94,.44+modRank('haste')*.06,'brightness(1.3)',.17);
+ if(modRank('rush'))spawnUpgradeVfx('chain',p.x-p.facing*48,p.y-115,.50+modRank('rush')*.055,p.facing,-.18,.23);
+ if(modRank('haste'))spawnUpgradeVfx('chain',p.x-p.facing*24,p.y-94,.46+modRank('haste')*.055,p.facing,-.12,.22);
  p.attack=p.attackDuration;p.animAge=0;p.hitDone=false;p.glow=.18;p.comboWindow=.95;
  sound('attack');
  // Every basic move cycles its mechanism before the timed gunshot.
@@ -7543,7 +7583,7 @@ function control(dt,pad){
  if(regen&&p.hp>wasHp){
   p.regenPulseClock=(p.regenPulseClock||0)+dt;
   if(p.regenPulseClock>=.9){p.regenPulseClock=0;
-   spawnModBitmap('blue',p.x,p.y-137,.70+regen*.08,'hue-rotate(245deg) saturate(.8)',.30);
+   spawnUpgradeVfx('guard',p.x,p.y-130,.46+regen*.065,p.facing,0,.36);
   }
  }else p.regenPulseClock=0;
  p.novaCooldown=Math.max(0,(p.novaCooldown||0)-dt);
