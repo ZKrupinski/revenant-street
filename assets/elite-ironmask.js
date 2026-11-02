@@ -87,22 +87,8 @@ function draw(e,x,y,z,api){
   ctx.fillStyle='#121c23';ctx.fillRect(-24,-204,48,191);
  }
  ctx.restore();
- // Only in the explicit ?elite=preview QA encounter, expose the live atlas
- // frame number so all 8 poses can be verified without guessing from motion.
- if(/(?:[?&])elite=preview(?:&|$)/.test(window.location?.search||'')){
-  ctx.save();ctx.fillStyle='#ffffff';ctx.font='900 18px Arial';
-  ctx.textAlign='center';
-  ctx.fillText('HOODED IRON MASK  /  '+key.toUpperCase()+'  '+(idx+1)+'/8',x,y-z-359);
-  ctx.restore();
- }
- if(e.dead)return;
- // Keep the elite identity and telegraphs, not floating health or poise bars.
- const top=y-z-325,tell=e.eliteTell>0;
- ctx.textAlign='center';ctx.font='900 14px Arial';
- ctx.fillStyle='#e9c4ba';ctx.fillText('IRON MASK / ELITE',x,top-13);
- if(tell){ctx.fillStyle='#ff5878';ctx.font='900 24px Arial';ctx.fillText('CRIMSON RUSH!',x,top-28)}
- if(e.windup>0){ctx.fillStyle='#fa647a';ctx.font='900 28px Arial';ctx.fillText('!',x,top-29)}
- if(e.groggy>0){ctx.fillStyle='#a0efff';ctx.font='900 14px Arial';ctx.fillText('처형 가능',x,top-33)}
+ // Combat and preview labels are hidden; original painted frames remain.
+
 }
 function colored(frame){return frame?.canvas||frame} // Legacy Frame Lab compatibility only.
 window.RZElite={KEYS,load,preload,move,frame,draw,colored,CW,CH,FOOT};

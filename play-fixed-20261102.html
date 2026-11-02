@@ -4549,14 +4549,8 @@ function drawIntruderCombat(e,x,y,z){
   ctx.filter='none';
  }
  ctx.restore();
- if(e.dead)return;
- // Enemy overhead HP/poise bars are intentionally hidden; keep attack telegraphs.
- const hpTop=y-z-270;
- ctx.textAlign='center';
- if(e.windup>0){ctx.fillStyle='#ff697b';ctx.font='900 26px Arial';ctx.fillText('!',x,hpTop-13)}
- if(e.chargePrep>0){ctx.fillStyle='#ffb842';ctx.font='900 28px Arial';ctx.fillText('!!',x,hpTop-18)}
- if(e.groggy>0){ctx.fillStyle='#9ef4ff';ctx.font='900 14px Arial';ctx.fillText('공격 → 처형',x,hpTop-12)}
 }
+
 // No vector circles/rings: the warning and landing flash stamp original
 // painted burst bitmap sprites onto the lane in world coordinates.
 function drawIntruderSpecialWarnings(){
@@ -4603,13 +4597,6 @@ function drawMaskedGrunt(e,x,y,z){
   ctx.fillStyle='#77333f';ctx.fillRect(-14,-155,28,5);
  }
  ctx.restore();
- if(e.dead)return;
- // Keep warning and execution cues; no per-enemy overhead HP or poise meter.
- const top=y-z-270;
- ctx.textAlign='center';
- if(e.windup>0){ctx.fillStyle='#ff697b';ctx.font='900 26px Arial';ctx.fillText('!',x,top-13)}
- if(e.chargePrep>0){ctx.fillStyle='#ffb842';ctx.font='900 28px Arial';ctx.fillText('!!',x,top-18)}
- if(e.groggy>0){ctx.fillStyle='#9ef4ff';ctx.font='900 14px Arial';ctx.fillText('공격 → 처형',x,top-12)}
 }
 
 function getAssassinMove(e){
@@ -4646,13 +4633,6 @@ function drawAssassin(e,x,y,z){
   ctx.fillStyle='#d8d3bc';ctx.beginPath();ctx.ellipse(0,-217,19,26,0,0,Math.PI*2);ctx.fill();
  }
  ctx.restore();
- if(e.dead)return;
- // Retain the attack/groggy telegraph anchor, remove all overhead meters.
- const top=y-z-267;
- ctx.textAlign='center';
- if(e.windup>0){ctx.fillStyle='#ff697b';ctx.font='900 26px Arial';ctx.fillText('!',x,top-13)}
- if(e.chargePrep>0){ctx.fillStyle='#ffb842';ctx.font='900 28px Arial';ctx.fillText('!!',x,top-18)}
- if(e.groggy>0){ctx.fillStyle='#9ef4ff';ctx.font='900 14px Arial';ctx.fillText('공격 → 처형',x,top-12)}
 }
 
 // Pre-matted new protagonist atlases: do NOT run the old green-screen flood
@@ -7429,7 +7409,7 @@ function enemyAttack(e){
  playCombatVoice(p.hp<=0?'heroDeath':'heroHurt');p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)startDeathCinematic()}
 function fxBurst(x,y,color='red',scale=1,specialAttackFx=false){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8),specialAttackFx})}
 function spawnParrySuccessFx(x,y,face=1){fx.push({kind:'parrySuccess10',x,y,face,life:.27,maxLife:.27})}
-function floatText(text,x,y,color){if(floating.length>=45)floating.splice(0,floating.length-36);floating.push({text,x,y,color,life:1.05})}
+function floatText(){ /* Hide character-bound damage numbers, skill and status words. */ }
 function messageUpdate(dt){if(messageTime>0){messageTime-=dt;if(messageTime<=0)$('gameMessage').classList.remove('active')}}
 function pollPad(){
  const g=navigator.getGamepads?.()?.find(Boolean);
@@ -8555,44 +8535,11 @@ function drawRiotGuard(e,x,y,z){
   if(old?.complete&&old.naturalWidth)ctx.drawImage(old,-74,-184,148,184);
  }
  ctx.restore();
- if(e.dead)return;
- // Shield guard keeps attack warnings, but no floating HP/poise gauge.
- const top=y-z-280;
- ctx.textAlign='center';
- if(e.windup>0){ctx.font='900 28px Arial';ctx.fillStyle='#ff677d';ctx.fillText('!',x,top-14)}
- if(e.groggy>0){ctx.font='900 13px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('GROGGY',x,top-10)}
 }
+
 // This warm-up runs only after the shield module has initialized.
 if(USE_HF_SHIELD)loadRiotGuard('idle');
-// Compact enemy ailment chips share the world-space HP-bar anchor.
-function enemyStatusIcons(e){
- const states=[];
- if(e.freeze>0)states.push(['❄',e.freezePower||1,'#bdefff']);
- if(e.shock>0)states.push(['⚡',e.shockPower||1,'#83ebff']);
- if(e.burn>0)states.push(['🔥',e.burnPower||1,'#ffbd81']);
- if(e.bleed>0)states.push(['🩸',e.bleedPower||1,'#ff8ba5']);
- return states;
-}
-function drawEnemyStatusIcons(e){
- if(e.dead)return;
- const states=enemyStatusIcons(e);
- if(!states.length)return;
- const x=(e.renderX??e.x),y=(e.renderY??e.y)-(e.z||0);
- const top=y-(e.type==='boss'?382:e.type==='guard'?309:e.type==='elite'?315:294);
- const width=37,total=states.length*width,first=x-total/2;
- ctx.save();
- ctx.textBaseline='middle';ctx.textAlign='center';
- for(let i=0;i<states.length;i++){
-  const [icon,count,color]=states[i],left=first+i*width;
-  // This is a UI chip; combat graphics remain painted PNG effects.
-  ctx.fillStyle='#07121de3';ctx.fillRect(left,top,35,22);
-  ctx.strokeStyle=color;ctx.lineWidth=1;ctx.strokeRect(left+.5,top+.5,34,21);
-  ctx.font='15px Arial';ctx.fillText(icon,left+10,top+11);
-  ctx.fillStyle='#ffe99f';ctx.font='900 12px Arial';
-  ctx.fillText('x'+Math.min(6,Math.max(1,count)),left+26,top+11);
- }
- ctx.restore();
-}
+// Status effects retain painted pixel VFX; overhead emoji/text chips are hidden.
 function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=actorShakeOffset(a);const x=Math.round((isP?a.x:(a.renderX??a.x))+sx),y=Math.round((isP?a.y:(a.renderY??a.y))+sy),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?getZMove():'';
  if(isP){ellipseShadow(x,y,1.06,.45);drawHeroAfterimages();drawHeroModAura(x,y,z);paintZ(x,y,z);return;}
  if(a.type==='raider'){drawMaskedGrunt(a,x,y,z);return;}
@@ -8631,8 +8578,7 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  if(isP){const swing=p.attack>0?(1-p.attack/p.attackDuration):0;const offsetX=29,offsetY=-120;ctx.save();ctx.translate(offsetX,offsetY);ctx.rotate(p.attack>0?(-.85+2.2*swing):-.88);const weapon=img['pipe_charged'];if(p.weapon>0&&weapon.complete)ctx.drawImage(weapon,-12,-18,150,38);ctx.restore();}
  // No vector rectangle on damage: only the original bitmap silhouette flashes.
  ctx.restore();
- if(!isP&&!a.dead){const y0=y-z-h-13;/* All enemy overhead HP/poise bars removed, including boss. */if(a.windup>0){ctx.textAlign='center';ctx.fillStyle='#ff697b';ctx.font=`900 ${boss?40:27}px Arial`;ctx.fillText('!',x,y0-13)}
- if(a.chargePrep>0){ctx.textAlign='center';ctx.fillStyle='#ffb842';ctx.font='900 31px Arial';ctx.fillText('!!',x,y0-18)}if(a.groggy>0){ctx.textAlign='center';ctx.font='900 14px Arial';ctx.fillStyle='#9ef4ff';ctx.fillText('공격 → 처형',x,y0-12)}}}
+}
 // Sample the interior of each 5x2 source cell with integer edges: no adjacent-frame bleed.
 function parrySuccessSourceRect(w,h,frame){
  const col=frame%5,row=Math.floor(frame/5);
@@ -8759,19 +8705,7 @@ function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);
   continue;
  }
  let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}if(layer!=='back'&&p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p);}
-// Damage labels stay ABOVE the fighters even in the behind-character preview;
-// only actual bitmap energy and combat sparks are moved behind actors.
-function drawFloatingEffects(){
- const left=cameraX-820,right=cameraX+W+820;
- for(const f of floating){
-  if(f.x<left||f.x>right)continue;
-  ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);
-  ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;
-  ctx.lineWidth=4;ctx.strokeStyle='#10131c';
-  ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;
-  ctx.fillText(f.text,f.x,f.y);ctx.restore();
- }
-}
+// Combat-only text overlays are intentionally disabled; painted VFX remain layered.
 // Hybrid by default. Use ?vfx=back or ?vfx=front for the old all-one-layer views.
 const Z_VFX_MODE=/(?:\?|&)vfx=front(?:&|$)/i.test(location.search||'')?'front':
  /(?:\?|&)vfx=back(?:&|$)/i.test(location.search||'')?'back':'hybrid';
@@ -8803,8 +8737,7 @@ function draw(){
  actors.forEach(drawActor);
  if(Z_VFX_MODE==='front')drawEffects('all');
  else if(Z_VFX_MODE==='hybrid')drawEffects('front',vfxSelection);
- drawFloatingEffects();
- for(const e of actors)if(e!==p&&!e.dead)drawEnemyStatusIcons(e);
+ // No overhead damage numbers, status chips or combat warning text.
  ctx.restore();syncZSprite();
  if(screenTint>0){ctx.globalAlpha=screenTint*.32;ctx.fillStyle='#ff335d';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}
  ctx.restore();

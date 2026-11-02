@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const root=path.resolve(__dirname,'..');
 for(const file of ['index.html','play-fixed-20261102.html']){
  const html=fs.readFileSync(path.join(root,file),'utf8');
- assert(html.includes('function drawFloatingEffects(){'),'damage numbers stay above combat layers');
+ assert(!html.includes('function drawFloatingEffects(){'),'no floating damage numbers');
  assert(html.includes("if(Z_VFX_MODE==='back')drawEffects('all');"),'old all-back preview');
  assert(html.includes("if(Z_VFX_MODE==='front')drawEffects('all');"),'old all-front preview');
  assert(html.includes("drawEffects('back',vfxSelection)"),'ordinary FX render under actor sprites');
@@ -54,7 +54,7 @@ for(const file of ['index.html','play-fixed-20261102.html']){
  assert.equal(world.inPass('all',true),true);
 
  // Simulate the actual drawEffects pass with PNG draw stubs.
- const effectStart=html.indexOf('function drawEffects('),effectEnd=html.indexOf('// Damage labels stay ABOVE',effectStart);
+ const effectStart=html.indexOf('function drawEffects('),effectEnd=html.indexOf('// Combat-only text overlays are intentionally disabled',effectStart);
  assert(effectStart>helperStart&&effectEnd>effectStart);
  const evt=[],testFx=[normal,secondary,crit,chain,parry,slam,dash,riposte,trail,extra];
  const render={
@@ -84,6 +84,7 @@ for(const file of ['index.html','play-fixed-20261102.html']){
  const begin=html.indexOf('const Z_VFX_MODE='),end=html.indexOf('const runtimePerf=',begin);
  assert(begin>0&&end>begin);
  const renderCode=html.slice(begin,end);
+ assert(!renderCode.includes('drawFloatingEffects()')&&!renderCode.includes('drawEnemyStatusIcons('),'character text not in draw order');
  for(const [query,mode] of [['','hybrid'],['?vfx=back','back'],['?vfx=front','front'],['?k=1&vfx=front','front']]){
   const calls=[],hero={x:200,y:540},enemy={x:300,y:565,dead:false};
   const a={window:null,location:{search:query},gameState:'playing',heroEntry:{active:false},
@@ -100,10 +101,10 @@ for(const file of ['index.html','play-fixed-20261102.html']){
   assert.equal(a.__zVfxLayerStatus(),mode);
   a.paint();
   const expect=mode==='hybrid'
-   ?['backdrop','vfx:back','hero','enemy','vfx:front','text','icons']
+   ?['backdrop','vfx:back','hero','enemy','vfx:front']
    :mode==='back'
-   ?['backdrop','vfx:all','hero','enemy','text','icons']
-   :['backdrop','hero','enemy','vfx:all','text','icons'];
+   ?['backdrop','vfx:all','hero','enemy']
+   :['backdrop','hero','enemy','vfx:all'];
   assert.deepEqual(calls,expect,file+' mode '+mode);
  }
  const first=html.indexOf("(()=>{'use strict';"),last=html.lastIndexOf('\n})();\n\n</script>');

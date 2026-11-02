@@ -92,16 +92,22 @@ assert(html.includes("bossEnergyHud.hidden=gameState!=='playing'||!activeBoss"),
  'only the top-screen final boss HP HUD should remain');
 assert(html.includes("clamp(100*activeBoss.hp/Math.max(1,activeBoss.maxHp),0,100)"),
  'real boss HP tracking must remain intact');
+// Combat rule: enemy and player heads show no text, numbers, warning labels
+// or status chips. HP/poise/statuses and screen-fixed boss HUD still operate.
 for(const [name,code] of [
  ['intruder',html.slice(html.indexOf('function drawIntruderCombat('),html.indexOf('function drawIntruderSpecialWarnings('))],
  ['masked grunt',html.slice(html.indexOf('function drawMaskedGrunt('),html.indexOf('function getAssassinMove('))],
  ['assassin',html.slice(html.indexOf('function drawAssassin('),html.indexOf('function prepareTransparentHeroCells('))],
- ['guard',html.slice(html.indexOf('function drawRiotGuard('),html.indexOf('function enemyStatusIcons('))],
+ ['shield guard',html.slice(html.indexOf('function drawRiotGuard('),html.indexOf('// This warm-up runs only after the shield module'))],
  ['iron mask',actorCode],
  ['final boss',bossSource]
 ]){
- assert(code.includes('fillText('),name+': attack warning telegraphs and labels stay visible');
+ assert(!code.includes('fillText('),name+': no overhead status or warning text');
 }
-assert(html.includes('drawEnemyStatusIcons(e)'),'status-effect symbols are still rendered');
-
+for(const file of ['index.html','play-fixed-20261102.html']){
+ const source=fs.readFileSync(path.join(root,file),'utf8');
+ assert(source.includes('function floatText(){'),'world-space text emitter disabled');
+ assert(!source.includes('drawFloatingEffects('),'no floating number pass');
+ assert(!source.includes('drawEnemyStatusIcons('),'no status emoji chip pass');
+}
 console.log('PASS: actual hooded Iron Mask melee/range AI runs charge 1-8 and attack 1-8; ordinary hits cannot cancel its animation');

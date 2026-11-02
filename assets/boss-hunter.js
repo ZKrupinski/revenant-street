@@ -148,14 +148,7 @@ function draw(e,x,y,z,api){
   ctx.restore();
  }
  ctx.restore();
- if(!e.dead){
-  // No health meter over the boss sprite; its screen-fixed HUD remains.
-  const top=y-z-405;
-  if(e.bossMode==='slam'){
-   ctx.textAlign='center';ctx.font='900 18px Arial';
-   ctx.fillStyle='#ff677c';ctx.fillText('⚠ CRIMSON IMPACT',x,top-12);
-  }
- }
+ // Boss attack warning stays in its bitmap telegraph, never floating text.
  return true;
 }
 window.RZBossHunter={NAMES,load,init,start,update,state,frame,draw,isEnabled:()=>useNewBoss};
