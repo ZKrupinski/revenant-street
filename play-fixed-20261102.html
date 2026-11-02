@@ -3492,6 +3492,24 @@ body{position:fixed;inset:0;touch-action:manipulation}
  margin:2px 0 0!important;
 }
 </style>
+<style id="z-combat-hud-entry-fallback-20261102">
+/* WAAPI fallback: elements travel in separately from outside the playfield,
+   settle with a short, restrained impact vibration. */
+#stageWrap .z-combat-ui-arrive{
+ animation:zCombatUiSlideAndSettle .65s linear both!important;
+}
+@keyframes zCombatUiSlideAndSettle{
+ 0%{transform:translate3d(var(--z-ui-from-x,0px),var(--z-ui-from-y,0px),0)}
+ 76%{transform:translate3d(0,0,0)}
+ 82%{transform:translate3d(-2.5px,1px,0)}
+ 88%{transform:translate3d(2px,-1px,0)}
+ 94%{transform:translate3d(-1px,0,0)}
+ 100%{transform:translate3d(0,0,0)}
+}
+@media(prefers-reduced-motion:reduce){
+ #stageWrap .z-combat-ui-arrive{animation:none!important}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -5692,7 +5710,73 @@ function hubMenuNavigate(dx,dy){
 }
 function menuConfirm(){if(!menuReady()){menuPad.readyAt=Math.max(menuPad.readyAt,Date.now()+250);return false;}const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
 function menuBack(){if(rewardSelection)return false;if(closeHubShardNotice())return true;const items=menuButtons();const back=items.find(b=>['resume','title','pauseMenu','hub'].includes(b.dataset.action));if(back){back.click();return true}return false}
+// Opening HUD motion uses individual translate so button press/joystick transforms stay intact.
+const combatHudEntranceAnimations=new Set();
+const combatHudFallbackElements=new Set();
+function cancelCombatHudEntrance(){
+ for(const animation of combatHudEntranceAnimations)animation.cancel();
+ combatHudEntranceAnimations.clear();
+ for(const element of combatHudFallbackElements){
+  element.classList.remove('z-combat-ui-arrive');
+  element.style.removeProperty('--z-ui-from-x');
+  element.style.removeProperty('--z-ui-from-y');
+  element.style.animationDelay='';
+ }
+ combatHudFallbackElements.clear();
+}
+function revealCombatHud(){
+ cancelCombatHudEntrance();
+ $('hud').hidden=false;$('touchControls').hidden=false;
+ if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+ const stage=$('stageWrap').getBoundingClientRect();
+ const entries=[
+  ['.hud-left','left',0],['.hud-center','top',45],['.hud-right','right',90],
+  ['#analogPad','left',110],
+  ['.touch-actions [data-face="left"]','bottom',140],
+  ['.touch-actions [data-face="top"]','right',175],
+  ['.touch-actions [data-face="bottom"]','bottom',210],
+  ['.touch-actions [data-face="right"]','right',245]
+ ];
+ for(const [selector,side,delay] of entries){
+  const element=document.querySelector(selector);
+  if(!element?.animate||!element.getClientRects().length)continue;
+  const rect=element.getBoundingClientRect(),margin=28;
+  const x=side==='left'?stage.left-rect.right-margin:side==='right'?stage.right-rect.left+margin:0;
+  const y=side==='top'?stage.top-rect.bottom-margin:side==='bottom'?stage.bottom-rect.top+margin:0;
+  const sx=x?Math.sign(x):0,sy=y?Math.sign(y):0;
+  const translate=(distance)=>`${sx*distance}px ${sy*distance}px`;
+  let animation=null;
+  // Modern browsers use the individual translate property so pad/button
+  // transforms remain intact. The CSS fallback supports older WebViews.
+  if(element.animate)try{
+   animation=element.animate([
+    {translate:`${x}px ${y}px`,offset:0,easing:'cubic-bezier(.18,.72,.22,1)'},
+    {translate:'0px 0px',offset:.76,easing:'ease-out'},
+    {translate:translate(-2.5),offset:.82},
+    {translate:translate(1.8),offset:.88},
+    {translate:translate(-1),offset:.94},
+    {translate:'0px 0px',offset:1}
+   ],{duration:650,delay,fill:'both',easing:'linear'});
+  }catch(_){}
+  if(animation){
+   combatHudEntranceAnimations.add(animation);
+   animation.onfinish=()=>{animation.cancel();combatHudEntranceAnimations.delete(animation)};
+  }else{
+   element.style.setProperty('--z-ui-from-x',x+'px');
+   element.style.setProperty('--z-ui-from-y',y+'px');
+   element.style.animationDelay=delay+'ms';
+   element.classList.add('z-combat-ui-arrive');
+   combatHudFallbackElements.add(element);
+   element.addEventListener('animationend',()=>{
+    element.classList.remove('z-combat-ui-arrive');
+    combatHudFallbackElements.delete(element);
+    element.style.animationDelay='';
+   },{once:true});
+  };
+ }
+}
 function showMenu(html){
+ cancelCombatHudEntrance();
  $('overlay').classList.remove('reward-confirming');
  $('menu').classList.remove('reward-entrance');
  menuPad.readyAt=Date.now()+(gameState==='reward'?700:180);menuPad.armed=false;menuPad.neutralAt=Date.now();
@@ -5912,7 +5996,7 @@ async function requestRunStart(){
   showMenu(`<div class="eyebrow">RESOURCE ERROR</div><h2>리소스 로딩 중단</h2><p>${String(err.message).replace(/[<>]/g,'')}</p><p>불완전한 캐릭터가 보이지 않도록 게임 실행을 막았습니다.</p><div class="buttons"><button class="main-btn" data-action="start">다시 불러오기</button><button class="secondary-btn" data-action="title">타이틀</button></div>`);
  }
 }
-function startRun(){pendingHubAutoRefresh=false;resetInputs();resetPlayer();
+function startRun(){cancelCombatHudEntrance();pendingHubAutoRefresh=false;resetInputs();resetPlayer();
  // Preserve WASD that was held while the loading or start overlay was visible.
  for(const k of ['w','a','s','d'])if(heldKeyboard.has(k))keys.add(k);
  menuBlockedKeys.clear();syncFaceButtonVisuals();
@@ -6634,53 +6718,66 @@ PARRY_COUNTER_ART.image.src=PARRY_COUNTER_ART.src;
 // 8-frame parry-counter art. Each genuine NORMAL strike sheds 4-5 fast,
 // staggered bitmap bursts at the enemy-side contact point; no vector trails,
 // smoke, procedural shapes or new image downloads.
-const BASIC_CONTACT_FX_LIMIT=32;
+// Compact, bright multi-hit sparks, based on the existing illustrated
+// parry-counter bitmap. Always keep a preloaded bitmap fallback so that a
+// failed / dimension-changed parry atlas cannot silently disable basic hits.
+const BASIC_CONTACT_FX_LIMIT=46;
 function spawnBasicContactFx(enemy,move,critical=false){
- if(!PARRY_COUNTER_ART.available||!PARRY_COUNTER_ART.image.complete)return false;
  const active=fx.reduce((n,v)=>n+(v.kind==='basicHitSprite'?1:0),0);
- const count=Math.min(4+Math.floor(Math.random()*2),
-  BASIC_CONTACT_FX_LIMIT-active,Math.max(0,110-fx.length));
+ const count=Math.min(5+Math.floor(Math.random()*3),
+  BASIC_CONTACT_FX_LIMIT-active,Math.max(0,112-fx.length));
  if(count<=0)return false;
  const dir=p.facing<0?-1:1;
  const kick=Z_KICK_MOVES.has(move),head=Z_HEAD_MOVES.has(move);
- const elbow=move.includes('elbow');
- const low=move==='lowkick'||move==='shovel_hook';
+ const elbow=move.includes('elbow'),low=move==='lowkick'||move==='shovel_hook';
  const upper=move==='uppercut'||move==='rising_elbow';
- const bodyY=low?61:head||upper?151:kick?102:elbow?121:132;
- // Hit the near side of the enemy rather than the center of either hitbox.
- const hitX=enemy.x-dir*Math.min(52,Math.max(16,bodyHalfX(enemy)*.66));
- const hitY=enemy.y-Math.max(0,enemy.z||0)-bodyY;
- const power=(kick||elbow||head?1.12:move==='jab'?.90:1)*(critical?1.11:1);
+ const bodyY=low?65:head||upper?155:kick?103:elbow?125:133;
+ // Near-body actual impact, NOT the hero's center or the enemy's distant edge.
+ const contactX=enemy.x-dir*Math.min(50,Math.max(16,bodyHalfX(enemy)*.66));
+ const contactY=enemy.y-Math.max(0,enemy.z||0)-bodyY;
+ const power=(kick||elbow||head?1.09:move==='jab'?.91:1)*(critical?1.1:1);
  for(let i=0;i<count;i++){
-  const main=i===0,delay=main?0:rnd(0,.031);
-  const duration=rnd(.085,.145), width=(main?rnd(73,107):rnd(25,63))*power;
-  // Spawn on contact; fragments travel BACK against the blow's direction.
-  fx.push({kind:'basicHitSprite',x:hitX+rnd(-7,7),y:hitY+rnd(-9,9),
-   dir:-dir,vx:-dir*rnd(62,180),vy:rnd(-87,87),
-   width,rotation:rnd(-.33,.33),alpha:rnd(.76,1),
-   frameBase:Math.random()<.58?0:4,delay,duration,age:0,
-   life:duration+delay,maxLife:duration+delay});
+  const first=i===0,delay=first?0:rnd(.002,.030);
+  const duration=rnd(.123,.175);
+  const width=(first?rnd(130,167):rnd(48,96))*power;
+  fx.push({kind:'basicHitSprite',x:contactX+rnd(-9,9),
+   y:contactY+rnd(-10,10),dir:-dir,
+   vx:-dir*rnd(65,160),vy:rnd(-78,78),
+   width,rotation:rnd(-.32,.32),alpha:rnd(.82,1),
+   frameBase:Math.random()<.58?0:4,
+   useBlue:Math.random()<.24,
+   delay,duration,age:0,life:duration+delay,maxLife:duration+delay});
  }
  return true;
 }
 function drawBasicContactFx(f){
- const image=PARRY_COUNTER_ART.image;
- if(!PARRY_COUNTER_ART.available||!image.complete||f.age<f.delay)return;
+ if(f.age<f.delay)return;
  const progress=clamp((f.age-f.delay)/f.duration,0,.999999);
- const frame=f.frameBase+Math.min(3,Math.floor(progress*4));
- const column=frame%4,row=Math.floor(frame/4);
- const sx=Math.round(column*image.naturalWidth/4);
- const sy=Math.round(row*image.naturalHeight/2);
- const sw=Math.round((column+1)*image.naturalWidth/4)-sx;
- const sh=Math.round((row+1)*image.naturalHeight/2)-sy;
- const w=f.width,h=w*(sh/sw)*.81;
- const elapsed=f.age-f.delay;
+ const image=PARRY_COUNTER_ART.image;
+ const painted=image.complete&&image.naturalWidth>=8&&image.naturalHeight>=2;
+ // Small animated fragments never disappear when the parry image is still
+ // loading or its dimensions differ from the former fixed-size assumption.
+ const art=painted?image:(img[f.useBlue?'burst_blue':'burst_gold']||img.burst_blue);
+ if(!art?.complete||!art.naturalWidth)return;
+ const w=f.width,elapsed=f.age-f.delay;
  ctx.save();
  ctx.translate(f.x+f.vx*elapsed,f.y+f.vy*elapsed);
  ctx.scale(f.dir,1);ctx.rotate(f.rotation);
- // Short, crisp reverse flash with no broad blurred glow.
- ctx.globalAlpha=f.alpha*(progress<.35?1:Math.max(0,(1-progress)/.65));
- ctx.drawImage(image,sx,sy,sw,sh,-w*.18,-h*.5,w,h);
+ ctx.globalCompositeOperation='screen';
+ ctx.globalAlpha=f.alpha*(progress<.42?1:Math.max(0,(1-progress)/.58));
+ if(painted){
+  const frame=f.frameBase+Math.min(3,Math.floor(progress*4));
+  const col=frame%4,row=Math.floor(frame/4);
+  const sx=Math.round(col*image.naturalWidth/4),sy=Math.round(row*image.naturalHeight/2);
+  const sw=Math.round((col+1)*image.naturalWidth/4)-sx;
+  const sh=Math.round((row+1)*image.naturalHeight/2)-sy;
+  const h=w*(sh/sw)*.81;
+  ctx.drawImage(image,sx,sy,sw,sh,-w*.18,-h*.5,w,h);
+ }else{
+  // Existing blue/gold brush-burst bitmaps: still no vector geometry/smoke.
+  const sz=w*.8;
+  ctx.drawImage(art,-sz*.42,-sz*.50,sz,sz);
+ }
  ctx.restore();
 }
 function spawnParryCounterFx(attacker,target,visual=1.25){
@@ -7834,7 +7931,7 @@ function update(dt){
   }
   if(heroEntry.elapsed>=heroEntry.duration){
    heroEntry.active=false;
-   $('hud').hidden=false;$('touchControls').hidden=false;
+   revealCombatHud();
    p.inv=Math.max(p.inv,.30);setStatus('COMBAT LIVE');updateHud();
    flash('CHAPTER 01 : 침수된 거리',1.35);
   }
