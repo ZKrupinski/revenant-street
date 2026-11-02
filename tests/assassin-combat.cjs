@@ -3040,35 +3040,40 @@ test('unavailable attacks are skipped and failed inputs do not consume moves',()
  for(let i=0;i<9;i++){t.p.stamina=100;t.p.attack=0;t.startAttack();moves.push(t.p.moveName)}
  for(let i=0;i<9;i+=3)assert.equal(new Set(moves.slice(i,i+3)).size,3);
 });
-test('drum and shotgun Foley stays predecoded and never ducks the music',()=>{
+test('ballistic Foley predecodes, fires at impact and never ducks music',()=>{
  const prior=world.AudioContext,priorMusic=world.__revenantBgm,played=[],gains=[];
  const p=()=>({value:0,setValueAtTime(v){this.value=v},linearRampToValueAtTime(v){this.value=v}});
- const node=()=>({gain:p(),threshold:{value:0},knee:{value:0},ratio:{value:0},
+ const node=()=>({gain:p(),frequency:{value:0},threshold:{value:0},knee:{value:0},ratio:{value:0},
   attack:{value:0},release:{value:0},playbackRate:{value:1},
   connect(x){return x},disconnect(){},stop(){}});
  let context;
  class FakeAC{
-  constructor(){context=this;this.currentTime=12;this.state='running';this.destination=node();}
+  constructor(){context=this;this.currentTime=12;this.state='running';this.destination=node()}
   createDynamicsCompressor(){return node()}
   createGain(){const v=node();gains.push(v);return v}
+  createBiquadFilter(){return node()}
   createBufferSource(){const v=node();v.start=()=>played.push(v);return v}
  }
  world.AudioContext=FakeAC;let ducked=false;
  world.__revenantBgm={duckImpact(){ducked=true}};
- t.seedImpactAudio(new FakeAC(),{punchA:{duration:.33},punchB:{duration:.36},heavy:{duration:.50},parry:{duration:.43},counter:{duration:.76}});
+ t.seedImpactAudio(new FakeAC(),{punchA:{duration:.33},punchB:{duration:.36},heavy:{duration:.60},
+  parry:{duration:.43},counter:{duration:.80},crack:{duration:.52}});
  try{
+  let pos=played.length;
   assert.equal(t.playImpactSound('punch'),true);
-  assert.equal(played.at(-1).buffer.duration,.33,'punch uses new rounded drum');
-  assert.equal(t.playImpactSound('punch'),false,'no stacked noise on double hits');
-  context.currentTime+=.1;
+  assert.equal(played[pos].buffer.duration,.33,'pistol report is primary attack impact');
+  assert.equal(t.playImpactSound('punch'),false,'normal rapid hit is capped');
+  context.currentTime+=.1;pos=played.length;
   assert.equal(t.playImpactSound('heavy',1.2),true);
-  assert.equal(played.at(-1).buffer.duration,.50,'heavy drum has half-second low body');
-  assert.equal(t.playImpactSound('parry',1.65),true,'shotgun rack bypasses regular-hit cooldown');
-  assert.equal(played.at(-1).buffer.duration,.43,'shotgun pump action');
-  assert.equal(t.playImpactSound('counter',1.25),true,'shotgun blast bypasses rapid-hit cooldown');
-  assert.equal(played.at(-1).buffer.duration,.76,'shotgun report has a tight, shorter tail');
-  assert(gains.some(v=>Math.abs(v.gain.value-(.88*.70*.92))<1e-8),'safe bus headroom with louder compressed Foley');
-  assert.equal(ducked,false,'sound must never duck BGM');
+  assert.equal(played[pos].buffer.duration,.60,'heavy shot is foremost');
+  pos=played.length;
+  assert.equal(t.playImpactSound('parry',1.65),true,'parry rack bypasses impact cooldown');
+  assert.equal(played[pos].buffer.duration,.43,'mechanical shotgun rack is foremost');
+  pos=played.length;
+  assert.equal(t.playImpactSound('counter',1.25),true,'counter blast has its own priority');
+  assert.equal(played[pos].buffer.duration,.80,'shotgun blast is the primary report');
+  assert(gains.some(v=>Math.abs(v.gain.value-(.98*.70*.92))<1e-8),'compressed mix preserves safe headroom');
+  assert.equal(ducked,false,'sound effects never duck background music');
  }finally{
   if(prior)world.AudioContext=prior;else delete world.AudioContext;
   if(priorMusic)world.__revenantBgm=priorMusic;else delete world.__revenantBgm;
