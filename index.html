@@ -6254,9 +6254,9 @@ function startAttack(){
  const cancelNormal=p.attack>0&&!p.airAttack&&!p.dashSmash&&!p.counterBoost&&
   !p.riposteStrikeTarget&&!p.airKickPhase&&p.z<=0;
  if(p.attack>0&&!cancelNormal){p.attackQueued=true;return}
- // Forward dash + attack is a deliberate single-frame-window strong shove.
- if(p.dashFollowWindow>0&&p.z<=16){
-  if(p.stamina<16)return;
+ // Dash attack is armed by a forward dash, never by distance traveled.
+ // A short/exhausted dash or one stopped by collision still qualifies.
+ if(p.dashFollowWindow>0&&!p.evadeBackstep&&p.z<=16){
   const dashDir=p.dodgeX||p.facing;
   p.dashFollowWindow=0;p.dodge=0;p.evadeBackstep=false;
   p.dashSmash=true;p.counterBoost=false;p.airAttack=false;
@@ -6266,7 +6266,10 @@ function startAttack(){
   p.attackDriveX=dashDir;p.attackDriveY=0;
   // A SECOND long lunge distributed over the punch frames.
   p.attackDriveTotal=280;p.attackDriveRemaining=280;
-  p.comboWindow=.95;p.comboIdx=2;p.stamina-=16;p.animAge=0;
+  p.comboWindow=.95;p.comboIdx=2;
+  // The dash has already spent its stamina. Consume up to 16 more but
+  // never reject its follow-up merely because the dash was low-energy.
+  p.stamina=Math.max(0,p.stamina-16);p.animAge=0;
   p.recentMoves.push('cross');if(p.recentMoves.length>5)p.recentMoves.shift();
   // Protect the whole committed lunge punch and a short recovery from enemy interrupts.
   p.inv=Math.max(p.inv,p.attackDuration+.14);runStats.attacks++;triggerStrikeCamera('dash');vibrateImpact('dash');sound('attack');playCombatVoice('heroPower');
@@ -6392,7 +6395,9 @@ function dodge(fromBuffer=false){
  // Forward dashes retain protection briefly after travel ends; backstep timing remains separate.
  p.inv=Math.max(p.inv,backInput?(exhausted?.12:.34):duration+(exhausted?.16:.24));
  p.dodgeX=backInput?-p.facing:p.facing;p.stamina=Math.max(0,p.stamina-19);
- p.dashFollowWindow=backInput?0:Math.max(.63,duration+.30);
+ // Short dash follows the same strong punch path as a full dash.
+ // Leave a forgiving tap window even when travel ends early.
+ p.dashFollowWindow=backInput?0:Math.max(.80,duration+.38);
  // The accepted input takes priority over the previous strike's hit-stop.
  hitStop=0;
  p.motionKey='';p.motionTime=0;p.animAge=0;
