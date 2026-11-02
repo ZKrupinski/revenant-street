@@ -2059,7 +2059,11 @@ test('upgrades may stack repeatedly and have genuine attack damage benefit',()=>
   const e=t.makeEnemy('raider',t.p.x+75,t.p.y,1);
   e.hp=1000;e.maxHp=1000;e.stun=2;t.setEnemies([e]);
   t.p.facing=1;t.p.moveName='jab';t.p.comboIdx=0;t.p.counterBoost=false;t.p.hitDone=false;
-  t.attackCheck();
+  // Compare the power modifier at fixed normal-hit damage, not random crit RNG.
+  t.p.critDrought=0;
+  const originalRandom=Math.random;
+  try{Math.random=()=>.999;t.attackCheck();}
+  finally{Math.random=originalRandom;}
   return 1000-e.hp;
  };
  const basic=hit();

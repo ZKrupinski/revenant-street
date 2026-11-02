@@ -94,17 +94,17 @@ for(const file of ['index.html','play-fixed-20261102.html']){
    drawBackdrop(){calls.push('backdrop')},drawIntruderSpecialWarnings(){},
    drawActor(v){calls.push(v===hero?'hero':'enemy')},
    drawEffects(layer){calls.push('vfx:'+layer)},drawFloatingEffects(){calls.push('text')},
-   drawEnemyStatusIcons(){calls.push('icons')},syncZSprite(){},
+   drawEnemyStatusIcons(){calls.push('icons')},syncZSprite(){},drawCombatWordHud(){calls.push('wordHUD')},
    drawTravelMeter(){},drawOffscreenEnemyIndicator(){}
   };
   a.window=a;vm.createContext(a);vm.runInContext(renderCode+'\nthis.paint=draw;',a);
   assert.equal(a.__zVfxLayerStatus(),mode);
   a.paint();
   const expect=mode==='hybrid'
-   ?['backdrop','vfx:back','hero','enemy','vfx:front']
+   ?['backdrop','vfx:back','hero','enemy','vfx:front','wordHUD']
    :mode==='back'
-   ?['backdrop','vfx:all','hero','enemy']
-   :['backdrop','hero','enemy','vfx:all'];
+   ?['backdrop','vfx:all','hero','enemy','wordHUD']
+   :['backdrop','hero','enemy','vfx:all','wordHUD'];
   assert.deepEqual(calls,expect,file+' mode '+mode);
  }
  const first=html.indexOf("(()=>{'use strict';"),last=html.lastIndexOf('\n})();\n\n</script>');
