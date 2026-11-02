@@ -3431,6 +3431,66 @@ body{position:fixed;inset:0;touch-action:manipulation}
  }
 }
 </style>
+<style id="z-explicit-upgrade-levels-v1">
+/* PROJECT Z / always display both current and after-upgrade levels.
+   Reuses the existing card typography; no new card height or scrolling. */
+#stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>.up-progression.level-transition{
+ display:flex!important;flex:0 0 auto!important;align-items:center!important;
+ justify-content:center!important;flex-wrap:nowrap!important;
+ min-width:0!important;width:100%!important;
+ padding:clamp(3px,.55cqh,6px) 0!important;
+ margin:clamp(1px,.4cqh,4px) 0 0!important;
+ gap:clamp(3px,.75cqw,11px)!important;
+ border:0!important;border-top:1px solid #5997b64a!important;
+ border-bottom:1px solid #5997b64a!important;
+ font:900 clamp(10px,1.9cqh,15px)/1.18 Arial,'Malgun Gothic',sans-serif!important;
+ white-space:nowrap!important;overflow:visible!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name .hub-level-line{
+ display:flex!important;flex:0 0 auto!important;align-items:center!important;
+ justify-content:center!important;flex-wrap:nowrap!important;
+ width:100%!important;min-width:0!important;
+ margin:clamp(2px,.35cqh,4px) 0 0!important;
+ gap:clamp(3px,.65cqw,9px)!important;
+ font:900 clamp(10px,1.8cqh,13px)/1.15 Arial,'Malgun Gothic',sans-serif!important;
+ letter-spacing:-.15px!important;white-space:nowrap!important;
+ color:#c8d8e4!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name .hub-level-line .level-now,
+#stageWrap #menu.reward-dialog .choice-grid>.upgrade-btn .level-now{
+ color:#a9c2d3!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name .hub-level-line .level-arrow,
+#stageWrap #menu.reward-dialog .choice-grid>.upgrade-btn .level-arrow{
+ color:#6abed9!important;flex:none!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name .hub-level-line .level-after{
+ color:#ffdfab!important;
+}
+#stageWrap #menu.reward-dialog .choice-grid>.upgrade-btn .level-after{
+ color:#91eaff!important;
+}
+#stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name .hub-level-line .level-after.max{
+ color:#79d9ac!important;
+}
+/* The old icon-side label was misleading (it only displayed next level).
+   Use its freed space for the explicit current->after text row. */
+#stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>.sym>.up-lvl{display:none!important}
+#app.tight-hub-stage #stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>.up-progression.level-transition,
+#app.compact-game-stage #stageWrap #menu.reward-dialog>.choice-grid>.upgrade-btn>.up-progression.level-transition{
+ display:flex!important;
+ font-size:clamp(9px,1.8cqh,12px)!important;
+ padding:2px 0!important;margin:2px 0 0!important;
+ gap:clamp(2px,.45cqw,6px)!important;
+}
+#app.tight-hub-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name .hub-level-line,
+#app.compact-game-stage #stageWrap #menu.hub-dialog .hub-modules>.hub-module .hub-module-name .hub-level-line{
+ display:flex!important;
+ font-size:clamp(9px,1.65cqh,11px)!important;
+ gap:clamp(2px,.45cqw,6px)!important;
+ margin:2px 0 0!important;
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -8278,8 +8338,8 @@ function rewardMenu(reason='wave'){
  for(const pick of fresh)if(cardsOffered.length<3&&!cardsOffered.some(o=>o.id===pick.id))cardsOffered.push(pick);
  for(const pick of [...owned.slice(1),...fresh])if(cardsOffered.length<3&&!cardsOffered.some(p=>p.id===pick.id))cardsOffered.push(pick);
  const cards=cardsOffered.map(({id,meta})=>{
-  const level=modRank(id),stack=level?'Lv.'+level+' → '+(level+1):'NEW';
-  return `<button class="upgrade-btn" data-mod="${id}"><span class="sym">${modIconMarkup(id)}<small class="up-lvl">Lv.${level+1}</small></span><strong>${meta.title} <small class="${level?'up-levelup':'up-new'}">${stack}</small></strong><span class="up-progression">→ Lv.${level+1}</span><small>${upgradeDescription(id,level)} / 최대 Lv.${MOD_LEVEL_CAP}</small></button>`;
+  const level=modRank(id),stack=level?'중첩 강화':'NEW';
+  return `<button class="upgrade-btn" data-mod="${id}" aria-label="${meta.title}: 현재 레벨 ${level}, 강화 후 레벨 ${level+1}"><span class="sym">${modIconMarkup(id)}</span><strong>${meta.title} <small class="${level?'up-levelup':'up-new'}">${stack}</small></strong><span class="up-progression level-transition"><span class="level-now">현재 Lv.${level}</span><span class="level-arrow" aria-hidden="true">→</span><span class="level-after">강화 후 Lv.${level+1}</span></span><small>${upgradeDescription(id,level)} / 최대 Lv.${MOD_LEVEL_CAP}</small></button>`;
  }).join('');
  const headline=reason==='mid'?'전투 중 파워업':'구역 클리어 파워업';
  const explanation=reason==='mid'?'재화 없이 1개 선택하면 전투가 이어집니다. 기존 강화도 중첩 가능.':
@@ -8604,9 +8664,9 @@ function hubMenu(upgraded='',autoRefreshed=false){
    data-perma="${m.id}" aria-pressed="${hubSelected===m.id}">
    <span class="hub-art-slot"><span class="hub-emblem">${modIconMarkup(m.art)}</span></span>
    <span class="hub-card-info">
-    <span class="hub-module-name">${m.title}<small>Lv.${lv}${maxed?' MAX':' → '+(lv+1)}</small></span>
+    <span class="hub-module-name">${m.title}<small class="hub-level-line" aria-label="현재 레벨 ${lv}, ${maxed?'최대 레벨':'강화 후 레벨 '+(lv+1)}"><span class="level-now">현재 Lv.${lv}</span><span class="level-arrow" aria-hidden="true">→</span><span class="level-after${maxed?' max':''}">${maxed?'MAX · Lv.'+lv:'강화 후 Lv.'+(lv+1)}</span></small></span>
     <span class="hub-forecast"><span class="hub-from">${m.format(lv)}</span>
-     <span class="hub-arrow">→</span><span class="hub-to">${m.format(lv+1)}</span></span>
+     <span class="hub-arrow">→</span><span class="hub-to">${m.format(Math.min(lv+1,HUB_MAX_LEVEL))}</span></span>
     <span class="hub-desc">${m.detail}</span>
     <span class="hub-buy"><span>${maxed?'최대 레벨':upgraded===m.id?'적용 완료':hubSelected===m.id?'선택됨':'선택'}</span><span>${maxed?'MAX':'◆ '+cost}</span></span>
    </span>
