@@ -2333,8 +2333,12 @@ test('user uploaded ten-frame parry artwork is embedded intact and uses 5x2 scre
   const r=sourceRect(1536,1024,frame),col=frame%5,row=Math.floor(frame/5);
   const x0=Math.round(col*1536/5),x1=Math.round((col+1)*1536/5);
   const y0=Math.round(row*1024/2),y1=Math.round((row+1)*1024/2);
-  assert(r.sx>x0+10&&r.sy>y0+30,'each crop must discard edge contamination');
-  assert(r.sw>0&&r.sh>0&&r.sx+r.sw<x1-10&&r.sy+r.sh<y1-30,'no neighboring cell can enter the crop');
+  // A strict 2px x / 3px y gutter keeps neighboring frames out
+  // without removing the pointed tip of the approved parry burst.
+  assert.equal(r.sx,x0+2,'preserve painted horizontal edge; maintain 2px gutter');
+  assert.equal(r.sy,y0+3,'preserve painted vertical edge; maintain 3px gutter');
+  assert(r.sw>0&&r.sh>0&&r.sx+r.sw===x1-2&&r.sy+r.sh===y1-3,
+   'no neighbor cell bleed while preserving the painted ends');
   assert.equal(r.sx%1,0);assert.equal(r.sy%1,0);
   assert.equal(r.sw%1,0);assert.equal(r.sh%1,0);
  }
