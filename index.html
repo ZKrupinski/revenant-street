@@ -5478,7 +5478,7 @@ function drawUpgradeVfxLoop(name,x,y,width,opacity,cycle,dir=1,rotation=0){
  ctx.drawImage(im,frame*cw,0,cw,im.naturalHeight,-width*.5,-displayH*.5,width,displayH);
  ctx.restore();entry.drawn++;return true;
 }
-function drawModEnergy(){
+function drawModEnergy(layer='all',selection=null){
  const left=cameraX-180,right=cameraX+W+180;
  // Show EVERY active status simultaneously, in dedicated sectors around the
  // opponent. Each module keeps its own 8-frame PNG and lifetime.
@@ -5487,6 +5487,7 @@ function drawModEnergy(){
   const active=Z_ENEMY_STATUS_VFX.filter(s=>e[s.status]>0);
   for(let i=0;i<active.length;i++){
    const state=active[i],rank=Math.min(6,e[state.power]||1);
+   if(!zDrawInLayer(layer,selection?.status.get(e)?.has(state.status)))continue;
    const kind=state.status==='burn'?'fire':state.status==='freeze'?'ice':state.status;
    const dir=e.face||1,slot=enemyFxSlot(kind,dir);
    const width=(164+rank*8)*state.scale*
@@ -5503,6 +5504,7 @@ function drawModEnergy(){
  // elemental selection, and no resurrection of the old defense shield.
  for(const ef of attributeFx){
   if(ef.x<left||ef.x>right)continue;
+  if(!zDrawInLayer(layer,selection?.attributes.has(ef)))continue;
   const sprite=Z_ELEMENT_IMPACT_SPRITES[ef.mod];
   if(!sprite)continue;
   const progress=clamp(1-ef.life/Math.max(.001,ef.maxLife),0,.99999);
@@ -6829,7 +6831,7 @@ function hurtEnemy(e,dmg,poise){
    if(e.hp>0)e.pendingFall=true;
   }
   hitStop=Math.max(hitStop,.12);screenShake=Math.max(screenShake,19);
-  fxBurst(e.x,e.y-118,'gold',specialStats('dashspeed').visual);
+  fxBurst(e.x,e.y-118,'gold',specialStats('dashspeed').visual,true);
   playImpactSound('heavy',1.1);
  }
  const basicContact=p.attack>0&&!p.dashSmash&&!p.counterBoost&&!p.airAttack&&!p.riposteStrikeTarget;
@@ -7129,6 +7131,7 @@ function heelLandingShockwave(powered=false){
  // Keep a subtle accent behind the wide hand-painted ground-smash sequence.
  spawnModBitmap('gold',p.x,p.y-36,skill.visual*.45,
   'brightness(1.45) saturate(1.2)',.30);
+ if(fx.at(-1)?.kind==='modBitmap')fx.at(-1).specialAttackFx=true;
  playImpactSound('heavy',powered?1.4:1.1);
  if(powered)playCombatGunfire('slam','axe_kick');
  vibrateImpact('slam',true);
@@ -7151,7 +7154,7 @@ function heelLandingShockwave(powered=false){
    if(!enemy.dead)enemy.pendingFall=true;
   }
   enemy.reactionDir=push;
-  fxBurst(enemy.x,enemy.y-96,'red',powered?1.55:1.25);
+  fxBurst(enemy.x,enemy.y-96,'red',powered?1.55:1.25,true);
  }
 }
 // Front-facing shockwave shared by the dash punch and the parry chase finisher.
@@ -7189,7 +7192,7 @@ function applyForwardSpecialSplash(kind,impactX,impactY,directTargets,fullDamage
    if(!enemy.dead)enemy.pendingFall=true;
   }
   enemy.reactionDir=face;
-  fxBurst(enemy.x,enemy.y-110,dash?'blue':'gold',.78+rank*.08);
+  fxBurst(enemy.x,enemy.y-110,dash?'blue':'gold',.78+rank*.08,true);
   affected++;
  }
  return affected;
@@ -7228,8 +7231,9 @@ function attackCheck(){
   e.reactionDir=p.facing;
   hitStop=Math.max(hitStop,.22);screenShake=Math.max(screenShake,30);
   screenTint=Math.max(screenTint,.55);
-  fxBurst(e.x,e.y-125,'gold',skill.visual);
+  fxBurst(e.x,e.y-125,'gold',skill.visual,true);
   spawnModBitmap('gold',e.x,e.y-133,skill.visual*.75,'brightness(1.6) saturate(1.4)',.35);
+   if(fx.at(-1)?.kind==='modBitmap')fx.at(-1).specialAttackFx=true;
   floatText('CRUSH COUNTER!',e.x,e.y-220,'#ffe098');
   playImpactSound('heavy',1.65);vibrateImpact('dashImpact',true);
   p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
@@ -7282,7 +7286,7 @@ function attackCheck(){
   // Drive victims down rather than launch them away from the heel.
   if(e.type!=='boss'){e.vz=-240;e.z=Math.max(0,e.z);e.pendingFall=true}
   hitStop=Math.max(hitStop,.11);screenShake=Math.max(screenShake,19);
-  fxBurst(e.x,e.y-40,'gold',1.75);
+  fxBurst(e.x,e.y-40,'gold',1.75,true);
  }
  const priorHealHp=p.hp;
  p.hp=clamp(p.hp+dmg*modRank('leech')*.02,0,p.maxHp);
@@ -7396,7 +7400,7 @@ function enemyAttack(e){
  p.dashSmash=false;p.dashFollowWindow=0;
  p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteWindow=0;p.riposteTarget=null;
  playCombatVoice(p.hp<=0?'heroDeath':'heroHurt');p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)startDeathCinematic()}
-function fxBurst(x,y,color='red',scale=1){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8)})}
+function fxBurst(x,y,color='red',scale=1,specialAttackFx=false){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8),specialAttackFx})}
 function spawnParrySuccessFx(x,y,face=1){fx.push({kind:'parrySuccess10',x,y,face,life:.27,maxLife:.27})}
 function floatText(text,x,y,color){if(floating.length>=45)floating.splice(0,floating.length-36);floating.push({text,x,y,color,life:1.05})}
 function messageUpdate(dt){if(messageTime>0){messageTime-=dt;if(messageTime<=0)$('gameMessage').classList.remove('active')}}
@@ -8611,7 +8615,72 @@ function parrySuccessSourceRect(w,h,frame){
  const padX=Math.ceil(tileW*.06),padY=Math.ceil(tileH*.08);
  return {sx:x0+padX,sy:y0+padY,sw:tileW-2*padX,sh:tileH-2*padY};
 }
-function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+820;for(const f of fx){if(f.x<left||f.x>right)continue;
+// Preserve signature attacks above actors. For a normal multi-effect
+// cluster, promote only one or two accents; all others remain behind.
+const Z_FRONT_SPECIAL_FX=new Set([
+ 'parrySuccess10','parryCounterSprite','groundSlamSprite',
+ 'dashPierceSprite','dashTrailSprite'
+]);
+function zIsSignatureVfx(f){return !!(f.specialAttackFx||Z_FRONT_SPECIAL_FX.has(f.kind));}
+function zHybridVfxForeground(){
+ const fxFront=new Set(),attributeFront=new Set(),statusFront=new Map(),groups=new Map();
+ const add=(owner,item)=>{
+  if(!owner)return;
+  if(!groups.has(owner))groups.set(owner,[]);
+  groups.get(owner).push(item);
+ };
+ const nearest=(x,y)=>{
+  let owner=null,min=Infinity;
+  for(const e of enemies){
+   if(e.dead&&e.fade<=0)continue;
+   const dx=Math.abs((e.renderX??e.x)-x),dy=Math.abs((e.renderY??e.y)-125-y);
+   if(dx>195||dy>175)continue;
+   const score=dx+dy*.55;
+   if(score<min){min=score;owner=e;}
+  }
+  const hx=Math.abs(p.x-x),hy=Math.abs(p.y-125-y);
+  if(hx<150&&hy<165&&hx+hy*.55<min)owner=p;
+  return owner;
+ };
+ for(const e of enemies){
+  if(e.dead)continue;
+  for(const s of Z_ENEMY_STATUS_VFX){
+   if(e[s.status]>0)add(e,{type:'status',name:s.status,
+    score:s.status==='shock'?65:s.status==='burn'?45:35});
+  }
+ }
+ for(const ef of attributeFx){
+  add(ef.target||nearest(ef.x,ef.y),{type:'attribute',value:ef,
+   score:ef.mod==='shock'?88:ef.mod==='fire'?62:52});
+ }
+ for(const f of fx){
+  if(zIsSignatureVfx(f))continue;
+  const target=f.contactEnemy||f.target||nearest(f.x,f.y);
+  const score=f.kind==='upgradeVfxSprite'
+   ?(f.upgrade==='crit'?105:f.upgrade==='chain'?93:f.upgrade==='power'?71:64)
+   :f.kind==='basicHitSprite'?(f.delay>0?87:61)
+   :f.kind==='healVfxSprite'?50:32;
+  add(target,{type:'fx',value:f,score});
+ }
+ for(const [owner,items] of groups){
+  if(items.length<2)continue;
+  const selected=items.slice().sort((a,b)=>b.score-a.score).slice(0,items.length>=5?2:1);
+  for(const item of selected){
+   if(item.type==='fx')fxFront.add(item.value);
+   else if(item.type==='attribute')attributeFront.add(item.value);
+   else{
+    if(!statusFront.has(owner))statusFront.set(owner,new Set());
+    statusFront.get(owner).add(item.name);
+   }
+  }
+ }
+ return {fx:fxFront,attributes:attributeFront,status:statusFront};
+}
+function zDrawInLayer(layer,isFront){
+ return layer==='all'||(layer==='front')===!!isFront;
+}
+function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);const left=cameraX-820,right=cameraX+W+820;for(const f of fx){if(f.x<left||f.x>right)continue;
+ if(!zDrawInLayer(layer,zIsSignatureVfx(f)||selection?.fx.has(f)))continue;
  if(f.kind==='upgradeVfxSprite'){drawUpgradeVfx(f);continue;}
   if(f.kind==='healVfxSprite'){drawHealVfx(f);continue;}
   if(f.kind==='basicHitSprite'){drawBasicContactFx(f);continue;}
@@ -8662,7 +8731,7 @@ function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+82
   }
   continue;
  }
- let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}if(p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p);}
+ let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}if(layer!=='back'&&p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p);}
 // Damage labels stay ABOVE the fighters even in the behind-character preview;
 // only actual bitmap energy and combat sparks are moved behind actors.
 function drawFloatingEffects(){
@@ -8676,10 +8745,10 @@ function drawFloatingEffects(){
   ctx.fillText(f.text,f.x,f.y);ctx.restore();
  }
 }
-// Default preview: energy and hit sprites are rendered behind the characters.
-// Add ?vfx=front to the URL to view the exact previous foreground composition.
-const Z_VFX_BEHIND_ACTORS=!/(?:\?|&)vfx=front(?:&|$)/i.test(location.search||'');
-window.__zVfxLayerStatus=()=>Z_VFX_BEHIND_ACTORS?'behind':'front';
+// Hybrid by default. Use ?vfx=back or ?vfx=front for the old all-one-layer views.
+const Z_VFX_MODE=/(?:\?|&)vfx=front(?:&|$)/i.test(location.search||'')?'front':
+ /(?:\?|&)vfx=back(?:&|$)/i.test(location.search||'')?'back':'hybrid';
+window.__zVfxLayerStatus=()=>Z_VFX_MODE;
 const visibleActors=[];
 function draw(){
  if(gameState!=='playing'&&gameState!=='dying'&&!rewardSelection)return;
@@ -8701,9 +8770,12 @@ function draw(){
  for(const e of enemies)if((!e.dead||e.fade>0)&&e.x>cameraX-300&&e.x<cameraX+W+300)actors.push(e);
  drawIntruderSpecialWarnings();
  actors.sort((a,b)=>a.y-b.y);
- if(Z_VFX_BEHIND_ACTORS)drawEffects();
+ const vfxSelection=Z_VFX_MODE==='hybrid'?zHybridVfxForeground():null;
+ if(Z_VFX_MODE==='back')drawEffects('all');
+ else if(Z_VFX_MODE==='hybrid')drawEffects('back',vfxSelection);
  actors.forEach(drawActor);
- if(!Z_VFX_BEHIND_ACTORS)drawEffects();
+ if(Z_VFX_MODE==='front')drawEffects('all');
+ else if(Z_VFX_MODE==='hybrid')drawEffects('front',vfxSelection);
  drawFloatingEffects();
  for(const e of actors)if(e!==p&&!e.dead)drawEnemyStatusIcons(e);
  ctx.restore();syncZSprite();
