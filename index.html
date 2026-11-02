@@ -7002,14 +7002,27 @@ Z_COMBAT_WORD_ART.image.onerror=()=>{
  Z_COMBAT_WORD_ART.ready=false;Z_COMBAT_WORD_ART.missing=true;
 };
 Z_COMBAT_WORD_ART.image.src='./assets/vfx/project_z_execution_critical_cyber_8f.png?v=20261102-cyberword-1';
+// Keep raster wordmarks and directional parry effects inside the actual
+// zoomed camera viewport, including a safety margin for screen shake.
+function zClampVfxX(worldX,leftExtent,rightExtent){
+ const zoom=clamp(cameraZoom||1,1,1.36),focus=W*.52,margin=42;
+ const left=cameraX+focus+(margin-focus)/zoom;
+ const right=cameraX+focus+(W-margin-focus)/zoom;
+ const low=left+leftExtent,high=right-rightExtent;
+ return low<=high?clamp(worldX,low,high):(low+high)*.5;
+}
+const Z_COMBAT_WORD_HEAD_OFFSETS=Object.freeze({
+ boss:425,elite:345,intruder:345,guard:300,assassin:290,raider:270
+});
 function spawnCombatWordFx(name,target){
  if(!target||!Z_COMBAT_WORD_ART.ready)return false;
- const kind=name==='execution'?'execution':'critical',duration=kind==='execution'?.40:.32;
- // One fully painted billboard per event; existing impact/skill FX continue.
- const x=(target.x??p.x)+p.facing*(kind==='execution'?30:20);
- const height=target.type==='boss'?320:target.type==='elite'?265:210;
- const y=(target.y??p.y)-Math.max(0,target.z||0)-height;
- const width=kind==='execution'?490:410;
+ const kind=name==='execution'?'execution':'critical',duration=kind==='execution'?.50:.40;
+ // Smaller, slower eight-frame wordmark floats above the victim's head,
+ // leaving the face and body uncovered even for elite/intruder/boss art.
+ const x=target.x??p.x;
+ const head=Z_COMBAT_WORD_HEAD_OFFSETS[target.type]??270;
+ const y=(target.y??p.y)-Math.max(0,target.z||0)-head-28;
+ const width=kind==='execution'?382:320;
  const active=fx.filter(f=>f.kind==='combatWordSprite');
  if(active.length>=10){const oldest=active[0],index=fx.indexOf(oldest);if(index>=0)fx.splice(index,1);}
  fx.push({kind:'combatWordSprite',word:kind,x,y,width,life:duration,maxLife:duration,
@@ -7029,7 +7042,8 @@ function drawCombatWordFx(f){
  const row=f.word==='execution'?0:1;
  ctx.save();
  ctx.globalAlpha=1;
- ctx.drawImage(im,frame*cw,row*ch,cw,ch,f.x-w*.5,f.y-h*.5,w,h);
+ const drawX=zClampVfxX(f.x,w*.5,w*.5);
+ ctx.drawImage(im,frame*cw,row*ch,cw,ch,drawX-w*.5,f.y-h*.5,w,h);
  ctx.restore();
  return true;
 }
@@ -8639,7 +8653,9 @@ function parrySuccessSourceRect(w,h,frame){
  const x0=Math.round(col*w/5),x1=Math.round((col+1)*w/5);
  const y0=Math.round(row*h/2),y1=Math.round((row+1)*h/2);
  const tileW=x1-x0,tileH=y1-y0;
- const padX=Math.ceil(tileW*.06),padY=Math.ceil(tileH*.08);
+ // Only 2/3 px gutter instead of discarding 6-8% of each painted pose.
+ // Original cell boundaries still prevent neighboring frames from leaking.
+ const padX=2,padY=3;
  return {sx:x0+padX,sy:y0+padY,sw:tileW-2*padX,sh:tileH-2*padY};
 }
 // Preserve signature attacks above actors. For a normal multi-effect
@@ -8751,8 +8767,10 @@ function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);
    // Those cells made the intended parry impact appear pinched horizontally.
    // Restore its balanced silhouette on screen without recutting any frames.
    const w=318,h=296;
-   ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.face,1);
-   // Screen compositing keys out black; inset avoids interpolation from neighboring cells.
+   const dir=f.face<0?-1:1;
+   const drawX=zClampVfxX(f.x,dir>0?w*.32:w*.68,dir>0?w*.68:w*.32);
+   ctx.save();ctx.translate(drawX,f.y);ctx.scale(dir,1);
+   // Screen compositing keys out black; 2 px cell gutter prevents frame bleed.
    ctx.globalCompositeOperation='screen';ctx.globalAlpha=Math.min(1,f.life/.07);
    ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.32,-h*.5,w,h);
    ctx.restore();

@@ -41,6 +41,8 @@ jobs:
         run: node tests/vfx-enemy-contact.cjs
       - name: Enlarged bitmap combat effects and source crop safety
         run: node tests/vfx-display-size.cjs
+      - name: Execution and critical wordmarks plus parry sprite edge safety
+        run: node tests/word-vfx-cyber.cjs
       - name: VFX behind actors live preview, URL comparison and readable damage labels
         run: node tests/vfx-actor-layer-preview.cjs
       - name: Shared hand-painted ground slam 8F PNG regression
