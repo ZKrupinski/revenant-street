@@ -6644,7 +6644,7 @@ function parry(){
  if(incoming)p.facing=incoming.x>=p.x?1:-1;
  p.inv=Math.max(p.inv,.08);p.stamina-=7;
  // Ordinary parry preparation has no impact flash.
- // Parry preparation is silent; successful lock gets the steel rack. }
+ /* Parry preparation is silent; successful rack plays on success. */ }
 // Real-time dash input buffer. A tap during the tail of the previous dash,
 // hit-reaction, or a landing must not be discarded forever by edge-triggered
 // keyboard/pad/touch listeners. Only one buffered dash can be pending.
@@ -6711,7 +6711,7 @@ function jump(){
  p.dashSmash=false;p.dashFollowWindow=0;
  p.jumpTime=0;p.moveName='jumpstart';
  p.vz=jumpMobilityStats().impulse;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;
- p.airKickUsed=false; // No synthetic pitch chirp at jump start.
+ p.airKickUsed=false; /* No synthetic pitch chirp at jump start. */
 }
 function execute(target){
  if(gameState!=='playing'||p.stun>0||!target||target.dead||target.groggy<=0)return false;
@@ -6724,7 +6724,7 @@ function execute(target){
  hurtEnemy(target,target.type==='boss'?260:999,100);
  screenShake=25;screenTint=.6;hitStop=.15;
  if(target.type!=='intruder')fxBurst(target.x,target.y-130,target.type==='boss'?'red':'gold',2.4);
- spawnCombatWordFx('execution',target);vibrateImpact('execution',true);playCombatVoice('heroPower'); // The hit itself drives the ballistic report.return true
+ spawnCombatWordFx('execution',target);vibrateImpact('execution',true);playCombatVoice('heroPower'); /* The hit itself drives the ballistic report. */return true
 }
 function awardEnemyKill(e){
  if(e.killAwarded)return;
@@ -7305,7 +7305,7 @@ function heelLandingShockwave(powered=false){
   'brightness(1.45) saturate(1.2)',.30);
  if(fx.at(-1)?.kind==='modBitmap')fx.at(-1).specialAttackFx=true;
  playImpactSound('heavy',powered?1.4:1.1);
- // Slam gun report already comes from the heavy impact bus.
+ /* Slam gun report already comes from the heavy impact bus. */
  vibrateImpact('slam',true);
  for(const enemy of impacted){
   const fromX=enemy.x,fromY=enemy.y;
