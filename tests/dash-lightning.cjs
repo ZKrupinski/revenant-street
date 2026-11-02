@@ -89,7 +89,7 @@ const combat={
  analog:{dx:0},keys:new Set(),performance:{now:()=>10},
  dashMobilityStats:()=>({duration:.32,speed:1250}),
  modRank:()=>0,clamp:(v,min,max)=>Math.min(max,Math.max(min,v)),
- loadZMove(){},fxBurst(){},sound(){},playCombatVoice(){},
+ loadZMove(){},fxBurst(){},sound(){},playCombatVoice(){},playImpactSound(){return true},
  triggerStrikeCamera(){},vibrateImpact(){},bodyHalfX:()=>54
 };
 vm.createContext(combat);
