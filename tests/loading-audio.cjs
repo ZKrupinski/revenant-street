@@ -77,7 +77,7 @@ async function combatVoices(){
  assert.equal(api.play('bossShout',boss,hero),true,'boss original recorded grunt preserved');
  assert(!script.includes("shotPistol:'")&&!script.includes("mechA:'"),'legacy hero audio is not in preload manifest');
  assert(html.includes('voice-engine.js?v=20261103-enemyonly-v4'),'new browser cache version');
- assert(html.includes("playImpactSound('counter',1.25)"),'new parry riposte sample preserved');
+ assert(html.includes("playImpactSound('counter',1.35)"),'new parry riposte sample preserved');
  assert(html.includes("applyImpactFeedback(e,smash||p.dashSmash"),'contact-driven attack sample remains');
  assert(!html.includes("sound('attack')"),'legacy synthetic attack bleeps removed');
  assert(!script.includes('__revenantBgm'),'enemy voices never alter background music');
