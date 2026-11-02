@@ -47,146 +47,41 @@ async function audio(){
  await bgm.prepare();assert.equal(fetches,1,'restart reuses full audio');
 }
 async function combatVoices(){
- const voiceScript=fs.readFileSync(path.join(root,'assets/voice/voice-engine.js'),'utf8');
- let fetches=0,decoded=0;
- const createdSources=[],voiceGains=[];
- const param=()=>({value:0,history:[],setValueAtTime(v){this.value=v;this.history.push(v)},linearRampToValueAtTime(v){this.value=v;this.history.push(v)}});
+ const script=fs.readFileSync(path.join(root,'assets/voice/voice-engine.js'),'utf8');
+ const clips=[],gains=[],requests=[];
+ const param=()=>({value:0,setValueAtTime(v){this.value=v},linearRampToValueAtTime(v){this.value=v}});
  const node=()=>({gain:param(),frequency:param(),threshold:param(),knee:param(),ratio:param(),attack:param(),release:param(),playbackRate:{value:1},
-  connect(x){return x},disconnect(){},start(when,offset,length){this.started=true;this.startedAt=when;this.playLength=length},stop(){this.stopped=true}});
- const ctx={currentTime:0,destination:node(),
-  createDynamicsCompressor:()=>node(),createGain:()=>{const g=node();voiceGains.push(g);return g},createBiquadFilter:()=>node(),
-  createBufferSource:()=>{const s=node();createdSources.push(s);return s},
-  decodeAudioData:async bytes=>{decoded++;return{duration:.9,clip:bytes.clip}}};
- const w={window:{},Math,fetch:async url=>{fetches++;return{ok:true,arrayBuffer:async()=>({clip:url})}}};
- vm.createContext(w);vm.runInContext(voiceScript,w);
- const voices=w.window.__zCombatVoice;
- assert.equal(voices.state().ready,false);
- await voices.prepare(ctx);
- assert.equal(fetches,9,'four gunshots, three slide actions and two short enemy grunts preloaded');
- assert.equal(decoded,9);
- assert.equal(voices.state().ready,true);
- await voices.prepare(ctx);assert.equal(fetches,9,'gunfire and vocals decode only once');
- const hero={x:300,y:560},foe={x:420,y:560,type:'raider'},boss={x:560,y:560,type:'boss'};
- assert.equal(voices.play('heroStrike',hero,hero),true);
- assert.equal(voiceGains[0].gain.value,.58*.70,'enemy and metal voice master must output 70% of prior amplitude');
- assert(/hero-mech-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero first attack must use a slide/bolt sound, not any voice');
- assert.equal(voices.play('heroStrike',hero,hero),false,'one hero cannot stack grunts');
- ctx.currentTime=.06;
- const beforeSilent=createdSources.length;
- assert.equal(voices.play('heroHurt',hero,hero),false,'hero pain must not play a voice or firearm mechanism');
- assert.equal(voices.play('heroDeath',hero,hero),false,'hero death must not play a scream or gun reload');
- assert.equal(createdSources.length,beforeSilent,'no player vocal sources should be created on hurt or death');
- ctx.currentTime=.6;
- assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy pain follows the real damage event');
- assert.equal(voices.play('enemyHurt',foe,hero),false,'injury voice is rate limited');
- ctx.currentTime=1.3;
- assert.equal(voices.play('bossShout',boss,hero),true,'boss warning must emit a short low grunt');
- assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'boss warning cannot use old yell');
- assert(createdSources.at(-1).playLength<=.31,'boss warning max 310ms');
- ctx.currentTime=1.9;
- assert.equal(voices.play('heroPower',hero,hero),true,'heavy attack emits a powerful metallic bolt action');
- const powerClip=createdSources.at(-1).buffer.clip;
- assert(powerClip.endsWith('hero-mech-power.mp3'),'heavy attack MUST use a heavy metal charging mechanism');
- assert(!powerClip.includes('voice-yell')&&!powerClip.includes('kiai'),'hero power must never play a human yell');
- ctx.currentTime=2.5;
- // In a real browser voice sources have ended by 2.5s; advance mocked
- // onended callbacks to release the three-slot voice cap.
- for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
- assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy gets its own wounded vocal');
- assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'pain uses short original CC0 male grunts');
- assert(createdSources.at(-1).startedAt>=ctx.currentTime+.055,'the crack of impact should precede the groan by about 60ms');
- assert(createdSources.at(-1).playLength<=.21,'raider grunt short and sharp');
- const enemyVolume=Math.max(...voiceGains.at(-1).gain.history);
- assert(enemyVolume>.35&&enemyVolume<.8,'short grunt must sit behind impact: '+enemyVolume);
- assert(voiceScript.includes("const ENEMY_VOICE_GAIN=.94"),'enemy voice mixed below impact crack');
- assert(voiceScript.includes('ENEMY_ARCHETYPES'),'six visual archetypes have distinct voice filtering');
- ctx.currentTime=3.0;
- assert.equal(voices.play('heroStrike',hero,hero),true,'normal hero strikes use mechanical charging clicks');
- assert(/hero-mech-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero normal hits never play human recordings');
- // Enemy death and warning must never revive the original drawn-out yell.
- // These events use the same short authentic grunt takes at quieter levels.
- ctx.currentTime=4.10;
- for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
- const defeated={x:440,y:560,type:'assassin'};
- assert.equal(voices.play('enemyDeath',defeated,hero),true);
- assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'enemy death uses short grunt not yell');
- assert(createdSources.at(-1).playLength<=.30,'assassin death a short gasp');
- const alerted={x:505,y:560,type:'guard'};
- ctx.currentTime=4.35;
- assert.equal(voices.play('enemyShout',alerted,hero),true);
- assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'enemy warning uses short grunt not yell');
- assert(createdSources.at(-1).playLength<=.24,'guard warning stays short');
- ctx.currentTime=5.2;
- for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
- assert.equal(voices.play('bossDeath',boss,hero),true);
- assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'boss death uses short grunt');
- assert(createdSources.at(-1).playLength<=.52,'each boss death breath is short');
- assert(createdSources.slice(-5)[0].startedAt<createdSources.at(-1).startedAt-1.8,'boss death is an extended sequence of agonized breaths');
- assert(!voiceScript.includes('voice-yell.wav'),'old shrill yell is not present in live voice engine');
- assert(createdSources.length>=3,'all voice families use genuine recorded buffers');
- assert(!voiceScript.includes('duckImpact'),'metal accents and enemy vocals do not change BGM volume');
- assert(!voiceScript.includes('hero-kiai-'),'old player shouts must be entirely disconnected from active gameplay');
- assert(html.includes("playImpactSound(kind,heavy?1.15:1)"),'character impact sound must continue alongside grunt');
- assert(html.includes("applyImpactFeedback(e,smash||p.dashSmash"),'striking an enemy must still play the physical hit sound');
- assert(!voiceScript.includes('window.__revenantBgm'),'the voice engine must never lower the music');
- for(const file of ['hero-grunt-a.wav','hero-grunt-b.wav']){
-  const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
-  assert(bytes.length>10000,'natural human recording is shipped: '+file);
-  assert(bytes.subarray(0,4).toString()==='RIFF'&&bytes.subarray(8,12).toString()==='WAVE',
-   'enemy voice must be a real WAV recording: '+file);
- }
- for(const oldFile of ['enemy-pain-deep-a.mp3','enemy-pain-deep-b.mp3','enemy-shout-deep.mp3','enemy-death-deep.mp3']){
-  assert(!voiceScript.includes("'./assets/voice/"+oldFile+"'"),
-   'animal-like formant-shifted remasters must not be loaded: '+oldFile);
- }
- assert(voiceScript.includes('baseRate*rateFactor'),
-  'character-specific pitch shapes vocal identity');
- assert(voiceScript.includes("const offset=isHero?0:sampleOnset(buffer)"),
-  'start at the audible male breath or consonant instead of leading silence');
- assert(html.includes('voice-engine.js?v=20261102-enemy-archetype-voices-v6-hitmix'),
-  'browser cache must not replay the old, animal-like voice engine');
- for(const file of ['hero-mech-a.mp3','hero-mech-b.mp3','hero-mech-power.mp3']){
-  const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
-  assert(bytes.length>6000,'mechanical Foley is shipped locally: '+file);
-  assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'mechanical effect is mp3: '+file);
- }
- assert(html.includes("Gun reports are contact-triggered by playImpactSound"),'normal and special hits use one ballistic impact bus without double firing');
- assert(html.includes("playImpactSound('counter',1.25)"),'confirmed counter fires dedicated shotgun blast');
- assert(html.includes("playCombatVoice('heroPower'); /* The hit itself drives the ballistic report. */"),'execution mechanism remains but does not double the gunshot');
- assert(html.includes("Slam gun report already comes from the heavy impact bus"),'powered landing gun report is integrated into impact bus');
- assert(html.includes("playCombatVoice('heroMove')"),'movement cycles occasional quiet metallic mechanisms');
- const motions=['jab','roundkick','spinning_elbow','sidekick','uppercut',
-  'spinning_heel','hammerfist','rising_headbutt','cross','axe_kick',
-  'backfist','crescent_kick','rising_elbow','frontkick','superman_punch',
-  'lowkick','hook','forward_headbutt','shovel_hook'];
- const tones=new Set(),families=new Set();
- for(const move of motions){
-  ctx.currentTime+=.12;
-  assert.equal(voices.fire('normal',move),true,'shot for every attack: '+move);
-  const src=createdSources.at(-1);
-  assert(src.buffer.clip.includes('/shot-'),'gunshot from local file: '+move);
-  assert(src.started,'shot is triggered independently of target hit');
-  tones.add(src.buffer.clip+'@'+src.playbackRate.value);
-  families.add(src.buffer.clip);
- }
- assert.equal(families.size,4,'normal attacks use all four gunshot sample families');
- assert(tones.size>=15,'all 19 attack moves have distinct timbre/pitch variation');
- for(const kind of ['heavy','counter','slam','execution']){
-  ctx.currentTime+=.25;
-  assert.equal(voices.fire(kind,'uppercut'),true,kind+' strong fire must never be crowded out');
- }
- assert(voiceGains.some(x=>Math.abs(x.gain.value-.98*.70)<.000001),'independent gunfire bus must output 70% of prior amplitude');
- assert(.98*.70>.58*.70,'original relative gunfire-over-vocal mix is retained');
- ctx.currentTime+=1.5;
- for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
- assert.equal(voices.play('heroMove',hero,hero),true,'walk and run occasionally rack a slide');
- assert.equal(voices.play('heroMove',hero,hero),false,'movement mechanical sound cannot spam every footstep');
- for(const name of ['shot-pistol.mp3','shot-revolver.mp3','shot-rifle.mp3','shot-heavy.mp3']){
-  const bytes=fs.readFileSync(path.join(root,'assets/voice',name));
-  assert(bytes.length>6000,'game embeds an original gun report: '+name);
-  assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'MP3 gun report must be valid: '+name);
- }
- console.log('PASS: enemy voice profiles, live ballistic impact routing, unchanged BGM');
+  connect(x){return x},disconnect(){},start(at,offset,len){this.startedAt=at;this.playLength=len},stop(){}});
+ const ctx={currentTime:0,destination:node(),createGain:()=>{const g=node();gains.push(g);return g},
+  createBiquadFilter:node,createDynamicsCompressor:node,createBufferSource:()=>{const src=node();clips.push(src);return src},
+  decodeAudioData:async x=>({duration:1.2,clip:x.clip})};
+ const world={window:{},Math,fetch:async url=>{requests.push(url);return{ok:true,arrayBuffer:async()=>({clip:url})}}};
+ vm.createContext(world);vm.runInContext(script,world);
+ const api=world.window.__zCombatVoice;
+ await api.prepare(ctx);
+ assert.equal(requests.length,2,'only two enemy grunts should preload, no prior mechanical/gun Foley');
+ assert(requests.every(url=>/hero-grunt-[ab]\.wav$/.test(url)),'old pistol and mechanical sources retired');
+ assert.equal(api.state().ready,true);
+ await api.prepare(ctx);assert.equal(requests.length,2,'cache decoded enemy voices');
+ const hero={x:300,y:550},raider={x:450,y:550,type:'raider'},boss={x:500,y:550,type:'boss'};
+ assert.equal(api.play('heroStrike',hero,hero),false,'legacy hero strike sound removed');
+ assert.equal(api.play('heroPower',hero,hero),false,'legacy hero power sound removed');
+ assert.equal(api.play('heroMove',hero,hero),false,'legacy hero locomotion sounds removed');
+ assert.equal(api.fire('normal','jab'),false,'legacy gunfire bus no longer supplies attacks');
+ ctx.currentTime=.7;
+ assert.equal(api.play('enemyHurt',raider,hero),true,'enemy grunt preserved on damage');
+ assert.equal(clips.at(-1).buffer.clip.endsWith('hero-grunt-a.wav'),true,'actual enemy human recording');
+ assert(clips.at(-1).startedAt>ctx.currentTime,'enemy reacts after hit');
+ assert.equal(api.play('enemyHurt',raider,hero),false,'enemy reactions are rate limited');
+ ctx.currentTime=1.3;for(const c of clips)if(c.onended){c.onended();c.onended=null}
+ assert.equal(api.play('bossShout',boss,hero),true,'boss original recorded grunt preserved');
+ assert(!script.includes("shotPistol:'")&&!script.includes("mechA:'"),'legacy hero audio is not in preload manifest');
+ assert(html.includes('voice-engine.js?v=20261103-enemyonly-v4'),'new browser cache version');
+ assert(html.includes("playImpactSound('counter',1.25)"),'new parry riposte sample preserved');
+ assert(html.includes("applyImpactFeedback(e,smash||p.dashSmash"),'contact-driven attack sample remains');
+ assert(!html.includes("sound('attack')"),'legacy synthetic attack bleeps removed');
+ assert(!script.includes('__revenantBgm'),'enemy voices never alter background music');
+ console.log('PASS: two human enemy grunts; all previous hero gun and mechanism sounds retired; new originals trigger at contact');
 }
 function spriteRetry(){
  const images=[];let now=1000;
