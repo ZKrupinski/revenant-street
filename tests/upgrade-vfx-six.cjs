@@ -17,10 +17,11 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  assert(src.includes('frame*cw,0,cw,im.naturalHeight'),'frame cropping');
  for(const marker of [
   "spawnUpgradeVfx('chain',nearby.x","spawnUpgradeVfx('nova',e.x",
-  "spawnUpgradeVfx('leech',p.x","spawnUpgradeVfx('power',e.x",
+  "spawnUpgradeVfx('leech',(e.x+p.x)/2","spawnUpgradeVfx('power',e.x",
   "spawnUpgradeVfx('crit',e.x","spawnUpgradeVfx('guard',p.x"
  ])assert(src.includes(marker),'wired: '+marker);
+ assert(src.includes("spawnHealVfx(p.hp-priorHealHp,'leech')"),'actual HP gains show mint healing at hero');
  assert(src.includes("if(Z_UPGRADE_VFX[m])spawnUpgradeVfx(m"),'on upgrade selection');
  assert(src.includes('window.__zUpgradeVfxStatus'),'status exposed');
 }
-console.log('PASS: six separate RGBA 8F bitmaps and six unique combat/upgrade event hooks');
+console.log('PASS: six RGBA upgrade 8F bitmaps plus the separate real-HP mint leech recovery hook');
