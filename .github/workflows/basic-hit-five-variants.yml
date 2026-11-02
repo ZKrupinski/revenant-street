@@ -16,5 +16,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node tests/basic-hit-five-variants.cjs
+      - run: node tests/basic-hit-five-variants.cjs && node tests/word-vfx-cyber.cjs
       - run: node tests/loading-audio.cjs
