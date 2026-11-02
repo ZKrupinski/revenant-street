@@ -8663,7 +8663,24 @@ function drawEffects(){drawModEnergy();const left=cameraX-820,right=cameraX+W+82
   }
   continue;
  }
- let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}if(p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p);for(const f of floating){if(f.x<left||f.x>right)continue;ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;ctx.lineWidth=4;ctx.strokeStyle='#10131c';ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);ctx.restore()}}
+ let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}if(p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p);}
+// Damage labels stay ABOVE the fighters even in the behind-character preview;
+// only actual bitmap energy and combat sparks are moved behind actors.
+function drawFloatingEffects(){
+ const left=cameraX-820,right=cameraX+W+820;
+ for(const f of floating){
+  if(f.x<left||f.x>right)continue;
+  ctx.save();ctx.globalAlpha=clamp(f.life*1.7,0,1);
+  ctx.textAlign='center';ctx.font=`900 ${f.text.length>12?17:21}px Arial`;
+  ctx.lineWidth=4;ctx.strokeStyle='#10131c';
+  ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle=f.color;
+  ctx.fillText(f.text,f.x,f.y);ctx.restore();
+ }
+}
+// Default preview: energy and hit sprites are rendered behind the characters.
+// Add ?vfx=front to the URL to view the exact previous foreground composition.
+const Z_VFX_BEHIND_ACTORS=!/(?:\?|&)vfx=front(?:&|$)/i.test(location.search||'');
+window.__zVfxLayerStatus=()=>Z_VFX_BEHIND_ACTORS?'behind':'front';
 const visibleActors=[];
 function draw(){
  if(gameState!=='playing'&&gameState!=='dying'&&!rewardSelection)return;
@@ -8685,8 +8702,11 @@ function draw(){
  for(const e of enemies)if((!e.dead||e.fade>0)&&e.x>cameraX-300&&e.x<cameraX+W+300)actors.push(e);
  drawIntruderSpecialWarnings();
  actors.sort((a,b)=>a.y-b.y);
+ if(Z_VFX_BEHIND_ACTORS)drawEffects();
  actors.forEach(drawActor);
- drawEffects();for(const e of actors)if(e!==p&&!e.dead)drawEnemyStatusIcons(e);
+ if(!Z_VFX_BEHIND_ACTORS)drawEffects();
+ drawFloatingEffects();
+ for(const e of actors)if(e!==p&&!e.dead)drawEnemyStatusIcons(e);
  ctx.restore();syncZSprite();
  if(screenTint>0){ctx.globalAlpha=screenTint*.32;ctx.fillStyle='#ff335d';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}
  ctx.restore();

@@ -7,6 +7,7 @@ on:
       - 'tests/upgrade-vfx-active.cjs'
       - 'tests/heal-guard-vfx.cjs'
       - 'tests/vfx-enemy-contact.cjs'
+      - 'tests/vfx-actor-layer-preview.cjs'
       - 'tests/vfx-display-size.cjs'
       - 'tests/loading-audio.cjs'
       - 'index.html'
@@ -25,6 +26,7 @@ jobs:
       - run: node tests/upgrade-vfx-active.cjs
       - run: node tests/heal-guard-vfx.cjs
       - run: node tests/vfx-enemy-contact.cjs
+      - run: node tests/vfx-actor-layer-preview.cjs
       - run: node tests/vfx-display-size.cjs
       - run: node tests/basic-hit-five-variants.cjs
       - run: node tests/loading-audio.cjs
