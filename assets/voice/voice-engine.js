@@ -106,92 +106,123 @@
    return true;
   }catch(_){return false}
  }
- function play(kind,actor,hero) {
+
+
+ const ENEMY_ARCHETYPES={
+  // Distinct voices by painted enemy appearance, without reusing long thin yells.
+  raider:{clip:'enemyA',rate:1.045,low:4900,high:160,presence:-.7,gain:.92,hurt:.18},
+  assassin:{clip:'enemyB',rate:1.095,low:6000,high:260,presence:.7,gain:.73,hurt:.15},
+  guard:{clip:'enemyA',rate:.925,low:2850,high:95,presence:-2.6,gain:1.03,hurt:.21},
+  intruder:{clip:'enemyB',rate:.985,low:3600,high:130,presence:-2.1,gain:.97,hurt:.21},
+  elite:{clip:'enemyA',rate:.885,low:2450,high:75,presence:-3.1,gain:1.16,hurt:.25},
+  boss:{clip:'enemyB',rate:.865,low:2250,high:65,presence:-3.6,gain:1.20,hurt:.28}
+ };
+ // [audio clip, start offset in seconds, maximum clip duration, pitch, gain].
+ // Redhood, Iron Mask and Hunter gasp several times as they collapse:
+ // NEVER play the old long drawn-out "으아아~" vocal.
+ const ENEMY_DEATH_STEPS={
+  raider:[['enemyA',0,.30,1,1]],
+  assassin:[['enemyB',0,.26,1,1]],
+  guard:[['enemyA',0,.33,1,1],['enemyB',.29,.24,.97,.54]],
+  intruder:[['enemyB',0,.42,1,1],['enemyA',.36,.46,.95,.84],['enemyB',.83,.41,.90,.54]],
+  elite:[['enemyA',0,.46,1,1],['enemyB',.37,.56,.96,.92],['enemyA',.91,.58,.92,.73],['enemyB',1.44,.47,.90,.48]],
+  boss:[['enemyB',0,.50,1,1],['enemyA',.41,.58,.96,.96],['enemyB',.95,.62,.92,.79],['enemyA',1.52,.57,.88,.62],['enemyB',2.05,.50,.90,.42]]
+ };
+ function stopVoiceEntry(entry){
+  if(!entry)return;
+  for(const source of entry.sources){try{source.stop()}catch(_){}}
+  active.delete(entry);
+  if(entry.actor?._voiceEntry===entry)entry.actor._voiceEntry=null;
+ }
+ function play(kind,actor,hero){
   if(!context||!buffers.mechA||!actor||!hero)return false;
-  try {
-   const now=context.currentTime,isHero=actor===hero,boss=!isHero&&actor.type==='boss';
-   // The player is silent on wounds/death: no recycled kiai, and a
-   // reload/cocking sound must not fire when the player gets hit.
+  try{
+   const now=context.currentTime,isHero=actor===hero;
+   const profile=isHero?null:(ENEMY_ARCHETYPES[actor.type]||ENEMY_ARCHETYPES.raider);
    if(isHero&&kind!=='heroStrike'&&kind!=='heroPower'&&kind!=='heroMove')return false;
    if(!isHero&&Math.abs(actor.x-hero.x)>1100)return false;
+   const fatal=!isHero&&(kind==='enemyDeath'||kind==='bossDeath');
    const cooldown=kind==='enemyHurt'?.48:
     kind==='enemyShout'||kind==='bossShout'?2.8:
     kind==='heroStrike'?.13:kind==='heroPower'?.20:kind==='heroMove'?1.0:.24;
-   // A lethal scream must never be lost because a grunt just played.
-   const fatal=kind==='heroDeath'||kind==='enemyDeath'||kind==='bossDeath';
    if(!fatal&&now-(actor._voiceAt??-99)<(kind==='heroPower'?.14:cooldown))return false;
    if(kind==='enemyHurt'&&now-lastCrowd<.20)return false;
-   const important=isHero||boss||kind==='enemyDeath';
-   if(active.size>=4) {
-    // In crowds a fresh painful hit replaces an old quiet grunt instead of
-    // disappearing. Keep a hard four-voice limit; never bury the impact SFX.
+   // Fatal cries always override earlier injury samples on this actor.
+   if(fatal&&actor._voiceEntry)stopVoiceEntry(actor._voiceEntry);
+   const important=isHero||fatal||actor.type==='boss'||actor.type==='elite';
+   if(active.size>=4){
     const quiet=[...active].find(v=>!v.important);
     if(!quiet&&!important)return false;
     const victim=quiet||[...active][0];
-    if(!victim)return false;
-    try{victim.source.stop()}catch(_){}
-    active.delete(victim);
+    if(victim)stopVoiceEntry(victim);
    }
-   // All enemy events use only short breaths / impact grunts.
-   // No long open-vowel yell is permitted, including lethal hits.
-   const file=kind==='heroPower'?'mechPower':
-    (kind==='heroStrike'||kind==='heroMove')?(Math.random()<.5?'mechA':'mechB'):
-    (Math.random()<.5?'enemyA':'enemyB');
-   const buffer=buffers[file];
-   if(!buffer)return false;
-   if(!master) {
+   if(!master){
     const limiter=context.createDynamicsCompressor(),output=context.createGain();
     limiter.threshold.value=-14;limiter.knee.value=6;limiter.ratio.value=4;
     limiter.attack.value=.003;limiter.release.value=.14;
-    // Independent accent bus; impact transients remain foreground and loudest.
-    output.gain.value=.58*NON_BGM_SFX_LEVEL;limiter.connect(output).connect(context.destination);
+    output.gain.value=.58*NON_BGM_SFX_LEVEL;
+    limiter.connect(output).connect(context.destination);
     master=limiter;
    }
-   const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
-   source.buffer=buffer;
-   // A small warm shift is fine, but never turn people into monsters.
-   const characterPitch=isHero?(kind==='heroPower'?.92:1.03):boss?.95:actor.type==='elite'?.975:
-    actor.type==='guard'?.99:actor.type==='assassin'?1.015:1.00;
-   const rate=Math.max(.92,Math.min(1.04,characterPitch*(.985+Math.random()*.03)));
-   source.playbackRate.value=rate;
-   // Very short weighty pain breaths stay behind the sharp impact.
-   // Their bus never ducks music or replaces mechanical Foley.
    const strengths={heroStrike:.94,heroPower:1.07,heroMove:.29,
-    enemyHurt:.64,enemyShout:.45,enemyDeath:.56,bossShout:.58,bossDeath:.64};
+    enemyHurt:.64,enemyShout:.48,enemyDeath:.60,bossShout:.58,bossDeath:.74};
    const position=isHero?1:Math.max(.62,1-Math.abs(actor.x-hero.x)/2350);
-   const volume=(strengths[kind]||.7)*position*(isHero?1:ENEMY_VOICE_GAIN);
-   filter.type='lowpass';filter.frequency.value=isHero?7600:boss?3400:4000;
-   // Tame the nasal / bright vowel range, leaving the hit crack intact.
-   const presence=isHero?null:context.createBiquadFilter();
-   if(presence){presence.type='peaking';presence.frequency.value=1800;presence.gain.value=-1.5;}
-   const maxDuration=kind==='heroMove'?.19:kind==='heroStrike'?.42:kind==='heroPower'?.72:
-    kind==='enemyHurt'?.18:kind==='enemyShout'?.22:kind==='bossShout'?.25:
-    kind==='enemyDeath'?.28:kind==='bossDeath'?.34:2.2;
-   // Start at the first audible breath; hard duration limits remove the
-   // old drawn-out '으아아~' vocal tail.
-   const offset=isHero?0:sampleOnset(buffer);
-   const duration=Math.min(maxDuration,(buffer.duration-offset)/rate);
-   if(!(duration>.02))return false;
-   // Let the independent punch crack play first; groans follow ~75ms later.
-   const delay=kind==='enemyHurt'||kind==='enemyDeath'||kind==='bossDeath'?.06:0;
-   const at=now+delay;
-   const attack=Math.min(.006,duration*.10),release=Math.min(.065,duration*.35);
-   gain.gain.setValueAtTime(.0001,at);
-   gain.gain.linearRampToValueAtTime(volume,at+attack);
-   gain.gain.setValueAtTime(volume,Math.max(at+attack,at+duration-release));
-   gain.gain.linearRampToValueAtTime(.0001,at+duration);
-   source.connect(filter);
-   if(presence)filter.connect(presence).connect(gain);
-   else filter.connect(gain);
-   gain.connect(master);
-   const entry={source,important};active.add(entry);
-   source.onended=()=>{active.delete(entry);source.disconnect();filter.disconnect();presence?.disconnect();gain.disconnect()};
-   source.start(at,offset,duration*rate);
-   source.stop(at+duration+.015);
-   actor._voiceAt=now;
+   const volume=(strengths[kind]||.7)*position*(isHero?1:ENEMY_VOICE_GAIN*profile.gain);
+   const heroClip=kind==='heroPower'?'mechPower':Math.random()<.5?'mechA':'mechB';
+   const variation=isHero?0:(actor._voiceVariation=(actor._voiceVariation||0)+1);
+   const baseRate=isHero?(kind==='heroPower'?.92:1.03):
+    profile.rate*(variation%2===0?.985:1.015);
+   let steps;
+   if(isHero){
+    const duration=kind==='heroMove'?.19:kind==='heroStrike'?.42:.72;
+    steps=[[heroClip,0,duration,1,1]];
+   }else if(fatal){
+    steps=ENEMY_DEATH_STEPS[actor.type]||ENEMY_DEATH_STEPS.raider;
+   }else{
+    const duration=kind==='enemyHurt'?profile.hurt:
+     kind==='bossShout'?.29:kind==='enemyShout'?.21:.22;
+    steps=[[profile.clip,0,duration,1,1]];
+   }
+   const entry={important,actor,sources:[]};
+   let pending=0;
+   for(const [clip,delay,maxDuration,rateFactor,relativeGain] of steps){
+    const buffer=buffers[clip];if(!buffer)continue;
+    const offset=isHero?0:sampleOnset(buffer);
+    const rate=Math.max(.80,Math.min(1.14,baseRate*rateFactor));
+    const duration=Math.min(maxDuration,Math.max(0,(buffer.duration-offset)/rate));
+    if(!(duration>.02))continue;
+    const at=now+(isHero?0:kind==='enemyHurt'||fatal?.06:0)+delay;
+    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
+    source.buffer=buffer;source.playbackRate.value=rate;
+    filter.type='lowpass';filter.frequency.value=isHero?7600:profile.low;
+    const high=isHero?null:context.createBiquadFilter();
+    if(high){high.type='highpass';high.frequency.value=profile.high;}
+    const presence=isHero?null:context.createBiquadFilter();
+    if(presence){presence.type='peaking';presence.frequency.value=1800;presence.gain.value=profile.presence;}
+    const attack=Math.min(.009,duration*.12),release=Math.min(fatal?.15:.075,duration*.38);
+    const loud=volume*relativeGain;
+    gain.gain.setValueAtTime(.0001,at);
+    gain.gain.linearRampToValueAtTime(loud,at+attack);
+    gain.gain.setValueAtTime(loud,Math.max(at+attack,at+duration-release));
+    gain.gain.linearRampToValueAtTime(.0001,at+duration);
+    source.connect(filter);
+    if(high){filter.connect(high);high.connect(presence);}
+    else if(presence)filter.connect(presence);
+    if(presence)presence.connect(gain);else filter.connect(gain);
+    gain.connect(master);
+    pending++;entry.sources.push(source);
+    source.onended=()=>{
+     pending--;source.disconnect();filter.disconnect();high?.disconnect();presence?.disconnect();gain.disconnect();
+     if(pending===0){active.delete(entry);if(actor._voiceEntry===entry)actor._voiceEntry=null;}
+    };
+    source.start(at,offset,duration*rate);
+    source.stop(at+duration+.015);
+   }
+   if(!pending)return false;
+   active.add(entry);actor._voiceEntry=entry;actor._voiceAt=now;
    if(kind==='enemyHurt')lastCrowd=now;
    return true;
-  } catch(_){return false}
+  }catch(_){return false}
  }
  window.__zCombatVoice={
   prepare,play,fire,

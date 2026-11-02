@@ -3559,7 +3559,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 <script src="./assets/elite-ironmask.js?v=newhood-special-1f83b64-v2"></script>
 <script src="./assets/boss-hunter.js?v=fe00bed9"></script>
 <script src="./assets/attacks-20.js?v=923cd5b7"></script>
-<script src="./assets/voice/voice-engine.js?v=20261102-restrained-hit-voice-v4"></script>
+<script src="./assets/voice/voice-engine.js?v=20261102-enemy-archetype-voices-v5"></script>
 <script>const EMBEDDED_ASSETS=window.RZ_ASSETS;</script>
 <script id="z-startup-recovery-v1">
 /* Startup watchdog: expose failures instead of leaving an empty neon frame. */
@@ -6464,7 +6464,7 @@ function hurtEnemy(e,dmg,poise){
  e.parryScreenDir=0;e.parryScreenEdge=null;
  e.encountered=true; // A hit counts as detection even through long stun / knockback.
  e.hp-=dmg;
- if(e.hp<=0){if(e.type==='boss'||e.type==='elite'||Math.random()<.48)playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e)}
+ if(e.hp<=0){playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e)}
  else if(Math.random()<.62)playCombatVoice('enemyHurt',e);
  e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:(e.type==='elite'||e.type==='intruder')?.80:1),0,e.maxPoise);
 
@@ -7695,7 +7695,7 @@ function updateEnemies(dt,parryVictimScale=1){
   e.bleed=Math.max(0,e.bleed-actorDt);e.burn=Math.max(0,(e.burn||0)-actorDt);
   if(e.groggy>0){e.groggy-=actorDt;if(e.groggy<=0){e.poise=0;e.stun=0}}
   if(e.bleed>0)e.hp-=actorDt*(4+2.5*(e.bleedPower||1));if(e.burn>0)e.hp-=actorDt*(5+3*(e.burnPower||1));
-  if(e.hp<=0){if(e.type==='boss'||e.type==='elite'||Math.random()<.4)playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e);e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);continue}
+  if(e.hp<=0){playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e);e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);continue}
   if(e.stun>0||e.shock>.35||e.groggy>0||e.proneTime>0||e.riseTime>0)continue;
   let dx=p.x-e.x,dy=p.y-e.y,dist=Math.abs(dx);
   // Aggro sticks once Z was detected: leaving the screen never resets pursuit.

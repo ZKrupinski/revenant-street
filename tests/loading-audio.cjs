@@ -82,7 +82,7 @@ async function combatVoices(){
  ctx.currentTime=1.3;
  assert.equal(voices.play('bossShout',boss,hero),true,'boss warning must emit a short low grunt');
  assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'boss warning cannot use old yell');
- assert(createdSources.at(-1).playLength<=.27,'boss warning max 270ms');
+ assert(createdSources.at(-1).playLength<=.31,'boss warning max 310ms');
  ctx.currentTime=1.9;
  assert.equal(voices.play('heroPower',hero,hero),true,'heavy attack emits a powerful metallic bolt action');
  const powerClip=createdSources.at(-1).buffer.clip;
@@ -95,11 +95,11 @@ async function combatVoices(){
  assert.equal(voices.play('enemyHurt',foe,hero),true,'enemy gets its own wounded vocal');
  assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'pain uses short original CC0 male grunts');
  assert(createdSources.at(-1).startedAt>=ctx.currentTime+.055,'the crack of impact should precede the groan by about 60ms');
- assert(createdSources.at(-1).playLength<=.19,'hit grunt max 190ms');
+ assert(createdSources.at(-1).playLength<=.21,'raider grunt short and sharp');
  const enemyVolume=Math.max(...voiceGains.at(-1).gain.history);
  assert(enemyVolume>.35&&enemyVolume<.8,'short grunt must sit behind impact: '+enemyVolume);
  assert(voiceScript.includes("const ENEMY_VOICE_GAIN=.94"),'enemy voice mixed below impact crack');
- assert(voiceScript.includes("presence.frequency.value=1800;presence.gain.value=-1.5"),'piercing midrange vowel is softened');
+ assert(voiceScript.includes('ENEMY_ARCHETYPES'),'six visual archetypes have distinct voice filtering');
  ctx.currentTime=3.0;
  assert.equal(voices.play('heroStrike',hero,hero),true,'normal hero strikes use mechanical charging clicks');
  assert(/hero-mech-[ab]\.mp3$/.test(createdSources.at(-1).buffer.clip),'hero normal hits never play human recordings');
@@ -110,17 +110,18 @@ async function combatVoices(){
  const defeated={x:440,y:560,type:'assassin'};
  assert.equal(voices.play('enemyDeath',defeated,hero),true);
  assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'enemy death uses short grunt not yell');
- assert(createdSources.at(-1).playLength<=.30,'enemy death maximum 300ms');
+ assert(createdSources.at(-1).playLength<=.30,'assassin death a short gasp');
  const alerted={x:505,y:560,type:'guard'};
  ctx.currentTime=4.35;
  assert.equal(voices.play('enemyShout',alerted,hero),true);
  assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'enemy warning uses short grunt not yell');
- assert(createdSources.at(-1).playLength<=.24,'enemy warning maximum 240ms');
+ assert(createdSources.at(-1).playLength<=.24,'guard warning stays short');
  ctx.currentTime=5.2;
  for(const src of createdSources){if(src.onended){src.onended();src.onended=null}}
  assert.equal(voices.play('bossDeath',boss,hero),true);
  assert(/hero-grunt-[ab]\.wav$/.test(createdSources.at(-1).buffer.clip),'boss death uses short grunt');
- assert(createdSources.at(-1).playLength<=.36,'boss death maximum 360ms');
+ assert(createdSources.at(-1).playLength<=.52,'each boss death breath is short');
+ assert(createdSources.slice(-5)[0].startedAt<createdSources.at(-1).startedAt-1.8,'boss death is an extended sequence of agonized breaths');
  assert(!voiceScript.includes('voice-yell.wav'),'old shrill yell is not present in live voice engine');
  assert(createdSources.length>=3,'all voice families use genuine recorded buffers');
  assert(!voiceScript.includes('duckImpact'),'metal accents and enemy vocals do not change BGM volume');
@@ -138,11 +139,11 @@ async function combatVoices(){
   assert(!voiceScript.includes("'./assets/voice/"+oldFile+"'"),
    'animal-like formant-shifted remasters must not be loaded: '+oldFile);
  }
- assert(voiceScript.includes("const rate=Math.max(.92,Math.min(1.04"),
-  'natural male voice pitch must stay close to source');
+ assert(voiceScript.includes('baseRate*rateFactor'),
+  'character-specific pitch shapes vocal identity');
  assert(voiceScript.includes("const offset=isHero?0:sampleOnset(buffer)"),
   'start at the audible male breath or consonant instead of leading silence');
- assert(html.includes('voice-engine.js?v=20261102-restrained-hit-voice-v4'),
+ assert(html.includes('voice-engine.js?v=20261102-enemy-archetype-voices-v5'),
   'browser cache must not replay the old, animal-like voice engine');
  for(const file of ['hero-mech-a.mp3','hero-mech-b.mp3','hero-mech-power.mp3']){
   const bytes=fs.readFileSync(path.join(root,'assets/voice',file));
@@ -185,7 +186,7 @@ async function combatVoices(){
   assert(bytes.length>6000,'game embeds an original gun report: '+name);
   assert(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===0xff,'MP3 gun report must be valid: '+name);
  }
- console.log('PASS: short restrained enemy grunts, nine clips, unchanged BGM/gunfire and impacts');
+ console.log('PASS: distinct enemy voice profiles, long elite deaths, unchanged BGM/gunfire/impacts');
 }
 function spriteRetry(){
  const images=[];let now=1000;

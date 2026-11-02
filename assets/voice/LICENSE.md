@@ -81,3 +81,7 @@ The live engine keeps playback near the original male voice pitch (approx. 0.95�
 ## Restrained short impact reactions (November 2, 2026)
 
 Runtime now uses only the two CC0 original human short grunts (`hero-grunt-a.wav`, `hero-grunt-b.wav`) for enemy damage, warnings, and death. The long `voice-yell.wav` and extreme pitch-shifted deep remasters remain for provenance only; none are fetched by the voice engine. The latest mix limits wounds to 0.18 s, warning to 0.22–0.25 s, and death to 0.28–0.34 s, removes piercing upper-mid energy, and preserves the original impact, firearm, mechanical, and soundtrack mixes.
+
+## Appearance-specific enemy voice performances (November 2, 2026)
+
+All six visual archetypes (masked raider, assassin, shield guard, red-hood intruder, hooded iron-mask elite, Hunter boss) have separate runtime voice profiles. Existing CC0 human grunt audio is shaped by unique sample, pitch, band-limits and per-character vocal emphasis; no new licensed material was added. Short wounds last 0.15–0.28 s. Redhood death is a sequence of gasps spanning ~1.3 s; Iron Mask ~1.9 s; Hunter ~2.5 s. Each segment contains a truncated low pain breath with a decaying envelope, avoiding the previous prolonged high-pitched yell. Old full-length yelling and deep animal-like remasters remain archives only. Combat hit transients, gunfire, mechanical accents and BGM remain unchanged.
