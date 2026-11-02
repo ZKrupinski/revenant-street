@@ -3530,12 +3530,16 @@ body{position:fixed;inset:0;touch-action:manipulation}
 #app.compact-game-stage #stageWrap #menu.reward-dialog>.reward-reroll-row .reward-balance{font-size:9px!important}
 </style>
 <style id="project-z-combat-word-hud-v2">
-/* Dedicated fixed-position, hand-painted 8-frame wordmark, left of PAUSE. */
+/* Pause-left responsive billboard: moving the HTML canvas keeps painted
+   source frames intact throughout the enter/exit transition. */
 #hud .hud-right{overflow:visible!important}
-#hud #combatWordHud{position:absolute;right:calc(100% + 8px);top:0;
- width:clamp(105px,14.5cqw,185px)!important;height:auto!important;
+#hud #combatWordHud{
+ position:absolute;right:calc(100% + 8px);top:0;
+ width:clamp(118px,22cqw,290px)!important;height:auto!important;
  aspect-ratio:8/5;max-width:none;display:none;pointer-events:none;
- z-index:5;object-fit:contain}
+ opacity:0;transform:translate3d(0,0,0);
+ z-index:5;object-fit:contain;will-change:transform,opacity;
+}
 </style>
 </head>
 <body>
@@ -6268,7 +6272,7 @@ function startRun(){cancelCombatHudEntrance();pendingHubAutoRefresh=false;resetI
  // Preserve WASD that was held while the loading or start overlay was visible.
  for(const k of ['w','a','s','d'])if(heldKeyboard.has(k))keys.add(k);
  menuBlockedKeys.clear();syncFaceButtonVisuals();
- setModsExpanded(false);wave=0;fx=[];floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;parrySlowTarget=null;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
+ setModsExpanded(false);wave=0;fx=[];zCombatWordQueue.length=0;floating=[];attributeFx=[];modStripCache='';enemies=[];hitStop=0;slowMotion=0;parrySlowTarget=null;screenShake=0;screenTint=0;$('hint').hidden=true;$('bossHud').hidden=true;gameState='playing';setStatus('COMBAT LIVE');hideMenu();spawnWave();
  const urlQA=/(?:[?&])(?:intruder|elite|boss)=(?:preview|entry)(?:&|$)|(?:[?&])intro=off(?:&|$)/.test(window.location?.search||'');
  heroEntry.active=!urlQA;heroEntry.elapsed=0;heroEntry.landed=false;
  if(heroEntry.active){$('touchControls').hidden=true;$('hud').hidden=true;setStatus('Z / DEPLOYING')}
@@ -7019,61 +7023,86 @@ function zClampVfxX(worldX,leftExtent,rightExtent){
  const low=left+leftExtent,high=right-rightExtent;
  return low<=high?clamp(worldX,low,high):(low+high)*.5;
 }
-// Wordmarks are screen-fixed HUD sprites rather than world-bound hit labels.
+// World-space hit effects remain in the game canvas. These 8-frame raster
+// wordmarks are pause-left HUD overlays unaffected by camera shake or zoom.
 const Z_COMBAT_WORD_TIMING=Object.freeze({
- execution:{frames:.98,hold:.30,fade:.32,width:282},
- critical:{frames:.86,hold:.26,fade:.30,width:264}
+ execution:{enter:.20,shake:.14,frames:2.06,hold:.50,exit:.64,width:316},
+ critical:{enter:.18,shake:.12,frames:1.85,hold:.42,exit:.60,width:312}
 });
-function spawnCombatWordFx(name,target){
- if(!target||!Z_COMBAT_WORD_ART.ready)return false;
- const kind=name==='execution'?'execution':'critical',settings=Z_COMBAT_WORD_TIMING[kind];
- // Reset the previous wordmark rather than stacking and obscuring HUD values.
- for(let i=fx.length-1;i>=0;i--)if(fx[i].kind==='combatWordSprite')fx.splice(i,1);
- const duration=settings.frames+settings.hold+settings.fade;
+const zCombatWordQueue=[];
+function zStartCombatWord(kind){
+ const cfg=Z_COMBAT_WORD_TIMING[kind];
+ const duration=cfg.frames+cfg.hold+cfg.exit;
  fx.push({kind:'combatWordSprite',word:kind,x:p.x,y:p.y,
   life:duration,maxLife:duration,age:0,drawnFrame:-1,
-  animDuration:settings.frames,fadeDuration:settings.fade,holdDuration:settings.hold});
+  animDuration:cfg.frames,fadeDuration:cfg.exit,holdDuration:cfg.hold});
+}
+function spawnCombatWordFx(name,target){
+ if(!target||!Z_COMBAT_WORD_ART.ready)return false;
+ const kind=name==='execution'?'execution':'critical';
+ if(fx.some(f=>f.kind==='combatWordSprite'&&f.life>0)){
+  // Do not restart slow eight-frame animations during rapidly chained hits.
+  // Keep one Critical pending; Execution takes priority without stacking UI.
+  if(kind==='execution'){
+   const i=zCombatWordQueue.indexOf(kind);if(i>=0)zCombatWordQueue.splice(i,1);
+   zCombatWordQueue.unshift(kind);
+  }else if(!zCombatWordQueue.includes('critical'))zCombatWordQueue.push('critical');
+  zCombatWordQueue.length=Math.min(2,zCombatWordQueue.length);
+ }else zStartCombatWord(kind);
  return true;
 }
+function zCombatWordEaseOut(t){t=clamp(t,0,1);return 1-Math.pow(1-t,3);}
+function zCombatWordEaseIn(t){t=clamp(t,0,1);return t*t*t;}
 function drawCombatWordFx(f){
  const im=Z_COMBAT_WORD_ART.image,canvas=$('combatWordHud');
  if(!canvas||!Z_COMBAT_WORD_ART.ready||!im.complete)return false;
  const pause=$('pauseButton'),hudCtx=canvas.getContext('2d');
  if(!pause||!hudCtx)return false;
  canvas.style.display='block';
- // Pin vertically to the PAUSE button center; CSS anchors immediately left.
- canvas.style.top=Math.round(pause.offsetTop+pause.offsetHeight*.5-
-   canvas.getBoundingClientRect().height*.5)+'px';
+ const rect=canvas.getBoundingClientRect(),drawW=rect.width||290,drawH=rect.height||drawW*5/8;
+ canvas.style.top=Math.round(pause.offsetTop+pause.offsetHeight*.5-drawH*.5)+'px';
  hudCtx.clearRect(0,0,canvas.width,canvas.height);
- const age=f.age||0;
- const progress=clamp(age/Math.max(.001,f.animDuration),0,.999999);
- // Play eight distinct original frames, then hold the final pose before fading.
- const desired=age>=f.animDuration?7:Math.min(7,Math.floor(progress*8));
+ const cfg=Z_COMBAT_WORD_TIMING[f.word],age=f.age||0;
+ const progress=clamp(age/Math.max(.001,cfg.frames),0,.999999);
+ const desired=age>=cfg.frames?7:Math.min(7,Math.floor(progress*8));
  const frame=Math.min(desired,(f.drawnFrame??-1)+1);
  f.drawnFrame=frame;
- const remaining=f.maxLife-age;
- const alpha=Math.min(1,clamp(age/.16,0,1),clamp(remaining/f.fadeDuration,0,1));
- const row=f.word==='execution'?0:1;
- const cw=im.naturalWidth/8,ch=im.naturalHeight/2;
- const w=Z_COMBAT_WORD_TIMING[f.word].width,h=w*ch/cw;
- hudCtx.save();hudCtx.globalAlpha=alpha;
- hudCtx.drawImage(im,frame*cw,row*ch,cw,ch,(canvas.width-w)*.5,(canvas.height-h)*.5,w,h);
- hudCtx.restore();
+ const cw=im.naturalWidth/8,ch=im.naturalHeight/2,row=f.word==='execution'?0:1;
+ const width=cfg.width,height=width*ch/cw;
+ hudCtx.drawImage(im,frame*cw,row*ch,cw,ch,(canvas.width-width)*.5,(canvas.height-height)*.5,width,height);
+ let dx=0,dy=0,alpha=1;
+ if(age<cfg.enter){
+  const t=zCombatWordEaseOut(age/cfg.enter);
+  dx=-Math.min(150,drawW*.52)*(1-t);alpha=t;
+ }else if(age<cfg.enter+cfg.shake){
+  const t=(age-cfg.enter)/cfg.shake,k=1-t;
+  dx=Math.sin(t*Math.PI*4)*4.8*k;
+  dy=Math.sin(t*Math.PI*2)*2*k;
+ }else if(age>=cfg.frames+cfg.hold){
+  const t=clamp((age-cfg.frames-cfg.hold)/cfg.exit,0,1);
+  const columnWidth=pause.parentElement?.offsetWidth||drawW*.72;
+  dx=(drawW+columnWidth+64)*zCombatWordEaseIn(t);
+  alpha=1-t;
+ }
+ canvas.style.transform='translate3d('+dx.toFixed(2)+'px,'+dy.toFixed(2)+'px,0)';
+ canvas.style.opacity=alpha.toFixed(3);
  return true;
 }
 function drawCombatWordHud(){
- const canvas=$('combatWordHud');
- if(!canvas)return;
- // Execution and critical share a single pause-adjacent HUD slot.
- const word=fx.findLast(f=>f.kind==='combatWordSprite'&&f.life>0);
- if(word&&gameState==='playing')drawCombatWordFx(word);
- else{canvas.getContext('2d')?.clearRect(0,0,canvas.width,canvas.height);canvas.style.display='none';}
+ const canvas=$('combatWordHud');if(!canvas)return;
+ const current=fx.findLast(f=>f.kind==='combatWordSprite'&&f.life>0);
+ if(current&&gameState==='playing')drawCombatWordFx(current);
+ else{
+  canvas.getContext('2d')?.clearRect(0,0,canvas.width,canvas.height);
+  canvas.style.display='none';canvas.style.opacity='0';
+  canvas.style.transform='translate3d(0,0,0)';
+ }
 }
 window.__zCombatWordStatus=()=>({
  ready:Z_COMBAT_WORD_ART.ready,missing:Z_COMBAT_WORD_ART.missing,
  source:Z_COMBAT_WORD_ART.image.src,
  active:fx.filter(f=>f.kind==='combatWordSprite').length,
- placement:'pause-left-hud'
+ queued:zCombatWordQueue.length,placement:'pause-left-hud'
 });
 
 // Five original painted transparent bitmap hit variants: 8 frames each.
@@ -8276,7 +8305,11 @@ function updateEffects(dt,realDt=dt){
  }
  for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){const fxDt=f.kind==='parrySuccess10'||f.kind==='basicHitSprite'||f.kind==='upgradeVfxSprite'||f.kind==='combatWordSprite'?realDt:f.kind==='parryCounterSprite'?realDt*.78:dt;
   f.life-=fxDt;if(f.kind==='basicHitSprite'||f.kind==='combatWordSprite')f.age+=fxDt;
-  if(f.kind==='combatWordSprite'&&(f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02);if(f.kind==='dashPierceSprite'||f.kind==='parryCounterSprite'){f.age=(f.age||0)+fxDt;if((f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02)}}fx=fx.filter(f=>f.life>0);for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
+  if(f.kind==='combatWordSprite'&&(f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02);if(f.kind==='dashPierceSprite'||f.kind==='parryCounterSprite'){f.age=(f.age||0)+fxDt;if((f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02)}}fx=fx.filter(f=>f.life>0);
+ if(gameState==='playing'&&!fx.some(f=>f.kind==='combatWordSprite')&&zCombatWordQueue.length){
+  zStartCombatWord(zCombatWordQueue.shift());
+ }
+ for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
 let modStripCache='',lastHudCombo=-1,hudAccumulator=.12,modsExpanded=false;
 function setModsExpanded(open){
  modsExpanded=!!open;
