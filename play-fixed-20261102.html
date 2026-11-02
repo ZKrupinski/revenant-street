@@ -5295,8 +5295,11 @@ function chooseCombatUpgradeOffers(){
   }).sort((a,b)=>b.score-a.score);
   const pick=scored[0].o;picks.push(pick);chosen.add(pick.id);return true;
  };
- take(pool.filter(o=>modRank(o.id)===0));
- take(pool.filter(o=>modRank(o.id)>0));
+ // Prefer a full fresh set first: don't force an already-seen stack.
+ // When there are 4+ other modules, a paid reroll never repeats prior cards.
+ take(pool.filter(o=>modRank(o.id)===0&&!last.has(o.id)));
+ take(pool.filter(o=>modRank(o.id)>0&&!last.has(o.id)));
+ while(picks.length<4&&take(pool.filter(o=>!last.has(o.id)))){}
  while(picks.length<4&&take(pool)){}
  combatUpgrades.lastOffers=picks.map(o=>o.id);
  combatUpgrades.offered=picks.map(o=>o.id);
