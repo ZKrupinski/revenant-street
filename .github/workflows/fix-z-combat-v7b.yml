@@ -1,0 +1,115 @@
+name: Rescue V7 quiet shots and non-audible slides with verified V7b masters
+on:
+  push:
+    paths: ['.github/workflows/fix-z-combat-v7b.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  remix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Install audio tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Master two newer loud, genuine mechanical slide recordings
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::group::Re-record and inspect real steel action slide-a"
+          curl -fsSL --retry 3 --connect-timeout 20 --max-time 90 \
+            "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_234929_cf8de3c1-de05-41dc-8703-2a2fada6df9f.mp3" -o "/tmp/slide-a-recording.mp3"
+          ffmpeg -nostdin -hide_banner -i "/tmp/slide-a-recording.mp3" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          ffmpeg -nostdin -y -hide_banner -loglevel error \
+            -i "/tmp/slide-a-recording.mp3" \
+            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-75dB,highpass=f=95,lowpass=f=9200,acompressor=threshold=0.10:ratio=3.0:attack=3:release=130:makeup=2,loudnorm=I=-17:LRA=8:TP=-1.5,alimiter=limit=0.91:level=false,apad,atrim=duration=1.34,afade=t=out:st=1.18:d=0.16" \
+            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k \
+            "assets/sfx/z-combat-v7b-slide-a.mp3"
+          test "$(wc -c < "assets/sfx/z-combat-v7b-slide-a.mp3")" -gt 16000
+          echo "::endgroup::"
+          echo "::group::Re-record and inspect real steel action slide-b"
+          curl -fsSL --retry 3 --connect-timeout 20 --max-time 90 \
+            "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_234930_79f4b09d-0858-40e7-85da-63a606fc337c.mp3" -o "/tmp/slide-b-recording.mp3"
+          ffmpeg -nostdin -hide_banner -i "/tmp/slide-b-recording.mp3" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          ffmpeg -nostdin -y -hide_banner -loglevel error \
+            -i "/tmp/slide-b-recording.mp3" \
+            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-75dB,highpass=f=95,lowpass=f=9200,acompressor=threshold=0.10:ratio=3.0:attack=3:release=130:makeup=2,loudnorm=I=-17:LRA=8:TP=-1.5,alimiter=limit=0.91:level=false,apad,atrim=duration=1.34,afade=t=out:st=1.18:d=0.16" \
+            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k \
+            "assets/sfx/z-combat-v7b-slide-b.mp3"
+          test "$(wc -c < "assets/sfx/z-combat-v7b-slide-b.mp3")" -gt 16000
+          echo "::endgroup::"
+      - name: Normalize two ultra-quiet attack variants so they actually have impact
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::group::Rebalance quiet V7 gunshot pistol-e"
+          ffmpeg -nostdin -y -hide_banner -loglevel error \
+            -i "assets/sfx/z-combat-v7-pistol-e.mp3" \
+            -af "highpass=f=47,bass=g=3.0:f=105:w=.7,acompressor=threshold=0.10:ratio=3.0:attack=4:release=155:makeup=2.0,loudnorm=I=-17:LRA=8:TP=-1.5,alimiter=limit=0.91:level=false,apad,atrim=duration=1.35,afade=t=out:st=1.21:d=0.14" \
+            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k \
+            "assets/sfx/z-combat-v7b-pistol-e.mp3"
+          echo "::endgroup::"
+          echo "::group::Rebalance quiet V7 gunshot magnum-f"
+          ffmpeg -nostdin -y -hide_banner -loglevel error \
+            -i "assets/sfx/z-combat-v7-magnum-f.mp3" \
+            -af "highpass=f=47,bass=g=3.0:f=105:w=.7,acompressor=threshold=0.10:ratio=3.0:attack=4:release=155:makeup=2.0,loudnorm=I=-17:LRA=8:TP=-1.5,alimiter=limit=0.91:level=false,apad,atrim=duration=1.35,afade=t=out:st=1.21:d=0.14" \
+            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k \
+            "assets/sfx/z-combat-v7b-magnum-f.mp3"
+          echo "::endgroup::"
+      - name: Fail if ANY audible shot or slide is silence
+        shell: bash
+        run: |
+          set -euo pipefail
+          file="assets/sfx/z-combat-v7b-pistol-e.mp3"
+          test -s "$file"
+          report=$(ffmpeg -nostdin -hide_banner -i "$file" -af volumedetect -f null - 2>&1)
+          mean=$(printf '%s\n' "$report" | sed -n 's/.*mean_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          peak=$(printf '%s\n' "$report" | sed -n 's/.*max_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          echo "pistol-e mean=$mean dB, peak=$peak dB"
+          test -n "$mean" && test -n "$peak"
+          awk -v p="$peak" -v m="$mean" 'BEGIN{exit !(p > -13 && m > -42)}'
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 "$file"
+          file="assets/sfx/z-combat-v7b-magnum-f.mp3"
+          test -s "$file"
+          report=$(ffmpeg -nostdin -hide_banner -i "$file" -af volumedetect -f null - 2>&1)
+          mean=$(printf '%s\n' "$report" | sed -n 's/.*mean_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          peak=$(printf '%s\n' "$report" | sed -n 's/.*max_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          echo "magnum-f mean=$mean dB, peak=$peak dB"
+          test -n "$mean" && test -n "$peak"
+          awk -v p="$peak" -v m="$mean" 'BEGIN{exit !(p > -13 && m > -42)}'
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 "$file"
+          file="assets/sfx/z-combat-v7b-slide-a.mp3"
+          test -s "$file"
+          report=$(ffmpeg -nostdin -hide_banner -i "$file" -af volumedetect -f null - 2>&1)
+          mean=$(printf '%s\n' "$report" | sed -n 's/.*mean_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          peak=$(printf '%s\n' "$report" | sed -n 's/.*max_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          echo "slide-a mean=$mean dB, peak=$peak dB"
+          test -n "$mean" && test -n "$peak"
+          awk -v p="$peak" -v m="$mean" 'BEGIN{exit !(p > -13 && m > -42)}'
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 "$file"
+          file="assets/sfx/z-combat-v7b-slide-b.mp3"
+          test -s "$file"
+          report=$(ffmpeg -nostdin -hide_banner -i "$file" -af volumedetect -f null - 2>&1)
+          mean=$(printf '%s\n' "$report" | sed -n 's/.*mean_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          peak=$(printf '%s\n' "$report" | sed -n 's/.*max_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          echo "slide-b mean=$mean dB, peak=$peak dB"
+          test -n "$mean" && test -n "$peak"
+          awk -v p="$peak" -v m="$mean" 'BEGIN{exit !(p > -13 && m > -42)}'
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 "$file"
+      - name: Commit non-silent, independently audited V7b audio files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/sfx/z-combat-v7b-*.mp3
+          if ! git diff --cached --quiet; then
+            git commit -m "Audio V7b: fix inaudible slides and quiet gunshot takes with validated level matching"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
