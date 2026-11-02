@@ -1,0 +1,20 @@
+name: Bitmap enemy contact VFX QA
+on:
+  push:
+    paths:
+      - 'assets/vfx/project_z_enemy_hit_5x8.png'
+      - 'tests/basic-hit-five-variants.cjs'
+      - 'index.html'
+      - 'play-fixed-20261102.html'
+      - '.github/workflows/basic-hit-five-variants.yml'
+  workflow_dispatch:
+jobs:
+  sprites:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/basic-hit-five-variants.cjs
+      - run: node tests/loading-audio.cjs

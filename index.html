@@ -6463,6 +6463,8 @@ function hurtEnemy(e,dmg,poise){
  e.parryScreenDir=0;e.parryScreenEdge=null;
  e.encountered=true; // A hit counts as detection even through long stun / knockback.
  e.hp-=dmg;
+ // Five no-repeat hand-painted hit effects for all real enemy damage events.
+ spawnBasicContactFx(e,p.moveName||'jab',dmg>=70||e.type==='boss'||e.type==='elite');
  if(e.hp<=0){playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e)}
  else if(Math.random()<.62)playCombatVoice('enemyHurt',e);
  e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:(e.type==='elite'||e.type==='intruder')?.80:1),0,e.maxPoise);
@@ -6733,69 +6735,73 @@ PARRY_COUNTER_ART.image.onload=()=>{
 };
 PARRY_COUNTER_ART.image.onerror=()=>{PARRY_COUNTER_ART.missing=true};
 PARRY_COUNTER_ART.image.src=PARRY_COUNTER_ART.src;
-// Compact reverse-spray hit shards: reuse the approved hand-painted
-// 8-frame parry-counter art. Each genuine NORMAL strike sheds 4-5 fast,
-// staggered bitmap bursts at the enemy-side contact point; no vector trails,
-// smoke, procedural shapes or new image downloads.
-// Compact, bright multi-hit sparks, based on the existing illustrated
-// parry-counter bitmap. Always keep a preloaded bitmap fallback so that a
-// failed / dimension-changed parry atlas cannot silently disable basic hits.
-const BASIC_CONTACT_FX_LIMIT=46;
+// Five original painted transparent bitmap hit variants: 8 frames each.
+// Normal, dash, dive and counter hits all use the same randomized source.
+const BASIC_HIT_FIVE={image:new Image(),available:false};
+BASIC_HIT_FIVE.image.onload=()=>{
+ BASIC_HIT_FIVE.available=BASIC_HIT_FIVE.image.naturalWidth===1280&&BASIC_HIT_FIVE.image.naturalHeight===520;
+};
+BASIC_HIT_FIVE.image.src='./assets/vfx/project_z_enemy_hit_5x8.png?v=20261102-five-brush-variants';
+const BASIC_CONTACT_FX_LIMIT=32;
+function randomHitVariant(enemy){
+ if(!enemy._hitFxBag?.length){
+  const bag=[0,1,2,3,4];
+  for(let i=bag.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}
+  if(bag[bag.length-1]===enemy._lastHitVariant){
+   const j=bag.findIndex(v=>v!==enemy._lastHitVariant);
+   [bag[j],bag[bag.length-1]]=[bag[bag.length-1],bag[j]];
+  }
+  enemy._hitFxBag=bag;
+ }
+ const variant=enemy._hitFxBag.pop();
+ enemy._lastHitVariant=variant;
+ return variant;
+}
 function spawnBasicContactFx(enemy,move,critical=false){
  const active=fx.reduce((n,v)=>n+(v.kind==='basicHitSprite'?1:0),0);
- const count=Math.min(5+Math.floor(Math.random()*3),
-  BASIC_CONTACT_FX_LIMIT-active,Math.max(0,112-fx.length));
- if(count<=0)return false;
- const dir=p.facing<0?-1:1;
- const kick=Z_KICK_MOVES.has(move),head=Z_HEAD_MOVES.has(move);
+ const room=Math.min(BASIC_CONTACT_FX_LIMIT-active,Math.max(0,106-fx.length));
+ if(room<=0)return false;
+ move=move||'jab';
+ const dir=p.facing<0?-1:1,kick=Z_KICK_MOVES.has(move),head=Z_HEAD_MOVES.has(move);
  const elbow=move.includes('elbow'),low=move==='lowkick'||move==='shovel_hook';
  const upper=move==='uppercut'||move==='rising_elbow';
  const bodyY=low?65:head||upper?155:kick?103:elbow?125:133;
- // Near-body actual impact, NOT the hero's center or the enemy's distant edge.
- const contactX=enemy.x-dir*Math.min(50,Math.max(16,bodyHalfX(enemy)*.66));
- const contactY=enemy.y-Math.max(0,enemy.z||0)-bodyY;
- const power=(kick||elbow||head?1.09:move==='jab'?.91:1)*(critical?1.1:1);
+ const x=enemy.x-dir*Math.min(50,Math.max(16,bodyHalfX(enemy)*.66));
+ const y=enemy.y-Math.max(0,enemy.z||0)-bodyY;
+ const power=(kick||elbow||head?1.08:move==='jab'?.90:1)*(critical?1.13:1);
+ const angles=[-.2,.10,-.43,.40,-.06],lengths=[.9,1.04,1.27,1.18,1.03];
+ const count=Math.min(room,critical?2:Math.random()<.52?2:1);
  for(let i=0;i<count;i++){
-  const first=i===0,delay=first?0:rnd(.002,.030);
-  const duration=rnd(.123,.175);
-  const width=(first?rnd(130,167):rnd(48,96))*power;
-  fx.push({kind:'basicHitSprite',x:contactX+rnd(-9,9),
-   y:contactY+rnd(-10,10),dir:-dir,
-   vx:-dir*rnd(65,160),vy:rnd(-78,78),
-   width,rotation:rnd(-.32,.32),alpha:rnd(.82,1),
-   frameBase:Math.random()<.58?0:4,
-   useBlue:Math.random()<.24,
-   delay,duration,age:0,life:duration+delay,maxLife:duration+delay});
+  const variant=randomHitVariant(enemy),main=i===0;
+  const delay=main?0:rnd(.012,.034),duration=main?rnd(.143,.190):rnd(.102,.148);
+  fx.push({kind:'basicHitSprite',x:x+rnd(-7,7)+(main?0:-dir*18),
+   y:y+rnd(-10,10)+(main?0:rnd(-23,21)),dir:-dir,
+   vx:-dir*(main?rnd(42,80):rnd(55,115)),vy:rnd(-52,42),
+   width:(main?rnd(135,158):rnd(59,81))*power*lengths[variant],
+   rotation:angles[variant]+rnd(-.12,.12),alpha:main?1:rnd(.68,.88),
+   variant,delay,duration,age:0,life:duration+delay,maxLife:duration+delay});
  }
  return true;
 }
 function drawBasicContactFx(f){
  if(f.age<f.delay)return;
  const progress=clamp((f.age-f.delay)/f.duration,0,.999999);
- const image=PARRY_COUNTER_ART.image;
- const painted=image.complete&&image.naturalWidth>=8&&image.naturalHeight>=2;
- // Small animated fragments never disappear when the parry image is still
- // loading or its dimensions differ from the former fixed-size assumption.
- const art=painted?image:(img[f.useBlue?'burst_blue':'burst_gold']||img.burst_blue);
- if(!art?.complete||!art.naturalWidth)return;
- const w=f.width,elapsed=f.age-f.delay;
+ const atlas=BASIC_HIT_FIVE.image,painted=BASIC_HIT_FIVE.available&&atlas.complete;
+ const fallback=PARRY_COUNTER_ART.image;
+ if(!painted&&(!fallback?.complete||!fallback.naturalWidth))return;
+ const elapsed=f.age-f.delay,w=f.width;
  ctx.save();
  ctx.translate(f.x+f.vx*elapsed,f.y+f.vy*elapsed);
  ctx.scale(f.dir,1);ctx.rotate(f.rotation);
- ctx.globalCompositeOperation='screen';
- ctx.globalAlpha=f.alpha*(progress<.42?1:Math.max(0,(1-progress)/.58));
+ ctx.globalAlpha=f.alpha*(progress<.6?1:Math.max(0,(1-progress)/.4));
+ const frame=Math.min(7,Math.floor(progress*8));
  if(painted){
-  const frame=f.frameBase+Math.min(3,Math.floor(progress*4));
-  const col=frame%4,row=Math.floor(frame/4);
-  const sx=Math.round(col*image.naturalWidth/4),sy=Math.round(row*image.naturalHeight/2);
-  const sw=Math.round((col+1)*image.naturalWidth/4)-sx;
-  const sh=Math.round((row+1)*image.naturalHeight/2)-sy;
-  const h=w*(sh/sw)*.81;
-  ctx.drawImage(image,sx,sy,sw,sh,-w*.18,-h*.5,w,h);
+  const sw=atlas.naturalWidth/8,sh=atlas.naturalHeight/5,h=w*(sh/sw)*.98;
+  ctx.drawImage(atlas,frame*sw,(f.variant%5)*sh,sw,sh,-w*.52,-h*.5,w,h);
  }else{
-  // Existing blue/gold brush-burst bitmaps: still no vector geometry/smoke.
-  const sz=w*.8;
-  ctx.drawImage(art,-sz*.42,-sz*.50,sz,sz);
+  const sw=fallback.naturalWidth/4,sh=fallback.naturalHeight/2,h=w*(sh/sw)*.75;
+  ctx.globalCompositeOperation='screen';
+  ctx.drawImage(fallback,(frame%4)*sw,Math.floor(frame/4)*sh,sw,sh,-w*.42,-h*.5,w,h);
  }
  ctx.restore();
 }
@@ -6989,7 +6995,7 @@ function attackCheck(){
  // Only confirmed, directly landed BASIC melee attacks get these mini-bursts.
  // Dash pierce, ground slam and parry chase keep their own bespoke artwork.
  if(!p.dashSmash&&!p.counterBoost&&!p.airAttack&&p.airKickPhase!=='dive')
-  spawnBasicContactFx(e,p.moveName,critical);
+  // The actual damage handler spawns the bitmap once for every attack type.
  createModImpact(e);combatStrengthFx(e,critical);hits++;
  if(p.dashSmash)recordStyleDamage('dash',beforeHp,e);
  if(p.airKickPhase==='dive'){
