@@ -1,0 +1,53 @@
+name: Finish V7 reverberant counter at stronger level with hard peak ceiling
+on:
+  push:
+    paths: ['.github/workflows/boost-z-counter-v7b.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  master:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Install audio mastering dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Reinforce dynamic loudness of original reverberant blast, preserve echo decay
+        shell: bash
+        run: |
+          set -euo pipefail
+          source="assets/sfx/z-combat-v7-counter-reverb.mp3"
+          out="assets/sfx/z-combat-v7b-counter-loud-reverb.mp3"
+          test -s "$source"
+          ffmpeg -nostdin -y -hide_banner -loglevel error -i "$source" \
+            -af "highpass=f=38,bass=g=2.4:f=110:w=0.8,acompressor=threshold=0.19:ratio=2.2:attack=8:release=175:makeup=1.25,loudnorm=I=-8.5:LRA=7:TP=-1.0,alimiter=limit=0.90:level=false" \
+            -ar 44100 -ac 2 -codec:a libmp3lame -b:a 192k "$out"
+          test "$(wc -c < "$out")" -gt 40000
+          echo "Before:"
+          ffmpeg -nostdin -hide_banner -i "$source" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          echo "After:"
+          report=$(ffmpeg -nostdin -hide_banner -i "$out" -af volumedetect -f null - 2>&1)
+          printf '%s\n' "$report" | grep -E 'mean_volume|max_volume' | tail -2
+          mean=$(printf '%s\n' "$report" | sed -n 's/.*mean_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          peak=$(printf '%s\n' "$report" | sed -n 's/.*max_volume: \([-0-9.]\+\) dB.*/\1/p' | tail -1)
+          echo "mean=$mean, peak=$peak"
+          test -n "$mean" && test -n "$peak"
+          awk -v p="$peak" -v m="$mean" 'BEGIN{exit !(p > -4 && m > -11)}'
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 "$out"
+      - name: Commit loud V7b counter output
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/sfx/z-combat-v7b-counter-loud-reverb.mp3
+          if ! git diff --cached --quiet; then
+            git commit -m "Audio V7b: reinforce cinematic counter boom with short echo and normalized loudness"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
