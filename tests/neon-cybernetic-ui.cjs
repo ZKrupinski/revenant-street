@@ -14,7 +14,7 @@ for(const name of ['z-neon-outer-v2.png','z-neon-card-v2.png','z-tech-panel-v2.p
 for(const s of ['#stageWrap #menu.reward-dialog{','#stageWrap #menu.reward-dialog .upgrade-btn{','#stageWrap #menu.hub-dialog{','#stageWrap #menu.hub-dialog .hub-module{','#stageWrap #menu.reward-dialog .upgrade-art::after,','--z-neon-outer:','--z-neon-card:','grid-template-columns:repeat(3,minmax(0,1fr))!important','overflow:hidden!important']){
  assert(css.includes(s),'neon popups missing: '+s);
 }
-for(const s of ['class="up-progression"','class="${level?\'up-levelup\':\'up-new\'}"','class="up-lvl"','class="choice-grid"']){
+for(const s of ['class="up-progression level-transition"','class="${level?\'up-levelup\':\'up-new\'}"','class="level-now"','class="level-arrow"','class="level-after"','class="choice-grid"']){
  assert(html.includes(s),'reward card hierarchy missing: '+s);
 }
 assert(html.includes("class=\"hub-module hub-centered-card hub-${m.id}"),'hub centered cards retain ID/selection and gamepad semantics');
