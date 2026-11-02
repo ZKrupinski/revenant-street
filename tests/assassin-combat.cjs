@@ -2322,8 +2322,8 @@ test('user uploaded ten-frame parry artwork is embedded intact and uses 5x2 scre
  const blob=require('node:crypto').createHash('sha1').update('blob '+avif.length+'\0').update(avif).digest('hex');
  assert.equal(blob,'6182b78d4426ffe678e36306d65c5e23ee29c9be','must match the validated uploaded ten-frame asset');
  assert(html.includes('spawnParrySuccessFx(p.x+p.facing*42,p.y-132,p.facing);'),'impact is anchored near hero forearm');
- assert(html.includes('const w=210,h=w*crop.sh/crop.sw'),'the new burst plays slightly smaller');
- assert(html.includes("ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.18,-h*.5,w,h)"));
+ assert(html.includes('const w=318,h=296'),'the corrected ten-frame burst keeps a balanced wide silhouette');
+ assert(html.includes("ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.32,-h*.5,w,h)"));
  assert(html.includes("ctx.globalCompositeOperation='screen'"),'solid black frame background must not become a rectangle');
  const first=html.indexOf('function parrySuccessSourceRect(w,h,frame){');
  const last=html.indexOf('function drawEffects(){',first);
@@ -2338,7 +2338,7 @@ test('user uploaded ten-frame parry artwork is embedded intact and uses 5x2 scre
   assert.equal(r.sx%1,0);assert.equal(r.sy%1,0);
   assert.equal(r.sw%1,0);assert.equal(r.sh%1,0);
  }
- console.log('PASS: parry atlas source rectangles safe for all 10 frames, reduced scale and forearm position');
+ console.log('PASS: parry atlas source rectangles safe for all 10 frames, corrected width-height ratio and forearm position');
 });
 test('successful riposte impact retriggers camera-forward and layered slow, without affecting failed hits',()=>{
  for(const facing of [1,-1]){
