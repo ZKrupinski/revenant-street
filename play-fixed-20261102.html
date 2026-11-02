@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Dedicated no-stale-cache launch entry. Same game assets and save data as index.html. -->
+<!-- Clean-cache alternate launcher; game code synchronized from current index.html. -->
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
@@ -5646,7 +5646,7 @@ function actorShakeOffset(a){
  return [Math.sin(time*103+seed)*amp,Math.sin(time*77+seed)*amp*.48];
 }
 function setStatus(s){$('statusLabel').textContent=s}function flash(text,duration=1.1,kind=''){const m=$('gameMessage');m.textContent=text;m.classList.toggle('phase-clear',kind==='phase-clear');m.classList.add('active');messageTime=duration}
-const menuPad={index:0,nav:0,confirm:false,back:false,armed:false,readyAt:0,neutralAt:0};
+const menuPad={titleNavPending:false,index:0,nav:0,confirm:false,back:false,armed:false,readyAt:0,neutralAt:0};
 const heldKeyboard=new Set();
 const menuBlockedKeys=new Set();
 function menuReady(){return !rewardSelection&&Date.now()>=menuPad.readyAt}
@@ -5658,6 +5658,11 @@ function menuButtons(){
 function selectMenuItem(step=0){
  if(rewardSelection)return null;
  const items=menuButtons();if(!items.length){menuPad.index=0;return null}
+ if(step&&menuPad.titleNavPending&&$('menu').classList.contains('title-dialog')){
+  const start=items.findIndex(b=>b.dataset?.action==='start');
+  menuPad.index=start>=0?start:menuPad.index;step=0;
+ }
+ menuPad.titleNavPending=false;
  menuPad.index=(menuPad.index+step+items.length*4)%items.length;
  for(let i=0;i<items.length;i++)items[i].classList.toggle('pad-selected',i===menuPad.index);
  const selected=items[menuPad.index];
@@ -5787,6 +5792,7 @@ function showMenu(html){
  $('menu').scrollTop=0;
  $('menu').classList.remove('title-dialog');$('hud').hidden=gameState==='menu';$('touchControls').hidden=true;
  // Keep menus visually neutral until navigation. Title confirm defaults to GAME START.
+ menuPad.titleNavPending=html.includes('class="buttons title-action-row"');
  menuPad.index=html.includes('class="buttons title-action-row"')?1:0;
  menuPad.nav=0;menuPad.confirm=false;menuPad.back=false;
  // Four face buttons are equivalent CONFIRM on title, REBEL HUB,
@@ -5908,7 +5914,7 @@ function requiredSceneArt(preview=false){
   ['주인공 머플러 제거 등장 8프레임',()=>ensureBitmapDecoded(heroEntry.image)],
   ['패링 방패 UI',()=>ensureBitmapDecoded(parryShieldImage)],
   ['패링 성공 10프레임 원본 이펙트',()=>ensureBitmapDecoded(parrySuccessImage)],
-  ['지면강타 8프레임 비트맵',()=>ensureBitmapDecoded(GROUND_SLAM_ART.image),true],
+  ['지면강타 8프레임 비트맵',()=>ensureBitmapDecoded(GROUND_SLAM_ART.image)],
   ['대쉬 후 번개 관통 8프레임 비트맵',()=>ensureBitmapDecoded(DASH_PIERCE_ART.image)],
    // The exact 8-frame user artwork must be fully decoded before battle begins.
    ['패링 반격 원본 8프레임 비트맵',()=>ensureBitmapDecoded(PARRY_COUNTER_ART.image)],
@@ -5935,26 +5941,31 @@ function requiredSceneArt(preview=false){
 }
 function waitSceneArt(preview,onProgress){
  const checks=requiredSceneArt(preview),started=performance.now();
- let cursor=0;
+ let cursor=0,completed=0,pending=[];
  return new Promise((resolve,reject)=>{
-  const timer=setInterval(()=>{
-   const pending=checks.slice(0,cursor).filter(([,fetch,optional])=>{const a=fetch();return !a.ready&&!(optional&&a.failed)}).length;
-   if(cursor<checks.length&&pending<3){
-    for(let i=pending;i<3&&cursor<checks.length;i++,cursor++){
-     try{checks[cursor][1]()}catch(err){clearInterval(timer);reject(err);return}
+  function poll(){
+   try{
+    const inspect=([name,fetch,optional])=>{
+     const state=fetch();
+     if(state.ready||(optional&&state.failed)){completed++;return true}
+     if(state.failed)throw Error('리소스 로딩 실패: '+name);
+     return false;
+    };
+    pending=pending.filter(check=>!inspect(check));
+    // Cached assets pass in the same turn; at most three decodes in flight.
+    // Yield between batches to keep the loading screen responsive.
+    const sliceStart=performance.now();
+    while(cursor<checks.length&&pending.length<3){
+     const check=checks[cursor++];if(!inspect(check))pending.push(check);
+     if(performance.now()-sliceStart>4)break;
     }
-   }
-   let completed=0,failed=[];
-   for(let i=0;i<cursor;i++){
-    const [name,fetch,optional]=checks[i],a=fetch();
-    if(a.ready||(optional&&a.failed))completed++;else if(a.failed)failed.push(name);
-   }
-   onProgress?.(completed,checks.length,cursor<checks.length?checks[cursor][0]:'마지막 리소스 확인');
-   if(completed===checks.length){clearInterval(timer);resolve(true)}
-   else if(failed.length||performance.now()-started>120000){
-    clearInterval(timer);reject(Error(failed.length?'리소스 로딩 실패: '+failed.join(', '):'리소스 로딩 시간 초과'));
-   }
-  },90);
+    onProgress?.(completed,checks.length,pending[0]?.[0]||checks[cursor]?.[0]||'마지막 리소스 확인');
+    if(completed===checks.length){resolve(true);return}
+    if(performance.now()-started>120000)throw Error('리소스 로딩 시간 초과');
+    setTimeout(poll,pending.length?40:0);
+   }catch(error){reject(error)}
+  }
+  poll();
  });
 }
 async function requestRunStart(){
@@ -5966,11 +5977,15 @@ async function requestRunStart(){
  try{
   const music=window.__revenantBgm;
   if(!music)throw Error('음악 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');
-  void music.beginPlayback(); // Preserve the initiating user gesture on mobile.
-  const voicesReady=(typeof prepareCombatVoices==='function'?prepareCombatVoices():Promise.resolve()).then(()=>null,error=>error);
+  Promise.resolve(music.beginPlayback()).catch(()=>{}); // Preserve the initiating user gesture on mobile.
+  const audioDeadline=promise=>new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>reject(Error('음악·음성 준비 시간 초과. 다시 불러오기를 눌러주세요.')),120000);
+   Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});
+  });
+  const voicesReady=audioDeadline(typeof prepareCombatVoices==='function'?prepareCombatVoices():Promise.resolve()).then(()=>null,error=>error);
   const musicReady=music.prepare();
   // Attach a rejection handler immediately while artwork is prepared.
-  const musicResult=musicReady.then(()=>null,error=>error);
+  const musicResult=audioDeadline(musicReady).then(()=>null,error=>error);
   await waitSceneArt(preview,(done,total,name)=>{
    const status=$('loadStatus'),bar=$('loadBar');
    if(status)status.textContent=`준비 ${done}/${total} — ${name}`;
@@ -8833,6 +8848,9 @@ function keyDown(ev){
  if(gameState!=='playing'){
   // Consume menu input entirely: no native focused-button click or combat fallthrough.
   if(rewardSelection||menuBlockedKeys.has(k)||ev.repeat||held)return;
+  if($('menu').classList.contains('title-dialog')&&['arrowleft','arrowup','arrowright','arrowdown'].includes(k)){
+   if(menuPad.titleNavPending)selectMenuItem(1);else menuConfirm();return;
+  }
   if(gameState==='hub'){
    if(k==='w'||k==='arrowup'){hubMenuNavigate(0,-1);return}
    if(k==='s'||k==='arrowdown'){hubMenuNavigate(0,1);return}
@@ -8861,19 +8879,31 @@ window.addEventListener('keydown',keyDown);window.addEventListener('keyup',keyUp
 const analogPad=$('analogPad'),analogThumb=$('analogThumb'),analogShaft=$('analogShaft');
 // Mirror keyboard WASD, D-pad and the physical analog stick onto the
 // SAME bitmap joystick as the touch drag. No extra vector control art.
+let externalStickVisualKey='',externalStickRect=null;
+function invalidateStickVisual(){externalStickVisualKey='';externalStickRect=null}
+window.addEventListener('resize',invalidateStickVisual,{passive:true});
+window.visualViewport?.addEventListener('resize',invalidateStickVisual,{passive:true});
+document.addEventListener('fullscreenchange',invalidateStickVisual);
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(invalidateStickVisual).observe(analogPad);
 function syncExternalStickVisual(pad){
  if(analog.pointerId!==null)return; // Live touch controls its own picture.
  const active=gameState==='playing';
+ if(!active||heroEntry.active)return;
  const dx=active?clamp((keys.has('d')?1:0)-(keys.has('a')?1:0)+(pad?.dx||0),-1,1):0;
  const dy=active?clamp((keys.has('s')?1:0)-(keys.has('w')?1:0)+(pad?.dy||0),-1,1):0;
  const magnitude=Math.hypot(dx,dy),factor=magnitude>1?1/magnitude:1;
  const nx=dx*factor,ny=dy*factor;
- const ring=analogPad.querySelector('.analog-ring'),r=ring.getBoundingClientRect();
+ const visualKey=nx.toFixed(3)+','+ny.toFixed(3);
+ if(visualKey===externalStickVisualKey)return;
+ externalStickVisualKey=visualKey;
+ const ring=analogPad.querySelector('.analog-ring');
+ const r=externalStickRect||(externalStickRect=ring.getBoundingClientRect());
  const radius=r.width*.35,x=nx*radius,y=ny*radius;
  analogShaft.style.transform=`translate(-50%,-60.56%) rotate(${(nx*28).toFixed(1)}deg) scaleY(${(1-ny*.38).toFixed(3)})`;
  analogThumb.style.translate=`${(x*.42).toFixed(1)}px ${(y*.42-r.height*(38/360)).toFixed(1)}px`;
 }
 function resetAnalog(){
+ invalidateStickVisual();
  analog.dx=0;analog.dy=0;analog.pointerId=null;
  analogThumb.style.translate='0 -10.56%';
  analogShaft.style.transform='translate(-50%,-60.56%) rotate(0deg) scaleY(1)';
@@ -8921,7 +8951,7 @@ $('menu').addEventListener('focusin',e=>{
  if(hubPointerFocusPending&&e.target.dataset?.perma){
   items.forEach(b=>b.classList.remove('pad-selected'));return;
  }
- menuPad.index=i;
+ menuPad.titleNavPending=false;menuPad.index=i;
  items.forEach((b,n)=>b.classList.toggle('pad-selected',n===i));
 });
 // A real touch pointer gets a temporary sky-blue frame. Hover remains a
