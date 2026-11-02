@@ -12,7 +12,7 @@ for(const file of ['index.html','play-fixed-20261102.html']){
  assert(html.includes('main?rnd(.30,.35):rnd(.22,.27)'),'linger long enough to see');
  assert(html.includes('main?rnd(228,262):rnd(105,128)'),'visible at playing resolution');
  assert(html.includes("if(f.kind==='basicHitSprite'){drawBasicContactFx(f);continue;}"),'draw path');
- assert(html.includes("if(f.kind==='basicHitSprite')f.age+=fxDt"),'animated');
+ assert(html.includes("if(f.kind==='basicHitSprite'||f.kind==='combatWordSprite')f.age+=fxDt"),'animated hit and cyber text cells');
  const begin=html.indexOf('const BASIC_HIT_FIVE='),end=html.indexOf('function spawnParryCounterFx(',begin);
  assert(begin>0&&end>begin,'standalone bitmap renderer found');
  const script=html.slice(begin,end);
