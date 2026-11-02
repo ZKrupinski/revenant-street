@@ -6,12 +6,10 @@
 (() => {
  'use strict';
  const CLIPS={
-  // Original human male CC0 recordings. The prior 0.67–0.72 pitch/formant
-  // remaster sounded like animal growls and is no longer loaded at runtime.
+  // Only two short CC0 human grunts. Old long screams and animal-like
+  // pitch-shifted remasters are archival, never loaded or played.
   enemyA:'./assets/voice/hero-grunt-a.wav',
   enemyB:'./assets/voice/hero-grunt-b.wav',
-  enemyShout:'./assets/voice/voice-yell.wav',
-  enemyDeath:'./assets/voice/voice-yell.wav',
   // Foley, not gunfire: short firearm slide, bolt and charging-lever clicks.
   mechA:'./assets/voice/hero-mech-a.mp3',
   mechB:'./assets/voice/hero-mech-b.mp3',
@@ -27,7 +25,7 @@
  const NON_BGM_SFX_LEVEL=.70;
  // Preserve normal human formants; no exaggerated 2.15x roar gain.
  // Impact transients remain foreground on an independent bus.
- const ENEMY_VOICE_GAIN=1.35;
+ const ENEMY_VOICE_GAIN=.94;
  let context=null,loading=null,master=null,gunBus=null,lastCrowd=-99;
  const SHOT_FAMILIES=['shotPistol','shotRevolver','shotRifle','shotHeavy'];
  // Attack motions deterministically choose their own timbre and pitch;
@@ -116,13 +114,13 @@
    // reload/cocking sound must not fire when the player gets hit.
    if(isHero&&kind!=='heroStrike'&&kind!=='heroPower'&&kind!=='heroMove')return false;
    if(!isHero&&Math.abs(actor.x-hero.x)>1100)return false;
-   const cooldown=kind==='enemyHurt'?.40:
-    kind==='enemyShout'||kind==='bossShout'?2.2:
+   const cooldown=kind==='enemyHurt'?.48:
+    kind==='enemyShout'||kind==='bossShout'?2.8:
     kind==='heroStrike'?.13:kind==='heroPower'?.20:kind==='heroMove'?1.0:.24;
    // A lethal scream must never be lost because a grunt just played.
    const fatal=kind==='heroDeath'||kind==='enemyDeath'||kind==='bossDeath';
    if(!fatal&&now-(actor._voiceAt??-99)<(kind==='heroPower'?.14:cooldown))return false;
-   if(kind==='enemyHurt'&&now-lastCrowd<.16)return false;
+   if(kind==='enemyHurt'&&now-lastCrowd<.20)return false;
    const important=isHero||boss||kind==='enemyDeath';
    if(active.size>=4) {
     // In crowds a fresh painful hit replaces an old quiet grunt instead of
@@ -134,12 +132,10 @@
     try{victim.source.stop()}catch(_){}
     active.delete(victim);
    }
-   // Unaltered human source takes; only light EQ and ±small pitch variation.
-   // Never select the prior low-formant beastlike remasters.
+   // All enemy events use only short breaths / impact grunts.
+   // No long open-vowel yell is permitted, including lethal hits.
    const file=kind==='heroPower'?'mechPower':
     (kind==='heroStrike'||kind==='heroMove')?(Math.random()<.5?'mechA':'mechB'):
-    kind==='bossDeath'||kind==='enemyDeath'?'enemyDeath':
-    kind==='bossShout'||kind==='enemyShout'?'enemyShout':
     (Math.random()<.5?'enemyA':'enemyB');
    const buffer=buffers[file];
    if(!buffer)return false;
@@ -153,34 +149,33 @@
    }
    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
    source.buffer=buffer;
-   // Keep human vowel formants recognizable: no deep pitch-shift, even on
-   // bosses. Slight character differences should remain clearly human.
-   const characterPitch=isHero?(kind==='heroPower'?.92:1.03):boss?.98:actor.type==='elite'?.99:
-    actor.type==='guard'?1.00:actor.type==='assassin'?1.035:1.01;
-   const rate=Math.max(.95,Math.min(1.075,characterPitch*(.985+Math.random()*.03)));
+   // A small warm shift is fine, but never turn people into monsters.
+   const characterPitch=isHero?(kind==='heroPower'?.92:1.03):boss?.95:actor.type==='elite'?.975:
+    actor.type==='guard'?.99:actor.type==='assassin'?1.015:1.00;
+   const rate=Math.max(.92,Math.min(1.04,characterPitch*(.985+Math.random()*.03)));
    source.playbackRate.value=rate;
-   // Natural, short human exertion responses sit behind the sharp impact.
+   // Very short weighty pain breaths stay behind the sharp impact.
    // Their bus never ducks music or replaces mechanical Foley.
    const strengths={heroStrike:.94,heroPower:1.07,heroMove:.29,
-    enemyHurt:.86,enemyShout:.68,enemyDeath:.83,bossShout:.75,bossDeath:.90};
+    enemyHurt:.64,enemyShout:.45,enemyDeath:.56,bossShout:.58,bossDeath:.64};
    const position=isHero?1:Math.max(.62,1-Math.abs(actor.x-hero.x)/2350);
    const volume=(strengths[kind]||.7)*position*(isHero?1:ENEMY_VOICE_GAIN);
-   filter.type='lowpass';filter.frequency.value=isHero?7600:boss?5200:5600;
-   // Restore natural voice articulation instead of muffled animal-like bass.
+   filter.type='lowpass';filter.frequency.value=isHero?7600:boss?3400:4000;
+   // Tame the nasal / bright vowel range, leaving the hit crack intact.
    const presence=isHero?null:context.createBiquadFilter();
-   if(presence){presence.type='peaking';presence.frequency.value=1800;presence.gain.value=2.0;}
+   if(presence){presence.type='peaking';presence.frequency.value=1800;presence.gain.value=-1.5;}
    const maxDuration=kind==='heroMove'?.19:kind==='heroStrike'?.42:kind==='heroPower'?.72:
-    kind==='enemyHurt'?.30:kind==='enemyShout'?.55:kind==='bossShout'?.66:
-    kind==='enemyDeath'?.82:kind==='bossDeath'?.95:2.2;
-   // Move immediately to the first audible human consonant/breath,
-   // not leading silence; no artificial deep growl/tail is generated.
+    kind==='enemyHurt'?.18:kind==='enemyShout'?.22:kind==='bossShout'?.25:
+    kind==='enemyDeath'?.28:kind==='bossDeath'?.34:2.2;
+   // Start at the first audible breath; hard duration limits remove the
+   // old drawn-out '으아아~' vocal tail.
    const offset=isHero?0:sampleOnset(buffer);
    const duration=Math.min(maxDuration,(buffer.duration-offset)/rate);
    if(!(duration>.02))return false;
    // Let the independent punch crack play first; groans follow ~75ms later.
    const delay=kind==='enemyHurt'||kind==='enemyDeath'||kind==='bossDeath'?.06:0;
    const at=now+delay;
-   const attack=Math.min(.007,duration*.12),release=Math.min(.09,duration*.28);
+   const attack=Math.min(.006,duration*.10),release=Math.min(.065,duration*.35);
    gain.gain.setValueAtTime(.0001,at);
    gain.gain.linearRampToValueAtTime(volume,at+attack);
    gain.gain.setValueAtTime(volume,Math.max(at+attack,at+duration-release));

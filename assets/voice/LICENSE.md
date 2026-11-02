@@ -77,3 +77,7 @@ The heavily pitch/formant-shifted remasters above are now **archived and no long
 | Enemy/boss death | `voice-yell.wav` (3yell1), longer/softer envelope |
 
 The live engine keeps playback near the original male voice pitch (approx. 0.95–1.075×) with gentle upper-mid presence and without the old 0.67–0.72 formant downshift. Enemy hurt is capped near 0.30 s; shouts and deaths have individual durations and loudness. Existing gunshot/impact SFX and BGM stay independent and are never ducked.
+
+## Restrained short impact reactions (November 2, 2026)
+
+Runtime now uses only the two CC0 original human short grunts (`hero-grunt-a.wav`, `hero-grunt-b.wav`) for enemy damage, warnings, and death. The long `voice-yell.wav` and extreme pitch-shifted deep remasters remain for provenance only; none are fetched by the voice engine. The latest mix limits wounds to 0.18 s, warning to 0.22–0.25 s, and death to 0.28–0.34 s, removes piercing upper-mid energy, and preserves the original impact, firearm, mechanical, and soundtrack mixes.
