@@ -3,11 +3,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const root=path.resolve(__dirname,'..');
 const expected=[
  ['basic contact render +35% versus original',"const elapsed=f.age-f.delay,w=f.width*1.35;"],
- ['elemental burst +28%',"const width=(130+progress*55)*ef.scale*1.28;"],
- ['enemy element timers +18%',"const width=(164+Math.min(rank,6)*8)*state.scale*1.18;"],
- ['angled enemy status cue', "state.sprite==='nova'?1.31:0"],
+ ['electric element selectively enlarged',"const width=(130+progress*55)*ef.scale*(ef.mod==='shock'?1.82:1.28);"],
+ ['enemy electric status selectively enlarged',"state.status==='shock'?1.76:state.status==='freeze'?1.32:1.18"],
+ ['angle-aware enemy status sectors', "const dir=e.face||1,slot=enemyFxSlot(kind,dir);"],
  ['mint heal +25%',"const cell=im.naturalWidth/8,width=170*f.scale*1.25,"],
- ['upgrade skill hit +30%',"const cw=im.naturalWidth/8,width=218*f.scale*1.30,"],
+ ['electric +50%, critical +43%, other upgrades baseline',
+  "f.upgrade==='chain'?1.95:f.upgrade==='crit'?1.86:1.30"],
  ['ground slam ORIGINAL',"const width=clamp(530*f.scale,230,910),"],
  ['dash pierce ORIGINAL',"const width=f.width,height=width*(ch/cw);"],
  ['dash wake ORIGINAL',"const width=f.width*(gathering?.82+age*.38:1);"],
@@ -21,8 +22,8 @@ for(const file of ['index.html','play-fixed-20261102.html']){
  for(const [name,code] of expected)assert(html.includes(code),file+': '+name);
  assert(html.includes('const x=enemy.x+dir*Math.min(54,Math.max(24,bodyHalfX(enemy)*.48));'),'hit FX begins on the forward side of the enemy');
  assert(html.includes('vx:dir*(main?rnd(22,52):rnd(42,90))'),'hit FX advances into the attack, not back toward hero');
- assert(html.includes('const tilt=groundSpread?1.31'),'floor-burst effect visibly rotates against enemy');
- assert(html.includes('fx[i].contactEnemy===e'),'big effects replace overlapping previous effects');
+ assert(html.includes('nova:{x:91,y:130,tilt:1.31}'),'ground-attack PNG stays angled toward enemy');
+ assert(html.includes('fx[i].contactEnemy===e&&fx[i].upgrade===kind'),'each effect type persists independently on one opponent');
  assert(!html.includes('drawUpgradeVfxLoop(Z_ELEMENT_IMPACT_SPRITES[mod]'),'no overlapping hero elemental aura');
  assert(html.includes("const w=318,h=296;"),'special parry effect uses original display');
  assert(html.includes("const width=clamp(530*f.scale,230,910),"),'ground slam does not use extra zoom');

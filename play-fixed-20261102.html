@@ -5362,17 +5362,16 @@ function drawHealVfx(f){
 }
 // Orient floor-origin PNGs upright, with the painted blast colliding against
 // the incoming side of the enemy instead of floating over an actor's center.
-// Only one active upgrade burst per victim prevents opaque overlap.
+// Different upgrade hits coexist at separated surface sectors; only same-type duplicates refresh.
 function spawnEnemyContactVfx(kind,e,scale=1,duration=.32,face=p.facing){
  if(!e||!Z_UPGRADE_VFX[kind])return false;
- const dir=face<0?-1:1,groundSpread=kind==='nova'||kind==='power';
- const x=e.x+dir*(groundSpread?35:-clamp(bodyHalfX(e)*.32,15,43));
- const y=(e.renderY??e.y)-(e.z||0)-(kind==='nova'?120:125);
- const tilt=groundSpread?1.31:kind==='leech'?.22:kind==='crit'?-.10:0;
+ const dir=face<0?-1:1,slot=enemyFxSlot(kind,dir);
+ // Refresh only the SAME effect on this target. Other modules must coexist.
  for(let i=fx.length-1;i>=0;i--){
-  if(fx[i].kind==='upgradeVfxSprite'&&fx[i].contactEnemy===e)fx.splice(i,1);
+  if(fx[i].kind==='upgradeVfxSprite'&&fx[i].contactEnemy===e&&fx[i].upgrade===kind)fx.splice(i,1);
  }
- const added=spawnUpgradeVfx(kind,x,y,scale,dir,tilt,duration);
+ const added=spawnUpgradeVfx(kind,e.x+slot.dx,(e.renderY??e.y)-(e.z||0)+slot.dy,
+  scale,dir,slot.rotation,duration);
  if(added)fx[fx.length-1].contactEnemy=e;
  return added;
 }
@@ -5386,7 +5385,9 @@ function drawUpgradeVfx(f){
  const entry=Z_UPGRADE_VFX[f.upgrade],im=entry?.image;
  if(!entry?.ready||!im.complete||!im.naturalWidth)return false;
  const progress=clamp(1-f.life/f.maxLife,0,.99999),frame=Math.min(7,Math.floor(progress*8));
- const cw=im.naturalWidth/8,width=218*f.scale*1.30,height=width*im.naturalHeight/cw;
+ // Electric chain +50% and critical impact +43% over the balanced upgrade size.
+ const cw=im.naturalWidth/8,width=218*f.scale*
+  (f.upgrade==='chain'?1.95:f.upgrade==='crit'?1.86:1.30),height=width*im.naturalHeight/cw;
  ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.dir||1,1);ctx.rotate(f.rotation||0);
  ctx.globalAlpha=progress>.77?clamp((1-progress)/.23,0,1):1;
  ctx.drawImage(im,frame*cw,0,cw,im.naturalHeight,-width*.5,-height*.5,width,height);
@@ -5420,30 +5421,42 @@ function combatStrengthFx(e,critical){
  }
 }
 function createModImpact(e){
- // Attribute sheets fire only for equipped elements, not for unrelated
- // passive buffs or dormant chain/nova effects.
- const equipped=['fire','shock','bleed','ice'].filter(mod=>modRank(mod)>0);
- // All elemental damage and status combinations remain active; choose one
- // illustrated contact per strike, rotating the equipped looks across hits.
- if(equipped.length){
-  const idx=(e._elementImpactStep||0)%equipped.length;
-  e._elementImpactStep=(e._elementImpactStep||0)+1;
-  const mod=equipped[idx],lv=modRank(mod),dir=p.facing<0?-1:1;
+ // Each equipped elemental module owns a separate impact cell on the victim.
+ // Repeated hits refresh only their own type; none erase other active elements.
+ const dir=p.facing<0?-1:1;
+ for(const mod of ['fire','shock','bleed','ice']){
+  const lv=modRank(mod);if(!lv)continue;
+  const slot=enemyFxSlot(mod,dir);
   const scale=(mod==='shock'?1.22:mod==='fire'?1.10:1)+Math.min(5,lv-1)*.11;
   const duration=mod==='shock'?.35:mod==='ice'?.44:.41;
-  attributeFx=attributeFx.filter(ef=>ef.target!==e);
-  attributeFx.push({
-   x:e.x+dir*(mod==='fire'?35:-20),
-   y:(e.renderY??e.y)-(e.z||0)-(mod==='ice'?110:124),
-   mod,dir,target:e,life:duration,maxLife:duration,
-   rotation:mod==='fire'?1.31:mod==='bleed'?.18:0,scale
-  });
+  attributeFx=attributeFx.filter(ef=>!(ef.target===e&&ef.mod===mod));
+  attributeFx.push({x:e.x+slot.dx,y:(e.renderY??e.y)-(e.z||0)+slot.dy,
+   mod,dir,target:e,life:duration,maxLife:duration,rotation:slot.rotation,scale});
  }
- if(attributeFx.length>58)attributeFx.splice(0,attributeFx.length-58);
+ if(attributeFx.length>128)attributeFx.splice(0,attributeFx.length-128);
  if(p.mod==='neuro'){
   spawnModBitmap('blue',e.x,e.y-133,1.85,'hue-rotate(59deg) saturate(1.65)',.31);
  }
 }
+// Separate hit sectors on an enemy: a simultaneous burn/shock/bleed/freeze
+// loadout draws four distinct bitmap sprites rather than rotating/overwriting.
+// Horizontal offsets are relative to the impact direction; Y is above feet.
+const Z_ENEMY_FX_SLOTS=Object.freeze({
+ fire:{x:94,y:161,tilt:1.31},
+ shock:{x:-105,y:174,tilt:-.08},
+ bleed:{x:-100,y:89,tilt:.18},
+ ice:{x:97,y:90,tilt:-.14},
+ nova:{x:91,y:130,tilt:1.31},
+ power:{x:104,y:148,tilt:1.31},
+ crit:{x:-98,y:154,tilt:-.10},
+ chain:{x:-111,y:146,tilt:-.08},
+ leech:{x:-93,y:105,tilt:.22}
+});
+function enemyFxSlot(kind,dir=1){
+ const slot=Z_ENEMY_FX_SLOTS[kind]||{x:90,y:127,tilt:0};
+ return {dx:slot.x*(dir<0?-1:1),dy:-slot.y,rotation:slot.tilt};
+}
+
 const MOD_STATUS_STATES=[['burn','fire'],['shock','shock'],['bleed','bleed'],['freeze','ice']];
 
 // Painted 8-frame upgrade effects can also be sampled as lightweight looping
@@ -5468,37 +5481,34 @@ function drawUpgradeVfxLoop(name,x,y,width,opacity,cycle,dir=1,rotation=0){
 }
 function drawModEnergy(){
  const left=cameraX-180,right=cameraX+W+180;
- // Each afflicted opponent keeps a visible painted energy animation, tied to
- // the actual remaining burn/shock/bleed/freeze timer, including during stagger.
- // One angled status cue per enemy avoids layers of giant body-center artwork.
- let painted=0;
+ // Show EVERY active status simultaneously, in dedicated sectors around the
+ // opponent. Each module keeps its own 8-frame PNG and lifetime.
  for(const e of enemies){
-  if(e.dead||e.x<left||e.x>right||painted>=10)continue;
+  if(e.dead||e.x<left||e.x>right)continue;
   const active=Z_ENEMY_STATUS_VFX.filter(s=>e[s.status]>0);
-  if(!active.length)continue;
-  const max=Math.min(1,active.length,10-painted);
-  for(let i=0;i<max;i++){
-   const index=(Math.floor(time*1.25+(e.slot||0))+i)%active.length;
-   const state=active[index],rank=Math.min(6,e[state.power]||1);
-   const width=(164+Math.min(rank,6)*8)*state.scale*1.18;
+  for(let i=0;i<active.length;i++){
+   const state=active[i],rank=Math.min(6,e[state.power]||1);
+   const kind=state.status==='burn'?'fire':state.status==='freeze'?'ice':state.status;
+   const dir=e.face||1,slot=enemyFxSlot(kind,dir);
+   const width=(164+rank*8)*state.scale*
+    (state.status==='shock'?1.76:state.status==='freeze'?1.32:1.18);
    const cycle=time*(state.status==='shock'?1.9:state.status==='burn'?1.35:1.05)+
     (e.slot||0)*.13+i*.19;
-   const pulse=.38+.14*Math.abs(Math.sin(time*4.1+(e.slot||0)+i));
-   const dir=e.face||1,x=(e.renderX??e.x)+dir*(state.sprite==='nova'?32:27);
-   const y=(e.renderY??e.y)-(e.z||0)-state.offset;
-   if(drawUpgradeVfxLoop(state.sprite,x,y,width,pulse*.75,cycle,dir,
-    state.sprite==='nova'?1.31:0))painted++;
+   const pulse=.26+.13*Math.abs(Math.sin(time*4.1+(e.slot||0)+i));
+   const x=(e.renderX??e.x)+slot.dx;
+   const y=(e.renderY??e.y)-(e.z||0)+slot.dy;
+   drawUpgradeVfxLoop(state.sprite,x,y,width,pulse,cycle,dir,slot.rotation);
   }
  }
- // Paint the immediate element contact from the same transparent 8F
- // effects used by ongoing enemy statuses, not filtered legacy smoke/bursts.
+ // Separate transient contact effects: no per-target suppression or rotating
+ // elemental selection, and no resurrection of the old defense shield.
  for(const ef of attributeFx){
   if(ef.x<left||ef.x>right)continue;
   const sprite=Z_ELEMENT_IMPACT_SPRITES[ef.mod];
   if(!sprite)continue;
   const progress=clamp(1-ef.life/Math.max(.001,ef.maxLife),0,.99999);
-  const width=(130+progress*55)*ef.scale*1.28;
-  drawUpgradeVfxLoop(sprite,ef.x,ef.y,width,(1-progress)*.68,progress,
+  const width=(130+progress*55)*ef.scale*(ef.mod==='shock'?1.82:1.28);
+  drawUpgradeVfxLoop(sprite,ef.x,ef.y,width,(1-progress)*.60,progress,
    ef.dir||1,ef.rotation||0);
  }
 }

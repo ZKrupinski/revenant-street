@@ -72,7 +72,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  assert(first>0&&last>first,'main game IIFE');
  new vm.Script(html.slice(first,last+6),{filename});
  // Execute the actual ongoing-ailment drawing code against a Canvas mock.
- const start=html.indexOf('const Z_ENEMY_STATUS_VFX=['),end=html.indexOf('function drawHeroModAura(',start);
+ const start=html.indexOf('const Z_ENEMY_FX_SLOTS='),end=html.indexOf('function drawHeroModAura(',start);
  assert(start>0&&end>start);
  const draws=[],effects=Object.fromEntries(names.map(id=>[id,{ready:true,image:{naturalWidth:2048,naturalHeight:256,complete:true},drawn:0}]));
  const enemy={x:460,y:570,renderX:462,renderY:568,z:0,slot:3,face:-1,dead:false,
@@ -84,6 +84,8 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  vm.createContext(world);
  vm.runInContext(html.slice(start,end)+'\nthis.paintStatuses=drawModEnergy;',world);
  world.paintStatuses();assert(draws.length===1,'shock remains visible while afflicted');
+ const shockDisplayWidth=draws[0][7];
+ assert(shockDisplayWidth>125,'active electrical status visibly enlarged');
  assert.strictEqual(draws.at(-1)[0],effects.chain.image,'enemy electric PNG');
  assert(draws[0][3]===256,'exact cell-width crop, no adjoining frame');
  draws.length=0;enemy.shock=0;enemy.burn=2;enemy.burnPower=3;
@@ -93,8 +95,10 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  world.paintStatuses();assert.strictEqual(draws.at(-1)[0],effects.leech.image);
  draws.length=0;enemy.bleed=0;enemy.freeze=1;enemy.freezePower=2;
  world.paintStatuses();assert.strictEqual(draws.at(-1)[0],effects.chain.image);
+ assert(shockDisplayWidth>draws.at(-1)[7]*2,'shock status is visibly more powerful than ice, despite sharing bitmap');
  draws.length=0;enemy.shock=enemy.burn=enemy.bleed=enemy.freeze=1;
- world.paintStatuses();assert(draws.length<=1,'only one status bitmap per enemy at a time');
+ world.paintStatuses();assert.equal(draws.length,4,'burn, shock, bleed and freeze all remain visible together');
+ assert.equal(new Set(draws.map(d=>d[0])).size,3,'all 4 states draw even when shock and freeze share the electric source PNG');
  draws.length=0;enemy.dead=true;
  world.paintStatuses();assert.equal(draws.length,0,'do not render persistent VFX on corpses');
  // Transient element hit feedback must also use the new clean RGBA strips.
@@ -120,4 +124,4 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  assert.equal(draws.length,1,'small trail on running haste still works');
  assert.strictEqual(draws[0][0],effects.chain.image);
 }
-console.log('PASS: 48 independent RGBA frames; single non-overlapping ailments, angled element hits and no passive hero impact aura in both game entrypoints');
+console.log('PASS: 48 transparent RGBA frames; 4 simultaneous spatially separated ailments, larger electric visual and no hero attack aura');

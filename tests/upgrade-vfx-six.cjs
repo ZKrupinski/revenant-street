@@ -24,8 +24,9 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  assert(!src.includes("spawnUpgradeVfx('guard'"),'no shield sprite from defense or ice');
  assert(!src.includes("spawnParryShieldFx("),'no old parry bubble path');
  assert(src.includes("else if(Z_UPGRADE_VFX[m]){"),'offensive upgrade effect deferred to actual collisions');
- assert(src.includes("groundSpread?1.31"),'floor splash turned upright at enemy side');
- assert(src.includes("fx[i].contactEnemy===e"),'one victim cannot stack three upgrade bursts');
+ assert(src.includes("nova:{x:91,y:130,tilt:1.31}"),'floor splash turned upright at enemy side');
+ assert(src.includes("fx[i].contactEnemy===e&&fx[i].upgrade===kind"),'different upgrades coexist; only identical effect refreshes');
+ assert(src.includes("f.upgrade==='chain'?1.95:f.upgrade==='crit'?1.86:1.30"),'electric and critical are selectively larger');
  assert(src.includes('window.__zUpgradeVfxStatus'),'status exposed');
 }
 console.log('PASS: six RGBA upgrade 8F bitmaps plus the separate real-HP mint leech recovery hook');
