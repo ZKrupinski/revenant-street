@@ -6626,7 +6626,7 @@ function startAttack(){
  if(modRank('rush'))spawnUpgradeVfx('chain',p.x-p.facing*48,p.y-115,.50+modRank('rush')*.055,p.facing,-.18,.23);
  if(modRank('haste'))spawnUpgradeVfx('chain',p.x-p.facing*24,p.y-94,.46+modRank('haste')*.055,p.facing,-.12,.22);
  p.attack=p.attackDuration;p.animAge=0;p.hitDone=false;p.glow=.18;p.comboWindow=.95;
- // Gun report happens at contact, not at attack-button press.
+ /* Gun report happens at contact, not at button press. */
 }
 function parry(){
  if(gameState!=='playing'||p.stun>0||p.parry>0||p.downTimer>0||p.getupTimer>0||p.stamina<7)return;
