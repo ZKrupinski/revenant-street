@@ -111,7 +111,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  const heroStart=html.indexOf('function drawHeroModAura(');
  const heroEnd=html.indexOf('// Road art:',heroStart);
  assert(heroStart>0&&heroEnd>heroStart,'isolate equipped elemental hero cues');
- vm.runInContext(html.slice(heroStart,heroEnd)+'\\nthis.paintHeroAura=drawHeroModAura;',world);
+ vm.runInContext(html.slice(heroStart,heroEnd)+'\nthis.paintHeroAura=drawHeroModAura;',world);
  draws.length=0;
  world.paintHeroAura(500,600,0);
  assert.equal(draws.length,1,'only one soft aura per hero per frame');
