@@ -5743,7 +5743,7 @@ function revealCombatHud(){
  ];
  for(const [selector,side,delay] of entries){
   const element=document.querySelector(selector);
-  if(!element?.animate||!element.getClientRects().length)continue;
+  if(!element||!element.getClientRects().length)continue;
   const rect=element.getBoundingClientRect(),margin=28;
   const x=side==='left'?stage.left-rect.right-margin:side==='right'?stage.right-rect.left+margin:0;
   const y=side==='top'?stage.top-rect.bottom-margin:side==='bottom'?stage.bottom-rect.top+margin:0;
