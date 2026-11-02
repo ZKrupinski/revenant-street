@@ -37,6 +37,8 @@ jobs:
         run: node tests/assassin-combat.cjs
       - name: One-shot guard and mint healing sprite regression
         run: node tests/heal-guard-vfx.cjs
+      - name: Angled enemy-collision effect and overlap cap regression
+        run: node tests/vfx-enemy-contact.cjs
       - name: Enlarged bitmap combat effects and source crop safety
         run: node tests/vfx-display-size.cjs
       - name: Shared hand-painted ground slam 8F PNG regression

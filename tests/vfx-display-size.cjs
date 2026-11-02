@@ -5,7 +5,7 @@ const expected=[
  ['basic contact render +80% versus original',"const elapsed=f.age-f.delay,w=f.width*1.80;"],
  ['elemental burst +65%',"const width=(130+progress*55)*ef.scale*1.65;"],
  ['enemy element timers +45%',"const width=(164+Math.min(rank,6)*8)*state.scale*1.45;"],
- ['one low-opacity hero element cue +40%',"y-z-126,(100+rank*9)*1.40,"],
+ ['angled enemy status cue', "state.sprite==='nova'?1.31:0"],
  ['mint heal +68%',"const cell=im.naturalWidth/8,width=170*f.scale*1.68,"],
  ['upgrade skill hit +68%',"const cw=im.naturalWidth/8,width=218*f.scale*1.68,"],
  ['ground slam +57%',"const width=clamp(530*f.scale,230,910)*1.57,"],
@@ -21,6 +21,9 @@ for(const file of ['index.html','play-fixed-20261102.html']){
  for(const [name,code] of expected)assert(html.includes(code),file+': '+name);
  assert(html.includes('const x=enemy.x+dir*Math.min(54,Math.max(24,bodyHalfX(enemy)*.48));'),'hit FX begins on the forward side of the enemy');
  assert(html.includes('vx:dir*(main?rnd(22,52):rnd(42,90))'),'hit FX advances into the attack, not back toward hero');
+ assert(html.includes('const tilt=groundSpread?1.31'),'floor-burst effect visibly rotates against enemy');
+ assert(html.includes('fx[i].contactEnemy===e'),'big effects replace overlapping previous effects');
+ assert(!html.includes('drawUpgradeVfxLoop(Z_ELEMENT_IMPACT_SPRITES[mod]'),'no overlapping hero elemental aura');
  const sourceFrames=[
   'const sw=atlas.naturalWidth/8,sh=atlas.naturalHeight/5,',
   'const cw=bitmap.naturalWidth/4,ch=bitmap.naturalHeight/2;',

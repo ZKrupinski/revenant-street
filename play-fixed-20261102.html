@@ -5364,9 +5364,9 @@ function drawHealVfx(f){
 // the incoming side of the enemy instead of floating over an actor's center.
 // Only one active upgrade burst per victim prevents opaque overlap.
 function spawnEnemyContactVfx(kind,e,scale=1,duration=.32,face=p.facing){
- if(!e||e.dead||!Z_UPGRADE_VFX[kind])return false;
+ if(!e||!Z_UPGRADE_VFX[kind])return false;
  const dir=face<0?-1:1,groundSpread=kind==='nova'||kind==='power';
- const x=(e.renderX??e.x)+dir*(groundSpread?35:-clamp(bodyHalfX(e)*.32,15,43));
+ const x=e.x+dir*(groundSpread?35:-clamp(bodyHalfX(e)*.32,15,43));
  const y=(e.renderY??e.y)-(e.z||0)-(kind==='nova'?120:125);
  const tilt=groundSpread?1.31:kind==='leech'?.22:kind==='crit'?-.10:0;
  for(let i=fx.length-1;i>=0;i--){
@@ -5433,7 +5433,7 @@ function createModImpact(e){
   const duration=mod==='shock'?.35:mod==='ice'?.44:.41;
   attributeFx=attributeFx.filter(ef=>ef.target!==e);
   attributeFx.push({
-   x:(e.renderX??e.x)+dir*(mod==='fire'?35:-20),
+   x:e.x+dir*(mod==='fire'?35:-20),
    y:(e.renderY??e.y)-(e.z||0)-(mod==='ice'?110:124),
    mod,dir,target:e,life:duration,maxLife:duration,
    rotation:mod==='fire'?1.31:mod==='bleed'?.18:0,scale

@@ -58,14 +58,14 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  assert(html.includes('const Z_ENEMY_STATUS_VFX=['),'persistent enemy ailments');
  assert(html.includes("const Z_ELEMENT_IMPACT_SPRITES=Object.freeze({fire:'nova',shock:'chain',bleed:'leech',ice:'chain'})"),'shared transparent element art');
  assert(html.includes('const sprite=Z_ELEMENT_IMPACT_SPRITES[ef.mod]'),'contact pop uses transparent PNG rather than filtered legacy burst');
- assert(html.includes('drawUpgradeVfxLoop(Z_ELEMENT_IMPACT_SPRITES[mod]'),'equipped hero elemental aura uses transparent PNG');
+ assert(!html.includes('drawUpgradeVfxLoop(Z_ELEMENT_IMPACT_SPRITES[mod]'),'no ground-impact aura painted over the hero');
  assert(html.includes("drawUpgradeVfxLoop(state.sprite"),'reuse actual 8F bitmap during status timer');
  assert(html.includes('for(const e of enemies)'),'enemy-side effect rather than hero-only');
  assert(!html.includes("drawUpgradeVfxLoop('guard',x"),'remove passive floating shield aura');
  assert(html.includes("spawnUpgradeVfx('chain',p.x-p.facing*24"),'haste active on attack');
  assert(html.includes("spawnHealVfx(p.regenAccumulated,'regen')"),'regen uses actual HP and a mint recovery pulse');
- assert(html.includes("spawnUpgradeVfx('crit',e.x+p.facing*23"),'impact affects enemy');
- assert(html.includes("spawnUpgradeVfx('power',e.x,e.y-111"),'momentum affects enemy');
+ assert(html.includes("spawnEnemyContactVfx('crit',e"),'impact uses victim surface, not body-center sprite');
+ assert(html.includes("spawnEnemyContactVfx('power',e"),'momentum collides against enemy in the forward direction');
  assert(html.includes("if(f.kind==='upgradeVfxSprite'){drawUpgradeVfx(f);continue;}"),'existing effect renderer retained');
  // Compile whole main game IIFE without launching the browser (no DOM required).
  const first=html.indexOf("(()=>{'use strict';"),last=html.lastIndexOf('\n})();\n\n</script>');
@@ -94,7 +94,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  draws.length=0;enemy.bleed=0;enemy.freeze=1;enemy.freezePower=2;
  world.paintStatuses();assert.strictEqual(draws.at(-1)[0],effects.chain.image);
  draws.length=0;enemy.shock=enemy.burn=enemy.bleed=enemy.freeze=1;
- world.paintStatuses();assert(draws.length<=2,'limit multiple status VFX per enemy');
+ world.paintStatuses();assert(draws.length<=1,'only one status bitmap per enemy at a time');
  draws.length=0;enemy.dead=true;
  world.paintStatuses();assert.equal(draws.length,0,'do not render persistent VFX on corpses');
  // Transient element hit feedback must also use the new clean RGBA strips.
@@ -114,7 +114,10 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  vm.runInContext(html.slice(heroStart,heroEnd)+'\nthis.paintHeroAura=drawHeroModAura;',world);
  draws.length=0;
  world.paintHeroAura(500,600,0);
- assert.equal(draws.length,1,'only one soft aura per hero per frame');
- assert([effects.chain.image,effects.nova.image].includes(draws[0][0]),'hero aura uses clean 8F RGBA art');
+ assert.equal(draws.length,0,'no painted attack explosions at the protagonist torso');
+ world.p.mods.push('haste');world.p.running=true;
+ world.paintHeroAura(500,600,0);
+ assert.equal(draws.length,1,'small trail on running haste still works');
+ assert.strictEqual(draws[0][0],effects.chain.image);
 }
-console.log('PASS: 48 independent RGBA frames; persistent ailments, clean element hits and subtle hero bitmap auras in both game entrypoints');
+console.log('PASS: 48 independent RGBA frames; single non-overlapping ailments, angled element hits and no passive hero impact aura in both game entrypoints');
