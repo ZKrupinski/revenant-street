@@ -1,0 +1,111 @@
+name: Import six fresh combat takes and cinematic reverberant V7 counter
+on:
+  push:
+    paths: ['.github/workflows/build-z-combat-v7.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-and-master:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Install mastering tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Import original recordings and master clean attack plus steel slide variants
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/sfx
+          echo "::group::Fresh original rifle-c"
+          curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 100 \
+            "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_234224_a0052565-2dec-46a8-9666-e0d287e7e291.mp3" -o "/tmp/z-new-rifle-c.mp3"
+          test "$(wc -c < "/tmp/z-new-rifle-c.mp3")" -gt 7000
+          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/z-new-rifle-c.mp3" \
+            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-42dB,highpass=f=48,lowpass=f=12500,bass=g=2.8:f=105:w=0.7,equalizer=f=210:t=q:w=1:g=1.0,acompressor=threshold=0.25:ratio=1.6:attack=4:release=110,volume=1.35,alimiter=limit=0.89:level=false,apad,atrim=duration=1.35,afade=t=out:st=1.21:d=0.14" \
+            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k "assets/sfx/z-combat-v7-rifle-c.mp3"
+          test "$(wc -c < "assets/sfx/z-combat-v7-rifle-c.mp3")" -gt 12000
+          ffmpeg -nostdin -hide_banner -i "assets/sfx/z-combat-v7-rifle-c.mp3" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          echo "::endgroup::"
+          echo "::group::Fresh original rifle-d"
+          curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 100 \
+            "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_234226_691b4927-c61f-47e1-bdb8-9bd9561238da.mp3" -o "/tmp/z-new-rifle-d.mp3"
+          test "$(wc -c < "/tmp/z-new-rifle-d.mp3")" -gt 7000
+          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/z-new-rifle-d.mp3" \
+            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-42dB,highpass=f=48,lowpass=f=12500,bass=g=2.8:f=105:w=0.7,equalizer=f=210:t=q:w=1:g=1.0,acompressor=threshold=0.25:ratio=1.6:attack=4:release=110,volume=1.35,alimiter=limit=0.89:level=false,apad,atrim=duration=1.35,afade=t=out:st=1.21:d=0.14" \
+            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k "assets/sfx/z-combat-v7-rifle-d.mp3"
+          test "$(wc -c < "assets/sfx/z-combat-v7-rifle-d.mp3")" -gt 12000
+          ffmpeg -nostdin -hide_banner -i "assets/sfx/z-combat-v7-rifle-d.mp3" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          echo "::endgroup::"
+          echo "::group::Fresh original pistol-e"
+          curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 100 \
+            "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_234225_2681e529-e358-4f47-b58c-3133f3aec89a.mp3" -o "/tmp/z-new-pistol-e.mp3"
+          test "$(wc -c < "/tmp/z-new-pistol-e.mp3")" -gt 7000
+          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/z-new-pistol-e.mp3" \
+            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-42dB,highpass=f=48,lowpass=f=12500,bass=g=2.8:f=105:w=0.7,equalizer=f=210:t=q:w=1:g=1.0,acompressor=threshold=0.25:ratio=1.6:attack=4:release=110,volume=1.35,alimiter=limit=0.89:level=false,apad,atrim=duration=1.35,afade=t=out:st=1.21:d=0.14" \
+            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k "assets/sfx/z-combat-v7-pistol-e.mp3"
+          test "$(wc -c < "assets/sfx/z-combat-v7-pistol-e.mp3")" -gt 12000
+          ffmpeg -nostdin -hide_banner -i "assets/sfx/z-combat-v7-pistol-e.mp3" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          echo "::endgroup::"
+          echo "::group::Fresh original magnum-f"
+          curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 100 \
+            "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_234224_260f39af-55c3-40f1-879b-afa38d4c41b2.mp3" -o "/tmp/z-new-magnum-f.mp3"
+          test "$(wc -c < "/tmp/z-new-magnum-f.mp3")" -gt 7000
+          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/z-new-magnum-f.mp3" \
+            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-42dB,highpass=f=48,lowpass=f=12500,bass=g=2.8:f=105:w=0.7,equalizer=f=210:t=q:w=1:g=1.0,acompressor=threshold=0.25:ratio=1.6:attack=4:release=110,volume=1.35,alimiter=limit=0.89:level=false,apad,atrim=duration=1.35,afade=t=out:st=1.21:d=0.14" \
+            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k "assets/sfx/z-combat-v7-magnum-f.mp3"
+          test "$(wc -c < "assets/sfx/z-combat-v7-magnum-f.mp3")" -gt 12000
+          ffmpeg -nostdin -hide_banner -i "assets/sfx/z-combat-v7-magnum-f.mp3" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          echo "::endgroup::"
+          echo "::group::Fresh original slide-a"
+          curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 100 \
+            "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_234224_528c991b-223c-41e5-a865-8aa41bb5baff.mp3" -o "/tmp/z-new-slide-a.mp3"
+          test "$(wc -c < "/tmp/z-new-slide-a.mp3")" -gt 7000
+          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/z-new-slide-a.mp3" \
+            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-42dB,highpass=f=100,lowpass=f=9000,acompressor=threshold=0.21:ratio=1.7:attack=4:release=100,volume=1.48,alimiter=limit=0.89:level=false,apad,atrim=duration=1.30,afade=t=out:st=1.16:d=0.14" \
+            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k "assets/sfx/z-combat-v7-slide-a.mp3"
+          test "$(wc -c < "assets/sfx/z-combat-v7-slide-a.mp3")" -gt 12000
+          ffmpeg -nostdin -hide_banner -i "assets/sfx/z-combat-v7-slide-a.mp3" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          echo "::endgroup::"
+          echo "::group::Fresh original slide-b"
+          curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 100 \
+            "https://d8j0ntlcm91z4.cloudfront.net/user_3KlCHKRIJO34SPkOC5UMUPo7vEp/hf_20261102_234224_56423aef-e6b7-4290-a123-35d54f6b88a4.mp3" -o "/tmp/z-new-slide-b.mp3"
+          test "$(wc -c < "/tmp/z-new-slide-b.mp3")" -gt 7000
+          ffmpeg -nostdin -y -hide_banner -loglevel error -i "/tmp/z-new-slide-b.mp3" \
+            -af "silenceremove=start_periods=1:start_duration=0:start_threshold=-42dB,highpass=f=100,lowpass=f=9000,acompressor=threshold=0.21:ratio=1.7:attack=4:release=100,volume=1.48,alimiter=limit=0.89:level=false,apad,atrim=duration=1.30,afade=t=out:st=1.16:d=0.14" \
+            -ar 44100 -ac 1 -codec:a libmp3lame -b:a 160k "assets/sfx/z-combat-v7-slide-b.mp3"
+          test "$(wc -c < "assets/sfx/z-combat-v7-slide-b.mp3")" -gt 12000
+          ffmpeg -nostdin -hide_banner -i "assets/sfx/z-combat-v7-slide-b.mp3" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          echo "::endgroup::"
+      - name: Create deep counter reverb from current approved original V6
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Authentic source V6 plus its own low-pass pressure wave and short reverberant echoes.
+          ffmpeg -nostdin -y -hide_banner -loglevel error \
+            -i "assets/sfx/z-counter-explosive-v6.mp3" \
+            -filter_complex "[0:a]asplit=3[dry][bass][reverb];[dry]volume=1.03[attack];[bass]lowpass=f=205,volume=2.1,adelay=24[pressure];[reverb]aecho=0.85:0.56:105|225|390:0.36|0.24|0.15,highpass=f=64,lowpass=f=2800,volume=0.43[tail];[attack][pressure][tail]amix=inputs=3:normalize=0,acompressor=threshold=0.28:ratio=2.0:attack=5:release=120,volume=1.14,alimiter=limit=0.88:level=false,apad,atrim=duration=2.65,afade=t=out:st=2.24:d=0.41[out]" \
+            -map "[out]" -ar 44100 -ac 2 -codec:a libmp3lame -b:a 192k \
+            "assets/sfx/z-combat-v7-counter-reverb.mp3"
+          test "$(wc -c < "assets/sfx/z-combat-v7-counter-reverb.mp3")" -gt 40000
+          echo "Source vs V7 counter peak and mean"
+          ffmpeg -nostdin -hide_banner -i "assets/sfx/z-counter-explosive-v6.mp3" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          ffmpeg -nostdin -hide_banner -i "assets/sfx/z-combat-v7-counter-reverb.mp3" -af volumedetect -f null - 2>&1 | grep -E 'mean_volume|max_volume' | tail -2 || true
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 assets/sfx/z-combat-v7-counter-reverb.mp3
+      - name: Version all seven real audio files in game repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/sfx/z-combat-v7-*.mp3
+          if ! git diff --cached --quiet; then
+            git commit -m "Audio V7: four new gunshot takes, two bolt-action Foley, counter with bass and natural short reverb"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
