@@ -29,7 +29,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  const pause={offsetTop:82,offsetHeight:32};
  const elements={combatWordHud:canvas,pauseButton:pause};
  const world={Z_COMBAT_WORD_ART:{image:{naturalWidth:2176,naturalHeight:320,complete:true},ready:true,missing:false},
- $,window:{},fx:[],p:{x:420,y:540},gameState:'playing',Math,
+ window:{},fx:[],p:{x:420,y:540},gameState:'playing',Math,
  clamp:(v,l,h)=>Math.max(l,Math.min(h,v))};
  // Use a local $ lookup; no other DOM infrastructure is needed.
  world.$=name=>elements[name];
