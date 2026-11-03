@@ -3541,6 +3541,111 @@ body{position:fixed;inset:0;touch-action:manipulation}
  z-index:5;object-fit:contain;will-change:transform,opacity;
 }
 </style>
+<style id="z-responsive-combat-screenshot-safe-v1">
+/* Preserve reference HUD composition on high-res and ultrawide screens.
+   All units derive from the visible 16:9 safe frame (860x488 reference).
+   Touch art, menu art, canvas world physics and original animations stay intact. */
+@container (min-width:900px){
+ #hud.hud{
+  inset:auto!important;top:calc(6px * var(--z-combat-scale,1))!important;
+  left:50%!important;right:auto!important;transform:translateX(-50%);
+  width:var(--z-combat-safe-width,100%)!important;height:0;
+  max-width:none!important;margin:0!important;
+ }
+ #hud .hud-left{left:calc(7px * var(--z-combat-scale,1));top:0;width:19%!important;}
+ #hud .hud-right{right:calc(7px * var(--z-combat-scale,1));top:0;width:17%!important;
+  gap:calc(3px * var(--z-combat-scale,1))!important;}
+ #hud .hud-center{left:29%;width:42%;top:calc(44px * var(--z-combat-scale,1))!important;}
+ #hud .hud-name{font-size:calc(10px * var(--z-combat-scale,1))!important;
+  gap:calc(6px * var(--z-combat-scale,1))!important;
+  margin-bottom:calc(3px * var(--z-combat-scale,1))!important;
+  letter-spacing:calc(.5px * var(--z-combat-scale,1))!important;}
+ #hud .hud-name small{font-size:calc(8px * var(--z-combat-scale,1))!important;}
+ #hud .player-mark{width:calc(26px * var(--z-combat-scale,1))!important;
+  height:calc(26px * var(--z-combat-scale,1))!important;
+  font-size:calc(22px * var(--z-combat-scale,1))!important;}
+ #hud .bar{height:calc(11px * var(--z-combat-scale,1))!important;
+  margin:calc(2px * var(--z-combat-scale,1)) 0!important;}
+ #hud .bar span{font-size:calc(9px * var(--z-combat-scale,1))!important;
+  line-height:calc(11px * var(--z-combat-scale,1))!important;}
+ #hud .bar.stamina{height:calc(6px * var(--z-combat-scale,1))!important;}
+ #hud .bar.stamina span{font-size:0!important;}
+ #hud .player-stats{font-size:calc(8px * var(--z-combat-scale,1))!important;
+  padding:calc(3px * var(--z-combat-scale,1)) calc(6px * var(--z-combat-scale,1))!important;
+  gap:calc(8px * var(--z-combat-scale,1))!important;
+  margin-top:calc(3px * var(--z-combat-scale,1))!important;}
+ #hud .chapter{font-size:calc(9px * var(--z-combat-scale,1))!important;
+  letter-spacing:calc(.8px * var(--z-combat-scale,1))!important;}
+ #hud .wave-label{font-size:calc(13px * var(--z-combat-scale,1))!important;
+  margin:calc(2px * var(--z-combat-scale,1)) 0!important;}
+ #hud .kill-count{font-size:calc(9px * var(--z-combat-scale,1))!important;}
+ #hud .squad-progress{height:calc(5px * var(--z-combat-scale,1))!important;
+  width:min(calc(210px * var(--z-combat-scale,1)),85%)!important;
+  margin:calc(5px * var(--z-combat-scale,1)) auto calc(3px * var(--z-combat-scale,1))!important;}
+ #hud .squad-status{font-size:calc(10px * var(--z-combat-scale,1))!important;}
+ #hud .currency{font-size:calc(18px * var(--z-combat-scale,1))!important;
+  letter-spacing:calc(.6px * var(--z-combat-scale,1))!important;}
+ #hud .combo{font-size:calc(16px * var(--z-combat-scale,1))!important;}
+ #hud .combo small{font-size:calc(10px * var(--z-combat-scale,1))!important;}
+ #hud .small-button{min-width:calc(36px * var(--z-combat-scale,1))!important;
+  min-height:calc(32px * var(--z-combat-scale,1))!important;
+  padding:calc(3px * var(--z-combat-scale,1)) calc(9px * var(--z-combat-scale,1))!important;
+  font-size:calc(13px * var(--z-combat-scale,1))!important;}
+ #hud .mod-wrap{max-width:100%!important;
+  margin-top:calc(3px * var(--z-combat-scale,1))!important;}
+ #hud #modStrip.mod-strip{grid-auto-rows:calc(23px * var(--z-combat-scale,1))!important;
+  max-height:calc(49px * var(--z-combat-scale,1))!important;
+  gap:calc(3px * var(--z-combat-scale,1))!important;}
+ #hud #modStrip .mod-chip.compact{min-height:calc(23px * var(--z-combat-scale,1))!important;
+  padding:calc(2px * var(--z-combat-scale,1)) calc(3px * var(--z-combat-scale,1))!important;
+  font-size:calc(11px * var(--z-combat-scale,1))!important;}
+ #hud #modStrip .mod-chip.compact b{font-size:calc(11px * var(--z-combat-scale,1))!important;}
+ #hud #modStrip .mod-chip.compact .icon .upgrade-art{
+  width:calc(19px * var(--z-combat-scale,1))!important;
+  height:calc(19px * var(--z-combat-scale,1))!important;}
+ #hud .mod-wrap.expanded #modStrip.mod-strip{max-height:calc(158px * var(--z-combat-scale,1))!important;}
+ #hud .mod-toggle{font-size:calc(10px * var(--z-combat-scale,1))!important;
+  min-height:calc(23px * var(--z-combat-scale,1))!important;}
+ #hud #combatWordHud{right:calc(43px * var(--z-combat-scale,1))!important;
+  width:calc(205px * var(--z-combat-scale,1))!important;}
+ #stageWrap .touch-controls{
+  left:50%!important;right:auto!important;
+  width:var(--z-combat-safe-width,100%)!important;
+  transform:translateX(-50%);
+  bottom:max(calc(5px * var(--z-combat-scale,1)),env(safe-area-inset-bottom,0px))!important;
+  padding:0 calc(12px * var(--z-combat-scale,1))!important;
+  gap:calc(8px * var(--z-combat-scale,1))!important;
+ }
+ #stageWrap .touch-controls .analog-pad{
+  flex:0 0 calc(118px * var(--z-combat-scale,1))!important;
+  width:calc(118px * var(--z-combat-scale,1))!important;
+  height:calc(138px * var(--z-combat-scale,1))!important;
+  transform:translate(calc(10px * var(--z-combat-scale,1)),
+                      calc(-13px * var(--z-combat-scale,1)));
+ }
+ #stageWrap .touch-controls .analog-pad .analog-ring{
+  width:calc(112px * var(--z-combat-scale,1))!important;
+  height:calc(112px * var(--z-combat-scale,1))!important;}
+ #stageWrap .touch-controls .analog-pad .analog-touch-zone{
+  top:calc(-32px * var(--z-combat-scale,1))!important;
+  right:calc(-26px * var(--z-combat-scale,1))!important;
+  bottom:calc(-25px * var(--z-combat-scale,1))!important;
+  left:calc(-26px * var(--z-combat-scale,1))!important;}
+ #stageWrap .touch-controls .touch-actions{
+  --face-btn:calc(54px * var(--z-combat-scale,1))!important;
+  gap:calc(2px * var(--z-combat-scale,1))!important;}
+ #stageWrap .boss-hud{
+  top:calc(112px * var(--z-combat-scale,1))!important;
+  right:calc(var(--z-combat-safe-gutter,0px) + 12px * var(--z-combat-scale,1))!important;
+  width:calc(330px * var(--z-combat-scale,1))!important;
+  max-width:calc(var(--z-combat-safe-width,100%) * .32)!important;
+  padding:calc(8px * var(--z-combat-scale,1))!important;}
+ #stageWrap .boss-title{font-size:calc(12px * var(--z-combat-scale,1))!important;
+  margin-bottom:calc(6px * var(--z-combat-scale,1))!important;}
+ #stageWrap .boss-track{height:calc(12px * var(--z-combat-scale,1))!important;}
+}
+/* The canvas's extended W and all existing compact portrait rules are intact. */
+</style>
 </head>
 <body>
 <div id="app">
@@ -3638,6 +3743,15 @@ function syncGameViewport(){
  const outerW=Math.max(1,host.width||window.innerWidth||1280);
  const outerH=Math.max(1,host.height||window.innerHeight||720);
  const stageH=Math.min(outerH,outerW/MIN_GAME_ASPECT);
+ // 860x488 reference HUD: scale by the VISIBLE 16:9 stage, not device pixels.
+ // Ultrawide retains extended world width but keeps HUD/controls in the central
+ // 16:9 safe area so the composition matches the screenshot.
+ const safeW=Math.min(outerW,stageH*MIN_GAME_ASPECT);
+ const safeGutter=(outerW-safeW)/2;
+ const hudScale=Math.max(.82,Math.min(6,safeW/860));
+ stageWrap.style.setProperty('--z-combat-safe-width',safeW+'px');
+ stageWrap.style.setProperty('--z-combat-safe-gutter',safeGutter+'px');
+ stageWrap.style.setProperty('--z-combat-scale',hudScale.toFixed(5));
  stageWrap.style.setProperty('--game-stage-height',stageH+'px');
  viewportHost.classList.toggle('compact-game-stage',stageH<310);
  viewportHost.classList.toggle('tight-hub-stage',stageH<480);
