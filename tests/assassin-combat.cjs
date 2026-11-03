@@ -490,6 +490,14 @@ test('Iron Mask elite uses eight original dark 4x2 painted animation sheets and 
  const src=fs.readFileSync(path.join(__dirname,'../assets/elite-ironmask.js'),'utf8');
  assert(src.includes("const KEYS=['idle','run','attack','hit','menace','death','charge','special']"));
  assert(src.includes("ctx.drawImage(source.image,(idx%4)*CW"),'renderer actually draws the new 64 painted frames');
+ assert(src.includes("(['attack','death'].includes(key)?'-crop-safe':'')"),'ironmask attacks/death must load approved isolated artwork');
+ for(const name of ['attack','death']){
+  const clean=fs.readFileSync(path.join(pathRoot,name+'-crop-safe.webp'));
+  assert.equal(clean.toString('ascii',0,4),'RIFF','clean elite '+name+' has WebP frames');
+  assert.equal(clean.toString('ascii',8,12),'WEBP','clean elite '+name+' keeps the source format');
+  assert(clean.length>85000,'clean elite '+name+' keeps every painted pose');
+ }
+ 
  assert(!src.includes('ctx.putImageData(pix'),'old turquoise recolor must be removed');
  assert(src.includes("ctx.scale(e.face>=0?1:-1,1)"),'right-facing source artwork must match direction');
  assert(html.includes("...window.RZElite.KEYS.map(k=>"),'all eight motions preload before gameplay');
@@ -547,7 +555,7 @@ test('Frame Lab displays the eight original Iron Mask painted animations, not re
  new vm.Script(script);
  assert(lab.includes('variant:\'elite\''),'elite variants not registered');
  assert(lab.includes("RZElite.KEYS.forEach(key=>list.push"),'Frame Lab must include the eight real new Iron Mask motions');
- assert(lab.includes("sheet_url:'./assets/ironmask-elite/'+key+'.webp'"),'Frame Lab must use same sprite art as game');
+ assert(lab.includes("sheet_url:'./assets/ironmask-elite/'+key+(['attack','death'].includes(key)?'-crop-safe':'')+'.webp'"),'Frame Lab must use same sprite art as game');
  assert(!lab.includes('RZElite.colored(c)'),'no legacy colored assassin sprites should appear');
  assert(lab.includes("cacheKey=a.variant==='elite'"),'elite cache must be isolated');
 });
@@ -1931,7 +1939,7 @@ test('Red hood grunt enters from the camera on one eight-frame bitmap sheet',()=
  assert(html.includes("intruderEntryImage.src='./assets/enemies/redhood-ambush-entry-8.webp'"));
  assert(html.includes("['난입 상단 4프레임',()=>ensureBitmapDecoded(intruderEntryImage)]"));
  for(const action of ['idle','run','attack','hit','death','special'])
-  assert(html.includes("image.src='./assets/enemies/redhood-intruder/'+(key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.webp':key==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':key+'.png')"));
+  assert(html.includes("image.src='./assets/enemies/redhood-intruder/'+(key==='death'?'death-fullbody-crop-safe.webp':key==='attack'?'attack-fullfist.webp':key==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':key+'.png')"));
  assert(html.includes("...INTRUDER_MOTION_KEYS.map(k=>['신규 빨간 후드 '+k+' 8프레임'"));
 });
 test('Crimson intruder drops into an ongoing squad as reinforcements and joins the fight',()=>{
@@ -1974,12 +1982,12 @@ test('Redhood basic punch restores all three fists that crossed neighboring spri
  }
 });
 test('redhood death uses the rebuilt 8-frame full-body atlas and restores legs across the former row seam',()=>{
- const source=fs.readFileSync(path.join(__dirname,'../assets/enemies/redhood-intruder/death-fullbody.webp'));
+ const source=fs.readFileSync(path.join(__dirname,'../assets/enemies/redhood-intruder/death-fullbody-crop-safe.webp'));
  assert(source.length>150000,'full-body 8-frame bitmap exists and retains illustrated leg details');
  assert.equal(source.toString('ascii',0,4),'RIFF');
  assert.equal(source.toString('ascii',8,12),'WEBP');
- assert(html.includes("key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.webp':key==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':key+'.png'"),'death must use rebuilt art, not the original row-overlapping PNG');
- assert.equal(t.intruderMotionImages.death.src,'./assets/enemies/redhood-intruder/death-fullbody.webp');
+ assert(html.includes("key==='death'?'death-fullbody-crop-safe.webp':key==='attack'?'attack-fullfist.webp':key==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':key+'.png'"),'death must use rebuilt art, not the original row-overlapping PNG');
+ assert.equal(t.intruderMotionImages.death.src,'./assets/enemies/redhood-intruder/death-fullbody-crop-safe.webp');
  assert(html.includes("if(name==='hit'||name==='death'||name==='attack'||name==='special'){"),'death must skip destructive eroded-core sprite isolation');
  assert(html.includes('diagnostic.byAtlas[name]=cuts.map'),'death cut QA must register sourcePreserved and zero removed pixels');
  assert.deepEqual(Array.from(t.INTRUDER_FRAME_FOOT.death),Array(8).fill(536),'all 8 poses have consistent foot position after reassembly');
@@ -2021,7 +2029,7 @@ test('Crimson support enemies are separate from regular wave rosters and keep di
  assert.equal(Object.keys(t.intruderMotionImages).length,6,'six independent action sheets');
  for(const kind of ['idle','run','attack','hit','death','special']){
   assert.equal(t.INTRUDER_FRAME_FOOT[kind].length,8,kind+' frames align with ground');
-  assert.equal(t.intruderMotionImages[kind].src,'./assets/enemies/redhood-intruder/'+(kind==='death'?'death-fullbody.webp':kind==='attack'?'attack-fullfist.webp':kind==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':kind+'.png'));
+  assert.equal(t.intruderMotionImages[kind].src,'./assets/enemies/redhood-intruder/'+(kind==='death'?'death-fullbody-crop-safe.webp':kind==='attack'?'attack-fullfist.webp':kind==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':kind+'.png'));
  }
  for(const [key,detail] of [['idle',{}],['run',{visualMoving:true,spriteDistance:200,locomotionMode:'run'}],
    ['attack',{windup:.2,windupDuration:.45}],['hit',{reactionTime:.3,reactionDuration:.48,hitAnimation:'hitHead'}]]){
