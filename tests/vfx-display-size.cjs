@@ -20,7 +20,12 @@ const expected=[
 for(const file of ['index.html','play-fixed-20261102.html']){
  const html=fs.readFileSync(path.join(root,file),'utf8');
  for(const [name,code] of expected)assert(html.includes(code),file+': '+name);
- assert(html.includes('const x=enemy.x+dir*Math.min(54,Math.max(24,bodyHalfX(enemy)*.48));'),'hit FX begins on the forward side of the enemy');
+ assert(html.includes("const x=enemy.x+dir*(eliteContact?137:Math.min(54,Math.max(24,bodyHalfX(enemy)*.48)));"),
+  'regular enemy hits retain previous offset, Iron Mask uses its larger forward body edge');
+ assert(html.includes("const count=Math.min(room,eliteContact?1:critical?2:Math.random()<.70?2:1)"),
+  'no overlapping translucent hit sprites on elite');
+ assert(html.includes("ctx.globalCompositeOperation=f.eliteContact?'source-over':'screen'"),
+  'Iron Mask contact FX use solid paint not a ghostly additive body overlay');
  assert(html.includes('vx:dir*(main?rnd(22,52):rnd(42,90))'),'hit FX advances into the attack, not back toward hero');
  assert(html.includes('nova:{x:91,y:130,tilt:1.31}'),'ground-attack PNG stays angled toward enemy');
  assert(html.includes('fx[i].contactEnemy===e&&fx[i].upgrade===kind'),'each effect type persists independently on one opponent');
