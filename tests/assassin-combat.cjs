@@ -3058,7 +3058,7 @@ test('ballistic Foley predecodes, fires at impact and never ducks music',()=>{
  world.__revenantBgm={duckImpact(){ducked=true}};
  t.seedImpactAudio(new FakeAC(),{punchA:{duration:.33},punchB:{duration:.36},
   punchC:{duration:.41},punchD:{duration:.42},punchE:{duration:.43},punchF:{duration:.44},
-  heavy:{duration:.60},parry:{duration:.46},parryAlt:{duration:.49},counter:{duration:2.1}});
+  heavy:{duration:.60},parry:{duration:2.1},counter:{duration:.46},upgrade:{duration:.96},reroll:{duration:.68}});
  try{
   const heard=[];
   for(let i=0;i<6;i++){
@@ -3073,11 +3073,11 @@ test('ballistic Foley predecodes, fires at impact and never ducks music',()=>{
   assert.equal(t.playImpactSound('heavy',1.2),true);
   assert.equal(played[pos].buffer.duration,.60,'heavy shot is foremost');
   pos=played.length;
-  assert.equal(t.playImpactSound('parry',1.65),true,'parry rack bypasses impact cooldown');
-  assert([.46,.49].includes(played[pos].buffer.duration),'new metal slide action is foremost');
+  assert.equal(t.playImpactSound('parry',1.65),true,'swapped explosive parry bypasses impact cooldown');
+  assert.equal(played[pos].buffer.duration,2.1,'parry now plays the original long boom from counter');
   pos=played.length;
-  assert.equal(t.playImpactSound('counter',1.25),true,'counter blast has its own priority');
-  assert.equal(played[pos].buffer.duration,2.1,'long reverberant explosion is the primary report');
+  assert.equal(t.playImpactSound('counter',1.25),true,'swapped slide counter retains special priority');
+  assert.equal(played[pos].buffer.duration,.46,'riposte now plays the metallic slide originally on parry');
   assert(gains.some(v=>Math.abs(v.gain.value-(1.11*.70*.92))<1e-8),'compressed mix preserves safe headroom');
   assert.equal(ducked,false,'sound effects never duck background music');
  }finally{
