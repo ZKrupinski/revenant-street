@@ -35,7 +35,7 @@ for(const name of ['index.html','play-fixed-20261102.html']){
   p:{hp:100,attack:0,parry:0,riposteChasing:false,airAttack:false,mods:[],credits:240},
   slowMotion:0,riposteCinematicTime:0,enemies:[{dead:false}],
   menuReady:()=>true,rewardMenu:(reason,rerolled)=>{world.lastMenu={reason,rerolled}},
-  updateHud:()=>{},sound:()=>{}
+  updateHud:()=>{},sound:()=>{},playUpgradeSfx:kind=>{world.lastUiSfx=kind}
  };
  world.modRank=id=>world.p.mods.filter(m=>m===id).length;
  vm.createContext(world);
@@ -71,6 +71,7 @@ for(const name of ['index.html','play-fixed-20261102.html']){
  assert.equal(api.combatRerollCost(),115);
  assert.equal(world.lastMenu.reason,'mid');
  assert(world.lastMenu.rerolled,'reroll preserves current mode');
+ assert.equal(world.lastUiSfx,'reroll','paid refresh uses the dedicated UI cue, never parry or a gunshot');
  world.p.credits=10;
  assert(!api.refreshCombatUpgradeOffers(),'cannot spend unavailable currency');
  assert.equal(world.p.credits,10);
