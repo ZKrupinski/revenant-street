@@ -90,6 +90,7 @@ const combat={
  dashMobilityStats:()=>({duration:.32,speed:1250}),
  modRank:()=>0,clamp:(v,min,max)=>Math.min(max,Math.max(min,v)),
  loadZMove(){},fxBurst(){},sound(){},playCombatVoice(){},playImpactSound(){return true},
+ playActionOnset(){return true}, // V10 input cue is part of the audio module, mocked in isolated dash physics QA.
  triggerStrikeCamera(){},vibrateImpact(){},bodyHalfX:()=>54
 };
 vm.createContext(combat);
