@@ -141,6 +141,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
   assert(Math.abs(translations.at(-1)[1]-(607-108))<25,'hit flash follows moving enemy chest, not old impact X/Y');
   world.attributeFx=[];
   enemy.renderX=462;enemy.renderY=568;enemy.dead=true;
+  draws.length=0;
  }
  world.attributeFx=[{mod:'fire',x:432,y:438,life:.25,maxLife:.4,scale:1.1}];
  world.paintStatuses();assert.equal(draws.length,1,'draw impact PNG');
