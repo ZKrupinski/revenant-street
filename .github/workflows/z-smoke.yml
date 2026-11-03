@@ -49,6 +49,8 @@ jobs:
         run: node tests/enemy-bitmap-anchors.cjs
       - name: Enemy hit in front and enemy death behind character sprite QA
         run: node tests/enemy-bitmap-layer-order.cjs
+      - name: Special attacks display simultaneous painted enemy impact overlays
+        run: node tests/special-hit-overlap.cjs
       - name: Enemy death bitmap time matches character fade without synthetic opacity fade
         run: node tests/enemy-death-fade-sync.cjs
       - name: Execution and critical wordmarks plus parry sprite edge safety
