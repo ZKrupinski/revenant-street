@@ -5629,7 +5629,7 @@ function sound(type='hit'){if(mute)return;try{const AC=window.AudioContext||wind
 function prepareCombatVoices(){
  const AC=window.AudioContext||window.webkitAudioContext;
  if(!AC||!window.__zCombatVoice)return Promise.resolve(false);
- if(!audio)audio=new AC();
+ if(!audio)audio=new AC({latencyHint:'interactive'});
  if(audio.state==='suspended')void audio.resume?.().catch?.(()=>{});
  return Promise.all([window.__zCombatVoice.prepare(audio),prepareImpactSfx(audio)]).then(()=>true);
 }
@@ -5654,7 +5654,7 @@ const Z_IMPACT_SFX_URLS=Object.freeze({
  reroll:'./assets/sfx/z-lowlat-v9-reroll.wav?v=zeroLeadV9'
 });
 const impactSfxBuffers=Object.create(null);
-let impactSfxPromise=null,impactSfxContext=null,impactBus=null,lastImpactAudio=-99,impactAttackBag=[],impactLastAttackKey='';
+let impactSfxPromise=null,impactSfxContext=null,impactBus=null,impactCounterBus=null,lastImpactAudio=-99,impactAttackBag=[],impactLastAttackKey='';
 let lastImpactHaptic=-999999;
 const impactVoices=[];
 function prepareImpactSfx(context=audio){
@@ -5704,6 +5704,32 @@ function nextImpactAttackKey(){
  impactLastAttackKey=selected;
  return selected;
 }
+// Sharp zero-queue attack cue for accepted guard/jump/dash inputs.
+// Reuse the already decoded mechanical-slide PCM; do not synthesize a new chirp,
+// and do not delay this cue to the first animation or collision frame.
+function playActionOnset(kind='dash'){
+ if(mute||!audio||!impactSfxBuffers.counter)return false;
+ try{
+  if(audio.state==='suspended')void audio.resume?.().catch?.(()=>{});
+  const now=audio.currentTime,buffer=impactSfxBuffers.counter;
+  const source=audio.createBufferSource(),hp=audio.createBiquadFilter(),gain=audio.createGain();
+  const isJump=kind==='jump',isDash=kind==='dash';
+  const rate=isJump?1.52:isDash?1.36:1.25;
+  const duration=isJump?.105:isDash?.125:.135;
+  const peak=(isJump?.57:isDash?.67:.64)*NON_BGM_SFX_LEVEL;
+  source.buffer=buffer;source.playbackRate.value=rate;
+  hp.type='highpass';hp.frequency.value=isJump?360:235;
+  gain.gain.setValueAtTime(.0001,now);
+  gain.gain.linearRampToValueAtTime(peak,now+.0007);
+  gain.gain.setValueAtTime(peak,now+.030);
+  gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
+  source.connect(hp).connect(gain).connect(audio.destination);
+  source.onended=()=>{try{source.disconnect();hp.disconnect();gain.disconnect()}catch(_){}};
+  source.start(now,0,Math.min(buffer.duration,rate*duration));
+  source.stop(now+duration+.005);
+  return true;
+ }catch(_){return false}
+}
 function playImpactSound(kind='punch',intensity=1){
  if(mute||!audio||!impactSfxBuffers.counter)return false;
  try{
@@ -5722,6 +5748,15 @@ function playImpactSound(kind='punch',intensity=1){
    output.gain.value=1.11*NON_BGM_SFX_LEVEL*IMPACT_SFX_TRIM;
    comp.connect(output).connect(audio.destination);impactBus=comp;
   }
+  // Isolate the follow-up counter from crowded basic hits and their compressor.
+  // More audible punch without turning up the other combat effects or ducking BGM.
+  if(!impactCounterBus){
+   const comp=audio.createDynamicsCompressor(),output=audio.createGain();
+   comp.threshold.value=-11;comp.knee.value=4;comp.ratio.value=3.5;
+   comp.attack.value=.001;comp.release.value=.19;
+   output.gain.value=1.48*NON_BGM_SFX_LEVEL*IMPACT_SFX_TRIM;
+   comp.connect(output).connect(audio.destination);impactCounterBus=comp;
+  }
   // Never discard a parry/counter because a crowd is being hit.
   while(impactVoices.length>=(priority?7:5)){
    const idx=impactVoices.findIndex(v=>!v.priority);
@@ -5730,7 +5765,7 @@ function playImpactSound(kind='punch',intensity=1){
    for(const source of old.sources)try{source.stop()}catch(_){}
   }
   const voice={priority,sources:[],remaining:0};
-  const strength=Math.max(.7,Math.min(1.28,intensity));
+  const strength=Math.max(.7,Math.min(key==='counter'?1.55:1.28,intensity));
   function layer(clip,delay,rate,level,limit,lowpass,highpass=55){
    const buffer=impactSfxBuffers[clip];if(!buffer)return;
    // V9 PCM WAVs: full waveform begins within 1.5ms, measured offline.
@@ -5750,7 +5785,7 @@ function playImpactSound(kind='punch',intensity=1){
    gain.gain.linearRampToValueAtTime(peak,at+attack);
    gain.gain.setValueAtTime(peak,Math.max(at+attack,at+duration-release));
    gain.gain.linearRampToValueAtTime(.0001,at+duration);
-   source.connect(hp).connect(lp).connect(gain).connect(impactBus);
+   source.connect(hp).connect(lp).connect(gain).connect(key==='counter'?impactCounterBus:impactBus);
    voice.sources.push(source);voice.remaining++;
    source.onended=()=>{
     source.disconnect();hp.disconnect();lp.disconnect();gain.disconnect();
@@ -5767,14 +5802,14 @@ function playImpactSound(kind='punch',intensity=1){
   const rate=attackIndex<0?1:
    [0.92,1.07,0.98,1.12,0.94,1.05][attackIndex]*(1+(Math.random()-.5)*.024);
   const duration=key==='parry'?2.28:key==='heavy'?1.03:isRack?1.20:.85;
-  const level=key==='parry'?1.98:isRack?2.16:key==='heavy'?1.23:1.22;
+  const level=key==='parry'?1.98:isRack?2.34:key==='heavy'?1.23:1.22;
   layer(key,0,rate,level,duration,isRack?9500:12500,isRack?80:45);
   if(!voice.sources.length)return false;
   impactVoices.push(voice);
   return true;
  }catch(_){return false}
 }
-window.__zImpactAudioStatus=()=>({version:'zero-lead-pcm-v9-20261103',ready:Object.keys(impactSfxBuffers).length===11,
+window.__zImpactAudioStatus=()=>({version:'zero-lead-action-counter-v10-20261103',ready:Object.keys(impactSfxBuffers).length===11,
  loaded:Object.keys(impactSfxBuffers).length,playing:impactVoices.length});
  // UI-only acquisition cue: not connected to the firearm impact bus, no ducking of BGM.
  // It is preloaded alongside other SFX, and can be heard while the world is paused.
@@ -6692,7 +6727,8 @@ function parry(){
  if(incoming)p.facing=incoming.x>=p.x?1:-1;
  p.inv=Math.max(p.inv,.08);p.stamina-=7;
  // Ordinary parry preparation has no impact flash.
- /* Parry preparation is silent; successful rack plays on success. */ }
+ // Immediate dry slide cue for the guard input; success still triggers its full hit sound.
+ playActionOnset('parry'); }
 // Real-time dash input buffer. A tap during the tail of the previous dash,
 // hit-reaction, or a landing must not be discarded forever by edge-triggered
 // keyboard/pad/touch listeners. Only one buffered dash can be pending.
@@ -6730,7 +6766,8 @@ function dodge(fromBuffer=false){
  p.motionKey='';p.motionTime=0;p.animAge=0;
  loadZMove(backInput?'dodge':'dash');
  fxBurst(p.x-p.facing*22,p.y-24,'blue',exhausted?.26:.42);
- playImpactSound('parry',.90); // V6: new loud rack on every accepted dash
+ playActionOnset('dash'); // Dry transient lands on the accepted dash input.
+ playImpactSound('parry',.90); // Preserve the existing full dash sound.
  void 0 /* prior arcade attack tone disabled */;void 0 /* previous mechanical cue disabled */;
  return true;
 }
@@ -6761,7 +6798,8 @@ function jump(){
  p.jumpTime=0;p.moveName='jumpstart';
  p.vz=jumpMobilityStats().impulse;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;
  p.airKickUsed=false;
- playImpactSound('parry',.85); // V6: same mechanical rack when jumping
+ playActionOnset('jump'); // Dry transient lands on the accepted jump input.
+ playImpactSound('parry',.85); // Preserve the existing full jump sound.
  /* No synthetic pitch chirp at jump start. */
 }
 function execute(target){
