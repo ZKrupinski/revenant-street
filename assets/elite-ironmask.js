@@ -18,7 +18,7 @@ function load(key){
    entry.loading=false;im.onload=null;im.onerror=null;
   };
   im.onerror=()=>{entry.failed=true;entry.loading=false;entry.error='Iron Mask '+key+' image missing'};
-  im.src=ROOT+key+'.webp'+(key==='special'?'?rev=newhood-special-1f83b64-v2':'');
+  im.src=ROOT+key+(['attack','death'].includes(key)?'-crop-safe':'')+'.webp'+(key==='special'?'?rev=newhood-special-1f83b64-v2':'');
   DATA[key]=entry;
  }
  return DATA[key];
