@@ -6404,6 +6404,8 @@ function requiredSceneArt(preview=false){
   ['주인공 머플러 제거 등장 8프레임',()=>ensureBitmapDecoded(heroEntry.image)],
   ['패링 성공 10프레임 원본 이펙트',()=>ensureBitmapDecoded(parrySuccessImage)],
   ['지면강타 8프레임 비트맵',()=>ensureBitmapDecoded(GROUND_SLAM_ART.image)],
+  ['적 피격 폭발 8프레임',()=>ensureBitmapDecoded(Z_ENEMY_BITMAP_ART.hit.image)],
+  ['적 사망 파편 증발 8프레임',()=>ensureBitmapDecoded(Z_ENEMY_BITMAP_ART.death.image)],
   ['대쉬 후 번개 관통 8프레임 비트맵',()=>ensureBitmapDecoded(DASH_PIERCE_ART.image)],
    // The exact 8-frame user artwork must be fully decoded before battle begins.
    ['패링 반격 원본 8프레임 비트맵',()=>ensureBitmapDecoded(PARRY_COUNTER_ART.image)],
@@ -6975,8 +6977,8 @@ function awardEnemyKill(e){
  gainCombatUpgradeCharge(e.type==='boss'?60:e.type==='elite'||e.type==='intruder'?38:26);
  const textValue='+₩'+money;
  floatText(textValue,e.x,e.y-210,'#ffdc8d');
- // Red hood uses painted impact PNGs only.
- if(e.type!=='intruder')fxBurst(e.x,e.y-120,'gold',.85);
+ // All enemy kills, including status damage and the final boss, get one raster dissolve.
+ spawnEnemyDeathBitmap(e);
 }
 function hurtEnemy(e,dmg,poise){
  if(e.dead||intruderEntering(e))return;
@@ -6989,6 +6991,7 @@ function hurtEnemy(e,dmg,poise){
  e.hp-=dmg;
  // Five no-repeat hand-painted hit effects for all real enemy damage events.
  spawnBasicContactFx(e,p.moveName||'jab',dmg>=70||e.type==='boss'||e.type==='elite'||e.type==='intruder');
+ if(e.hp>0)spawnEnemyHitBitmap(e,dmg);
  if(e.hp<=0){playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e)}
  else if(Math.random()<.62)playCombatVoice('enemyHurt',e);
  e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:(e.type==='elite'||e.type==='intruder')?.80:1),0,e.maxPoise);
@@ -7095,7 +7098,7 @@ function hurtEnemy(e,dmg,poise){
  // No trailing visual interpolation after a fresh basic-attack impact.
  // Hit-stop now freezes both bodies AFTER the victim has already recoiled.
  if(basicContact)e.renderX=e.x;
- if(e.type!=='intruder')fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:smash?1.65:1.2);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');applyImpactFeedback(e,smash||p.dashSmash,p.dashSmash?'dashImpact':smash?'heavy':'punch',!(p.dashSmash||p.airAttack||p._inputStrikeSfxPlayed));p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
+ floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');applyImpactFeedback(e,smash||p.dashSmash,p.dashSmash?'dashImpact':smash?'heavy':'punch',!(p.dashSmash||p.airAttack||p._inputStrikeSfxPlayed));p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
  if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=e.type==='boss'?1.30:e.type==='elite'?2.4:3.6;e.stun=e.groggy;if(e.type!=='intruder')fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
  if(e.type==='elite'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.14;e.eliteCooldown=Math.min(e.eliteCooldown,1.6);fxBurst(e.x,e.y-150,'red',1.8);floatText('CRIMSON OVERDRIVE',e.x,e.y-255,'#ff8494')}
  if(e.type==='intruder'&&e.hp>0&&e.hp<e.maxHp*.42&&e.phase===1){
@@ -7103,7 +7106,7 @@ function hurtEnemy(e,dmg,poise){
   floatText('CRIMSON RAGE!',e.x,e.y-247,'#ff8ca0');
  }
  if(e.type==='boss'&&e.hp<e.maxHp*.55&&e.phase===1){e.phase=2;e.bossPhasePending=true;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
- if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);if(e.type==='intruder')spawnIntruderDeathFx(e);else fxBurst(e.x,e.y-70,'gold',1.1);}}
+ if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);}}
 // Neutral jump and long leap share the same heel-slam landing.
 // One radial splash per touchdown: hits launch enemies AWAY on both sides.
 // Bitmap-only explosion art: no vector shockwave rings or geometry.
@@ -7846,6 +7849,58 @@ function enemyAttack(e){
  p.dashSmash=false;p.dashFollowWindow=0;
  p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteWindow=0;p.riposteTarget=null;
  playCombatVoice(p.hp<=0?'heroDeath':'heroHurt');p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)startDeathCinematic()}
+// Two independently authored 4x2 RGBA images. Each 512x512 cell is padded
+// on every side: drawImage only ever samples one complete cell, not its neighbors.
+const Z_ENEMY_BITMAP_ART={
+ hit:{image:new Image(),src:'./assets/vfx/project_z_enemy_hit_explosion_8f.png',duration:.27},
+ death:{image:new Image(),src:'./assets/vfx/project_z_enemy_death_evaporation_8f.png',duration:.66}
+};
+for(const asset of Object.values(Z_ENEMY_BITMAP_ART))asset.image.src=asset.src;
+function spawnEnemyHitBitmap(enemy,damage=0){
+ if(!enemy||enemy.dead||fx.length>=108)return false;
+ if(time-(enemy.lastBitmapHitAt??-99)<.060)return false;
+ enemy.lastBitmapHitAt=time;
+ const duration=Z_ENEMY_BITMAP_ART.hit.duration;
+ const width=(enemy.type==='boss'?326:enemy.type==='elite'?288:
+    enemy.type==='intruder'?250:enemy.type==='guard'?233:210)*(damage>=80?1.10:1);
+ fx.push({kind:'enemyHitBitmap',contactEnemy:enemy,
+  x:enemy.x+p.facing*(enemy.type==='elite'?79:33),
+  y:enemy.y-Math.max(0,enemy.z||0)-
+     (enemy.type==='boss'?185:enemy.type==='elite'?150:122),
+  width,age:0,life:duration,maxLife:duration});
+ return true;
+}
+function spawnEnemyDeathBitmap(enemy){
+ if(!enemy||fx.some(f=>f.kind==='enemyDeathBitmap'&&f.deadEnemy===enemy))return false;
+ if(fx.length>=108)fx.splice(0,Math.max(1,fx.length-100));
+ const duration=Z_ENEMY_BITMAP_ART.death.duration;
+ fx.push({kind:'enemyDeathBitmap',deadEnemy:enemy,
+  x:enemy.x,y:enemy.y-Math.max(0,enemy.z||0)-
+      (enemy.type==='boss'?190:enemy.type==='elite'?155:130),
+  width:enemy.type==='boss'?475:enemy.type==='elite'?376:
+      enemy.type==='intruder'?341:enemy.type==='guard'?320:292,
+  age:0,life:duration,maxLife:duration});
+ return true;
+}
+function drawEnemyBitmapFx(effect){
+ const hit=effect.kind==='enemyHitBitmap';
+ const spec=hit?Z_ENEMY_BITMAP_ART.hit:Z_ENEMY_BITMAP_ART.death;
+ const image=spec.image;
+ if(!image.complete||image.naturalWidth!==2048||image.naturalHeight!==1024)return;
+ const p=clamp((effect.age||0)/effect.maxLife,0,.99999);
+ const frame=Math.min(7,Math.floor(p*8)),w=effect.width;
+ ctx.save();ctx.globalCompositeOperation='source-over';
+ ctx.globalAlpha=p>(hit?.81:.86)?Math.max(0,(1-p)/(hit?.19:.14)):1;
+ ctx.drawImage(image,(frame%4)*512,Math.floor(frame/4)*512,512,512,
+   effect.x-w*.5,effect.y-w*.5,w,w);
+ ctx.restore();
+}
+window.__zEnemyBitmapFxStatus=()=>({
+ version:'enemy-hit-death-bitmap-8f',
+ hit:Z_ENEMY_BITMAP_ART.hit.image.complete&&Z_ENEMY_BITMAP_ART.hit.image.naturalWidth===2048,
+ death:Z_ENEMY_BITMAP_ART.death.image.complete&&Z_ENEMY_BITMAP_ART.death.image.naturalWidth===2048,
+ frames:8,columns:4,rows:2,cell:512
+});
 function fxBurst(x,y,color='red',scale=1,specialAttackFx=false){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8),specialAttackFx})}
 function spawnParrySuccessFx(x,y,face=1){fx.push({kind:'parrySuccess10',x,y,face,life:.31,maxLife:.31})}
 function floatText(){ /* Hide character-bound damage numbers, skill and status words. */ }
@@ -8623,8 +8678,8 @@ function updateEffects(dt,realDt=dt){
   heroAfterimages[i].life-=heroAfterimages[i].counterEcho?realDt*.83:dt;
   if(heroAfterimages[i].life<=0)heroAfterimages.splice(i,1);
  }
- for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){const fxDt=f.kind==='parrySuccess10'||f.kind==='basicHitSprite'||f.kind==='upgradeVfxSprite'||f.kind==='combatWordSprite'?realDt:f.kind==='parryCounterSprite'?realDt*.90:dt;
-  f.life-=fxDt;if(f.kind==='basicHitSprite'||f.kind==='combatWordSprite')f.age+=fxDt;
+ for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){const fxDt=f.kind==='parrySuccess10'||f.kind==='basicHitSprite'||f.kind==='upgradeVfxSprite'||f.kind==='combatWordSprite'||f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap'?realDt:f.kind==='parryCounterSprite'?realDt*.90:dt;
+  f.life-=fxDt;if(f.kind==='basicHitSprite'||f.kind==='combatWordSprite'||f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap')f.age+=fxDt;
   if(f.kind==='combatWordSprite'&&(f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02);if(f.kind==='dashPierceSprite'||f.kind==='parryCounterSprite'){f.age=(f.age||0)+fxDt;if((f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02)}}fx=fx.filter(f=>f.life>0);
  if(gameState==='playing'&&!fx.some(f=>f.kind==='combatWordSprite')&&zCombatWordQueue.length){
   zStartCombatWord(zCombatWordQueue.shift());
@@ -9082,7 +9137,7 @@ function prepareParrySuccessCells(){
 // cluster, promote only one or two accents; all others remain behind.
 const Z_FRONT_SPECIAL_FX=new Set([
  'combatWordSprite','parrySuccess10','parryCounterSprite','groundSlamSprite',
- 'dashPierceSprite','dashTrailSprite'
+ 'dashPierceSprite','dashTrailSprite','enemyDeathBitmap'
 ]);
 function zIsSignatureVfx(f){return !!(f.specialAttackFx||Z_FRONT_SPECIAL_FX.has(f.kind));}
 function zHybridVfxForeground(){
@@ -9147,6 +9202,7 @@ function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);
  if(f.kind==='upgradeVfxSprite'){drawUpgradeVfx(f);continue;}
   if(f.kind==='healVfxSprite'){drawHealVfx(f);continue;}
   if(f.kind==='basicHitSprite'){drawBasicContactFx(f);continue;}
+  if(f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap'){drawEnemyBitmapFx(f);continue;}
  if(f.kind==='combatWordSprite')continue; // Draw once in fixed HUD, outside world camera.
  if(f.kind==='dashPierceSprite'){drawDashPierceSprite(f);continue;}
   if(f.kind==='parryCounterSprite'){drawParryCounterSprite(f);continue;}
