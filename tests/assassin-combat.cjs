@@ -1485,7 +1485,7 @@ test('audit-backed hero limb overscan is limited to verified punches, boots and 
   'grounded rear boots only sample the lower third of the preceding cell');
  assert(source.includes('sx+x0,sy-crop.spillTop,width,crop.spillTop'),
   'raised fist source bleed is sampled without borrowing the prior row body');
- assert(source.includes('const targetH=Z_LOCAL_HERO_LIMB_OVERSCAN[moveKey]?.top?.length?272:254'),
+ assert(source.includes('const targetH=maskedExtra?280:Z_LOCAL_HERO_LIMB_OVERSCAN[moveKey]?.top?.length?272:254'),
   'raised-fist poses keep their established head/torso size');
 });
 test('remote masked raider fall and get-up preserve 14 audited edge-crossing limbs',()=>{
