@@ -7078,7 +7078,7 @@ function execute(target){
  const hpBeforeFinisher=p.hp;
  p.hp=clamp(p.hp+14,0,p.maxHp);spawnHealVfx(p.hp-hpBeforeFinisher,'finisher');
  p.credits+=target.type==='boss'?190:65;
- hurtEnemy(target,target.type==='boss'?260:999,100);
+ hurtEnemy(target,target.type==='boss'?260:999,100,'execution');
  screenShake=25;screenTint=.6;hitStop=.15;
  if(target.type!=='intruder')fxBurst(target.x,target.y-130,target.type==='boss'?'red':'gold',2.4);
  spawnCombatWordFx('execution',target);vibrateImpact('execution',true);void 0 /* previous mechanical cue disabled */; /* The hit itself drives the ballistic report. */return true
@@ -7094,7 +7094,7 @@ function awardEnemyKill(e){
  // All enemy kills, including status damage and the final boss, get one raster dissolve.
  spawnEnemyDeathBitmap(e);
 }
-function hurtEnemy(e,dmg,poise){
+function hurtEnemy(e,dmg,poise,specialKind=''){
  if(e.dead||intruderEntering(e))return;
  runStats.hits++;
  gainCombatUpgradeCharge(9+(p.dashSmash?9:0)+(p.airAttack?12:0)+(p.counterBoost?15:0));
@@ -7103,9 +7103,12 @@ function hurtEnemy(e,dmg,poise){
  e.parryScreenDir=0;e.parryScreenEdge=null;
  e.encountered=true; // A hit counts as detection even through long stun / knockback.
  e.hp-=dmg;
- // Five no-repeat hand-painted hit effects for all real enemy damage events.
+ // Layer painted victim impacts over the signature attack animation at the
+ // same confirmed contact. A fatal special hit gets one as well.
+ const specialContact=!!specialKind||!!p.dashSmash||!!p.counterBoost||
+  !!p.airAttack||p.airKickPhase==='dive';
  spawnBasicContactFx(e,p.moveName||'jab',dmg>=70||e.type==='boss'||e.type==='elite'||e.type==='intruder');
- if(e.hp>0)spawnEnemyHitBitmap(e,dmg);
+ if(e.hp>0||specialContact)spawnEnemyHitBitmap(e,dmg,specialContact);
  if(e.hp<=0){playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e)}
  else if(Math.random()<.62)playCombatVoice('enemyHurt',e);
  e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:(e.type==='elite'||e.type==='intruder')?.80:1),0,e.maxPoise);
@@ -7686,7 +7689,7 @@ function heelLandingShockwave(powered=false){
   const fromX=enemy.x,fromY=enemy.y;
   const push=fromX===p.x?p.facing:Math.sign(fromX-p.x);
   const beforeHp=enemy.hp;
-  hurtEnemy(enemy,(skill.damage+p.damageBoost)*(1+modRank('power')*.16),45+modRank('jumpspeed')*14);
+  hurtEnemy(enemy,(skill.damage+p.damageBoost)*(1+modRank('power')*.16),45+modRank('jumpspeed')*14,'jump');
   recordStyleDamage('jump',beforeHp,enemy);
   const resist=enemy.type==='boss'?.33:(enemy.type==='elite'||enemy.type==='intruder')?.78:
    enemy.type==='guard'?.88:1;
@@ -7727,7 +7730,7 @@ function applyForwardSpecialSplash(kind,impactX,impactY,directTargets,fullDamage
   const falloff=clamp(1-.20*Math.sqrt(ellipse),.78,1);
   const damage=fullDamage*(dash?.58:.70)*falloff;
   const centerY=enemy.y,beforeHp=enemy.hp;
-  hurtEnemy(enemy,damage,(dash?33:45)+rank*(dash?8:14));
+  hurtEnemy(enemy,damage,(dash?33:45)+rank*(dash?8:14),kind);
   recordStyleDamage(dash?'dash':'parry',beforeHp,enemy);
   const resist=enemy.type==='boss'?.36:(enemy.type==='elite'||enemy.type==='intruder')?.70:
    enemy.type==='guard'?.82:1;
@@ -7756,7 +7759,7 @@ function attackCheck(){
   const dmg=(skill.damage+p.damageBoost)*(1+modRank('power')*.16);
   const centerX=e.x,centerY=e.y;
   const beforeHp=e.hp;
-  hurtEnemy(e,Math.min(e.hp,dmg),65+modRank('counter')*25);
+  hurtEnemy(e,Math.min(e.hp,dmg),65+modRank('counter')*25,'counter');
   recordStyleDamage('parry',beforeHp,e);
   spawnParryCounterFx(p,e,skill.visual); // true parry follow-up contact only
   // Only a *landed* chase punch brings back the full camera/echo/slow-motion beat.
@@ -7834,7 +7837,8 @@ function attackCheck(){
  }
  directTargets.add(e);
  const beforeHp=e.hp;
- hurtEnemy(e,dmg,p.counterBoost?100:armed?([28,31,47][p.comboIdx]||28):(poise[p.moveName]||28));
+ hurtEnemy(e,dmg,p.counterBoost?100:armed?([28,31,47][p.comboIdx]||28):(poise[p.moveName]||28),
+  p.dashSmash?'dash':p.counterBoost?'counter':p.airAttack||p.airKickPhase==='dive'?'jump':'');
  // Only confirmed, directly landed BASIC melee attacks get these mini-bursts.
  // Dash pierce, ground slam and parry chase keep their own bespoke artwork.
  // Damage handler already emits one contact bitmap for every real strike.
@@ -7884,7 +7888,7 @@ function attackCheck(){
   triggerSpecialContactSlowMo('dash',dashImpactTarget);
   applyForwardSpecialSplash('dash',dashImpactX,dashImpactY,directTargets,damage);
  }
- if(armed){p.weapon--;if(p.weapon<=0){flash('OVERLOAD SHATTER!',1.7);screenShake=27;screenTint=.9;sound('break');fxBurst(p.x+75*p.facing,p.y-120,'red',3);for(const e of enemies)if(!e.dead&&Math.hypot(e.x-p.x,(e.y-p.y)*1.4)<310){hurtEnemy(e,85,105)}}}
+ if(armed){p.weapon--;if(p.weapon<=0){flash('OVERLOAD SHATTER!',1.7);screenShake=27;screenTint=.9;sound('break');fxBurst(p.x+75*p.facing,p.y-120,'red',3);for(const e of enemies)if(!e.dead&&Math.hypot(e.x-p.x,(e.y-p.y)*1.4)<310){hurtEnemy(e,85,105,'overload')}}}
  if(hits>0&&p.attackDriveRemaining>0&&p.attackDriveTotal>0){
   // Commit the hit's momentum into forward pressure; avoid backward recoil.
   const carry=Math.min(p.attackDriveRemaining,21);
@@ -8042,13 +8046,20 @@ function zEnemyHitPointProfile(move='jab',heavy=false){
  if(heavy){jitterX=20;jitterY=15}
  return {height,jitterX,jitterY};
 }
-function spawnEnemyHitBitmap(enemy,damage=0){
- if(!enemy||enemy.dead||fx.length>=108)return false;
- // Fast combo frames get new impacts, but do not stack a flickering orb.
- if(time-(enemy.lastBitmapHitAt??-99)<.060)return false;
+function spawnEnemyHitBitmap(enemy,damage=0,specialContact=false){
+ if(!enemy||enemy.dead)return false;
+ // Preserve one bitmap per special-hit enemy when many effects overlap.
+ // Retire only older ordinary contact art, never slam/parry/dash/death VFX.
+ if(fx.length>=108){
+  if(!specialContact)return false;
+  const old=fx.findIndex(f=>f.kind==='basicHitSprite'||f.kind==='enemyHitBitmap');
+  if(old>=0)fx.splice(old,1);
+  else if(fx.length>=120)return false;
+ }
+ if(!specialContact&&time-(enemy.lastBitmapHitAt??-99)<.060)return false;
  enemy.lastBitmapHitAt=time;
  const style=zEnemyFxSize(enemy),foot=zEnemyFootWorld(enemy);
- const heavy=damage>=70||!!p.dashSmash||!!p.counterBoost||!!p.airAttack;
+ const heavy=specialContact||damage>=70||!!p.dashSmash||!!p.counterBoost||!!p.airAttack;
  const move=p.moveName||'jab',point=zEnemyHitPointProfile(move,heavy);
  const dir=p.facing<0?-1:1;
  const side=clamp(bodyHalfX(enemy)*.30,14,enemy.type==='boss'?70:58);
@@ -8056,7 +8067,7 @@ function spawnEnemyHitBitmap(enemy,damage=0){
  const y=foot.y-Math.max(0,enemy.z||0)-
    style.height*point.height+rnd(-point.jitterY,point.jitterY);
  const duration=Z_ENEMY_BITMAP_ART.hit.duration;
- fx.push({kind:'enemyHitBitmap',contactEnemy:enemy,
+ fx.push({kind:'enemyHitBitmap',contactEnemy:enemy,specialContact:!!specialContact,
   x,y,width:style.hit*(heavy?1.10:1),
   strikeHeight:point.height,move,age:0,life:duration,maxLife:duration});
  return true;
@@ -9421,7 +9432,7 @@ function zHybridVfxForeground(){
 function zDrawInLayer(layer,isFront){
  return layer==='all'||(layer==='front')===!!isFront;
 }
-function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);const left=cameraX-820,right=cameraX+W+820;for(const f of fx){if(f.x<left||f.x>right)continue;
+function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);const left=cameraX-820,right=cameraX+W+820;const hitOverlays=[];for(const f of fx){if(f.x<left||f.x>right)continue;
  // Hit flashes always cover the struck character; dying ash always appears beneath actors.
  const front=f.kind==='enemyHitBitmap'?true:f.kind==='enemyDeathBitmap'?false:
   (zIsSignatureVfx(f)||!!selection?.fx.has(f));
@@ -9429,7 +9440,8 @@ function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);
  if(f.kind==='upgradeVfxSprite'){drawUpgradeVfx(f);continue;}
   if(f.kind==='healVfxSprite'){drawHealVfx(f);continue;}
   if(f.kind==='basicHitSprite'){drawBasicContactFx(f);continue;}
-  if(f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap'){drawEnemyBitmapFx(f);continue;}
+  if(f.kind==='enemyHitBitmap'){hitOverlays.push(f);continue;}
+  if(f.kind==='enemyDeathBitmap'){drawEnemyBitmapFx(f);continue;}
  if(f.kind==='combatWordSprite')continue; // Draw once in fixed HUD, outside world camera.
  if(f.kind==='dashPierceSprite'){drawDashPierceSprite(f);continue;}
   if(f.kind==='parryCounterSprite'){drawParryCounterSprite(f);continue;}
@@ -9485,7 +9497,9 @@ function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);
   }
   continue;
  }
- let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}if(layer!=='back'&&p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p);}
+ let a=img['burst_'+f.color];if(!a?.complete||!a.naturalWidth)continue;const scale=(1-f.life/f.maxLife)*.6+.48;const sz=115*f.scale*scale;ctx.save();ctx.globalAlpha=clamp(f.life/f.maxLife,0,1);ctx.translate(f.x,f.y);ctx.rotate(f.rotation);ctx.drawImage(a,-sz/2,-sz/2,sz,sz);ctx.restore()}
+ for(const hit of hitOverlays)drawEnemyBitmapFx(hit);
+ if(layer!=='back'&&p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p);}
 // Combat-only text overlays are intentionally disabled; painted VFX remain layered.
 // Hybrid by default. Use ?vfx=back or ?vfx=front for the old all-one-layer views.
 const Z_VFX_MODE=/(?:\?|&)vfx=front(?:&|$)/i.test(location.search||'')?'front':
