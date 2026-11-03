@@ -1398,13 +1398,45 @@ test('sidekick boot crossing the source cell grid is recovered with foot-safe sa
  }
  assert(html.includes("key==='sidekick'&&url==='./assets/z-attacks-20/sidekick.webp'"),
  'special reading is enabled only on the approved local sidekick atlas');
- assert(html.includes("prepareZCells(im,localSidekickFootFix?'sidekick-local':'')"),
+ assert(html.includes("localSidekickFootFix?'sidekick-local':"),
  'the loaded atlas uses the correct frame extraction path');
  const anchor=html.slice(html.indexOf('function prepareZCells(im,'),html.indexOf('function loadMaskedMove(key)'));
- assert(anchor.includes("crop.readWidth,canvas.height,0,0,crop.readWidth,canvas.height"),
+ assert(anchor.includes("crop.readWidth,canvas.height,crop.padLeft,0,crop.readWidth,canvas.height"),
  'drawImage copies the extended source shoe before background removal');
  assert(anchor.includes('r.canvas,union.x,union.y,union.w,union.h'),
  'the same full-body union crop applies to every output frame');
+});
+test('Superman Punch third frame restores the extended fist and rear boot without neighbor-frame leakage',()=>{
+ const cw=340,main=t.zCellSamplingSpec('superman_punch-local',2,cw,1),pad=Math.ceil(cw*.17);
+ assert.equal(main.canvasWidth,338+pad*2,'all 8 superman frames receive equal safe margins');
+ assert.equal(main.readWidth,338,'normal source core is still cell-exact');
+ assert.equal(main.padLeft,pad,'all poses share the original cell center');
+ assert.equal(main.spillLeft,pad,'the flying rear boot is recovered beyond the cell');
+ assert.equal(main.spillRight,pad,'the fully outstretched fist is recovered beyond the cell');
+ for(const i of [0,1,3,4,5,6,7]){
+  const crop=t.zCellSamplingSpec('superman_punch-local',i,cw,1);
+  assert.equal(crop.canvasWidth,main.canvasWidth,'no size flicker between poses');
+  assert.equal(crop.padLeft,pad,'same foot and body alignment');
+  assert.equal(crop.spillLeft,0,'other poses cannot steal left neighboring frame pixels');
+  assert.equal(crop.spillRight,0,'other poses cannot steal right neighboring frame pixels');
+ }
+ assert(html.includes("key==='superman_punch'&&url==='./assets/z-attacks-20/superman_punch.webp'"),
+  'only the approved locally hosted original Superman Punch is patched');
+ assert(html.includes("localSupermanLimbFix?'superman_punch-local':''"),
+  'loader selects the matching oversized-frame extraction');
+ const cropCode=html.slice(html.indexOf('function prepareZCells('),html.indexOf('// Masked cyberpunk grunt A:'));
+ assert(cropCode.includes("const upper=Math.floor(canvas.height*.55)"),
+  'the enemy-facing tip samples only the upper-half source strip');
+ assert(cropCode.includes("const lowerStart=Math.floor(canvas.height*.40)"),
+  'the flying boot samples only the lower-half strip');
+ assert(cropCode.includes('sx+crop.readWidth,sy,crop.spillRight,upper'),
+  'the wrist and glove are truly sampled from their source image');
+ assert(cropCode.includes('sx-crop.spillLeft,sy+lowerStart,crop.spillLeft,lower'),
+  'the rear boot is genuinely sampled from the original image');
+ assert(cropCode.includes("const targetW=moveKey==='superman_punch-local'?320:240"),
+  'the complete flying pose remains at a readable scale, not shrunk');
+ assert(cropCode.includes('r.canvas,union.x,union.y,union.w,union.h'),
+  'all eight frames continue to share the same foot-anchored union');
 });
 test('offscreen arrows ping-pong across eight hand-painted frames at 8 fps',()=>{
  const atlas=fs.readFileSync(path.join(__dirname,'../assets/ui/edge-arrows-animated.webp'));
