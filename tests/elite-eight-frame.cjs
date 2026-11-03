@@ -78,8 +78,8 @@ assert(html.includes('const active=Z_ENEMY_STATUS_VFX.filter(s=>e[s.status]>0);'
  'only genuinely active ailments may appear on an Iron Mask elite');
 assert(!html.includes("if(e.type==='elite')continue;"),
  'elite damage-over-time states now use the same visible status art as other mobs');
-assert(html.includes('drawUpgradeVfxLoop(state.sprite,x,y,width,1,cycle,dir,slot.rotation)'),
- 'active elite status is opaque, with no small blinking alpha pulse');
+assert(html.includes('drawUpgradeVfxLoop(state.sprite,body.x,body.y,width,1,cycle,dir,slot.rotation)'),
+ 'active elite status is opaque and centered on the moving enemy torso');
 assert(!html.includes('const pulse=.26+.13*Math.abs'),
  'remove the old blinking semi-transparent satellite effect');
 assert(html.includes("spawnGroundSlamFx(e.x+e.face*82,e.y,1.46,'elite')"),
