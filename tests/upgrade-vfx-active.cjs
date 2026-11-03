@@ -74,11 +74,11 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  // Execute the actual ongoing-ailment drawing code against a Canvas mock.
  const start=html.indexOf('const Z_ENEMY_FX_SLOTS='),end=html.indexOf('function drawHeroModAura(',start);
  assert(start>0&&end>start);
- const draws=[],effects=Object.fromEntries(names.map(id=>[id,{ready:true,image:{naturalWidth:2048,naturalHeight:256,complete:true},drawn:0}]));
+ const draws=[],alphaAtDraw=[],translations=[],effects=Object.fromEntries(names.map(id=>[id,{ready:true,image:{naturalWidth:2048,naturalHeight:256,complete:true},drawn:0}]));
  const enemy={x:460,y:570,renderX:462,renderY:568,z:0,slot:3,face:-1,dead:false,
   shock:1,burn:0,bleed:0,freeze:0,shockPower:2};
- const ctx={save(){},restore(){},translate(){},rotate(){},scale(){},
-  drawImage(...args){draws.push(args)},globalAlpha:1,filter:'none'};
+ const ctx={save(){},restore(){},translate(x,y){translations.push([x,y])},rotate(){},scale(){},
+  drawImage(...args){draws.push(args);alphaAtDraw.push(this.globalAlpha)},globalAlpha:1,filter:'none'};
  const world={Z_UPGRADE_VFX:effects,ctx,clamp:(x,a,b)=>Math.max(a,Math.min(b,x)),
   enemies:[enemy],attributeFx:[],time:11,cameraX:0,W:1280,Math,MOD_META:{},img:{},
    zDrawInLayer:(layer,isFront)=>layer==='all'||(layer==='front')===!!isFront};
@@ -97,15 +97,41 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  draws.length=0;enemy.bleed=0;enemy.freeze=1;enemy.freezePower=2;
  world.paintStatuses();assert.strictEqual(draws.at(-1)[0],effects.chain.image);
  assert(shockDisplayWidth>draws.at(-1)[7]*2,'shock status is visibly more powerful than ice, despite sharing bitmap');
+ if(filename==='index.html'){
+  assert(shockDisplayWidth>230,'ongoing electric effect has substantial full-screen legibility');
+  assert(alphaAtDraw.slice(-4).every(v=>v===1),'each active status sprite renders fully opaque');
+ }
+ 
  draws.length=0;enemy.shock=enemy.burn=enemy.bleed=enemy.freeze=1;
  world.paintStatuses();assert.equal(draws.length,4,'burn, shock, bleed and freeze all remain visible together');
  assert.equal(new Set(draws.map(d=>d[0])).size,3,'all 4 states draw even when shock and freeze share the electric source PNG');
+ if(filename==='index.html'){
+  assert(alphaAtDraw.slice(-4).every(v=>v===1),'four simultaneous statuses keep full opacity without pulsating translucency');
+  assert.equal(new Set(translations.slice(-4).map(v=>v.join(':'))).size,4,
+    'burn/shock/bleed/freeze retain four separate body-adjacent positions');
+  // Do not revive an idle ghost on elites: render only while actual ailment timers are active.
+  draws.length=0;enemy.shock=1;enemy.burn=enemy.bleed=enemy.freeze=0;
+  enemy.type='elite';world.paintStatuses();
+  assert.equal(draws.length,1,'a genuinely afflicted Iron Mask elite shows its full opaque status');
+  assert(draws[0][7]>shockDisplayWidth*1.07,'elite status sprite is bigger than regular grunt');
+  assert.equal(alphaAtDraw.at(-1),1,'elite status is fully opaque');
+  draws.length=0;enemy.type='boss';world.paintStatuses();
+  assert.equal(draws.length,1,'boss status is visible, not excluded from ongoing effects');
+  assert(draws[0][7]>shockDisplayWidth*1.15,'boss gets larger readable status art');
+  draws.length=0;enemy.shock=0;world.paintStatuses();
+  assert.equal(draws.length,0,'elite/boss has no stray glowing status when timer ends');
+  delete enemy.type;
+ }
  draws.length=0;enemy.dead=true;
  world.paintStatuses();assert.equal(draws.length,0,'do not render persistent VFX on corpses');
  // Transient element hit feedback must also use the new clean RGBA strips.
  world.attributeFx=[{mod:'fire',x:432,y:438,life:.25,maxLife:.4,scale:1.1}];
  world.paintStatuses();assert.equal(draws.length,1,'draw impact PNG');
  assert.strictEqual(draws[0][0],effects.nova.image,'no legacy filtered gold bitmap on fire impact');
+ if(filename==='index.html'){
+  assert.equal(alphaAtDraw.at(-1),1,'short elemental contact flash is solid, not 0-60% faded');
+  assert(draws[0][7]>215,'short-lived elemental contact uses an enlarged bitmap');
+ }
  draws.length=0;
  world.attributeFx=[{mod:'ice',x:432,y:438,life:.25,maxLife:.4,scale:1.1}];
  world.paintStatuses();assert.strictEqual(draws[0][0],effects.chain.image,'ice impact avoids old guard/shield bitmap');
