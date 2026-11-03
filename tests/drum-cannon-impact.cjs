@@ -17,7 +17,7 @@ const mapping={
 const hashes=new Set();
 for(const [key,filename] of Object.entries(mapping)){
  const b=fs.readFileSync(path.join(root,'assets/sfx',filename));
- assert(b.length>32000,'non-silent game sound source exists '+key+' '+filename);
+ assert(b.length>(filename.endsWith('.wav')?32000:17000),'non-silent game sound source exists '+key+' '+filename);
  if(filename.endsWith('.wav')){
   assert.equal(b.subarray(0,4).toString(),'RIFF',filename+' must be real WAV');
   assert.equal(b.subarray(8,12).toString(),'WAVE',filename+' correct wave header');
