@@ -2454,14 +2454,39 @@ test('global parry cinematic slows camera world clock, hero, and parried foe in 
  const resumed=t.getGameTime();t.update(1/60);
  assert(Math.abs(t.getGameTime()-resumed-1/60)<.0001,'world returns to 1x');
 });
-test('parry chase remains attack-input responsive during full-screen slow motion',()=>{
+test('parry chase is full-speed after input; actual counter contact restores slow motion',()=>{
  g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2350;t.p.y=570;
  const e=t.makeEnemy('assassin',t.p.x+82,t.p.y,0);e.hp=e.maxHp=950;
  t.setEnemies([e]);t.parry();t.enemyAttack(e);
+ assert(t.getSlowMotion()>=1.39,'parry success initially slows the world');
+ assert(t.getHitStop()>=.19,'parry success keeps its initial hit freeze');
  t.startAttack();
- assert.equal(t.p.riposteChasing,true,'counter chase starts immediately from fresh input despite cinematic');
- assert(t.getSlowMotion()>.9,'chase begins while cinematic slow is active');
+ assert.equal(t.p.riposteChasing,true,'chase starts immediately from accepted attack input');
  assert.equal(t.p.riposteChaseTarget,e,'original parry target retained');
+ assert.equal(t.getSlowMotion(),0,'no old parry slow during the chase');
+ assert.equal(t.getSlowVictim(),null,'parried target returns to 1x during chase');
+ assert.equal(t.getRiposteCinematicTime(),0,'no prior counter cinematic during the chase');
+ assert.equal(t.getHitStop(),0,'the parry freeze cannot hold up the chase');
+ const timeBefore=t.getGameTime();
+ t.update(1/60);
+ assert(Math.abs(t.getGameTime()-timeBefore-1/60)<.0001,'world clock advances at normal speed during chase');
+ assert.equal(t.getSlowMotion(),0,'chase stays at normal speed across subsequent frames');
+ // Contact brings the second slow-motion beat back, without changing chase motion.
+ t.p.riposteChasing=false;t.p.riposteStrikeTarget=e;
+ t.attackCheck();
+ assert(t.getSlowMotion()>=1.47,'landed riposte restores the powerful slow motion');
+ assert(t.getRiposteCinematicTime()>=1.07,'contact starts the second cinematic phase');
+});
+test('manual dash following parry also clears slow motion, without altering its startup feedback',()=>{
+ g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2550;t.p.y=570;
+ const e=t.makeEnemy('assassin',t.p.x+80,t.p.y,0);
+ t.setEnemies([e]);t.parry();t.enemyAttack(e);
+ assert(t.getSlowMotion()>=1.39,'parry slow starts on success');
+ assert.equal(t.dodge(),true,'dash is accepted within the parry follow-up window');
+ assert.equal(t.getSlowMotion(),0,'dash removes parry slow');
+ assert.equal(t.getSlowVictim(),null,'dash removes the leftover target slow');
+ const before=t.getGameTime();t.update(1/60);
+ assert(Math.abs(t.getGameTime()-before-1/60)<.0001,'manual dash advances the world at 1x');
 });
 test('parry shield is a real eight-frame transparent PNG',()=>{
  const png=fs.readFileSync(path.join(__dirname,'../assets/fx/parry-shield.png'));
