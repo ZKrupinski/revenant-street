@@ -6155,7 +6155,7 @@ function selectMenuItem(step=0){
  menuPad.index=(menuPad.index+step+items.length*4)%items.length;
  for(let i=0;i<items.length;i++)items[i].classList.toggle('pad-selected',i===menuPad.index);
  const selected=items[menuPad.index];
- if(step||wasTitleNavPending)playUiMechanical('move');
+ if((step||wasTitleNavPending)&&typeof playUiMechanical==='function')playUiMechanical('move');
  selected.focus?.({preventScroll:true});
  if(!$('menu').classList.contains('title-dialog')&&!$('menu').classList.contains('reward-dialog')&&!$('menu').classList.contains('result-dialog'))selected.scrollIntoView?.({block:'nearest',inline:'nearest'});
  return selected;
@@ -6200,7 +6200,7 @@ function hubMenuNavigate(dx,dy){
  menuPad.index=items.indexOf(target);
  items.forEach((b,i)=>b.classList.toggle('pad-selected',i===menuPad.index));
  target.focus?.({preventScroll:true});
- playUiMechanical('move');
+ if(typeof playUiMechanical==='function')playUiMechanical('move');
  // HUB fits inside the 16:9 game frame; never auto-scroll the entire menu.
  return target;
 }
