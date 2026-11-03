@@ -9187,7 +9187,7 @@ function prepareParrySuccessCells(){
 // cluster, promote only one or two accents; all others remain behind.
 const Z_FRONT_SPECIAL_FX=new Set([
  'combatWordSprite','parrySuccess10','parryCounterSprite','groundSlamSprite',
- 'dashPierceSprite','dashTrailSprite','enemyDeathBitmap'
+ 'dashPierceSprite','dashTrailSprite','enemyHitBitmap'
 ]);
 function zIsSignatureVfx(f){return !!(f.specialAttackFx||Z_FRONT_SPECIAL_FX.has(f.kind));}
 function zHybridVfxForeground(){
@@ -9222,7 +9222,8 @@ function zHybridVfxForeground(){
    score:ef.mod==='shock'?88:ef.mod==='fire'?62:52});
  }
  for(const f of fx){
-  if(zIsSignatureVfx(f))continue;
+  // Death evaporation is always behind actors, never promoted by multi-effect layering.
+  if(f.kind==='enemyDeathBitmap'||zIsSignatureVfx(f))continue;
   const target=f.contactEnemy||f.target||nearest(f.x,f.y);
   const score=f.kind==='upgradeVfxSprite'
    ?(f.upgrade==='crit'?105:f.upgrade==='chain'?93:f.upgrade==='power'?71:64)
@@ -9248,7 +9249,10 @@ function zDrawInLayer(layer,isFront){
  return layer==='all'||(layer==='front')===!!isFront;
 }
 function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);const left=cameraX-820,right=cameraX+W+820;for(const f of fx){if(f.x<left||f.x>right)continue;
- if(!zDrawInLayer(layer,zIsSignatureVfx(f)||selection?.fx.has(f)))continue;
+ // Hit flashes always cover the struck character; dying ash always appears beneath actors.
+ const front=f.kind==='enemyHitBitmap'?true:f.kind==='enemyDeathBitmap'?false:
+  (zIsSignatureVfx(f)||!!selection?.fx.has(f));
+ if(!zDrawInLayer(layer,front))continue;
  if(f.kind==='upgradeVfxSprite'){drawUpgradeVfx(f);continue;}
   if(f.kind==='healVfxSprite'){drawHealVfx(f);continue;}
   if(f.kind==='basicHitSprite'){drawBasicContactFx(f);continue;}
