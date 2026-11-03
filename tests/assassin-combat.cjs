@@ -1488,6 +1488,42 @@ test('audit-backed hero limb overscan is limited to verified punches, boots and 
  assert(source.includes('const targetH=Z_LOCAL_HERO_LIMB_OVERSCAN[moveKey]?.top?.length?272:254'),
   'raised-fist poses keep their established head/torso size');
 });
+test('remote masked raider fall and get-up preserve 14 audited edge-crossing limbs',()=>{
+ const cw=336;
+ const cases={
+  'masked-hitFly':{2:{right:true},4:{right:true}},
+  'masked-fall':{0:{right:true},1:{left:true},4:{right:true},
+   5:{left:true,right:true},6:{left:true,right:true},7:{left:true}},
+  'masked-getup':{0:{right:true},1:{left:true,right:true},
+   2:{bottom:true},3:{bottom:true},6:{top:true},7:{top:true}}
+ };
+ for(const [name,perFrame] of Object.entries(cases)){
+  const baseline=t.zCellSamplingSpec(name,0,cw,1);
+  for(let frame=0;frame<8;frame++){
+   const spec=t.zCellSamplingSpec(name,frame,cw,1),expected=perFrame[frame]||{};
+   assert.equal(spec.canvasWidth,baseline.canvasWidth,name+' all frames keep constant width');
+   assert.equal(spec.padLeft,baseline.padLeft,name+' all frames retain center anchor');
+   assert.equal(spec.padTop,baseline.padTop,name+' all frames retain top anchor');
+   for(const side of ['left','right','top','bottom']){
+    const prop='spill'+side[0].toUpperCase()+side.slice(1);
+    assert.equal(spec[prop]>0,!!expected[side],name+' pose '+frame+' '+side);
+   }
+  }
+ }
+ for(const unaffected of ['masked-attack','masked-run','masked-hitHead']){
+  const c=t.zCellSamplingSpec(unaffected,3,cw,1);
+  assert.equal(c.canvasWidth,334,'other enemy motions keep original crop');
+  assert.equal(c.padTop,0,'untouched enemy art keeps original baseline');
+ }
+ assert(html.includes("prepareZCells(im,Z_MASKED_EDGE_SPANS['masked-'+key]?'masked-'+key:'')"),
+  'only audited masked motions use restored source sampling');
+ assert(html.includes('if(crop.spillRight&&!crop.maskedFrame)'),
+  'generic upper-body sampling never borrows an adjacent masked pose');
+ assert(html.includes('if(crop.spillLeft&&!crop.maskedFrame)'),
+  'generic boot sampling never borrows an adjacent masked pose');
+ assert(html.includes("for(const side of ['top','bottom'])"),
+  'get-up row-seam limbs have explicit x ranges instead of neighbor-wide strips');
+});
 test('offscreen arrows ping-pong across eight hand-painted frames at 8 fps',()=>{
  const atlas=fs.readFileSync(path.join(__dirname,'../assets/ui/edge-arrows-animated.webp'));
  assert.equal(atlas.toString('ascii',0,4),'RIFF','WebP signature');
