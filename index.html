@@ -9757,7 +9757,16 @@ function drawRiotGuard(e,x,y,z){
 if(USE_HF_SHIELD)loadRiotGuard('idle');
 // Status effects retain painted pixel VFX; overhead emoji/text chips are hidden.
 function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=actorShakeOffset(a);const x=Math.round((isP?a.x:(a.renderX??a.x))+sx),y=Math.round((isP?a.y:(a.renderY??a.y))+sy),z=a.z||0;const boss=!isP&&a.type==='boss';const s=isP?1:boss?1.5:2.12;const act=isP?getZMove():'';
- if(isP){ellipseShadow(x,y,1.06,.45);drawHeroAfterimages();drawHeroModAura(x,y,z);paintZ(x,y,z);return;}
+ if(isP){
+  ellipseShadow(x,y,1.06,.45);
+  // Draw the green healing bitmap AFTER the ground shadow but BEFORE the
+  // protagonist sprite, so heal/regen/leech never cover the character.
+  drawHeroHealingOverlays();
+  drawHeroAfterimages();
+  drawHeroModAura(x,y,z);
+  paintZ(x,y,z);
+  return;
+ }
  if(a.type==='raider'){drawMaskedGrunt(a,x,y,z);return;}
  if(a.type==='intruder'){
   if(intruderEntering(a))drawIntruderEntry(a,x,y);
@@ -9994,7 +10003,7 @@ function draw(){
  actors.forEach(drawActor);
  if(Z_VFX_MODE==='front')drawEffects('all');
  else if(Z_VFX_MODE==='hybrid')drawEffects('front',vfxSelection);
- drawHeroHealingOverlays(); // Green healing overlays ALL characters in every VFX mode.
+ // Healing draws only in the protagonist's own back layer, immediately before paintZ().
  // No overhead damage numbers, status chips or combat warning text.
  ctx.restore();syncZSprite();drawCombatWordHud();
  if(screenTint>0){ctx.globalAlpha=screenTint*.32;ctx.fillStyle='#ff335d';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}
