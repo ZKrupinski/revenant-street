@@ -63,9 +63,22 @@ for(const [type,[hitSize,deathSize]] of Object.entries(expected)){
   const d=draws[0];
   assert.deepEqual(d.slice(1,5),[(frame%4)*512,Math.floor(frame/4)*512,512,512],
    'exact cell without adjacent frame bleed '+type+':'+frame);
-  assert.equal(d[6],580-deathSize*422/512,'visible ash pile stays foot-aligned '+type+':'+frame);
+  assert.equal(d[6],580-77-deathSize*422/512+Math.max(35,Math.min(60,deathSize*.10)),
+   'ash pile aligns below the currently airborne sprite feet '+type+':'+frame);
   assert.equal(d[7],deathSize);assert.equal(d[8],deathSize);
  }
+ // A dying body keeps moving during knockback; the VFX must FOLLOW its art,
+ // not remain where HP first reached zero.
+ e.renderX=735;e.renderY=552;e.z=31;
+ death.age=death.maxLife*.35;
+ draws.length=0;world.drawEnemyBitmapFx(death);
+ assert.equal(death.x,735,'death VFX X follows moving sprite '+type);
+ assert.equal(death.footY,521,'death VFX Y follows moving airborne foot '+type);
+ assert.equal(draws[0][5]+deathSize/2,735,'effect stays centered underneath sprite '+type);
+ e.renderX=700;e.renderY=570;e.z=0;draws.length=0;
+ world.drawEnemyBitmapFx(death);
+ assert.equal(death.x,700,'death effect follows continuing slide '+type);
+ assert.equal(death.footY,570,'death effect settles with landed sprite '+type);
 }
 const e=makeEnemy('raider',0);
 world.p.moveName='jab';world.time+=1;
@@ -84,4 +97,4 @@ const d=fx.at(-1);draws.length=0;world.drawEnemyBitmapFx(d);
 assert(Math.abs((draws[0][5]+d.width/2)-edge.x)<=36,'edge correction limited to 36px, preserve feet');
 assert(html.includes("if(e.hp>0)spawnEnemyHitBitmap(e,dmg);"),'only living enemy takes hit burst');
 assert(html.includes('spawnEnemyDeathBitmap(e);'),'death explosion spans all enemy types');
-console.log('PASS: six enemy sizes, accurate hit-height offsets, fixed foot-line on 8 frames, source-cell clipping safety');
+console.log('PASS: six enemy sizes, hit-height offsets, death sprite-follow anchors through knockback/landing, 8-frame crop safety');
