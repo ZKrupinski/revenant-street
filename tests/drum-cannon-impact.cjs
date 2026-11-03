@@ -31,11 +31,14 @@ for(const entry of ['index.html','play-fixed-20261102.html']){
   assert(html.includes(key+":'./assets/sfx/z-lowlat-v9-"+key+".wav?v=zeroLeadV9'"),
    entry+' must use real decoded PCM V9 sample '+key);
  }
+ const expectedAudioVersion=entry==='index.html'?
+  "version:'zero-lead-action-counter-v10-20261103'":
+  "version:'zero-lead-pcm-v9-20261103'";
  for(const phrase of [
   "playImpactSound('parry',1.65)","playImpactSound('counter',1.35)",
   "playImpactSound('parry',.90)","playImpactSound('parry',.85)",
   "playImpactSound('counter',1.30)","playImpactSound('counter',powered?1.35:1.08)",
-  "version:'zero-lead-pcm-v9-20261103'",
+  expectedAudioVersion,
   "Object.keys(impactSfxBuffers).length===11",
   "function nextImpactAttackKey()","if(bag[0]===impactLastAttackKey)",
   "const duration=key==='parry'?2.28","const release=key==='parry'?Math.min(.34",
@@ -43,6 +46,16 @@ for(const entry of ['index.html','play-fixed-20261102.html']){
   "function playUpgradeSfx(type='confirm')",
   "playUpgradeSfx('confirm')","playUpgradeSfx('reroll')"
  ])assert(html.includes(phrase),entry+' missing cue or original 8-frame combat wiring '+phrase);
+ if(entry==='index.html'){
+  for(const action of ['parry','dash','jump'])
+   assert(html.includes("playActionOnset('"+action+"')"),'V10 action onset missing '+action);
+  assert(html.includes("source.connect(hp).connect(lp).connect(gain).connect(key==='counter'?impactCounterBus:impactBus)"),
+   'V10 counter uses a louder independent compressed sound bus');
+  assert(html.includes("const strength=Math.max(.7,Math.min(key==='counter'?1.55:1.28,intensity))"),
+   'V10 counter retains extra dynamic headroom relative to basic strikes');
+  assert(html.includes("audio=new AC({latencyHint:'interactive'})"),
+   'V10 requests low latency when initializing WebAudio');
+ }
  const a=html.indexOf('// PROJECT Z AUDIO V9:'),b=html.indexOf('// Single active controller',a);
  assert(a>0&&b>a,'V9 master active in both HTML entrypoints');
  const engine=html.slice(a,b),start=html.indexOf('function startAttack()'),
@@ -70,4 +83,4 @@ for(const entry of ['index.html','play-fixed-20261102.html']){
  assert(!engine.includes('__revenantBgm'),'combat bus does not duck music');
  assert(!html.includes("sound('attack')"),'old chirping arcade attack sound stays removed');
 }
-console.log('PASS: 13 measured real PCM sounds <3ms onset, instant attack/counter input, preserved hit rumble and V8 sample swap');
+console.log('PASS: V9 13 zero-lead PCM recordings, V10 instant action onsets, louder isolated counter, preserved V8 sound identities');
