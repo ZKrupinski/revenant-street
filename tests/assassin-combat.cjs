@@ -1379,7 +1379,7 @@ test('approved arcade joystick uses bitmap disc and separately movable red ball,
 test('sidekick boot crossing the source cell grid is recovered with foot-safe sample widths',()=>{
  const cw=336;
  const overflow=t.zCellSamplingSpec('sidekick-local',5,cw,1);
- assert.equal(overflow.canvasWidth,365,'all 8 local sidekick canvases share width');
+ assert.equal(overflow.canvasWidth,365+Math.ceil(cw*.14),'sidekick also has a leftward upper-limb margin across all poses');
  assert.equal(overflow.readWidth,365,'6th sidekick frame reads the boot beyond the original 334px crop');
  assert(overflow.bleed>=25,'allow enough room for the full extended shoe tip');
  const neighboring=t.zCellSamplingSpec('sidekick-local',4,cw,1);
@@ -1398,10 +1398,10 @@ test('sidekick boot crossing the source cell grid is recovered with foot-safe sa
  }
  assert(html.includes("key==='sidekick'&&url==='./assets/z-attacks-20/sidekick.webp'"),
  'special reading is enabled only on the approved local sidekick atlas');
- assert(html.includes("localSidekickFootFix?'sidekick-local':"),
+ assert(html.includes("const localSidekickFootFix=key==='sidekick'&&url==='./assets/z-attacks-20/sidekick.webp'"),
  'the loaded atlas uses the correct frame extraction path');
  const anchor=html.slice(html.indexOf('function prepareZCells(im,'),html.indexOf('function loadMaskedMove(key)'));
- assert(anchor.includes("crop.readWidth,canvas.height,crop.padLeft,0,crop.readWidth,canvas.height"),
+ assert(anchor.includes("crop.readWidth,coreHeight,crop.padLeft,crop.padTop,crop.readWidth,coreHeight"),
  'drawImage copies the extended source shoe before background removal');
  assert(anchor.includes('r.canvas,union.x,union.y,union.w,union.h'),
  'the same full-body union crop applies to every output frame');
@@ -1420,23 +1420,65 @@ test('Superman Punch third frame restores the extended fist and rear boot withou
   assert.equal(crop.spillLeft,0,'other poses cannot steal left neighboring frame pixels');
   assert.equal(crop.spillRight,0,'other poses cannot steal right neighboring frame pixels');
  }
- assert(html.includes("key==='superman_punch'&&url==='./assets/z-attacks-20/superman_punch.webp'"),
+ assert(html.includes("url==='./assets/z-attacks-20/'+key+'.webp'"),
   'only the approved locally hosted original Superman Punch is patched');
- assert(html.includes("localSupermanLimbFix?'superman_punch-local':''"),
+ assert(html.includes("else frames=prepareZCells(im,localHeroLimbFix?key+'-local':'')"),
   'loader selects the matching oversized-frame extraction');
  const cropCode=html.slice(html.indexOf('function prepareZCells('),html.indexOf('// Masked cyberpunk grunt A:'));
- assert(cropCode.includes("const upper=Math.floor(canvas.height*.55)"),
+ assert(cropCode.includes("const upper=Math.floor(coreHeight*.55)"),
   'the enemy-facing tip samples only the upper-half source strip');
- assert(cropCode.includes("const lowerStart=Math.floor(canvas.height*.40)"),
+ assert(cropCode.includes("crop.leftBand==='mid'?.40:.68"),
   'the flying boot samples only the lower-half strip');
  assert(cropCode.includes('sx+crop.readWidth,sy,crop.spillRight,upper'),
   'the wrist and glove are truly sampled from their source image');
- assert(cropCode.includes('sx-crop.spillLeft,sy+lowerStart,crop.spillLeft,lower'),
+ assert(cropCode.includes('sx-crop.spillLeft,sy+start,crop.spillLeft,height'),
   'the rear boot is genuinely sampled from the original image');
- assert(cropCode.includes("const targetW=moveKey==='superman_punch-local'?320:240"),
+ assert(cropCode.includes("const targetW=moveKey==='superman_punch-local'?320:hasExtra?269:240"),
   'the complete flying pose remains at a readable scale, not shrunk');
  assert(cropCode.includes('r.canvas,union.x,union.y,union.w,union.h'),
   'all eight frames continue to share the same foot-anchored union');
+});
+test('audit-backed hero limb overscan is limited to verified punches, boots and uppercuts',()=>{
+ const policies={
+  'cross-local':{left:[2,3]},'jab-local':{left:[1,2,3]},
+  'forward_headbutt-local':{left:[2,3]},
+  'shovel_hook-local':{left:[2,3]},
+  'rising_headbutt-local':{left:[3]},
+  'roundkick-local':{left:[6]},
+  'sidekick-local':{left:[3]},
+  'superman_punch-local':{left:[2],right:[2]},
+  'rising_elbow-local':{top:[4,5]},
+  'uppercut-local':{top:[4]}
+ };
+ for(const [move,parts] of Object.entries(policies)){
+  const origin=t.zCellSamplingSpec(move,0,340,1);
+  for(let i=0;i<8;i++){
+   const crop=t.zCellSamplingSpec(move,i,340,1);
+   assert.equal(crop.canvasWidth,origin.canvasWidth,move+' has no frame-size flicker');
+   assert.equal(crop.padLeft,origin.padLeft,move+' has no horizontal anchor jitter');
+   assert.equal(crop.padTop,origin.padTop,move+' has no vertical anchor jitter');
+   assert.equal(crop.spillLeft>0,!!parts.left?.includes(i),move+' left band is isolated on frame '+i);
+   assert.equal(crop.spillRight>0,!!parts.right?.includes(i),move+' right band is isolated on frame '+i);
+   assert.equal(crop.spillTop>0,!!parts.top?.includes(i),move+' raised glove uses the right row '+i);
+  }
+ }
+ for(const move of ['backfist','hammerfist','hook','frontkick','lowkick','spinning_elbow','spinning_heel','axe_kick','crescent_kick','diagonal_airkick']){
+  for(let i=0;i<8;i++){
+   const crop=t.zCellSamplingSpec(move+'-local',i,340,1);
+   assert.equal(crop.canvasWidth,338,'safe moves never borrow neighbors');
+   assert.equal(crop.readWidth,338,'safe moves use the exact source cell');
+   assert.equal(crop.padTop,0);
+  }
+ }
+ const source=html.slice(html.indexOf('function prepareZCells('),html.indexOf('// Masked cyberpunk grunt A:'));
+ assert(source.includes("crop.leftBand==='upper'?Math.floor(coreHeight*.44):coreHeight"),
+  'upper-frame spill cannot copy another actor foot');
+ assert(source.includes("crop.leftBand==='mid'?.40:.68"),
+  'grounded rear boots only sample the lower third of the preceding cell');
+ assert(source.includes('sx+x0,sy-crop.spillTop,width,crop.spillTop'),
+  'raised fist source bleed is sampled without borrowing the prior row body');
+ assert(source.includes('const targetH=Z_LOCAL_HERO_LIMB_OVERSCAN[moveKey]?.top?.length?272:254'),
+  'raised-fist poses keep their established head/torso size');
 });
 test('offscreen arrows ping-pong across eight hand-painted frames at 8 fps',()=>{
  const atlas=fs.readFileSync(path.join(__dirname,'../assets/ui/edge-arrows-animated.webp'));
