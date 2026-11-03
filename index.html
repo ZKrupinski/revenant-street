@@ -5572,7 +5572,9 @@ function drawUpgradeVfxLoop(name,x,y,width,opacity,cycle,dir=1,rotation=0){
  if(!entry?.ready||!im?.complete||!im.naturalWidth)return false;
  const frame=Math.min(7,Math.floor((((cycle%1)+1)%1)*8));
  const cw=im.naturalWidth/8,displayH=width*(im.naturalHeight/cw);
- ctx.save();ctx.globalAlpha=clamp(opacity,0,.82);
+ // Use the caller's opacity as-is: active ailments can be fully opaque.
+ // The authored RGBA PNG still supplies its clean transparent silhouette.
+ ctx.save();ctx.globalAlpha=clamp(opacity,0,1);
  ctx.translate(x,y);ctx.scale(dir||1,1);ctx.rotate(rotation);
  ctx.drawImage(im,frame*cw,0,cw,im.naturalHeight,-width*.5,-displayH*.5,width,displayH);
  ctx.restore();entry.drawn++;return true;
@@ -5583,24 +5585,26 @@ function drawModEnergy(layer='all',selection=null){
  // opponent. Each module keeps its own 8-frame PNG and lifetime.
  for(const e of enemies){
   if(e.dead||e.x<left||e.x>right)continue;
-  // Iron Mask should not have semi-transparent, pulsing status sprites
-  // orbiting its body during idle or recoil. Real elemental status damage
-  // and direct contact VFX remain active.
-  if(e.type==='elite')continue;
+  // Paint real ailments on ALL living foes, including Iron Mask and boss.
+  // Ailments without a live timer render nothing, so no idle/recoil ghosts.
   const active=Z_ENEMY_STATUS_VFX.filter(s=>e[s.status]>0);
   for(let i=0;i<active.length;i++){
    const state=active[i],rank=Math.min(6,e[state.power]||1);
    if(!zDrawInLayer(layer,selection?.status.get(e)?.has(state.status)))continue;
    const kind=state.status==='burn'?'fire':state.status==='freeze'?'ice':state.status;
    const dir=e.face||1,slot=enemyFxSlot(kind,dir);
+   const enemyScale=e.type==='boss'?1.75:e.type==='elite'?1.60:e.type==='intruder'?1.53:1.45;
    const width=(164+rank*8)*state.scale*
-    (state.status==='shock'?1.76:state.status==='freeze'?1.32:1.18);
+    (state.status==='shock'?1.76:state.status==='freeze'?1.32:1.18)*enemyScale;
    const cycle=time*(state.status==='shock'?1.9:state.status==='burn'?1.35:1.05)+
     (e.slot||0)*.13+i*.19;
-   const pulse=.26+.13*Math.abs(Math.sin(time*4.1+(e.slot||0)+i));
-   const x=(e.renderX??e.x)+slot.dx;
-   const y=(e.renderY??e.y)-(e.z||0)+slot.dy;
-   drawUpgradeVfxLoop(state.sprite,x,y,width,pulse,cycle,dir,slot.rotation);
+   // Four separate upper/lower quadrants. Extra spacing at 3-4 states
+   // avoids large overlapping stamps collapsing into a single body orb.
+   const spread=(active.length>=3?1.23:1.14)*(e.type==='boss'?1.10:1);
+   const upper=state.status==='shock'||state.status==='burn';
+   const x=(e.renderX??e.x)+slot.dx*spread;
+   const y=(e.renderY??e.y)-(e.z||0)+slot.dy+(upper?-20:18);
+   drawUpgradeVfxLoop(state.sprite,x,y,width,1,cycle,dir,slot.rotation);
   }
  }
  // Separate transient contact effects: no per-target suppression or rotating
@@ -5612,7 +5616,10 @@ function drawModEnergy(layer='all',selection=null){
   if(!sprite)continue;
   const progress=clamp(1-ef.life/Math.max(.001,ef.maxLife),0,.99999);
   const width=(130+progress*55)*ef.scale*(ef.mod==='shock'?1.82:1.28);
-  drawUpgradeVfxLoop(sprite,ef.x,ef.y,width,(1-progress)*.60,progress,
+  const enemyScale=ef.target?.type==='boss'?1.46:
+   ef.target?.type==='elite'||ef.target?.type==='intruder'?1.36:1.27;
+  // Contact flashes use source PNG alpha only, not a second fading 0-60% mask.
+  drawUpgradeVfxLoop(sprite,ef.x,ef.y,width*enemyScale,1,progress,
    ef.dir||1,ef.rotation||0);
  }
 }
