@@ -5944,7 +5944,7 @@ function applyImpactFeedback(target,heavy=false,kind='punch',withAudio=true){
  screenShake=Math.max(screenShake,heavy?24:16);
  screenTint=Math.max(screenTint,heavy?.22:.105);
  hitStop=Math.max(hitStop,heavy?.105:.072);
- if(withAudio)playImpactSound(kind,heavy?1.15:1);
+ if(withAudio)playImpactSound(target===p?kind:'punch',heavy?1.15:1);
  vibrateImpact(target===p?'hurt':kind,kind==='dashImpact');
 }
 function actorShakeOffset(a){
@@ -6889,7 +6889,7 @@ function hurtEnemy(e,dmg,poise){
  // No trailing visual interpolation after a fresh basic-attack impact.
  // Hit-stop now freezes both bodies AFTER the victim has already recoiled.
  if(basicContact)e.renderX=e.x;
- if(e.type!=='intruder')fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:smash?1.65:1.2);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');applyImpactFeedback(e,smash||p.dashSmash,p.dashSmash?'dashImpact':'punch',!(p.dashSmash||p.airAttack));p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
+ if(e.type!=='intruder')fxBurst(e.x,e.y-115,'red',e.type==='boss'?1.3:smash?1.65:1.2);floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');applyImpactFeedback(e,smash||p.dashSmash,p.dashSmash?'dashImpact':smash?'heavy':'punch',!(p.dashSmash||p.airAttack));p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
  if(e.poise>=e.maxPoise&&e.groggy<=0){e.groggy=e.type==='boss'?1.30:e.type==='elite'?2.4:3.6;e.stun=e.groggy;if(e.type!=='intruder')fxBurst(e.x,e.y-170,'blue',1.25);floatText('GROGGY',e.x,e.y-207,'#90e3ff')}
  if(e.type==='elite'&&e.hp<e.maxHp*.45&&e.phase===1){e.phase=2;e.speed*=1.14;e.eliteCooldown=Math.min(e.eliteCooldown,1.6);fxBurst(e.x,e.y-150,'red',1.8);floatText('CRIMSON OVERDRIVE',e.x,e.y-255,'#ff8494')}
  if(e.type==='intruder'&&e.hp>0&&e.hp<e.maxHp*.42&&e.phase===1){
