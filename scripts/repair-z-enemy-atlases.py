@@ -65,6 +65,23 @@ for orig,dest in CASES:
             removed+=int(np.sum(erase & (cell[:,:,3]>0)))
             cell[erase]=[0,0,0,0]
             changes.append({'pose':i+1,'area':area,'bbox':[x,y,w,h]})
+        # Residual semitransparent outlines (alpha <42) are not captured by
+        # connected-component thresholding. The audited gutters below are
+        # entirely outside the actor; keep the actor-connected pixels and
+        # their 4px antialias margin protected.
+        gutters={
+            'attack':{2:[(401,356,458,465)],5:[(50,241,112,314)]},
+            'death':{1:[(419,418,454,495)],2:[(398,439,455,534)],
+                     5:[(409,482,453,539)],6:[(393,491,455,562)]},
+            'redhood-death':{1:[(480,355,527,420)],
+                             2:[(491,383,531,540)],6:[(500,489,539,541)]}
+        }
+        protected=cv2.dilate((lab==main).astype('uint8'),
+                             np.ones((9,9),'uint8'),iterations=1)
+        for left,top,right,bottom in gutters.get(typ,{}).get(i,[]):
+            sub=cell[top:bottom,left:right]
+            guard=protected[top:bottom,left:right]
+            sub[guard==0]=[0,0,0,0]
     if not changes:raise AssertionError(f'Expected source artifacts not found in {orig}')
     if typ=='attack':
         # Pose 5's extended metal fist was painted with a squared-off tip.
