@@ -4872,6 +4872,25 @@ function intruderCombatFrame(e,key){
  if(move==='run')return Math.floor(Math.max(0,e.spriteDistance||0)/(key==='run'?39:27))%8;
  return Math.floor(Math.max(0,e.spriteTime||0)*5.5)%8;
 }
+// Hit confirmation flash is sampled from each character's ACTUAL bitmap.
+// A short white highlight of existing opaque pixels, never a procedural polygon
+// or extra explosion in empty air. Real-time fade survives hit-stop and slow-mo.
+const Z_HIT_FLASH_REAL_DURATION=.15;
+function zDrawSpriteHitFlash(image,sx,sy,sw,sh,dx,dy,dw,dh,actor,actorOpacity=1){
+ const remaining=Math.max(0,actor?.hitFlashFx||0);
+ if(remaining<=0||actorOpacity<=0||!image)return false;
+ const u=1-clamp(remaining/Z_HIT_FLASH_REAL_DURATION,0,1);
+ const strength=u<.34?.79:.79*clamp((1-u)/.66,0,1);
+ if(strength<=0)return false;
+ ctx.save();
+ ctx.globalCompositeOperation='screen';
+ ctx.filter='brightness(0) invert(1)';
+ ctx.globalAlpha=clamp(actorOpacity*strength,0,1);
+ ctx.drawImage(image,sx,sy,sw,sh,dx,dy,dw,dh);
+ ctx.restore();
+ return true;
+}
+window.__zDrawSpriteHitFlash=zDrawSpriteHitFlash;
 function drawIntruderCombat(e,x,y,z){
  const key=getMaskedMove(e);
  const move=intruderVisualMove(e,key);
@@ -4894,14 +4913,7 @@ function drawIntruderCombat(e,x,y,z){
  const w=crop.sw*scale,h=crop.sh*scale;
  const sprite=crop.bitmap||image;
  ctx.drawImage(sprite,crop.sx,crop.sy,crop.sw,crop.sh,left,top,w,h);
- if(e.hitFlash>0){
-  // Preserve the painted fabric and face: no pure-white flat silhouette.
-  ctx.filter='brightness(1.42) contrast(1.10) saturate(.80)';
-  ctx.globalCompositeOperation='screen';
-  ctx.globalAlpha=opacity*.35*clamp(e.hitFlash/.22,0,1);
-  ctx.drawImage(sprite,crop.sx,crop.sy,crop.sw,crop.sh,left,top,w,h);
-  ctx.filter='none';ctx.globalCompositeOperation='source-over';
- }
+ zDrawSpriteHitFlash(sprite,crop.sx,crop.sy,crop.sw,crop.sh,left,top,w,h,e,opacity);
  ctx.restore();
 }
 
@@ -4937,13 +4949,7 @@ function drawMaskedGrunt(e,x,y,z){
   const {w,h}=fr.bounds;
   ctx.globalAlpha=e.dead?clamp(e.fade,0,1):1;
   ctx.drawImage(fr.canvas,-(fr.anchorX??w/2),-(fr.anchorY??h),w,h);
-  if(e.hitFlash>0){
-   ctx.filter='brightness(1.55) contrast(1.10) saturate(.85)';ctx.globalCompositeOperation='screen';
-   const originalOpacity=ctx.globalAlpha;
-   ctx.globalAlpha=originalOpacity*.75*clamp(e.hitFlash/.22,0,1);
-   ctx.drawImage(fr.canvas,-(fr.anchorX??w/2),-(fr.anchorY??h),w,h);
-   ctx.filter='none';ctx.globalCompositeOperation='source-over';ctx.globalAlpha=originalOpacity;
-  }
+  zDrawSpriteHitFlash(fr.canvas,0,0,w,h,-(fr.anchorX??w/2),-(fr.anchorY??h),w,h,e,ctx.globalAlpha);
  } // No geometric dummy actor during art loading.
  ctx.restore();
 }
@@ -4971,12 +4977,8 @@ function drawAssassin(e,x,y,z){
  ctx.save();ctx.translate(x,Math.round(y-z));ctx.scale(e.face>0?-1:1,1);ctx.globalAlpha=opacity;
  if(fr){
   ctx.drawImage(fr.canvas,-RZAssassinArt.anchorX,-RZAssassinArt.anchorY);
-  if(e.hitFlash>0){
-   ctx.filter='brightness(1.55) contrast(1.10) saturate(.85)';ctx.globalCompositeOperation='screen';
-   ctx.globalAlpha=opacity*.75*clamp(e.hitFlash/.22,0,1);
-   ctx.drawImage(fr.canvas,-RZAssassinArt.anchorX,-RZAssassinArt.anchorY);
-   ctx.filter='none';ctx.globalCompositeOperation='source-over';ctx.globalAlpha=opacity;
-  }
+  zDrawSpriteHitFlash(fr.canvas,0,0,fr.canvas.width,fr.canvas.height,
+   -RZAssassinArt.anchorX,-RZAssassinArt.anchorY,fr.canvas.width,fr.canvas.height,e,opacity);
  } // No geometric dummy assassin during art loading.
  ctx.restore();
 }
@@ -7233,6 +7235,9 @@ function hurtEnemy(e,dmg,poise,specialKind=''){
  e.parryScreenDir=0;e.parryScreenEdge=null;
  e.encountered=true; // A hit counts as detection even through long stun / knockback.
  e.hp-=dmg;
+ // A brief full-silhouette bitmap pulse on CONFIRMED damage, irrespective of
+ // the ongoing reaction animation or its old slow-motion animation clock.
+ if(dmg>0)e.hitFlashFx=Z_HIT_FLASH_REAL_DURATION;
  // Layer painted victim impacts over the signature attack animation at the
  // same confirmed contact. A fatal special hit gets one as well.
  const specialContact=!!specialKind||!!p.dashSmash||!!p.counterBoost||
@@ -8017,7 +8022,7 @@ function attackCheck(){
    (e.x-p.x)*p.facing>=0).sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0];
   if(next&&Math.abs(next.x-p.x)<bodyHalfX(p)+bodyHalfX(next)-8)p.x=clamp(next.x-p.facing*(bodyHalfX(p)+bodyHalfX(next)-8),64,STAGE_WIDTH-64);
  }
- if(!hits)fxBurst(p.x+p.facing*105,p.y-123,'red',.6)
+ // A whiff does not create a projectile, hit burst or impact stamp in midair.
 }
 function enemyAttack(e){
  const eliteCleave=e.type==='elite'&&e.eliteAttack;
@@ -9031,6 +9036,10 @@ function updateEnemies(dt,parryVictimScale=1){
 }
 function updateEffects(dt,realDt=dt){
  p.hitFlash=Math.max(0,(p.hitFlash||0)-dt);
+ // Flash uses wall-clock seconds, so hit-stop and a parry cinematic cannot
+ // hide the ignition or prolong a white character silhouette for whole seconds.
+ for(const enemy of enemies)if((enemy.hitFlashFx||0)>0)
+  enemy.hitFlashFx=Math.max(0,enemy.hitFlashFx-realDt);
  for(let i=heroAfterimages.length-1;i>=0;i--){
   heroAfterimages[i].life-=heroAfterimages[i].counterEcho?realDt*.83:dt;
   if(heroAfterimages[i].life<=0)heroAfterimages.splice(i,1);
@@ -9409,12 +9418,8 @@ function drawRiotGuard(e,x,y,z){
   // Source is pre-matted; preserve proportions and 1 common scale.
   const scale=.75;
   ctx.drawImage(current,-RIOT_CW*scale/2,-RIOT_CH*scale,RIOT_CW*scale,RIOT_CH*scale);
-  if(e.hitFlash>0){
-   ctx.filter='brightness(1.55) contrast(1.10) saturate(.85)';ctx.globalCompositeOperation='screen';
-   ctx.globalAlpha=alpha*.75*clamp(e.hitFlash/.22,0,1);
-   ctx.drawImage(current,-RIOT_CW*scale/2,-RIOT_CH*scale,RIOT_CW*scale,RIOT_CH*scale);
-   ctx.filter='none';ctx.globalCompositeOperation='source-over';ctx.globalAlpha=alpha;
-  }
+  zDrawSpriteHitFlash(current,0,0,RIOT_CW,RIOT_CH,
+   -RIOT_CW*scale/2,-RIOT_CH*scale,RIOT_CW*scale,RIOT_CH*scale,e,alpha);
  }else{
   // Only shown while initial eight-frame art streams in.
   const old=img.guard;
@@ -9454,13 +9459,8 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  if(impacted)ctx.scale(1+(scalesX[variant]-1)*snap,1+(scalesY[variant]-1)*snap);
  const bob=Math.sin(time*5+a.x)*1.5;
  ctx.drawImage(picture,-w/2,-h+bob,w,h);
- if(a.hitFlash>0){
-  const originalOpacity=ctx.globalAlpha;
-  ctx.filter='brightness(1.55) contrast(1.10) saturate(.85)';ctx.globalCompositeOperation='screen';
-  ctx.globalAlpha=originalOpacity*.75*clamp(a.hitFlash/.22,0,1);
-  ctx.drawImage(picture,-w/2,-h+bob,w,h);
-  ctx.filter='none';ctx.globalCompositeOperation='source-over';ctx.globalAlpha=originalOpacity;
- }
+ zDrawSpriteHitFlash(picture,0,0,picture.naturalWidth,picture.naturalHeight,
+  -w/2,-h+bob,w,h,a,ctx.globalAlpha);
  if(isP){const swing=p.attack>0?(1-p.attack/p.attackDuration):0;const offsetX=29,offsetY=-120;ctx.save();ctx.translate(offsetX,offsetY);ctx.rotate(p.attack>0?(-.85+2.2*swing):-.88);const weapon=img['pipe_charged'];if(p.weapon>0&&weapon.complete)ctx.drawImage(weapon,-12,-18,150,38);ctx.restore();}
  // No vector rectangle on damage: only the original bitmap silhouette flashes.
  ctx.restore();
