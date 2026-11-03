@@ -3646,6 +3646,74 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 /* The canvas's extended W and all existing compact portrait rules are intact. */
 </style>
+
+<style id="z-progress-hud-v2">
+/* Compact single-glance combat progress. CSS draws functional meters only:
+   no new icons or sprite assets are introduced. */
+#hud .hud-center.progress-hud{
+  left:50%!important;transform:translateX(-50%);
+  width:min(37%,calc(350px * var(--z-combat-scale,1)))!important;
+  max-width:none!important;top:calc(43px * var(--z-combat-scale,1))!important;
+  padding:calc(7px * var(--z-combat-scale,1)) calc(10px * var(--z-combat-scale,1))!important;
+  background:linear-gradient(180deg,rgba(8,17,29,.91),rgba(8,13,22,.76));
+  border:1px solid rgba(90,115,139,.56);
+  border-left:calc(3px * var(--z-combat-scale,1)) solid #e44a61;
+  box-shadow:0 5px 14px rgba(0,0,0,.36);
+  text-align:left;pointer-events:none;
+}
+#hud .progress-hud .chapter{display:none!important}
+#hud .progress-hud .progress-head,
+#hud .progress-hud .progress-foot{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:calc(6px * var(--z-combat-scale,1));white-space:nowrap;
+}
+#hud .progress-hud .wave-label{
+  display:block;font:italic 900 calc(15px * var(--z-combat-scale,1))/1 Impact,'Arial Black',sans-serif!important;
+  color:#ff7388;letter-spacing:calc(.7px * var(--z-combat-scale,1))!important;
+  margin:0!important;overflow:visible!important;text-overflow:clip!important;
+}
+#hud .progress-hud .squad-status{
+  font:800 calc(10px * var(--z-combat-scale,1))/1.2 Arial,'Malgun Gothic',sans-serif!important;
+  color:#d9e3ed;letter-spacing:0!important;flex-shrink:0;
+}
+#hud .progress-hud .squad-progress{
+  display:block;height:calc(9px * var(--z-combat-scale,1))!important;
+  width:100%!important;margin:calc(6px * var(--z-combat-scale,1)) 0 calc(5px * var(--z-combat-scale,1))!important;
+  background:rgba(29,44,62,.85);border:1px solid rgba(111,134,151,.7);
+  border-radius:2px;overflow:hidden;
+}
+#hud .progress-hud .squad-progress>div{
+  background:linear-gradient(90deg,#b62947,#ff6175 70%,#ffad81);
+  transition:width .17s ease-out;
+}
+#hud .progress-hud .progress-foot{
+  color:#aabdd0;font:800 calc(9px * var(--z-combat-scale,1))/1.2 Arial,'Malgun Gothic',sans-serif;
+}
+#hud .progress-hud .kill-count{
+  display:block!important;margin:0!important;flex-shrink:0;
+  color:#f5f6f9;font-size:calc(12px * var(--z-combat-scale,1))!important;
+  letter-spacing:0!important;text-shadow:0 1px 5px #000;
+}
+#hud .progress-hud.is-boss{border-left-color:#ffb377}
+#hud .progress-hud.is-boss .wave-label{color:#ffb377}
+#hud .progress-hud.is-boss .squad-progress,
+#hud .progress-hud.is-boss .progress-foot{display:none!important}
+@container (max-width:610px){
+  #hud .hud-center.progress-hud{
+    padding:calc(4px * var(--z-combat-scale,1)) calc(6px * var(--z-combat-scale,1))!important;
+    top:calc(40px * var(--z-combat-scale,1))!important;
+  }
+  #hud .progress-hud .wave-label{
+    font-size:calc(11px * var(--z-combat-scale,1))!important;
+  }
+  #hud .progress-hud .squad-status{
+    font-size:calc(8px * var(--z-combat-scale,1))!important;
+  }
+  #hud .progress-hud .progress-caption{display:none}
+  #hud .progress-hud .progress-foot{justify-content:flex-end}
+  #hud .progress-hud .kill-count{font-size:calc(10px * var(--z-combat-scale,1))!important}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -3663,7 +3731,12 @@ body{position:fixed;inset:0;touch-action:manipulation}
         <div class="player-stats"><span>STYLE <b id="weaponCount">BARE FISTS</b></span><span class="mod-hud-caption" id="modName" aria-hidden="true">EFFECTS</span></div>
         <div class="mod-wrap" id="modWrap"><div class="mod-strip" id="modStrip" aria-label="선택한 전투 속성"><span class="empty-mod">속성 미장착</span></div><button type="button" class="mod-toggle" id="modToggle" aria-expanded="false" aria-controls="modStrip" hidden>추가 효과 보기</button></div>
       </div>
-      <div class="hud-center"><div class="chapter" id="chapter">01 / 침수된 거리</div><div class="wave-label" id="waveLabel">WAVE 01 — 침입자</div><div class="kill-count" id="enemyCount" aria-live="polite">현재 적 04명 · 턴 잔여 04명</div><div class="squad-progress" role="progressbar" aria-label="이번 턴 적 처치 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="enemyProgress"><div id="enemyProgressFill"></div></div><div class="squad-status" id="enemyStatus">무리 01 시작</div></div>
+      <div class="hud-center progress-hud" id="progressHud" aria-label="스테이지 진행 상황">
+        <span class="chapter" id="chapter" hidden aria-hidden="true">01 / 침수된 거리</span>
+        <div class="progress-head"><span class="wave-label" id="waveLabel">WAVE 01</span><span class="squad-status" id="enemyStatus">무리 01 / 11</span></div>
+        <div class="squad-progress" role="progressbar" aria-label="웨이브 적 처치 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="enemyProgress"><div id="enemyProgressFill"></div></div>
+        <div class="progress-foot"><span class="progress-caption" id="enemyProgressLabel">처치 진행도</span><span class="kill-count" id="enemyCount" aria-live="polite">남은 적 00</span></div>
+      </div>
       <div class="hud-right"><div class="currency" title="전투로 획득하는 크레딧">₩ <b id="credits">0000</b> <small style="color:#ffe68f">◆ <b id="shardCount">0</b></small></div><div class="combo" id="combo">0 <small>HITS</small></div><canvas id="combatWordHud" width="320" height="200" aria-hidden="true"></canvas><button class="small-button" id="pauseButton" aria-label="일시정지">Ⅱ</button></div>
     </div>
     <div class="boss-hud" id="bossHud" hidden><div class="boss-title"><span id="bossName">ELITE HUNTER</span><span>PHASE <b id="bossPhase">01</b></span></div><div class="boss-track"><div id="bossFill"></div></div></div>
@@ -6698,7 +6771,7 @@ function spawnNextEncounter(){
  });
  squadIndex++;supportTriggered=intruderSupportCount(wave,i)===0;lastEncounterCleared=-1;waveClearNotified=false;
  $('hint').hidden=true;
- $('waveLabel').textContent=`WAVE 0${wave} · 무리 ${String(squadIndex).padStart(2,'0')}/${spots.length}`;
+ $('waveLabel').textContent=`WAVE ${String(wave).padStart(2,'0')}`;
  return true;
 }
 // This one-shot event fires with 0-2 initial enemies remaining, before clear.
@@ -6744,8 +6817,7 @@ function spawnWave(){
    window.RZBossHunter?.load(name);
  }else spawnNextEncounter();
  $('bossHud').hidden=true;
- $('waveLabel').textContent=wave===3?'WAVE 03 · 최종 헌터':
-  `WAVE 0${wave} · 무리 ${String(squadIndex).padStart(2,'0')}/${SQUAD_SPOTS[wave]?.length||0}`;
+ $('waveLabel').textContent=`WAVE ${String(wave).padStart(2,'0')}`;
  $('chapter').textContent=`0${wave} / 끝없는 거리`;
 }
 function makeEnemy(type,x,y,index){
@@ -8945,18 +9017,21 @@ function updateHud(){
  if(modStripCache!==markup){$('modStrip').innerHTML=markup;modStripCache=markup}
  updateModToggle(active.length+(p.mod==='neuro'?1:0));
  $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'BARE FISTS';$('modName').textContent='EFFECTS';$('credits').textContent=String(p.credits).padStart(4,'0');$('shardCount').textContent=String(perma.shards);if(p.hits!==lastHudCombo){$('combo').innerHTML=`${p.hits} <small>HITS</small>`;lastHudCombo=p.hits}const progress=waveEnemyTotals(),squads=SQUAD_SPOTS[wave]?.length||1;
- const clear=progress.current===0;
- $('enemyCount').textContent=wave===3?
-  (progress.current?'최종 보스 전투 중':'보스 격파!'):
-  clear?(progress.future?(squadIndex===0?'첫 무리 출현 전':'현재 0명 · 다음 무리 대기'):'이번 턴 적 전멸!'):
-  `현재 ${progress.current}명  ·  턴 잔여 ${progress.remaining}명`;
- $('enemyStatus').textContent=wave===3?'최종 결전':clear&&progress.future?
-  (squadIndex===0?'다음 적 무리 대기':`무리 ${squadIndex}/${squads} 격파`):
-  clear?'구역 확보':
-  `무리 ${squadIndex}/${squads}  ·  턴 처치 ${progress.defeated}/${progress.total}`;
+ // Present only one numeric enemy total. Wave progress is conveyed by the
+ // broad fill bar; squad position stays in the small header, not repeated.
+ const finalWave=wave===3;
+ const remaining=Math.max(0,progress.remaining);
+ const waiting=progress.current===0&&progress.future>0;
+ const completed=remaining===0;
+ $('progressHud').classList.toggle('is-boss',finalWave);
+ $('enemyCount').textContent=completed?'구역 확보':`남은 적 ${remaining}`;
+ $('enemyStatus').textContent=finalWave?'FINAL':
+  completed?'CLEAR':`무리 ${String(squadIndex).padStart(2,'0')} / ${String(squads).padStart(2,'0')}`;
+ $('enemyProgressLabel').textContent=completed?'웨이브 완료':waiting?'다음 무리 대기':'처치 진행도';
  const percent=progress.total?Math.round(progress.defeated/progress.total*100):0;
  $('enemyProgressFill').style.width=percent+'%';
- $('enemyProgress').setAttribute?.('aria-valuenow',String(percent));$('level').textContent=String(level).padStart(2,'0');// Only the final boss gets a separate, screen-fixed health bar.
+ $('enemyProgress').setAttribute?.('aria-valuenow',String(percent));
+ $('enemyProgress').setAttribute?.('aria-valuetext',`${progress.defeated}/${progress.total}명 처치`);$('level').textContent=String(level).padStart(2,'0');// Only the final boss gets a separate, screen-fixed health bar.
  // Elites and intruder support teams retain combat HP, damage, and their
  // in-world feedback, but never create an additional boss-style HUD.
  const activeBoss=enemies.find(e=>!e.dead&&e.type==='boss'&&Math.abs(e.x-p.x)<1050);
