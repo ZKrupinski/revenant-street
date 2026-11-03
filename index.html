@@ -3979,12 +3979,98 @@ body{position:fixed;inset:0;touch-action:manipulation}
 <link rel="preload" as="image" href="./assets/ui/ref-wave-state-v5.webp">
 <link rel="preload" as="image" href="./assets/ui/ref-boss-state-v5.webp">
 <link rel="preload" as="image" href="./assets/ui/ref-warning-state-v5.webp">
+
+<style id="z-hud-style-effects-grid-and-direction-overlay-v8">
+/* HUD: approved sparse bitmap composition — HP, lightweight STYLE EFFECTS,
+   3/4 columns of independent upgrade icons, no large backing plate. */
+#hud .hud-left .hud-name,
+#hud .hud-left .bar.stamina,
+#hud .hud-left .player-stats{display:none!important}
+#hud .hud-left .z-style-effects-caption{
+ position:absolute!important;
+ top:calc(58px * var(--z-combat-scale,1))!important;
+ left:calc(8px * var(--z-combat-scale,1))!important;
+ display:block!important;margin:0!important;padding:0!important;
+ color:#ecf0f4;font:italic 900 calc(11px * var(--z-combat-scale,1))/1.2 Arial,"Malgun Gothic",sans-serif!important;
+ text-shadow:0 2px 3px #090a13,0 0 6px #03050e!important;
+ letter-spacing:calc(.18px * var(--z-combat-scale,1))!important;
+ background:none!important;border:0!important;pointer-events:none!important;
+ white-space:nowrap!important;
+}
+#hud .hud-left .z-style-effects-caption::first-letter{color:#ff344d}
+#hud .hud-left .mod-wrap{
+ position:absolute!important;top:calc(74px * var(--z-combat-scale,1))!important;
+ left:calc(7px * var(--z-combat-scale,1))!important;
+ width:min(calc(255px * var(--z-combat-scale,1)),98%)!important;
+ max-width:none!important;margin:0!important;padding:0!important;
+ border:0!important;box-shadow:none!important;background:transparent!important;
+ overflow:visible!important;
+}
+#hud .hud-left #modStrip.mod-strip{
+ display:grid!important;
+ grid-template-columns:repeat(4,minmax(0,1fr))!important;
+ grid-auto-flow:row!important;
+ grid-auto-rows:calc(28px * var(--z-combat-scale,1))!important;
+ column-gap:calc(3px * var(--z-combat-scale,1))!important;
+ row-gap:calc(2px * var(--z-combat-scale,1))!important;
+ width:100%!important;max-width:none!important;
+ max-height:calc(119px * var(--z-combat-scale,1))!important;
+ padding:0!important;margin:0!important;
+ background:transparent!important;border:0!important;box-shadow:none!important;
+ overflow-x:hidden!important;overflow-y:hidden!important;
+ align-content:start!important;scrollbar-width:none!important;
+}
+#hud .hud-left #modStrip .mod-chip.compact{
+ min-width:0!important;min-height:0!important;display:flex!important;
+ justify-content:flex-start!important;align-items:center!important;
+ padding:calc(1px * var(--z-combat-scale,1)) calc(2px * var(--z-combat-scale,1))!important;
+ gap:calc(2px * var(--z-combat-scale,1))!important;
+ margin:0!important;border:0!important;outline:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;
+ filter:drop-shadow(0 1px 2px #05030c)!important;
+ font-size:calc(11px * var(--z-combat-scale,1))!important;
+ white-space:nowrap!important;overflow:visible!important;
+}
+#hud .hud-left #modStrip .mod-chip.compact .icon{
+ flex:none!important;font-size:calc(14px * var(--z-combat-scale,1))!important;
+}
+#hud .hud-left #modStrip .mod-chip.compact .icon .upgrade-art{
+ width:calc(21px * var(--z-combat-scale,1))!important;
+ height:calc(21px * var(--z-combat-scale,1))!important;
+}
+#hud .hud-left #modStrip .mod-chip.compact b{
+ flex:none!important;font-size:calc(11px * var(--z-combat-scale,1))!important;
+ color:#ffe6a8!important;
+}
+#hud .hud-left .mod-wrap.expanded #modStrip.mod-strip{
+ max-height:calc(194px * var(--z-combat-scale,1))!important;
+ overflow-y:auto!important;pointer-events:auto!important;
+}
+#hud .hud-left .mod-toggle{
+ padding:calc(2px * var(--z-combat-scale,1))!important;
+ background:transparent!important;border:0!important;box-shadow:none!important;
+ color:#ded5cb!important;text-shadow:0 1px 2px #000!important;
+ font-size:calc(10px * var(--z-combat-scale,1))!important;
+}
+@container (max-width:610px){
+ #hud .hud-left .mod-wrap{width:min(calc(220px * var(--z-combat-scale,1)),100%)!important}
+ #hud .hud-left #modStrip.mod-strip{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+/* Separate transparent bitmap-overlay canvas: arrows draw ABOVE HUD/icons,
+   but stay BELOW joystick, attack buttons, and menu overlays. */
+#stageWrap > #directionArrowOverlay{
+ position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+ display:block!important;z-index:6!important;pointer-events:none!important;
+ border:0!important;background:none!important;object-fit:fill!important;
+}
+</style>
+
 </head>
 <body>
 <div id="app">
   <header class="masthead"><div class="brand"><span class="brand-kicker">PROJECT Z–ACTION / PLAYABLE COMBAT PROTOTYPE</span><img class="masthead-brand-bi" src="./assets/ui/project-z-wordmark-bi-20261101.webp" alt="REVENANT STREET" width="840" height="288" decoding="async" /></div><div class="status"><span class="status-dot"></span><span id="statusLabel">STANDBY</span><span class="ver">ALPHA 1.11</span></div></header>
   <main class="stage-wrap" id="stageWrap">
-    <canvas id="game" width="1280" height="720" aria-label="레버넌트 스트리트 게임 화면"></canvas>
+    <canvas id="game" width="1280" height="720" aria-label="레버넌트 스트리트 게임 화면"></canvas><canvas id="directionArrowOverlay" width="1280" height="720" aria-hidden="true"></canvas>
 <svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs><filter id="z-alpha-key" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  4 -5 4 0 1"/></filter></defs></svg>
 <div id="z-art-sprite"></div><div id="z-art-badge">Z FRAME-ART EXPERIMENTAL</div>
 
@@ -3994,7 +4080,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
         <div class="bar hp" aria-label="주인공 체력"><div class="hp-image-track"><div class="bar-fill" id="hpFill"></div></div><span id="hpText">100 / 100</span></div>
         <div class="bar stamina"><div class="bar-fill" id="staminaFill"></div><span>STAMINA</span></div>
         <div class="player-stats"><span>STYLE <b id="weaponCount">BARE FISTS</b></span><span class="mod-hud-caption" id="modName" aria-hidden="true">EFFECTS</span></div>
-        <div class="mod-wrap" id="modWrap"><div class="mod-strip" id="modStrip" aria-label="선택한 전투 속성"><span class="empty-mod">속성 미장착</span></div><button type="button" class="mod-toggle" id="modToggle" aria-expanded="false" aria-controls="modStrip" hidden>추가 효과 보기</button></div>
+        <div class="z-style-effects-caption" aria-hidden="true">/// STYLE EFFECTS</div><div class="mod-wrap" id="modWrap"><div class="mod-strip" id="modStrip" aria-label="선택한 전투 속성"><span class="empty-mod">속성 미장착</span></div><button type="button" class="mod-toggle" id="modToggle" aria-expanded="false" aria-controls="modStrip" hidden>추가 효과 보기</button></div>
       </div>
       <div class="hud-center progress-hud" id="progressHud" aria-label="스테이지 진행 상황">
         <span class="chapter" id="chapter" hidden aria-hidden="true">01 / 침수된 거리</span>
@@ -4078,6 +4164,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 <script>
 (()=>{'use strict';
 const $=id=>document.getElementById(id), canvas=$('game'),ctx=canvas.getContext('2d');
+const directionArrowCanvas=$('directionArrowOverlay'),directionCtx=directionArrowCanvas.getContext('2d');
 let W=1280;const H=720;
 const stageWrap=$('stageWrap'),viewportHost=$('app');
 const MIN_GAME_ASPECT=16/9;
@@ -4103,6 +4190,7 @@ function syncGameViewport(){
  const target=Math.max(1280,Math.round(H*outerW/stageH));
  if(W!==target||canvas.width!==target||canvas.height!==H){
   W=target;canvas.width=W;canvas.height=H;
+  directionArrowCanvas.width=W;directionArrowCanvas.height=H;
   // After device rotation, keep the hero on-screen.
   if(typeof cameraX!=='undefined'&&typeof p!=='undefined'&&typeof STAGE_WIDTH!=='undefined')
    cameraX=Math.max(0,Math.min(STAGE_WIDTH-W,p.x-W*.52));
@@ -4194,7 +4282,7 @@ assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
 // Both keys reference exactly the same embedded panorama; decode only once.
 img.street_pano=img.street;
 // Eight hand-painted bitmap frames: top row points right, bottom row points left.
-let offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows-animated.webp';
+let offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows-neon-v2.png';
 // Top row: four exclusive back-view entrance frames. The bottom row never
 // appears during entry; the six independent combat atlases take over after landing.
 let intruderEntryImage=new Image();intruderEntryImage.src='./assets/enemies/redhood-ambush-entry-8.webp';
@@ -6865,7 +6953,7 @@ function ensureBitmapDecoded(image){
 }
 function resetFailedUiBitmaps(){
  const sources=[
-  {get:()=>offscreenArrow,set:im=>{offscreenArrow=im},url:'./assets/ui/edge-arrows-animated.webp'},
+  {get:()=>offscreenArrow,set:im=>{offscreenArrow=im},url:'./assets/ui/edge-arrows-neon-v2.png'},
   {get:()=>upgradeIconsImage,set:im=>{upgradeIconsImage=im},url:'./assets/ui/upgrade-icons-v4.webp',css:true},
   {get:()=>arcadeButtonsImage,set:im=>{arcadeButtonsImage=im},url:'./assets/ui/arcade-action-buttons-v1.webp',css:'arcade'},
   {get:()=>joystickBaseImage,set:im=>{joystickBaseImage=im},url:'./assets/ui/z-arcade-stick-base-centerhole.webp',css:'joystickBase'},
@@ -9393,7 +9481,7 @@ function setModsExpanded(open){
  button.setAttribute?.('aria-expanded',String(modsExpanded));
 }
 function updateModToggle(count){
- const more=Math.max(0,count-6),button=$('modToggle');
+ const more=Math.max(0,count-12),button=$('modToggle');
  button.hidden=more===0;
  if(!more&&modsExpanded)setModsExpanded(false);
  button.textContent=modsExpanded?'접기 ▲':`+${more} 효과 보기`;
@@ -9633,27 +9721,16 @@ function drawOffscreenEnemyIndicator(){
  // Shrink only when an enemy is visible, so arrows stay useful during a fight
  // without masking the protagonist, parry timing or melee enemies.
  const anyVisible=enemies.some(e=>!e.dead&&e.x>=cameraX+45&&e.x<=cameraX+W-45);
- const width=anyVisible?98:130,height=anyVisible?76:100;
+ const width=anyVisible?92:112,height=anyVisible?61:74;
  const wave=(1+Math.sin(time*11.5))/2;
- const blink=.44+.56*wave*wave;
+ const blink=.78+.22*wave*wave;
  for(const target of targets){
-  const left=target.side==='left',x=left?12:W-width-12,y=238;
-  const sway=Math.sin(time*6.2)*4*(left?-1:1);
-  ctx.save();ctx.globalAlpha=blink;
-  ctx.filter='brightness('+(0.76+wave*.92).toFixed(2)+') drop-shadow(0px 0px 9px rgba(255,38,36,0.9))';
-  ctx.drawImage(offscreenArrow,frame*cellW,left?cellH:0,cellW,cellH,x+sway,y-5,width,height);
-  ctx.filter='none';
-  ctx.globalAlpha=.70+.30*wave;
-  ctx.textAlign='center';ctx.textBaseline='alphabetic';
-  ctx.font='900 13px Arial,"Malgun Gothic",sans-serif';
-  ctx.lineWidth=4;ctx.strokeStyle='#09080c';
-  const note='화면 밖 '+target.remaining+'명';
-  ctx.strokeText(note,x+width/2,y+height+7);ctx.fillStyle='#ffe8db';ctx.fillText(note,x+width/2,y+height+7);
-  ctx.font='900 11px Arial,sans-serif';
-  const distance=target.distance+' px';
-  ctx.strokeText(distance,x+width/2,y+height+23);ctx.fillStyle='#ff8583';
-  ctx.fillText(distance,x+width/2,y+height+23);
-  ctx.restore();
+  const left=target.side==='left',x=left?18:W-width-18,y=265;
+  const sway=Math.sin(time*6.2)*1.7*(left?-1:1);
+  directionCtx.save();directionCtx.globalAlpha=blink;
+  directionCtx.filter='brightness('+(0.9+wave*.22).toFixed(2)+') drop-shadow(0px 0px 5px rgba(255,38,36,0.76))';
+  directionCtx.drawImage(offscreenArrow,frame*cellW,left?cellH:0,cellW,cellH,x+sway,y-5,width,height);
+  directionCtx.restore();
  }
 }
 // Turn-clear guidance reuses the original hand-painted arrow atlas.
@@ -9670,13 +9747,13 @@ function drawRightAdvanceSign(){
  const frame=offscreenArrowFrameAt(time);
  const cellW=offscreenArrow.naturalWidth/4,cellH=offscreenArrow.naturalHeight/2;
  const pulse=(1+Math.sin(time*10.5))/2;
- const width=158,height=115;
- const x=W-width-29+Math.sin(time*5.6)*5,y=H*.355;
- ctx.save();
- ctx.globalAlpha=.61+.39*pulse;
- ctx.filter='brightness('+(1.02+pulse*.66).toFixed(2)+') drop-shadow(0px 0px 13px rgba(255,54,48,0.95))';
- ctx.drawImage(offscreenArrow,frame*cellW,0,cellW,cellH,x,y,width,height);
- ctx.restore();
+ const width=118,height=78;
+ const x=W-width-18+Math.sin(time*5.6)*2,y=H*.39;
+ directionCtx.save();
+ directionCtx.globalAlpha=.78+.22*pulse;
+ directionCtx.filter='brightness('+(0.94+pulse*.25).toFixed(2)+') drop-shadow(0px 0px 6px rgba(255,54,48,0.76))';
+ directionCtx.drawImage(offscreenArrow,frame*cellW,0,cellW,cellH,x,y,width,height);
+ directionCtx.restore();
 }
 // Compatibility marker retained for historical sprite-QA slices only.
 // The top-center minimap and "SEOUL 199X / progress" overlay no longer draw.
@@ -9989,7 +10066,7 @@ window.__zVfxLayerStatus=()=>Z_VFX_MODE;
 const visibleActors=[];
 function draw(){
  if(gameState!=='playing'&&gameState!=='dying'&&!rewardSelection)return;
- ctx.clearRect(0,0,W,H);
+ ctx.clearRect(0,0,W,H);directionCtx.clearRect(0,0,W,H);
  if(heroEntry.active){drawHeroEntryCinematic();return;}
  ctx.save();
  // Only the full-screen camera offset is softened by 15%; gamepad rumble,
