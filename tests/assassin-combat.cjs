@@ -2492,10 +2492,10 @@ test('all twenty distinct bitmap attack atlases are archived locally and playabl
  assert(html.includes("p.moveName='jumpstart';"),
    'ordinary jumps must not select an attack atlas');
 });
-test('elite and boss use pure white bitmap flash and jump has longer vertical travel',()=>{
+test('Iron Mask no longer flashes a ghost silhouette, boss still has impact flash and jump travels vertically',()=>{
  const elite=fs.readFileSync(path.join(__dirname,'../assets/elite-ironmask.js'),'utf8');
  const boss=fs.readFileSync(path.join(__dirname,'../assets/boss-hunter.js'),'utf8');
- assert(elite.includes("'brightness(0) invert(1)'"),'elite flash should whiten actual sprite');
+ assert(!elite.includes("'brightness(0) invert(1)'"),'Iron Mask must not overlay a transparent duplicate of its silhouette');
  assert(boss.includes("'brightness(0) invert(1)'"),'boss flash should whiten actual sprite');
  assert(html.includes("p.vz=jumpMobilityStats().impulse;p.z=2"),'jump launch impulse must grow with height upgrades');
  assert(html.includes("p.vz=-1150"),'fast downward kick');
