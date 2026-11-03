@@ -7854,7 +7854,7 @@ function fxBurst(x,y,color='red',scale=1,specialAttackFx=false){if(fx.length>=90
 // on every side: drawImage only ever samples one complete cell, not its neighbors.
 const Z_ENEMY_BITMAP_ART={
  hit:{image:new Image(),src:'./assets/vfx/project_z_enemy_hit_explosion_8f.png',duration:.27},
- death:{image:new Image(),src:'./assets/vfx/project_z_enemy_death_evaporation_8f.png',duration:.66}
+ death:{image:new Image(),src:'./assets/vfx/project_z_enemy_death_evaporation_8f.png',duration:.72+1/.74}
 };
 for(const asset of Object.values(Z_ENEMY_BITMAP_ART))asset.image.src=asset.src;
 // Exact game-display sizes (1280x720 world canvas), with the actual enemy
@@ -7870,6 +7870,25 @@ const Z_ENEMY_FX_SIZES=Object.freeze({
 // In the rendered death atlas, the ash pile touches source Y=421..422.
 // Hold that ground line constant through all 8 cells as residue rises.
 const Z_DEATH_FOOT_SOURCE_Y=422/512;
+// The painted death sequence follows the SAME disappearance clock used by
+// updateEnemies, including the delay before actors begin fading.
+// Boss: 2.7 s hold + 1/.58 s fade. Others: .72 s hold + 1/.74 s fade.
+const Z_DEATH_EFFECT_TIMING=Object.freeze({
+ normalHold:.72,normalFadeRate:.74,bossHold:2.7,bossFadeRate:.58
+});
+function zEnemyDeathDuration(enemy){
+ const boss=enemy?.type==='boss';
+ return boss?Z_DEATH_EFFECT_TIMING.bossHold+1/Z_DEATH_EFFECT_TIMING.bossFadeRate:
+  Z_DEATH_EFFECT_TIMING.normalHold+1/Z_DEATH_EFFECT_TIMING.normalFadeRate;
+}
+function zEnemyDeathFadeProgress(enemy){
+ if(!enemy)return 0;
+ const collapsing=['assassin','raider','intruder','elite'].includes(enemy.type);
+ // Knocked-airborne characters cannot fade until their death art lands;
+ // count collapseAge rather than killing-blow time for these enemies.
+ const age=collapsing?(enemy.collapseAge||0):(enemy.deathAge||0);
+ return clamp(age/zEnemyDeathDuration(enemy),0,.999999);
+}
 function zEnemyFxSize(enemy){
  return Z_ENEMY_FX_SIZES[enemy?.type]||Z_ENEMY_FX_SIZES.raider;
 }
@@ -7917,7 +7936,7 @@ function spawnEnemyDeathBitmap(enemy){
  if(!enemy||fx.some(f=>f.kind==='enemyDeathBitmap'&&f.deadEnemy===enemy))return false;
  if(fx.length>=108)fx.splice(0,Math.max(1,fx.length-100));
  const foot=zEnemyFootWorld(enemy),style=zEnemyFxSize(enemy);
- const duration=Z_ENEMY_BITMAP_ART.death.duration;
+ const duration=zEnemyDeathDuration(enemy);
  // The actor remains the live anchor while knockback/airfall/death sprites play.
  // These initial coordinates are only a fallback if the actor is later removed.
  fx.push({kind:'enemyDeathBitmap',deadEnemy:enemy,followSpriteFoot:true,
@@ -7951,15 +7970,16 @@ function drawEnemyBitmapFx(effect){
  const underFootReveal=hit?0:clamp(w*.10,35,60);
  const topY=hit?effect.y-w*.5:effect.footY-w*Z_DEATH_FOOT_SOURCE_Y+underFootReveal;
  ctx.save();ctx.globalCompositeOperation='source-over';
- ctx.globalAlpha=progress>(hit?.81:.86)?
-   Math.max(0,(1-progress)/(hit?.19:.14)):1;
+ // Death never receives a global opacity fade: only its authored 8 RGBA
+ // frames change. It disappears on the exact tick the actor does.
+ ctx.globalAlpha=hit&&progress>.81?Math.max(0,(1-progress)/.19):1;
  // Strict cell coordinates, with original transparent overscan untouched.
  ctx.drawImage(image,(frame%4)*512,Math.floor(frame/4)*512,512,512,
    drawX-w*.5,topY,w,w);
  ctx.restore();
 }
 window.__zEnemyBitmapFxStatus=()=>({
- version:'enemy-death-follows-sprite-foot-8f-v3',
+ version:'enemy-death-synced-to-character-fade-8f-v4',
  hit:Z_ENEMY_BITMAP_ART.hit.image.complete&&Z_ENEMY_BITMAP_ART.hit.image.naturalWidth===2048,
  death:Z_ENEMY_BITMAP_ART.death.image.complete&&Z_ENEMY_BITMAP_ART.death.image.naturalWidth===2048,
  frames:8,columns:4,rows:2,cell:512,deathFootSourceY:422,
@@ -8744,6 +8764,14 @@ function updateEffects(dt,realDt=dt){
  for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){const fxDt=f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap'?realDt:f.kind==='parrySuccess10'||f.kind==='basicHitSprite'||f.kind==='upgradeVfxSprite'||f.kind==='combatWordSprite'?realDt:f.kind==='parryCounterSprite'?realDt*.90:dt;
   f.life-=fxDt;if(f.kind==='basicHitSprite'||f.kind==='combatWordSprite')f.age+=fxDt;
   if(f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap')f.age+=fxDt;
+  if(f.kind==='enemyDeathBitmap'&&f.deadEnemy?.dead){
+   // Override wall-clock age with the victim's CURRENT death/fade progress.
+   // Slow motion, hit-stop, airborne collapse and boss hold cannot end this
+   // effect before the character sprite fully disappears.
+   const progress=zEnemyDeathFadeProgress(f.deadEnemy);
+   f.age=progress*f.maxLife;
+   f.life=f.deadEnemy.fade>0?Math.max(.02,(1-progress)*f.maxLife):0;
+  }
   if(f.kind==='combatWordSprite'&&(f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02);if(f.kind==='dashPierceSprite'||f.kind==='parryCounterSprite'){f.age=(f.age||0)+fxDt;if((f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02)}}fx=fx.filter(f=>f.life>0);
  if(gameState==='playing'&&!fx.some(f=>f.kind==='combatWordSprite')&&zCombatWordQueue.length){
   zStartCombatWord(zCombatWordQueue.shift());
