@@ -62,7 +62,7 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
   "spawnCombatWordFx('critical',e)",
   "const critChance=Math.min(.72,.22+modRank('crit')*.10);",
   "(p.critDrought||0)>=4",
-  "const padX=2,padY=3;",
+  filename==='index.html'?"const PARRY_SUCCESS_CELL_PAD=10":"const padX=2,padY=3;",
   "zCombatWordQueue.length=0;floating=[]",
   "zStartCombatWord(zCombatWordQueue.shift())"
  ])assert(html.includes(needle),filename+' missing '+needle);
