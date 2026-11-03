@@ -3102,7 +3102,7 @@ test('ballistic Foley predecodes, fires at impact and never ducks music',()=>{
   "ctx.drawImage(bitmap,(frame%4)*cw,Math.floor(frame/4)*ch,cw,ch",
   "spawnGroundSlamFx(p.x,p.y,skill.visual,'hero')",
   "if(kind==='slam')spawnGroundSlamFx(b.x,b.y,1.55,'boss')",
-  "spawnGroundSlamFx(e.x+e.face*35,e.y,1.20,'elite')",
+  "spawnGroundSlamFx(e.x+e.face*82,e.y,1.46,'elite')",
   "if(f.kind==='groundSlamSprite')",
   "if(!drawGroundSlamSprite(f))"
  ];
@@ -3113,7 +3113,7 @@ test('ballistic Foley predecodes, fires at impact and never ducks music',()=>{
  const block=html.slice(begin,end);
  assert(block.includes("width*(ch/cw)"),'4x2 frame maintains authored aspect ratio');
  assert(block.includes("f.y-footAnchor"),'feet remain locked to the actor ground');
- const elite=html.indexOf("spawnGroundSlamFx(e.x+e.face*35,e.y,1.20,'elite')");
+ const elite=html.indexOf("spawnGroundSlamFx(e.x+e.face*82,e.y,1.46,'elite')");
  const hit=html.indexOf("e.eliteAttack=true;",elite-1500);
  assert(hit>=0&&hit<elite,'iron mask spawn occurs at special attack collision not warning');
 }
