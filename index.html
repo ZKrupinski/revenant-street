@@ -4249,19 +4249,42 @@ const Z_LOCAL_HERO_LIMB_OVERSCAN=Object.freeze({
  'rising_elbow-local':{top:[4,5]},
  'uppercut-local':{top:[4]}
 });
+// Remote masked grunt inspection (2026-11-03): only flight, fall and
+// stand-up images show 14 source-grid contacts across 96 original poses.
+// The spans below were measured from source pixels, not guessed per attack.
+const Z_MASKED_EDGE_SPANS=Object.freeze({
+ 'masked-hitFly':{2:{right:[236,279]},4:{right:[139,193]}},
+ 'masked-fall':{
+  0:{right:[88,142]},1:{left:[87,144]},
+  4:{right:[278,320]},5:{left:[270,318],right:[282,323]},
+  6:{left:[274,317],right:[242,322]},7:{left:[240,321]}},
+ 'masked-getup':{
+  0:{right:[232,304]},1:{left:[237,306],right:[242,296]},
+  2:{bottom:[71,148]},3:{bottom:[102,184]},
+  6:{top:[66,163]},7:{top:[96,197]}}
+});
 function zCellSamplingSpec(moveKey,index,cellWidth,inset=1){
  const core=Math.max(1,Math.floor(cellWidth-2*inset));
  // Existing authored sidekick foot overlap is intentionally preserved.
  const reserve=moveKey==='sidekick-local'?Math.ceil(cellWidth*.09):0;
  const spill=moveKey==='sidekick-local'?(index===5?reserve:index===4?Math.min(8,reserve):0):0;
  const policy=Z_LOCAL_HERO_LIMB_OVERSCAN[moveKey]||null;
- const padLeft=policy?.left?.length?Math.ceil(cellWidth*(moveKey==='superman_punch-local'?.17:.14)):0;
- const padRight=policy?.right?.length?Math.ceil(cellWidth*.17):0;
- const padTop=policy?.top?.length?Math.ceil(cellWidth*.065):0;
+ const masked=Z_MASKED_EDGE_SPANS[moveKey]||null;
+ const maskedFrame=masked?.[index]||null;
+ const margin=masked?Math.ceil(cellWidth*.115):0;
+ const padLeft=masked?(Object.values(masked).some(v=>v.left)?margin:0):
+  policy?.left?.length?Math.ceil(cellWidth*(moveKey==='superman_punch-local'?.17:.14)):0;
+ const padRight=masked?(Object.values(masked).some(v=>v.right)?margin:0):
+  policy?.right?.length?Math.ceil(cellWidth*.17):0;
+ const padTop=masked?(Object.values(masked).some(v=>v.top)?margin:0):
+  policy?.top?.length?Math.ceil(cellWidth*.065):0;
+ const padBottom=masked&&Object.values(masked).some(v=>v.bottom)?margin:0;
  return {canvasWidth:core+reserve+padLeft+padRight,readWidth:core+spill,bleed:spill,
-  padLeft,padTop,spillLeft:policy?.left?.includes(index)?padLeft:0,
-  spillRight:policy?.right?.includes(index)?padRight:0,
-  spillTop:policy?.top?.includes(index)?padTop:0,
+  padLeft,padTop,padBottom,maskedFrame,
+  spillLeft:maskedFrame?.left?padLeft:policy?.left?.includes(index)?padLeft:0,
+  spillRight:maskedFrame?.right?padRight:policy?.right?.includes(index)?padRight:0,
+  spillTop:maskedFrame?.top?padTop:policy?.top?.includes(index)?padTop:0,
+  spillBottom:maskedFrame?.bottom?padBottom:0,
   leftBand:policy?.band||'foot'};
 }
 function prepareZCells(im,moveKey=''){
@@ -4274,7 +4297,7 @@ function prepareZCells(im,moveKey=''){
   const canvas=document.createElement('canvas');
   canvas.width=crop.canvasWidth;
   const coreHeight=Math.max(1,Math.floor(ch-2*inset));
-  canvas.height=coreHeight+crop.padTop;
+  canvas.height=coreHeight+crop.padTop+crop.padBottom;
   const c=canvas.getContext('2d',{willReadFrequently:true});
   const sx=Math.floor((i%4)*cw+inset),sy=Math.floor(Math.floor(i/4)*ch+inset);
   c.clearRect(0,0,canvas.width,canvas.height);
@@ -4297,7 +4320,31 @@ function prepareZCells(im,moveKey=''){
    c.drawImage(im,sx-crop.spillLeft,sy+start,crop.spillLeft,height,
     crop.padLeft-crop.spillLeft,crop.padTop+start,crop.spillLeft,height);
   }
-  if(crop.spillTop){
+  if(crop.maskedFrame){
+   // Copy only the verified source-overlap band from the adjacent cell;
+   // the other pose's head/body is never read. Preserve all 8 foot pivots.
+   const m=crop.maskedFrame;
+   for(const side of ['left','right']){
+    if(!m[side])continue;
+    const lo=Math.max(0,Math.min(coreHeight-1,m[side][0]-5));
+    const hi=Math.max(lo+1,Math.min(coreHeight,m[side][1]+6));
+    const margin=side==='left'?crop.spillLeft:crop.spillRight;
+    const sourceX=side==='left'?sx-margin:sx+crop.readWidth;
+    const destX=side==='left'?crop.padLeft-margin:crop.padLeft+crop.readWidth;
+    c.drawImage(im,sourceX,sy+lo,margin,hi-lo,
+     destX,crop.padTop+lo,margin,hi-lo);
+   }
+   for(const side of ['top','bottom']){
+    if(!m[side])continue;
+    const lo=Math.max(0,Math.min(crop.readWidth-1,m[side][0]-5));
+    const hi=Math.max(lo+1,Math.min(crop.readWidth,m[side][1]+6));
+    const margin=side==='top'?crop.spillTop:crop.spillBottom;
+    const sourceY=side==='top'?sy-margin:sy+coreHeight;
+    const destY=side==='top'?crop.padTop-margin:crop.padTop+coreHeight;
+    c.drawImage(im,sx+lo,sourceY,hi-lo,margin,
+     crop.padLeft+lo,destY,hi-lo,margin);
+   }
+  }else if(crop.spillTop){
    // Upward fists on the SECOND atlas row can rise above the horizontal grid.
    // Restrict to the glove side so the earlier row's boots cannot bleed.
    const x0=Math.floor(crop.readWidth*.49),width=Math.floor(crop.readWidth*.36);
@@ -4428,8 +4475,9 @@ function prepareZCells(im,moveKey=''){
   // full-length arms/legs: fit the extended silhouette into a larger canvas,
   // not by shrinking the hero's torso and head on the action change.
   const hasExtra=!!Z_LOCAL_HERO_LIMB_OVERSCAN[moveKey];
-  const targetW=moveKey==='superman_punch-local'?320:hasExtra?269:240;
-  const targetH=Z_LOCAL_HERO_LIMB_OVERSCAN[moveKey]?.top?.length?272:254;
+  const maskedExtra=!!Z_MASKED_EDGE_SPANS[moveKey];
+  const targetW=moveKey==='superman_punch-local'?320:hasExtra?269:maskedExtra?270:240;
+  const targetH=maskedExtra?280:Z_LOCAL_HERO_LIMB_OVERSCAN[moveKey]?.top?.length?272:254;
   const unitScale=Math.min(targetW/union.w,targetH/union.h);
   // Hold full source resolution through matting, then retain only display-sized
   // transparent cells. A 35-sheet atlas library must not keep huge raw canvases.
@@ -4455,7 +4503,7 @@ function loadMaskedMove(key){
   const im=new Image();im.crossOrigin='anonymous';
   im.onload=()=>{
    try{
-    const raw=prepareZCells(im);
+    const raw=prepareZCells(im,Z_MASKED_EDGE_SPANS['masked-'+key]?'masked-'+key:'');
     if(raw.length!==8)throw Error('8-frame masked enemy atlas required');
     obj.frames=anchorMaskedFrames(raw,key);
     obj.ready=true;
