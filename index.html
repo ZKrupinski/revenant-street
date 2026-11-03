@@ -7857,50 +7857,99 @@ const Z_ENEMY_BITMAP_ART={
  death:{image:new Image(),src:'./assets/vfx/project_z_enemy_death_evaporation_8f.png',duration:.66}
 };
 for(const asset of Object.values(Z_ENEMY_BITMAP_ART))asset.image.src=asset.src;
+// Exact game-display sizes (1280x720 world canvas), with the actual enemy
+// sprite's foot/ground line used as the anchor rather than its torso center.
+const Z_ENEMY_FX_SIZES=Object.freeze({
+ raider:{hit:280,death:390,height:245},
+ assassin:{hit:280,death:390,height:250},
+ guard:{hit:320,death:440,height:265},
+ intruder:{hit:350,death:480,height:280},
+ elite:{hit:400,death:540,height:315},
+ boss:{hit:480,death:650,height:350}
+});
+// In the rendered death atlas, the ash pile touches source Y=421..422.
+// Hold that ground line constant through all 8 cells as residue rises.
+const Z_DEATH_FOOT_SOURCE_Y=422/512;
+function zEnemyFxSize(enemy){
+ return Z_ENEMY_FX_SIZES[enemy?.type]||Z_ENEMY_FX_SIZES.raider;
+}
+function zEnemyFootWorld(enemy){
+ return {
+  x:Number.isFinite(enemy.renderX)?enemy.renderX:enemy.x,
+  y:Number.isFinite(enemy.renderY)?enemy.renderY:enemy.y
+ };
+}
+function zEnemyHitPointProfile(move='jab',heavy=false){
+ const name=String(move||'jab').toLowerCase();
+ let height=.60,jitterX=15,jitterY=12;
+ if(name==='lowkick'||name==='shovel_hook'||name.includes('sweep')){
+  height=.25;jitterX=12;jitterY=8;
+ }else if(name.includes('headbutt')||name==='uppercut'||
+  name.includes('rising')||name.includes('highkick')||name.includes('roundhouse')){
+  height=.80;jitterX=12;jitterY=8;
+ }else if(name.includes('body')||name.includes('gut')||
+  (name.includes('kick')&&!name.includes('high'))){
+  height=.45;jitterX=14;jitterY=10;
+ }
+ if(heavy){jitterX=20;jitterY=15}
+ return {height,jitterX,jitterY};
+}
 function spawnEnemyHitBitmap(enemy,damage=0){
  if(!enemy||enemy.dead||fx.length>=108)return false;
+ // Fast combo frames get new impacts, but do not stack a flickering orb.
  if(time-(enemy.lastBitmapHitAt??-99)<.060)return false;
  enemy.lastBitmapHitAt=time;
+ const style=zEnemyFxSize(enemy),foot=zEnemyFootWorld(enemy);
+ const heavy=damage>=70||!!p.dashSmash||!!p.counterBoost||!!p.airAttack;
+ const move=p.moveName||'jab',point=zEnemyHitPointProfile(move,heavy);
+ const dir=p.facing<0?-1:1;
+ const side=clamp(bodyHalfX(enemy)*.30,14,enemy.type==='boss'?70:58);
+ const x=foot.x+dir*side+rnd(-point.jitterX,point.jitterX);
+ const y=foot.y-Math.max(0,enemy.z||0)-
+   style.height*point.height+rnd(-point.jitterY,point.jitterY);
  const duration=Z_ENEMY_BITMAP_ART.hit.duration;
- const width=(enemy.type==='boss'?326:enemy.type==='elite'?288:
-    enemy.type==='intruder'?250:enemy.type==='guard'?233:210)*(damage>=80?1.10:1);
  fx.push({kind:'enemyHitBitmap',contactEnemy:enemy,
-  x:enemy.x+p.facing*(enemy.type==='elite'?79:33),
-  y:enemy.y-Math.max(0,enemy.z||0)-
-     (enemy.type==='boss'?185:enemy.type==='elite'?150:122),
-  width,age:0,life:duration,maxLife:duration});
+  x,y,width:style.hit*(heavy?1.10:1),
+  strikeHeight:point.height,move,age:0,life:duration,maxLife:duration});
  return true;
 }
 function spawnEnemyDeathBitmap(enemy){
  if(!enemy||fx.some(f=>f.kind==='enemyDeathBitmap'&&f.deadEnemy===enemy))return false;
  if(fx.length>=108)fx.splice(0,Math.max(1,fx.length-100));
+ const foot=zEnemyFootWorld(enemy),style=zEnemyFxSize(enemy);
  const duration=Z_ENEMY_BITMAP_ART.death.duration;
+ // Do not subtract jump height: death debris belongs on the actual ground.
  fx.push({kind:'enemyDeathBitmap',deadEnemy:enemy,
-  x:enemy.x,y:enemy.y-Math.max(0,enemy.z||0)-
-      (enemy.type==='boss'?190:enemy.type==='elite'?155:130),
-  width:enemy.type==='boss'?475:enemy.type==='elite'?376:
-      enemy.type==='intruder'?341:enemy.type==='guard'?320:292,
-  age:0,life:duration,maxLife:duration});
+  x:foot.x,y:foot.y,footX:foot.x,footY:foot.y,
+  width:style.death,age:0,life:duration,maxLife:duration});
  return true;
 }
 function drawEnemyBitmapFx(effect){
  const hit=effect.kind==='enemyHitBitmap';
- const spec=hit?Z_ENEMY_BITMAP_ART.hit:Z_ENEMY_BITMAP_ART.death;
- const image=spec.image;
+ const image=(hit?Z_ENEMY_BITMAP_ART.hit:Z_ENEMY_BITMAP_ART.death).image;
  if(!image.complete||image.naturalWidth!==2048||image.naturalHeight!==1024)return;
- const p=clamp((effect.age||0)/effect.maxLife,0,.99999);
- const frame=Math.min(7,Math.floor(p*8)),w=effect.width;
+ const progress=clamp((effect.age||0)/effect.maxLife,0,.99999);
+ const frame=Math.min(7,Math.floor(progress*8)),w=effect.width;
+ // Only nudge within 36/48 px near a viewport edge; otherwise keep the
+ // original combat hit point / death foot visibly attached to its character.
+ const visibleHalf=w*(hit?.39:.34);
+ const preferredX=clamp(effect.x,cameraX+visibleHalf+6,cameraX+W-visibleHalf-6);
+ const drawX=clamp(preferredX,effect.x-(hit?48:36),effect.x+(hit?48:36));
+ const topY=hit?effect.y-w*.5:effect.footY-w*Z_DEATH_FOOT_SOURCE_Y;
  ctx.save();ctx.globalCompositeOperation='source-over';
- ctx.globalAlpha=p>(hit?.81:.86)?Math.max(0,(1-p)/(hit?.19:.14)):1;
+ ctx.globalAlpha=progress>(hit?.81:.86)?
+   Math.max(0,(1-progress)/(hit?.19:.14)):1;
+ // Strict cell coordinates, with original transparent overscan untouched.
  ctx.drawImage(image,(frame%4)*512,Math.floor(frame/4)*512,512,512,
-   effect.x-w*.5,effect.y-w*.5,w,w);
+   drawX-w*.5,topY,w,w);
  ctx.restore();
 }
 window.__zEnemyBitmapFxStatus=()=>({
- version:'enemy-hit-death-bitmap-8f',
+ version:'enemy-foot-anchor-hit-location-8f-v2',
  hit:Z_ENEMY_BITMAP_ART.hit.image.complete&&Z_ENEMY_BITMAP_ART.hit.image.naturalWidth===2048,
  death:Z_ENEMY_BITMAP_ART.death.image.complete&&Z_ENEMY_BITMAP_ART.death.image.naturalWidth===2048,
- frames:8,columns:4,rows:2,cell:512
+ frames:8,columns:4,rows:2,cell:512,deathFootSourceY:422,
+ sizes:Z_ENEMY_FX_SIZES
 });
 function spawnParrySuccessFx(x,y,face=1){fx.push({kind:'parrySuccess10',x,y,face,life:.31,maxLife:.31})}
 function floatText(){ /* Hide character-bound damage numbers, skill and status words. */ }
