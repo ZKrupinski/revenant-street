@@ -8738,7 +8738,7 @@ if(gameState!=='playing')return;
  if(slowMotion<=0)parrySlowTarget=null;
  time+=worldDt;messageUpdate(worldDt);updateEffects(worldDt,dt);updateComboCamera(worldDt,dt);
  if(hitStop>0){hitStop=Math.max(0,hitStop-dt);followComboCamera(worldDt,dt);updateHudThrottled(dt);return}
- control(heroDt,pad);followComboCamera(worldDt,dt);updateEnemies(worldDt,targetScale);updateHudThrottled(dt);$('hint').hidden=true; // old text bubble replaced by animated bitmap arrow}
+ control(heroDt,pad);followComboCamera(worldDt,dt);updateEnemies(worldDt,targetScale);updateHudThrottled(dt);$('hint').hidden=true; /* old text bubble replaced by animated bitmap arrow */}
 // Cache photographic depth treatment once per loaded panorama. Ground stays original.
 const backdropDepthCache=new WeakMap();
 function depthBackdrop(bg){
