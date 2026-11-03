@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PROJECT Z V8 — Swapped Parry Counter + Original Upgrade UI</title>
+<title>PROJECT Z V9 — Instant low-latency combat audio</title>
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#24303b 0%,#11161e 50%,#090c11 100%);font-family:system-ui,"Malgun Gothic",sans-serif;color:#eef2f4}
 main{max-width:820px;margin:auto;padding:32px 18px 48px}.eyebrow{color:#85dbdc;letter-spacing:.16em;font-weight:800;font-size:12px}
@@ -11,24 +11,24 @@ p{line-height:1.6;color:#aab6c0}.sample{display:grid;grid-template-columns:minma
 a{color:#7ee4e0;font-weight:800}footer{padding:20px 0;color:#90a1aa;font-size:13px}
 @media(max-width:670px){.sample{grid-template-columns:1fr}.sample audio{width:100%}}
 </style></head><body><main>
-<div class="eyebrow">REBELTREE / PROJECT Z · 2026.11.03 · V8</div>
-<h1>패링·반격음 교환 / 콤보 6종 / 전용 강화음</h1>
-<p>실제 게임이 사용하는 음원을 직접 비교해 보세요. 발차기와 강타를 포함한 모든 일반 콤보가 6개 총격음을 순환하며, 재생속도에 미세한 변화를 적용했습니다.</p>
-<div class="info">V8: 패링 성공은 이전의 반격 폭발음, 반격은 이전의 패링 슬라이드음으로 서로 교환했습니다. 점프·대쉬 시작과 특수공격도 같은 교환된 배정을 따릅니다. 전투 중 파워업 확정은 별도의 UI 음을 재생합니다.</div>
+<div class="eyebrow">REBELTREE / PROJECT Z · 2026.11.03 · V9</div>
+<h1>V9 · 소리 시작 지연 제거 / 반격 즉시 재생</h1>
+<p>실제 게임에서 사용하는 무압축 PCM 사운드를 바로 들을 수 있습니다. 6종 기본공격, 패링·반격, 강화음 모두 첫 소리가 0~1.5ms 안에 시작하도록 정리했습니다.</p>
+<div class="info">음원 앞부분 실제 공백 측정: 반격 약 103ms → 1.5ms, 패링 약 165ms → 1.5ms, 강공격 약 152ms → 1.5ms. 소리의 본체와 잔향은 유지했습니다. 공격·반격 소리는 수락된 버튼 입력 시 재생하며, 화면 타격 효과는 충돌 시 그대로 적용합니다.</div>
 <h2>기본공격 · 6가지 실사 총격음</h2>
-<section class="sample"><div><b>소총 A</b><p>기존 묵직한 소총음</p></div><audio controls preload="none" src="./assets/sfx/z-ballistic-rifle-20261103-weight-v5.mp3?v=weightV5"></audio></section>
-<section class="sample"><div><b>권총 B</b><p>기존 건조한 권총음</p></div><audio controls preload="none" src="./assets/sfx/z-ballistic-sidearm-20261103-weight-v5.mp3?v=weightV5"></audio></section>
-<section class="sample"><div><b>소총 C · 신규</b><p>소총의 다른 발사 질감</p></div><audio controls preload="none" src="./assets/sfx/z-combat-v7-rifle-c.mp3?v=audioV7"></audio></section>
-<section class="sample"><div><b>소총 D · 신규</b><p>조금 더 타이트한 총격감</p></div><audio controls preload="none" src="./assets/sfx/z-combat-v7-rifle-d.mp3?v=audioV7"></audio></section>
-<section class="sample"><div><b>소총 E · 신규</b><p>음량 균형을 맞춘 발사음</p></div><audio controls preload="none" src="./assets/sfx/z-combat-v7c-rifle-e.mp3?v=audioV7c"></audio></section>
-<section class="sample"><div><b>소총 F · 신규</b><p>다른 질감의 짧은 총격</p></div><audio controls preload="none" src="./assets/sfx/z-combat-v7c-rifle-f.mp3?v=audioV7c"></audio></section>
+<section class="sample"><div><b>소총 A</b><p>기존 묵직한 소총음</p></div><audio controls preload="none" src="./assets/sfx/z-lowlat-v9-punchA.wav?v=zeroLeadV9"></audio></section>
+<section class="sample"><div><b>권총 B</b><p>기존 건조한 권총음</p></div><audio controls preload="none" src="./assets/sfx/z-lowlat-v9-punchB.wav?v=zeroLeadV9"></audio></section>
+<section class="sample"><div><b>소총 C · 신규</b><p>소총의 다른 발사 질감</p></div><audio controls preload="none" src="./assets/sfx/z-lowlat-v9-punchC.wav?v=zeroLeadV9"></audio></section>
+<section class="sample"><div><b>소총 D · 신규</b><p>조금 더 타이트한 총격감</p></div><audio controls preload="none" src="./assets/sfx/z-lowlat-v9-punchD.wav?v=zeroLeadV9"></audio></section>
+<section class="sample"><div><b>소총 E · 신규</b><p>음량 균형을 맞춘 발사음</p></div><audio controls preload="none" src="./assets/sfx/z-lowlat-v9-punchE.wav?v=zeroLeadV9"></audio></section>
+<section class="sample"><div><b>소총 F · 신규</b><p>다른 질감의 짧은 총격</p></div><audio controls preload="none" src="./assets/sfx/z-lowlat-v9-punchF.wav?v=zeroLeadV9"></audio></section>
 <h2>패링 성공 · 폭음과 잔향 (교환됨)</h2>
-<section class="sample"><div><b>패링 성공 / 점프·대쉬 시작</b><p>이전 반격의 묵직한 폭발음</p></div><audio controls preload="none" src="./assets/sfx/z-combat-v7b-counter-loud-reverb.mp3?v=audioV8swap"></audio></section>
+<section class="sample"><div><b>패링 성공 / 점프·대쉬 시작</b><p>이전 반격의 묵직한 폭발음</p></div><audio controls preload="none" src="./assets/sfx/z-lowlat-v9-parry.wav?v=zeroLeadV9"></audio></section>
 <h2>강타 / 패링 후 반격</h2>
-<section class="sample"><div><b>강공격</b><p>기존 중화기 발사</p></div><audio controls preload="none" src="./assets/sfx/z-ballistic-heavy-20261103-weight-v5.mp3?v=weightV5"></audio></section>
-<section class="sample"><div><b>패링 후 반격 / 점프·대쉬공격</b><p>이전 패링의 강한 철컥 슬라이드음</p></div><audio controls preload="none" src="./assets/sfx/z-combat-v7b-slide-b.mp3?v=audioV8swap"></audio></section>
+<section class="sample"><div><b>강공격</b><p>기존 중화기 발사</p></div><audio controls preload="none" src="./assets/sfx/z-lowlat-v9-heavy.wav?v=zeroLeadV9"></audio></section>
+<section class="sample"><div><b>패링 후 반격 / 점프·대쉬공격</b><p>이전 패링의 강한 철컥 슬라이드음</p></div><audio controls preload="none" src="./assets/sfx/z-lowlat-v9-counter.wav?v=zeroLeadV9"></audio></section>
 <h2>전투 중 업그레이드 전용 사운드</h2>
-<section class="sample"><div><b>강화 아이템 선택 확정 · 신규</b><p>총격과 다른 맑고 단단한 사이버네틱 3음 확인 효과</p></div><audio controls preload="none" src="./assets/sfx/z-ui-upgrade-confirm-v8.wav?v=audioV8"></audio></section>
-<section class="sample"><div><b>강화 후보 갱신 · 신규</b><p>카드를 다시 뽑을 때 들리는 짧은 시스템 스캔음</p></div><audio controls preload="none" src="./assets/sfx/z-ui-upgrade-reroll-v8.wav?v=audioV8"></audio></section>
-<footer><a href="./index.html?v=swapped-parry-combo-ui-v8-20261103">수정된 게임 플레이</a> · <a href="./play-fixed-20261102.html?v=swapped-parry-combo-ui-v8-20261103">별도 게임 실행</a><p>기존 UI·이펙트·배경음악은 변경하지 않았습니다.</p></footer>
+<section class="sample"><div><b>강화 아이템 선택 확정 · 신규</b><p>총격과 다른 맑고 단단한 사이버네틱 3음 확인 효과</p></div><audio controls preload="none" src="./assets/sfx/z-lowlat-v9-upgrade.wav?v=zeroLeadV9"></audio></section>
+<section class="sample"><div><b>강화 후보 갱신 · 신규</b><p>카드를 다시 뽑을 때 들리는 짧은 시스템 스캔음</p></div><audio controls preload="none" src="./assets/sfx/z-lowlat-v9-reroll.wav?v=zeroLeadV9"></audio></section>
+<footer><a href="./index.html?v=zero-lead-audio-v9-20261103">수정된 게임 플레이</a> · <a href="./play-fixed-20261102.html?v=zero-lead-audio-v9-20261103">별도 게임 실행</a><p>기존 UI·이펙트·배경음악은 변경하지 않았습니다.</p></footer>
 </main></body></html>
