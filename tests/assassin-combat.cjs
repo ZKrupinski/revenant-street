@@ -2287,7 +2287,7 @@ test('JUST PARRY shows the artist ten-frame blue burst without stacked enlarged 
  t.enemyAttack(enemy);
  const bursts=t.getFx().filter(f=>f.kind==='parrySuccess10');
  assert.equal(bursts.length,1,'one original ten-frame blue burst per confirmed parry');
- assert.equal(bursts[0].life,.27,'ten-frame burst uses an accelerated 270ms real-time clock');
+ assert.equal(bursts[0].life,.31,'V11 ten-frame burst uses a slightly slower 310ms real-time clock');
  assert.equal(t.getFx().filter(f=>f.kind==='parryShield').length,0,'no inflated prior shield effect');
  assert(!t.getFx().some(f=>f.kind==='modBitmap'&&f.color==='blue'),'no duplicate blue bitmap glow');
  assert(!t.getFx().some(f=>f.color==='gold'),'no stacked golden burst');
@@ -2295,7 +2295,7 @@ test('JUST PARRY shows the artist ten-frame blue burst without stacked enlarged 
  assert.equal(t.getSlowVictim(),enemy,'only successfully parried actor gets stacked slowdown');
  assert(t.getHitStop()>=.19,'initial parry impact has an extended 190ms freeze');
 });
-test('fast ten-frame parry burst plays on real time through freeze and slow-mo',()=>{
+test('V11 ten-frame parry burst plays slightly slower on real time through freeze and slow-mo',()=>{
  g.startRun();t.keys.clear();t.setEnemies([]);t.p.x=2600;t.p.y=570;t.p.facing=1;
  t.setCameraX(t.p.x-465);
  const enemy=t.makeEnemy('assassin',t.p.x+80,t.p.y,0);t.setEnemies([enemy]);
@@ -2305,12 +2305,12 @@ test('fast ten-frame parry burst plays on real time through freeze and slow-mo',
  const world=t.getGameTime();
  for(let n=0;n<6;n++)t.update(1/60);
  const elapsed=(6/60);
- assert(shot.life<.27-elapsed+.0001,'VFX must advance on real time even during hitstop');
+ assert(shot.life<.31-elapsed+.0001,'VFX must advance on real time even during hitstop');
  assert(t.getGameTime()-world<elapsed*.26,'background/world effects remain strongly slowed');
  assert(t.getCameraZoom()>1.25,'camera zoom is visible before flash completes');
  assert(t.getCameraX()>t.p.x-455,'camera follows the parry toward the enemy-facing side');
- for(let n=0;n<12;n++)t.update(1/60);
- assert(!t.getFx().includes(shot),'the full 10-frame flash ends in under 300ms real time');
+ for(let n=0;n<15;n++)t.update(1/60);
+ assert(!t.getFx().includes(shot),'the full ten-frame flash ends after ~310ms, before 350ms real time');
  assert(t.getSlowMotion()>1.0,'surrounding actors remain in slow motion after burst');
 });
 test('parry camera looks forward in either direction and safely frames the entire burst',()=>{
