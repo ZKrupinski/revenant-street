@@ -1,4 +1,4 @@
-/* Project Z — Iron Mask Elite v2: eight ORIGINAL bitmap animation atlases.
+/* Project Z — Iron Mask Elite v3: fixed knockback/recovery priority and clean painted states.
    Each 4x2 WebP carries 8 pre-cut, fixed-baseline full-body sprites.
    No palette shift, outline trick, destructive crop, or borrowed assassin sprite.
 */
@@ -24,9 +24,16 @@ function load(key){
  return DATA[key];
 }
 function preload(){return KEYS.map(load)}
+// Motion priority: death > reaction/physical knockback > collapse > recovery
+// > committed special > attack > moving > idle. Reactions do NOT end just
+// because their short timer expires while the body is still flying backwards.
 function move(e){
- if(e.dead)return e.z>12?'hitFly':'death';
- if((e.reactionTime||0)>0||(e.proneTime||0)>0||(e.riseTime||0)>0)return 'hit';
+ if(e.dead)return 'death';
+ if((e.reactionTime||0)>0||Math.abs(e.knockVX||0)>28||
+    (e.pendingFall&&((e.z||0)>4||(e.proneTime||0)<=0))||
+    (e.z||0)>16)return 'hit';
+ if((e.proneTime||0)>0)return 'hit'; // hold the last recovery cel, NEVER loop it
+ if((e.riseTime||0)>0)return 'idle'; // exit recoil before returning to guard
  if(e.eliteTell>0)return 'charge';
  if(e.eliteSpecialPlaying||e.eliteRush>0||e.eliteAttack||e.eliteSpecialRecover>0)return 'special';
  if(e.windup>0||e.attackPoseTime>0)return 'attack';
@@ -36,10 +43,13 @@ function move(e){
 function frame(e,key){
  const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
  if(key==='death')return clamp(Math.floor((e.collapseAge||0)/.88*8),0,7);
- if(key==='hitFly')return clamp(Math.floor((e.reactionTime||0)*15),0,7);
+ if(key==='hitFly')return 4; // compatibility only: no idle art during flight
  if(key==='hit'){
   if((e.reactionTime||0)>0)return clamp(Math.floor((1-e.reactionTime/Math.max(.001,e.reactionDuration||.5))*8),0,7);
-  return Math.floor((e.spriteTime||0)*9)%8;
+  if((e.proneTime||0)>0)return 7; // recovering on floor: still, not looping hit
+  // Movement under remaining knockback stays in an unmistakable recoil pose.
+  // Never replay frames 0-7 while the actor is standing still.
+  return (e.z||0)>12?3:4;
  }
  if(key==='charge')return clamp(Math.floor((1-e.eliteTell/Math.max(.001,e.eliteTellDuration||.9))*8),0,7);
  if(key==='special'){
@@ -55,6 +65,7 @@ function frame(e,key){
  }
  if(key==='menace')return clamp(Math.floor((e.spriteTime||0)*11),0,7);
  if(key==='run')return Math.floor(Math.max(0,e.spriteDistance||0)/39)%8;
+ if((e.riseTime||0)>0)return 0; // briefly brace before the idle loop resumes
  return Math.floor(Math.max(0,e.spriteTime||0)*5.9)%8;
 }
 function draw(e,x,y,z,api){
@@ -75,13 +86,9 @@ function draw(e,x,y,z,api){
   const dx=-CW*scale*.5,dy=-FOOT*scale;
   ctx.drawImage(source.image,(idx%4)*CW,Math.floor(idx/4)*CH,CW,CH,
     dx,dy,CW*scale,CH*scale);
-  if(e.hitFlash>0){
-   ctx.save();ctx.filter='brightness(0) invert(1)';
-   ctx.globalAlpha=alpha*.68*clamp(e.hitFlash/.30,0,1);
-   ctx.drawImage(source.image,(idx%4)*CW,Math.floor(idx/4)*CH,CW,CH,
-     dx,dy,CW*scale,CH*scale);
-   ctx.restore();
-  }
+  // Hit feedback is provided by the separate full-opacity painted contact
+  // sprites. Never overlay a semi-transparent duplicate of the entire Iron Mask
+  // body: it flashes like a ghost during idle/special transitions.
  }else{
   // Deliberately do NOT briefly draw the old bright casual elite.
   ctx.fillStyle='#121c23';ctx.fillRect(-24,-204,48,191);
