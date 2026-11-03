@@ -24,6 +24,13 @@ def silhouette(source, points, original_size):
     draw.polygon(polygon, fill=255)
     mask = mask.resize((w,h), Image.Resampling.LANCZOS)
     image.putalpha(ImageChops.multiply(image.getchannel("A"), mask))
+    # Clear hidden RGB as well as alpha; this prevents matte leaks in image
+    # tooling that ignores alpha during intermediate downscaling.
+    pixels=image.load()
+    for yy in range(h):
+        for xx in range(w):
+            if pixels[xx,yy][3]==0:
+                pixels[xx,yy]=(0,0,0,0)
     return image
 
 def wave():
@@ -40,18 +47,26 @@ def wave():
     ]
     image=silhouette("ref-wave-frame-v5.webp",contour,(1600,211))
     px=image.load(); w,h=image.size
-    # The approved source screenshot had a partially-filled wave meter.
-    # Previous crops retained a red stripe on its empty upper track.
-    # Remove only RED pixels in that narrow meter header; preserve every
-    # surrounding metal edge, cyan LED, left WAVE lettering and skull.
-    for y in range(round(57*h/211),round(94*h/211)):
-        for x in range(round(451*w/1600),round(889*w/1600)):
-            r,g,b,a=px[x,y]
-            if a and r>95 and r>g*1.36 and r>b*1.24:
-                # Convert the baked red paint/glow into dark neutral metallic
-                # pixels, so all red meter pixels come from the live fill ONLY.
-                v=min(100,round((g+b)*.44)+8)
-                px[x,y]=(v,min(255,v+2),min(255,v+7),a)
+    # The approved screenshot had a red glowing fill already baked into the
+    # upper-left rail even though the production gauge must start EMPTY.
+    # Restore that stripe with pixels from the perfectly matching EMPTY
+    # upper rail on the RIGHT of the same original bitmap. This preserves
+    # original metal texture and highlights instead of making white aliases.
+    before=image.copy()
+    src=before.load()
+    for y in range(round(57*h/211),round(99*h/211)):
+        y0=y*211/max(1,h)
+        dy=min(1.0,max(0,(y0-57)/9),max(0,(99-y0)/9))
+        for x in range(round(446*w/1600),round(870*w/1600)):
+            x0=x*1600/max(1,w)
+            dx=min(1.0,max(0,(x0-446)/22),max(0,(870-x0)/22))
+            weight=min(dx,dy)
+            # Sample from the uninterrupted empty metallic rail. The source
+            # strip occupies the same y and contains no progress-fill pixels.
+            sx=round((925+(x0-446)%230)*w/1600)
+            sx=min(w-1,max(0,sx))
+            orig=src[x,y];clean=src[sx,y]
+            px[x,y]=tuple(round(orig[k]*(1-weight)+clean[k]*weight) for k in range(4))
     output=UI/"ref-wave-frame-v8.png"
     image.save(output,optimize=True)
     return output
