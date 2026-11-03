@@ -66,6 +66,26 @@ for orig,dest in CASES:
             cell[erase]=[0,0,0,0]
             changes.append({'pose':i+1,'area':area,'bbox':[x,y,w,h]})
     if not changes:raise AssertionError(f'Expected source artifacts not found in {orig}')
+    if typ=='attack':
+        # Pose 5's extended metal fist was painted with a squared-off tip.
+        # The next authored 8-frame pose has the SAME actor, same foot plane,
+        # same straight arm and a COMPLETE painted fist. Reuse only those
+        # original glove/forearm pixels, not a synthetic patch or rescale.
+        # All other limb/body pixels and seven remaining poses stay unchanged.
+        with Image.open(ROOT/orig) as src_image:
+            original=np.asarray(src_image.convert('RGBA')).copy()
+        target=frame_roi(im,4)
+        donor=frame_roi(original,5)
+        x0,x1,y0,y1=390,461,245,337
+        assert target.shape==donor.shape and target.shape[1]>=461
+        assert int(np.count_nonzero(donor[y0:y1,x0:x1,3]>60))>600, 'intact donor glove missing'
+        for x in range(x0,x1):
+            factor=min(1.,max(0.,(x-x0)/11.))
+            if factor<=0:continue
+            a=target[y0:y1,x,:].astype('float32')
+            b=donor[y0:y1,x,:].astype('float32')
+            target[y0:y1,x,:]=np.clip(a*(1-factor)+b*factor,0,255).astype('uint8')
+        print('GLOVE RECOVERED ironmask attack pose 5 from original complete pose 6 sleeve/hand',flush=True)
     final=Image.fromarray(im,'RGBA')
     target=ROOT/dest;target.parent.mkdir(exist_ok=True,parents=True)
     final.save(target,'WEBP',quality=97,method=6)
