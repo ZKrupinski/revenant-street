@@ -107,8 +107,13 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  assert.equal(new Set(draws.map(d=>d[0])).size,3,'all 4 states draw even when shock and freeze share the electric source PNG');
  if(filename==='index.html'){
   assert(alphaAtDraw.slice(-4).every(v=>v===1),'four simultaneous statuses keep full opacity without pulsating translucency');
-  assert.equal(new Set(translations.slice(-4).map(v=>v.join(':'))).size,4,
-    'burn/shock/bleed/freeze retain four separate body-adjacent positions');
+  const positions=translations.slice(-4);
+  assert.equal(new Set(positions.map(v=>v.join(':'))).size,4,
+    'burn/shock/bleed/freeze retain small distinct positions on the torso');
+  assert(positions.every(([x,y])=>Math.abs(x-enemy.renderX)<=25),
+    'all four active status images sit ON the enemy body, not its outer silhouette');
+  assert(positions.every(([x,y])=>Math.abs(y-(enemy.renderY-108))<=25),
+    'all four active status sprites are centered at the chest/abdomen');
   // Do not revive an idle ghost on elites: render only while actual ailment timers are active.
   draws.length=0;enemy.shock=1;enemy.burn=enemy.bleed=enemy.freeze=0;
   enemy.type='elite';world.paintStatuses();
@@ -118,6 +123,8 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
   draws.length=0;enemy.type='boss';world.paintStatuses();
   assert.equal(draws.length,1,'boss status is visible, not excluded from ongoing effects');
   assert(draws[0][7]>shockDisplayWidth*1.15,'boss gets larger readable status art');
+  assert(Math.abs(translations.at(-1)[0]-enemy.renderX)<30,'boss ailment still anchors to central torso');
+  assert(Math.abs(translations.at(-1)[1]-(enemy.renderY-174))<30,'boss has elevated chest center');
   draws.length=0;enemy.shock=0;world.paintStatuses();
   assert.equal(draws.length,0,'elite/boss has no stray glowing status when timer ends');
   delete enemy.type;
@@ -125,6 +132,16 @@ for(const filename of ['index.html','play-fixed-20261102.html']){
  draws.length=0;enemy.dead=true;
  world.paintStatuses();assert.equal(draws.length,0,'do not render persistent VFX on corpses');
  // Transient element hit feedback must also use the new clean RGBA strips.
+ if(filename==='index.html'){
+  enemy.dead=false;enemy.type='raider';enemy.renderX=615;enemy.renderY=607;
+  world.attributeFx=[{mod:'fire',target:enemy,dir:1,x:50,y:50,life:.25,maxLife:.4,scale:1.1}];
+  draws.length=0;world.paintStatuses();
+  assert.equal(draws.length,1,'body-attached contact flash draws');
+  assert(Math.abs(translations.at(-1)[0]-615)<25,'hit flash follows current enemy X, not original far-away spawn');
+  assert(Math.abs(translations.at(-1)[1]-(607-108))<25,'hit flash follows moving enemy chest, not old impact X/Y');
+  world.attributeFx=[];
+  enemy.renderX=462;enemy.renderY=568;enemy.dead=true;
+ }
  world.attributeFx=[{mod:'fire',x:432,y:438,life:.25,maxLife:.4,scale:1.1}];
  world.paintStatuses();assert.equal(draws.length,1,'draw impact PNG');
  assert.strictEqual(draws[0][0],effects.nova.image,'no legacy filtered gold bitmap on fire impact');
