@@ -2342,7 +2342,13 @@ test('user uploaded ten-frame parry artwork is embedded intact and uses 5x2 scre
  assert(html.includes('const w=318,h=296'),'the corrected ten-frame burst stays at its original size without changing its source ratio');
  assert(html.includes("ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.32,-h*.5,w,h)"));
  assert(html.includes("ctx.globalCompositeOperation='screen'"),'solid black frame background must not become a rectangle');
- const first=html.indexOf('function parrySuccessSourceRect(w,h,frame){');
+ assert(html.includes('const PARRY_SUCCESS_CELL_PAD=10'),'transparent per-frame margin is present');
+  assert(html.includes('g.imageSmoothingEnabled=false'),'source frames are copied pixel-for-pixel');
+  assert(html.includes('prepareParrySuccessCells();'),'ten frame precut occurs during preloading');
+  assert(html.includes('if(cell)ctx.drawImage(cell,'),'draw the separated frame');
+  assert(html.includes('g.drawImage(source,r.sx+r.sw-1-x,'),
+   'enemy-side edge reuses only the same source cell');
+  const first=html.indexOf('function parrySuccessSourceRect(w,h,frame){');
  const last=html.indexOf('function drawEffects(',first);
  assert(first>=0&&last>first,'crop source helper must precede rendering');
  const sourceRect=vm.runInNewContext(html.slice(first,last)+'\nparrySuccessSourceRect');
@@ -2350,12 +2356,11 @@ test('user uploaded ten-frame parry artwork is embedded intact and uses 5x2 scre
   const r=sourceRect(1536,1024,frame),col=frame%5,row=Math.floor(frame/5);
   const x0=Math.round(col*1536/5),x1=Math.round((col+1)*1536/5);
   const y0=Math.round(row*1024/2),y1=Math.round((row+1)*1024/2);
-  // A strict 2px x / 3px y gutter keeps neighboring frames out
-  // without removing the pointed tip of the approved parry burst.
-  assert.equal(r.sx,x0+2,'preserve painted horizontal edge; maintain 2px gutter');
-  assert.equal(r.sy,y0+3,'preserve painted vertical edge; maintain 3px gutter');
-  assert(r.sw>0&&r.sh>0&&r.sx+r.sw===x1-2&&r.sy+r.sh===y1-3,
-   'no neighbor cell bleed while preserving the painted ends');
+  // Full native cell: the individual 1:1 bitmap prevents neighbor bleed.
+  assert.equal(r.sx,x0,'retain the full left edge');
+  assert.equal(r.sy,y0,'retain the full top edge');
+  assert(r.sw>0&&r.sh>0&&r.sx+r.sw===x1&&r.sy+r.sh===y1,
+   'retain the painted tip while never sampling another cell');
   assert.equal(r.sx%1,0);assert.equal(r.sy%1,0);
   assert.equal(r.sw%1,0);assert.equal(r.sh%1,0);
  }
