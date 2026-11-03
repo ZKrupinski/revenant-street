@@ -35,6 +35,8 @@ jobs:
         run: node tests/drum-cannon-impact.cjs
       - name: Title first navigation and startup performance regression
         run: node tests/startup-performance.cjs
+      - name: Screenshot-reference HUD and controls at HD, 4K and ultrawide resolutions
+        run: node tests/combat-hud-responsive.cjs
       - name: Combat and animation regression tests
         run: node tests/assassin-combat.cjs
       - name: One-shot guard and mint healing sprite regression
