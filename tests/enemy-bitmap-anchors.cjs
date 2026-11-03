@@ -55,8 +55,10 @@ for(const [type,[hitSize,deathSize]] of Object.entries(expected)){
  assert.equal(death.x,650,'ground X pinned '+type);
  assert.equal(death.footY,580,'death ignores airborne Z '+type);
  assert.equal(world.spawnEnemyDeathBitmap(e),false,'no duplicate death '+type);
- for(let frame=0;frame<8;frame++){
-  death.age=(frame+.25)/8*death.maxLife;
+ const expectedTempo=[0,1,2,3,4,5,6,7,6,7];
+ for(let phase=0;phase<expectedTempo.length;phase++){
+  const frame=expectedTempo[phase];
+  death.age=(phase+.25)/expectedTempo.length*death.maxLife;
   draws.length=0;
   world.drawEnemyBitmapFx(death);
   assert.equal(draws.length,1,'one frame for '+type+' frame '+frame);
@@ -97,4 +99,4 @@ const d=fx.at(-1);draws.length=0;world.drawEnemyBitmapFx(d);
 assert(Math.abs((draws[0][5]+d.width/2)-edge.x)<=36,'edge correction limited to 36px, preserve feet');
 assert(html.includes("if(e.hp>0)spawnEnemyHitBitmap(e,dmg);"),'only living enemy takes hit burst');
 assert(html.includes('spawnEnemyDeathBitmap(e);'),'death explosion spans all enemy types');
-console.log('PASS: six enemy sizes, hit-height offsets, death sprite-follow anchors through knockback/landing, 8-frame crop safety');
+console.log('PASS: six enemy sizes, 10-step death cadence through original 8 cells, sprite-follow anchors, alpha crop safety');
