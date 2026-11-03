@@ -4308,11 +4308,17 @@ function prepareZCells(im,moveKey=''){
   // Sample *inside* a possible black grid stroke; corner-only detection mistakes frame lines for the background.
   const points=[];
   const addSample=(x,y)=>{const k=(Math.floor(y)*w+Math.floor(x))*4;points.push([d[k],d[k+1],d[k+2]])};
+  // Safe overscan adds *transparent* canvas gutters. They must NEVER be
+  // mistaken for the original chroma-key backing: sample the actual source
+  // cell interior on all sides or the hero gets a solid green rectangle.
+  const sl=crop.padLeft,st=crop.padTop,sw=crop.readWidth,sh=coreHeight;
+  const px=t=>Math.max(0,Math.min(w-1,sl+Math.floor(t*(sw-1))));
+  const py=t=>Math.max(0,Math.min(h-1,st+Math.floor(t*(sh-1))));
   for(const t of [.03,.08,.16,.28,.5,.72,.84,.92,.97]){
-   const x=Math.max(0,Math.min(w-1,Math.floor(t*(w-1))));
-   const y=Math.max(0,Math.min(h-1,Math.floor(t*(h-1))));
-   for(const q of [.02,.08]){const ex=Math.max(0,Math.min(w-1,Math.floor(q*(w-1)))),ey=Math.max(0,Math.min(h-1,Math.floor(q*(h-1))));
-    addSample(x,ey);addSample(x,h-1-ey);addSample(ex,y);addSample(w-1-ex,y);
+   const x=px(t),y=py(t);
+   for(const q of [.02,.08]){
+    const ex=px(q),ey=py(q);
+    addSample(x,ey);addSample(x,py(1-q));addSample(ex,y);addSample(px(1-q),y);
    }
   }
   const corners=points;
