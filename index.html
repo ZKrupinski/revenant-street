@@ -7989,6 +7989,17 @@ const Z_DEATH_FOOT_SOURCE_Y=422/512;
 // only the two faint, evaporating tail cells (6,7) until the body vanishes.
 // Original sheet, crop, scale, sprite foot anchor and 100% VFX opacity stay.
 const Z_DEATH_FRAME_SEQUENCE=Object.freeze([0,1,2,3,4,5,6,7,6,7]);
+const Z_DEATH_FIRST_BURST_SEC=.055;
+// The very bright ignition image must never freeze for 0.2-0.4 s.
+// Its 55 ms clock is independent of the body's fade/collapse clock, so
+// even a dying airborne enemy advances immediately out of the fireball.
+// The other 9 phases still follow the character's disappearing animation.
+function zDeathBitmapFrame(effect,progress){
+ const sequenceFrame=Z_DEATH_FRAME_SEQUENCE[Math.min(Z_DEATH_FRAME_SEQUENCE.length-1,
+  Math.floor(progress*Z_DEATH_FRAME_SEQUENCE.length))];
+ return (effect.firstBurstAge||0)>=Z_DEATH_FIRST_BURST_SEC?
+  Math.max(1,sequenceFrame):sequenceFrame;
+}
 // The painted death sequence follows the SAME disappearance clock used by
 // updateEnemies, including the delay before actors begin fading.
 // Boss: 2.7 s hold + 1/.58 s fade. Others: .72 s hold + 1/.74 s fade.
@@ -8060,7 +8071,7 @@ function spawnEnemyDeathBitmap(enemy){
  // These initial coordinates are only a fallback if the actor is later removed.
  fx.push({kind:'enemyDeathBitmap',deadEnemy:enemy,followSpriteFoot:true,
   x:foot.x,y:foot.y,footX:foot.x,footY:foot.y,
-  width:style.death,age:0,life:duration,maxLife:duration});
+  width:style.death,age:0,firstBurstAge:0,life:duration,maxLife:duration});
  return true;
 }
 function drawEnemyBitmapFx(effect){
@@ -8069,8 +8080,7 @@ function drawEnemyBitmapFx(effect){
  if(!image.complete||image.naturalWidth!==2048||image.naturalHeight!==1024)return;
  const progress=clamp((effect.age||0)/effect.maxLife,0,.99999);
  const frame=hit?Math.min(7,Math.floor(progress*8)):
-  Z_DEATH_FRAME_SEQUENCE[Math.min(Z_DEATH_FRAME_SEQUENCE.length-1,
-   Math.floor(progress*Z_DEATH_FRAME_SEQUENCE.length))];
+  zDeathBitmapFrame(effect,progress);
  const w=effect.width;
  if(!hit&&effect.followSpriteFoot&&effect.deadEnemy){
   // Match drawActor(): use the SMOOTHED character location and its current
@@ -8101,7 +8111,7 @@ function drawEnemyBitmapFx(effect){
  ctx.restore();
 }
 window.__zEnemyBitmapFxStatus=()=>({
- version:'enemy-death-faster-evaporation-8f-v5',
+ version:'enemy-death-fast-first-frame-55ms-8f-v6',
  hit:Z_ENEMY_BITMAP_ART.hit.image.complete&&Z_ENEMY_BITMAP_ART.hit.image.naturalWidth===2048,
  death:Z_ENEMY_BITMAP_ART.death.image.complete&&Z_ENEMY_BITMAP_ART.death.image.naturalWidth===2048,
  frames:8,columns:4,rows:2,cell:512,deathFootSourceY:422,
@@ -8886,6 +8896,7 @@ function updateEffects(dt,realDt=dt){
  for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){const fxDt=f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap'?realDt:f.kind==='parrySuccess10'||f.kind==='basicHitSprite'||f.kind==='upgradeVfxSprite'||f.kind==='combatWordSprite'?realDt:f.kind==='parryCounterSprite'?realDt*.90:dt;
   f.life-=fxDt;if(f.kind==='basicHitSprite'||f.kind==='combatWordSprite')f.age+=fxDt;
   if(f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap')f.age+=fxDt;
+  if(f.kind==='enemyDeathBitmap')f.firstBurstAge=(f.firstBurstAge||0)+realDt;
   if(f.kind==='enemyDeathBitmap'&&f.deadEnemy?.dead){
    // Override wall-clock age with the victim's CURRENT death/fade progress.
    // Slow motion, hit-stop, airborne collapse and boss hold cannot end this
