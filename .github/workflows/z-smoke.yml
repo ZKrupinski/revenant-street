@@ -45,6 +45,8 @@ jobs:
         run: node tests/vfx-display-size.cjs
       - name: Per-character enemy impact points, foot anchors, and eight-frame cut safety
         run: node tests/enemy-bitmap-anchors.cjs
+      - name: Enemy hit in front and enemy death behind character sprite QA
+        run: node tests/enemy-bitmap-layer-order.cjs
       - name: Execution and critical wordmarks plus parry sprite edge safety
         run: node tests/word-vfx-cyber.cjs
       - name: VFX behind actors live preview, URL comparison and readable damage labels
