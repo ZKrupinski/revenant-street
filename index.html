@@ -4232,21 +4232,37 @@ function getZMove(){
  if(Math.hypot(p.moveDX||0,p.moveDY||0)>.18)return p.backstepping?'backwalk':p.running?'run':'walk';
  return 'idle';
 }
-// Source atlas -> eight isolated transparent canvases. Ordinary motions keep
-// exact 4x2 cell boundaries and the established planted-foot alignment.
-// The local sidekick has a documented overlapping boot at poses 5/6.
-// The local superman_punch has BOTH its flying rear boot and extended fist
-// outside pose 3's cell. Its overscan reads only the safe upper-right
-// (punch) and lower-left (boot) strips, never neighboring actors' bodies.
-// Do not change remote art, other attacks, or the hoodie alternative.
+// Non-destructive audit of all 20 original hero attacks (160 poses).
+// Only the verified frame-edge overlaps below may read beyond their OWN
+// integer 4x2 cells. Upper vs lower bands exclude neighboring characters.
+// The same overscan padding applies to all eight poses of a move, so neither
+// torso size nor foot anchor jumps when the affected frame is displayed.
+const Z_LOCAL_HERO_LIMB_OVERSCAN=Object.freeze({
+ 'cross-local':{left:[2,3],band:'foot'},
+ 'jab-local':{left:[1,2,3],band:'foot'},
+ 'forward_headbutt-local':{left:[2,3],band:'foot'},
+ 'shovel_hook-local':{left:[2,3],band:'foot'},
+ 'rising_headbutt-local':{left:[3],band:'foot'},
+ 'roundkick-local':{left:[6],band:'foot'},
+ 'sidekick-local':{left:[3],band:'upper'},
+ 'superman_punch-local':{left:[2],right:[2],band:'mid'},
+ 'rising_elbow-local':{top:[4,5]},
+ 'uppercut-local':{top:[4]}
+});
 function zCellSamplingSpec(moveKey,index,cellWidth,inset=1){
  const core=Math.max(1,Math.floor(cellWidth-2*inset));
+ // Existing authored sidekick foot overlap is intentionally preserved.
  const reserve=moveKey==='sidekick-local'?Math.ceil(cellWidth*.09):0;
  const spill=moveKey==='sidekick-local'?(index===5?reserve:index===4?Math.min(8,reserve):0):0;
- const wide=moveKey==='superman_punch-local';
- const pad=wide?Math.ceil(cellWidth*.17):0;
- return {canvasWidth:core+reserve+pad*2,readWidth:core+spill,bleed:spill,
-  padLeft:pad,spillLeft:wide&&index===2?pad:0,spillRight:wide&&index===2?pad:0};
+ const policy=Z_LOCAL_HERO_LIMB_OVERSCAN[moveKey]||null;
+ const padLeft=policy?.left?.length?Math.ceil(cellWidth*(moveKey==='superman_punch-local'?.17:.14)):0;
+ const padRight=policy?.right?.length?Math.ceil(cellWidth*.17):0;
+ const padTop=policy?.top?.length?Math.ceil(cellWidth*.065):0;
+ return {canvasWidth:core+reserve+padLeft+padRight,readWidth:core+spill,bleed:spill,
+  padLeft,padTop,spillLeft:policy?.left?.includes(index)?padLeft:0,
+  spillRight:policy?.right?.includes(index)?padRight:0,
+  spillTop:policy?.top?.includes(index)?padTop:0,
+  leftBand:policy?.band||'foot'};
 }
 function prepareZCells(im,moveKey=''){
  const cells=[],cw=im.naturalWidth/4,ch=im.naturalHeight/2;
@@ -4257,25 +4273,36 @@ function prepareZCells(im,moveKey=''){
   const crop=zCellSamplingSpec(moveKey,i,cw,inset);
   const canvas=document.createElement('canvas');
   canvas.width=crop.canvasWidth;
-  canvas.height=Math.max(1,Math.floor(ch-2*inset));
+  const coreHeight=Math.max(1,Math.floor(ch-2*inset));
+  canvas.height=coreHeight+crop.padTop;
   const c=canvas.getContext('2d',{willReadFrequently:true});
   const sx=Math.floor((i%4)*cw+inset),sy=Math.floor(Math.floor(i/4)*ch+inset);
   c.clearRect(0,0,canvas.width,canvas.height);
-  // Copy all foot pixels that overflow the artwork's painted frame grid.
-  // Non-overflow poses retain their original exact source rectangle.
-  c.drawImage(im,sx,sy,crop.readWidth,canvas.height,crop.padLeft,0,crop.readWidth,canvas.height);
-  if(crop.spillLeft&&crop.spillRight){
-   // Hero Superman Punch / pose 3, upper-right: the outstretched glove
-   // continues into the NEXT atlas cell by ~35px. No adjacent pose's
-   // lower body may enter this high-band source window.
-   const upper=Math.floor(canvas.height*.55);
+  // Source pixels stay at 1:1, at the SAME reference origin in all eight poses.
+  c.drawImage(im,sx,sy,crop.readWidth,coreHeight,crop.padLeft,crop.padTop,crop.readWidth,coreHeight);
+  if(crop.spillRight){
+   // Superman Punch pose 3: the glove extends 30-40px into the NEXT cell,
+   // but that cell's lower-body art is excluded from the upper sample.
+   const upper=Math.floor(coreHeight*.55);
    c.drawImage(im,sx+crop.readWidth,sy,crop.spillRight,upper,
-    crop.padLeft+crop.readWidth,0,crop.spillRight,upper);
-   // The SAME pose's airborne rear boot extends into the preceding
-   // cell at the lower-left. Never borrow the prior pose's raised arm.
-   const lowerStart=Math.floor(canvas.height*.40),lower=canvas.height-lowerStart;
-   c.drawImage(im,sx-crop.spillLeft,sy+lowerStart,crop.spillLeft,lower,
-    0,lowerStart,crop.spillLeft,lower);
+    crop.padLeft+crop.readWidth,crop.padTop,crop.spillRight,upper);
+  }
+  if(crop.spillLeft){
+   // Grounded lunge poses have their rear boots across the LEFT grid.
+   // Superman's airborne boot begins higher; sidekick pose 4 spills at
+   // shoulder height. Do not pull unrelated limbs from other rows.
+   const start=crop.leftBand==='upper'?0:Math.floor(coreHeight*(crop.leftBand==='mid'?.40:.68));
+   const end=crop.leftBand==='upper'?Math.floor(coreHeight*.44):coreHeight;
+   const height=Math.max(1,end-start);
+   c.drawImage(im,sx-crop.spillLeft,sy+start,crop.spillLeft,height,
+    crop.padLeft-crop.spillLeft,crop.padTop+start,crop.spillLeft,height);
+  }
+  if(crop.spillTop){
+   // Upward fists on the SECOND atlas row can rise above the horizontal grid.
+   // Restrict to the glove side so the earlier row's boots cannot bleed.
+   const x0=Math.floor(crop.readWidth*.49),width=Math.floor(crop.readWidth*.36);
+   c.drawImage(im,sx+x0,sy-crop.spillTop,width,crop.spillTop,
+    crop.padLeft+x0,crop.padTop-crop.spillTop,width,crop.spillTop);
   }
   const pixels=c.getImageData(0,0,canvas.width,canvas.height),d=pixels.data,w=canvas.width,h=canvas.height;
   // Sample *inside* a possible black grid stroke; corner-only detection mistakes frame lines for the background.
@@ -4394,8 +4421,10 @@ function prepareZCells(im,moveKey=''){
   // Preserve the physical body size when the flying pose has unusually wide
   // full-length arms/legs: fit the extended silhouette into a larger canvas,
   // not by shrinking the hero's torso and head on the action change.
-  const targetW=moveKey==='superman_punch-local'?320:240;
-  const unitScale=Math.min(targetW/union.w,254/union.h);
+  const hasExtra=!!Z_LOCAL_HERO_LIMB_OVERSCAN[moveKey];
+  const targetW=moveKey==='superman_punch-local'?320:hasExtra?269:240;
+  const targetH=Z_LOCAL_HERO_LIMB_OVERSCAN[moveKey]?.top?.length?272:254;
+  const unitScale=Math.min(targetW/union.w,targetH/union.h);
   // Hold full source resolution through matting, then retain only display-sized
   // transparent cells. A 35-sheet atlas library must not keep huge raw canvases.
   const renderW=Math.max(1,Math.round(union.w*unitScale));
@@ -4804,13 +4833,13 @@ function loadZMove(key){
  im.onload=()=>{
   try{
    const localSidekickFootFix=key==='sidekick'&&url==='./assets/z-attacks-20/sidekick.webp';
-   const localSupermanLimbFix=key==='superman_punch'&&url==='./assets/z-attacks-20/superman_punch.webp';
+   const localHeroLimbFix=url==='./assets/z-attacks-20/'+key+'.webp'&&
+    !!Z_LOCAL_HERO_LIMB_OVERSCAN[key+'-local'];
    let frames;
    if(Z_HOODIE_HERO)frames=prepareTransparentHeroCells(im);
    else if(key==='idle'&&url==='./assets/project-z-hero/z-idle-hair-safe.webp')frames=preparePremattedIdleCells(im);
    else if(Z_HF_ART&&(zGaitChoice==='v3'||zGaitChoice==='v4')&&(key==='walk'||key==='run'||key==='backwalk'))frames=preparePremattedGaitCells(im);
-   else frames=prepareZCells(im,localSidekickFootFix?'sidekick-local':
-    localSupermanLimbFix?'superman_punch-local':'');
+   else frames=prepareZCells(im,localHeroLimbFix?key+'-local':'');
    if(frames.length!==8)throw Error('Expected eight frames');
    obj.frames=frames;obj.ready=true;obj.failed=false;obj.error=null;cleanup();
   }catch(err){fail(err)}
