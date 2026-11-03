@@ -3771,7 +3771,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 <link rel="preload" as="image" href="./assets/ui/z-wave-metal-fill-v4.png?v=metal-20261103">
 <link rel="preload" as="image" href="./assets/ui/z-metal-digit-atlas-v4.png?v=metal-20261103">
 
-<style id="z-projectz-exact-reference-hud-v5">
+<style id="z-projectz-alpha-sprites-hud-v7">
 /* Every visible panel/metal wordmark/skull/HP decoration is a bitmap sampled from
    the approved 28901.png artwork. Only clipping and numerical layout are CSS. */
 #hud .hud-center.progress-hud{
@@ -3788,28 +3788,28 @@ body{position:fixed;inset:0;touch-action:manipulation}
  display:block!important;position:relative!important;
  width:100%!important;height:100%!important;margin:0!important;padding:0!important;
  border:0!important;box-shadow:none!important;overflow:visible!important;
- background:url('./assets/ui/ref-wave-frame-v5.webp') center/100% 100% no-repeat!important;
+ background:url('./assets/ui/ref-wave-frame-v7.png') center/100% 100% no-repeat!important;
 }
 #hud .progress-hud .chapter,#hud .progress-hud .wave-brand,#hud .progress-hud .wave-glyph{display:none!important}
 #hud .progress-hud .wave-chip{
  display:block!important;position:absolute!important;
- left:22.7%!important;top:30%!important;
- width:auto!important;height:43%!important;
+ left:22.0%!important;top:31.5%!important;
+ width:auto!important;height:38%!important;
  padding:0!important;margin:0!important;border:0!important;background:none!important;
 }
 #hud .progress-hud .z-metal-digits{
  display:flex!important;align-items:center!important;flex-wrap:nowrap!important;
- gap:0!important;width:max-content!important;height:100%!important;
+ gap:calc(.35px * var(--z-combat-scale,1))!important;width:max-content!important;height:100%!important;
  padding:0!important;margin:0!important;border:0!important;background:none!important;
 }
 #hud .progress-hud .z-metal-digit{
  display:block!important;flex:none!important;box-sizing:border-box!important;
- width:calc(17.7px * var(--z-combat-scale,1))!important;
- height:calc(27px * var(--z-combat-scale,1))!important;
+ width:calc(12px * var(--z-combat-scale,1))!important;
+ height:calc(21px * var(--z-combat-scale,1))!important;
  margin:0!important;padding:0!important;border:0!important;
- background-image:url('./assets/ui/ref-metal-number-atlas-v6.webp')!important;
- background-repeat:no-repeat!important;background-size:1000% 100%!important;
- background-position-y:center!important;image-rendering:auto!important;
+ background-image:none!important; /* inline bitmap URL for one independently alpha-cut digit */
+ background-repeat:no-repeat!important;background-size:100% 100%!important;
+ background-position:center center!important;image-rendering:auto!important;
  filter:drop-shadow(0 1px 1px rgba(0,0,0,.74))!important;
 }
 #hud .progress-hud .meter-wrap{
@@ -3836,18 +3836,18 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 #hud .progress-hud .enemy-chip{
  display:block!important;position:absolute!important;
- left:auto!important;right:4.9%!important;top:27%!important;
- width:auto!important;height:51%!important;
+ left:auto!important;right:5.3%!important;top:28%!important;
+ width:auto!important;height:46%!important;
  margin:0!important;padding:0!important;border:0!important;
  background:none!important;box-shadow:none!important;
 }
 #hud .progress-hud .enemy-chip .z-metal-digit{
- width:calc(20.0px * var(--z-combat-scale,1))!important;
- height:calc(30px * var(--z-combat-scale,1))!important;
+ width:calc(18.5px * var(--z-combat-scale,1))!important;
+ height:calc(28px * var(--z-combat-scale,1))!important;
 }
 #hud .progress-hud .enemy-chip.is-wide .z-metal-digit{
- width:calc(15px * var(--z-combat-scale,1))!important;
- height:calc(25px * var(--z-combat-scale,1))!important;
+ width:calc(13.0px * var(--z-combat-scale,1))!important;
+ height:calc(24px * var(--z-combat-scale,1))!important;
 }
 #hud .progress-hud .z-hud-sr{
  position:absolute!important;width:1px!important;height:1px!important;
@@ -3951,8 +3951,8 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 @container (max-width:610px){
  #hud .hud-center.progress-hud{width:min(calc(475px * var(--z-combat-scale,1)),50%)!important}
- #hud .progress-hud .z-metal-digit{width:calc(15px * var(--z-combat-scale,1))!important;height:calc(24px * var(--z-combat-scale,1))!important}
- #hud .progress-hud .enemy-chip .z-metal-digit{width:calc(16px * var(--z-combat-scale,1))!important;height:calc(26px * var(--z-combat-scale,1))!important}
+ #hud .progress-hud .z-metal-digit{width:calc(10px * var(--z-combat-scale,1))!important;height:calc(18px * var(--z-combat-scale,1))!important}
+ #hud .progress-hud .enemy-chip .z-metal-digit{width:calc(15px * var(--z-combat-scale,1))!important;height:calc(24px * var(--z-combat-scale,1))!important}
  #hud .hud-left .bar.hp{width:calc(227px * var(--z-combat-scale,1))!important;height:calc(45.3px * var(--z-combat-scale,1))!important}
  #hud .bar.hp .bar-fill{background-size:calc(137px * var(--z-combat-scale,1)) 100%!important}
  #hud .hud-left .hud-name{top:calc(44px * var(--z-combat-scale,1))!important}
@@ -3960,9 +3960,18 @@ body{position:fixed;inset:0;touch-action:manipulation}
  #stageWrap .boss-hud{top:calc(50px * var(--z-combat-scale,1))!important}
 }
 </style>
-<link rel="preload" as="image" href="./assets/ui/ref-wave-frame-v5.webp">
+<link rel="preload" as="image" href="./assets/ui/ref-wave-frame-v7.png">
 <link rel="preload" as="image" href="./assets/ui/ref-wave-fill-cell-v5.webp">
-<link rel="preload" as="image" href="./assets/ui/ref-metal-number-atlas-v6.webp">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-0-v7.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-1-v7.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-2-v7.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-3-v7.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-4-v7.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-5-v7.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-6-v7.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-7-v7.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-8-v7.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-9-v7.png">
 <link rel="preload" as="image" href="./assets/ui/ref-hero-hp-frame-v7.webp">
 <link rel="preload" as="image" href="./assets/ui/ref-hero-hp-fill-v5.webp">
 <link rel="preload" as="image" href="./assets/ui/ref-boss-hp-frame-v5.webp">
@@ -9304,7 +9313,8 @@ function updateEffects(dt,realDt=dt){
  }
  for(const f of floating){f.life-=dt;f.y-=dt*27}floating=floating.filter(f=>f.life>0);for(const r of rain){r.y+=r.s*dt;r.x-=35*dt;if(r.y>730){r.y=-10;r.x=rnd(0,1350)}if(r.x<-10)r.x=1290}screenShake=Math.max(0,screenShake-43*dt);screenTint=Math.max(0,screenTint-1.4*dt)}
 // Prebuilt metallic numeric PNG glyphs, sampled as 10 separate equal-width cells.
-// All glyphs have identical metrics, avoiding reflow while enemies are defeated.
+// Each glyph is its own transparent PNG, with no neighbor bleed or clipped italics.
+// Fixed cell dimensions maintain a stable counter layout throughout combat.
 function zMetalHudNumber(id,value){
  const root=$(id);if(!root)return;
  const text=String(value).replace(/[^0-9]/g,'').slice(-4)||'0';
@@ -9313,7 +9323,7 @@ function zMetalHudNumber(id,value){
  root.replaceChildren();
  for(const digit of text){
   const cell=document.createElement('span');cell.className='z-metal-digit';
-  cell.style.setProperty('background-position',(Number(digit)*100/9)+'% 0','important');
+  cell.style.setProperty('background-image',`url("./assets/ui/ref-metal-digit-${digit}-v7.png")`,'important');
   root.appendChild(cell);
  }
  if(id==='zHudEnemyDigits')root.parentElement.classList.toggle('is-wide',text.length>2);
@@ -9374,7 +9384,7 @@ function zCreateMetallicDigitsV5(){
   return true;
  }catch(e){window.__zMetalNumeralStatus={ready:false,error:String(e)};return false}
 }
-zCreateMetallicDigitsV5();
+/* Legacy procedural digit generation disabled: independent artist-approved v7 PNGs are preloaded instead. */
 let modStripCache='',lastHudCombo=-1,hudAccumulator=.12,modsExpanded=false;
 function setModsExpanded(open){
  modsExpanded=!!open;
