@@ -7918,8 +7918,9 @@ function spawnEnemyDeathBitmap(enemy){
  if(fx.length>=108)fx.splice(0,Math.max(1,fx.length-100));
  const foot=zEnemyFootWorld(enemy),style=zEnemyFxSize(enemy);
  const duration=Z_ENEMY_BITMAP_ART.death.duration;
- // Do not subtract jump height: death debris belongs on the actual ground.
- fx.push({kind:'enemyDeathBitmap',deadEnemy:enemy,
+ // The actor remains the live anchor while knockback/airfall/death sprites play.
+ // These initial coordinates are only a fallback if the actor is later removed.
+ fx.push({kind:'enemyDeathBitmap',deadEnemy:enemy,followSpriteFoot:true,
   x:foot.x,y:foot.y,footX:foot.x,footY:foot.y,
   width:style.death,age:0,life:duration,maxLife:duration});
  return true;
@@ -7930,12 +7931,25 @@ function drawEnemyBitmapFx(effect){
  if(!image.complete||image.naturalWidth!==2048||image.naturalHeight!==1024)return;
  const progress=clamp((effect.age||0)/effect.maxLife,0,.99999);
  const frame=Math.min(7,Math.floor(progress*8)),w=effect.width;
+ if(!hit&&effect.followSpriteFoot&&effect.deadEnemy){
+  // Match drawActor(): use the SMOOTHED character location and its current
+  // airborne Z, not the stale position captured on the killing blow.
+  const enemy=effect.deadEnemy,foot=zEnemyFootWorld(enemy);
+  const shake=typeof actorShakeOffset==='function'?actorShakeOffset(enemy):[0,0];
+  effect.x=Math.round(foot.x+shake[0]);
+  effect.footX=effect.x;
+  effect.footY=Math.round(foot.y+shake[1]-Math.max(0,enemy.z||0));
+  effect.y=effect.footY;
+ }
  // Only nudge within 36/48 px near a viewport edge; otherwise keep the
- // original combat hit point / death foot visibly attached to its character.
+ // effect visually beneath the actual sprite as its death animation moves.
  const visibleHalf=w*(hit?.39:.34);
  const preferredX=clamp(effect.x,cameraX+visibleHalf+6,cameraX+W-visibleHalf-6);
  const drawX=clamp(preferredX,effect.x-(hit?48:36),effect.x+(hit?48:36));
- const topY=hit?effect.y-w*.5:effect.footY-w*Z_DEATH_FOOT_SOURCE_Y;
+ // Expose the burst beneath the shoes while retaining the authored alpha cells.
+ // The debris stays behind the character, with its core just BELOW their foot.
+ const underFootReveal=hit?0:clamp(w*.10,35,60);
+ const topY=hit?effect.y-w*.5:effect.footY-w*Z_DEATH_FOOT_SOURCE_Y+underFootReveal;
  ctx.save();ctx.globalCompositeOperation='source-over';
  ctx.globalAlpha=progress>(hit?.81:.86)?
    Math.max(0,(1-progress)/(hit?.19:.14)):1;
@@ -7945,7 +7959,7 @@ function drawEnemyBitmapFx(effect){
  ctx.restore();
 }
 window.__zEnemyBitmapFxStatus=()=>({
- version:'enemy-foot-anchor-hit-location-8f-v2',
+ version:'enemy-death-follows-sprite-foot-8f-v3',
  hit:Z_ENEMY_BITMAP_ART.hit.image.complete&&Z_ENEMY_BITMAP_ART.hit.image.naturalWidth===2048,
  death:Z_ENEMY_BITMAP_ART.death.image.complete&&Z_ENEMY_BITMAP_ART.death.image.naturalWidth===2048,
  frames:8,columns:4,rows:2,cell:512,deathFootSourceY:422,
