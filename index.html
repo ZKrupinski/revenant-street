@@ -6341,6 +6341,8 @@ async function requestRunStart(){
    if(status)status.textContent=`준비 ${done}/${total} — ${name}`;
    if(bar)bar.style.width=`${Math.floor(100*done/total)}%`;
   });
+  $('loadStatus').textContent='패링 성공 10프레임 끝단·여백 정밀 커팅 중';
+  prepareParrySuccessCells();
   $('loadStatus').textContent='강화 전용 6종 × 8프레임 비트맵 디코딩 중';
   const zUpgradeLoadError=await Z_UPGRADE_VFX_PRELOAD;
   if(zUpgradeLoadError)throw zUpgradeLoadError;
@@ -8854,16 +8856,43 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  // No vector rectangle on damage: only the original bitmap silhouette flashes.
  ctx.restore();
 }
-// Sample the interior of each 5x2 source cell with integer edges: no adjacent-frame bleed.
+// Full native 5x2 cells, including the enemy-facing tips.
+// Prevent adjacent-frame filtering by isolating frames at 1:1 first,
+// rather than deleting pixels at the source-cell boundaries.
 function parrySuccessSourceRect(w,h,frame){
  const col=frame%5,row=Math.floor(frame/5);
  const x0=Math.round(col*w/5),x1=Math.round((col+1)*w/5);
  const y0=Math.round(row*h/2),y1=Math.round((row+1)*h/2);
- const tileW=x1-x0,tileH=y1-y0;
- // Only 2/3 px gutter instead of discarding 6-8% of each painted pose.
- // Original cell boundaries still prevent neighboring frames from leaking.
- const padX=2,padY=3;
- return {sx:x0+padX,sy:y0+padY,sw:tileW-2*padX,sh:tileH-2*padY};
+ return {sx:x0,sy:y0,sw:x1-x0,sh:y1-y0};
+}
+const PARRY_SUCCESS_CELL_PAD=10;
+let parrySuccessCells=null;
+function prepareParrySuccessCells(){
+ const source=parrySuccessImage;
+ if(!source.complete||source.naturalWidth!==1536||source.naturalHeight!==1024)
+  throw Error('패링 성공 원본 시트가 아직 준비되지 않았습니다');
+ const pad=PARRY_SUCCESS_CELL_PAD,cells=[];
+ for(let i=0;i<10;i++){
+  const r=parrySuccessSourceRect(source.naturalWidth,source.naturalHeight,i);
+  const cv=document.createElement('canvas');
+  cv.width=r.sw+pad*2;cv.height=r.sh+pad*2;
+  const g=cv.getContext('2d');
+  if(!g)throw Error('패링 성공 프레임 비트맵을 만들 수 없습니다');
+  // 1:1 source pixels; adjacent frames can never blend on the later zoom.
+  g.imageSmoothingEnabled=false;
+  g.drawImage(source,r.sx,r.sy,r.sw,r.sh,pad,pad,r.sw,r.sh);
+  // A few pixels of the outward end reached the old source-cell boundary.
+  // Extend solely from this frame's outermost eight columns into the
+  // transparent gutter, mirrored and tapered for a natural decay.
+  for(let x=0;x<8;x++){
+   g.globalAlpha=.72*Math.pow(1-(x+1)/9,1.5);
+   g.drawImage(source,r.sx+r.sw-1-x,r.sy,1,r.sh,pad+r.sw+x,pad,1,r.sh);
+  }
+  g.globalAlpha=1;
+  cells.push(cv);
+ }
+ parrySuccessCells=cells;
+ return true;
 }
 // Preserve signature attacks above actors. For a normal multi-effect
 // cluster, promote only one or two accents; all others remain behind.
@@ -8975,11 +9004,16 @@ function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);
    // Restore its balanced silhouette on screen without recutting any frames.
    const w=318,h=296;
    const dir=f.face<0?-1:1;
-   const drawX=zClampVfxX(f.x,dir>0?w*.32:w*.68,dir>0?w*.68:w*.32);
+   const cell=parrySuccessCells?.[frame]||null;
+   const edgeX=cell?w*PARRY_SUCCESS_CELL_PAD/crop.sw:0;
+   const edgeY=cell?h*PARRY_SUCCESS_CELL_PAD/crop.sh:0;
+   const drawX=zClampVfxX(f.x,dir>0?w*.32+edgeX:w*.68+edgeX,
+    dir>0?w*.68+edgeX:w*.32+edgeX);
    ctx.save();ctx.translate(drawX,f.y);ctx.scale(dir,1);
-   // Screen compositing keys out black; 2 px cell gutter prevents frame bleed.
+   // Full original bitmap silhouette and blend, with safe transparent overscan.
    ctx.globalCompositeOperation='screen';ctx.globalAlpha=Math.min(1,f.life/.07);
-   ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.32,-h*.5,w,h);
+   if(cell)ctx.drawImage(cell,-w*.32-edgeX,-h*.5-edgeY,w+edgeX*2,h+edgeY*2);
+   else ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.32,-h*.5,w,h);
    ctx.restore();
   }
   continue;
