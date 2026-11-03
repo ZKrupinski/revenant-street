@@ -58,8 +58,10 @@ for(const entry of ['index.html','play-fixed-20261102.html']){
  assert(!engine.includes('__revenantBgm'),'no BGM ducking');
  assert(html.includes("const isRack=key==='counter'"),'parry and counter sample assignments truly reversed');
  assert(html.includes("const rate=attackIndex<0?1:"),'six shots have additional audible timbre/rate distinctions');
- assert(html.includes("applyImpactFeedback(e,smash||p.dashSmash,p.dashSmash?'dashImpact':'punch'"),
-  'all STANDARD attacks (including heavy punches/kicks) use six shuffled Foley clips, never just one heavy');
+ assert(html.includes("if(withAudio)playImpactSound(target===p?kind:'punch'"),
+  'all STANDARD attacks (including heavy punches/kicks) use shuffled sounds, not the same heavy recording');
+ assert(html.includes("applyImpactFeedback(e,smash||p.dashSmash,p.dashSmash?'dashImpact':smash?'heavy':'punch'"),
+  'heavy punches/kicks still retain their full haptic intensity');
  assert(!html.includes("sound('parry');playImpactSound('heavy',.83)"),
   'upgrade confirmation must not play two aggressive combat sounds');
  assert(html.includes("rewardMenu(upgradeReason,true);updateHud();playUpgradeSfx('reroll')"),
