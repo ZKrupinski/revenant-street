@@ -4008,12 +4008,12 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 #hud .hud-left #modStrip.mod-strip{
  display:grid!important;
- grid-template-columns:repeat(4,minmax(0,1fr))!important;
+ grid-template-columns:repeat(4,max-content)!important;
  grid-auto-flow:row!important;
  grid-auto-rows:calc(28px * var(--z-combat-scale,1))!important;
- column-gap:calc(3px * var(--z-combat-scale,1))!important;
+ column-gap:calc(2px * var(--z-combat-scale,1))!important;
  row-gap:calc(2px * var(--z-combat-scale,1))!important;
- width:100%!important;max-width:none!important;
+ width:max-content!important;max-width:100%!important;
  max-height:calc(119px * var(--z-combat-scale,1))!important;
  padding:0!important;margin:0!important;
  background:transparent!important;border:0!important;box-shadow:none!important;
@@ -4054,7 +4054,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 @container (max-width:610px){
  #hud .hud-left .mod-wrap{width:min(calc(220px * var(--z-combat-scale,1)),100%)!important}
- #hud .hud-left #modStrip.mod-strip{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ #hud .hud-left #modStrip.mod-strip{grid-template-columns:repeat(3,max-content)!important}
 }
 /* Separate transparent bitmap-overlay canvas: arrows draw ABOVE HUD/icons,
    but stay BELOW joystick, attack buttons, and menu overlays. */
@@ -4282,7 +4282,7 @@ assetNames.forEach(n=>{const a=new Image();a.src=EMBEDDED_ASSETS[n];img[n]=a});
 // Both keys reference exactly the same embedded panorama; decode only once.
 img.street_pano=img.street;
 // Eight hand-painted bitmap frames: top row points right, bottom row points left.
-let offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows-neon-v2.png';
+let offscreenArrow=new Image();offscreenArrow.src='./assets/ui/edge-arrows-animated.webp';
 // Top row: four exclusive back-view entrance frames. The bottom row never
 // appears during entry; the six independent combat atlases take over after landing.
 let intruderEntryImage=new Image();intruderEntryImage.src='./assets/enemies/redhood-ambush-entry-8.webp';
@@ -6953,7 +6953,7 @@ function ensureBitmapDecoded(image){
 }
 function resetFailedUiBitmaps(){
  const sources=[
-  {get:()=>offscreenArrow,set:im=>{offscreenArrow=im},url:'./assets/ui/edge-arrows-neon-v2.png'},
+  {get:()=>offscreenArrow,set:im=>{offscreenArrow=im},url:'./assets/ui/edge-arrows-animated.webp'},
   {get:()=>upgradeIconsImage,set:im=>{upgradeIconsImage=im},url:'./assets/ui/upgrade-icons-v4.webp',css:true},
   {get:()=>arcadeButtonsImage,set:im=>{arcadeButtonsImage=im},url:'./assets/ui/arcade-action-buttons-v1.webp',css:'arcade'},
   {get:()=>joystickBaseImage,set:im=>{joystickBaseImage=im},url:'./assets/ui/z-arcade-stick-base-centerhole.webp',css:'joystickBase'},
