@@ -1,0 +1,61 @@
+name: Project Z V9 zero-lead audio master and audit
+on:
+  push:
+    paths:
+      - tools/trim_sfx_onset_v9.py
+      - .github/workflows/trim-z-audio-v9.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  master-pcm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Ensure ffmpeg PCM decoder available
+        shell: bash
+        run: |
+          if ! command -v ffmpeg >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; fi
+          ffmpeg -version | head -1
+      - name: Trim all live action, parry, counter, upgrade and enemy-vocal onsets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/trim_sfx_onset_v9.py
+      - name: Check every new WAV header, bitdepth and strict sub-3ms onset
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,wave
+          doc=json.loads(Path("assets/sfx/z-lowlat-v9-audit.json").read_text())
+          entries=doc["sources"]
+          assert len(entries)==13,(len(entries),"expected 11 SFX and 2 enemy grunts")
+          assert {a["key"] for a in entries}=={
+           "punchA","punchB","punchC","punchD","punchE","punchF",
+           "heavy","parry","counter","upgrade","reroll","enemyA","enemyB"}
+          for a in entries:
+           p=Path(a["output"]);assert p.exists(),p
+           with wave.open(str(p),"rb") as w:
+            assert w.getsampwidth()==2 and w.getframerate()==44100
+            assert w.getnframes()>0 and w.getnchannels() in (1,2)
+           assert a["final_audible_onset_ms"]<=3,a
+           assert a["bytes"]>7000,a
+           print(a["key"],"cut",a["trimmed_front_ms"],"ms, onset",a["final_audible_onset_ms"],"ms")
+          PY
+      - name: Commit onset-tight uncompressed PCM with measurement audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/sfx/z-lowlat-v9-*.wav assets/sfx/z-lowlat-v9-audit.json assets/voice/z-lowlat-v9-*.wav
+          if ! git diff --cached --quiet; then
+            git commit -m "Audio V9: decode and trim all live combat, menu, enemy vocal samples to <3ms audible onset"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
