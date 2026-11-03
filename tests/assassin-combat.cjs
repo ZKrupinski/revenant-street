@@ -649,7 +649,7 @@ test('original Z idle retains all eight complete hairstyles in transparent prema
   'fixed 4x2 square-grid with common ground alignment is required');
  assert(html.includes("else if(key==='idle'&&url==='./assets/project-z-hero/z-idle-hair-safe.webp')frames=preparePremattedIdleCells(im)"),
   'the original hair must bypass green-screen connected-component removal');
- assert(html.includes('else frames=prepareZCells(im,localSidekickFootFix?'),
+ assert(html.includes("else frames=prepareZCells(im,localHeroLimbFix?key+'-local':''"),
   'other original moves must retain their existing sprite pipeline');
 });
 test('all 21 combat upgrades, NEURO and 3 Hub modules have distinct square bitmap-icon cells',()=>{
