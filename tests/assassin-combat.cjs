@@ -1441,7 +1441,7 @@ test('Superman Punch third frame restores the extended fist and rear boot withou
   'the wrist and glove are truly sampled from their source image');
  assert(cropCode.includes('sx-crop.spillLeft,sy+start,crop.spillLeft,height'),
   'the rear boot is genuinely sampled from the original image');
- assert(cropCode.includes("const targetW=moveKey==='superman_punch-local'?320:hasExtra?269:240"),
+ assert(cropCode.includes("const targetW=moveKey==='superman_punch-local'?320:hasExtra?269:maskedExtra?270:240"),
   'the complete flying pose remains at a readable scale, not shrunk');
  assert(cropCode.includes('r.canvas,union.x,union.y,union.w,union.h'),
   'all eight frames continue to share the same foot-anchored union');
