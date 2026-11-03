@@ -60,7 +60,7 @@ async function combatVoices(){
  const api=world.window.__zCombatVoice;
  await api.prepare(ctx);
  assert.equal(requests.length,2,'only two enemy grunts should preload, no prior mechanical/gun Foley');
- assert(requests.every(url=>/hero-grunt-[ab]\.wav$/.test(url)),'old pistol and mechanical sources retired');
+ assert(requests.every(url=>/z-lowlat-v9-enemy[AB]\.wav\?v=zeroLeadV9$/.test(url)),'only the new zero-preroll human grunts load; old pistol and mechanical sources remain retired');
  assert.equal(api.state().ready,true);
  await api.prepare(ctx);assert.equal(requests.length,2,'cache decoded enemy voices');
  const hero={x:300,y:550},raider={x:450,y:550,type:'raider'},boss={x:500,y:550,type:'boss'};
