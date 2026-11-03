@@ -4938,18 +4938,13 @@ function drawMaskedGrunt(e,x,y,z){
   ctx.globalAlpha=e.dead?clamp(e.fade,0,1):1;
   ctx.drawImage(fr.canvas,-(fr.anchorX??w/2),-(fr.anchorY??h),w,h);
   if(e.hitFlash>0){
-   ctx.filter='brightness(0) invert(1)';
+   ctx.filter='brightness(1.55) contrast(1.10) saturate(.85)';ctx.globalCompositeOperation='screen';
    const originalOpacity=ctx.globalAlpha;
    ctx.globalAlpha=originalOpacity*.75*clamp(e.hitFlash/.22,0,1);
    ctx.drawImage(fr.canvas,-(fr.anchorX??w/2),-(fr.anchorY??h),w,h);
-   ctx.filter='none';ctx.globalAlpha=originalOpacity;
+   ctx.filter='none';ctx.globalCompositeOperation='source-over';ctx.globalAlpha=originalOpacity;
   }
- }else{
-  // Never flash old raider art while a sheet is loading.
-  ctx.fillStyle='#1c2632';ctx.fillRect(-20,-134,40,117);
-  ctx.beginPath();ctx.arc(0,-147,23,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#77333f';ctx.fillRect(-14,-155,28,5);
- }
+ } // No geometric dummy actor during art loading.
  ctx.restore();
 }
 
@@ -4977,15 +4972,12 @@ function drawAssassin(e,x,y,z){
  if(fr){
   ctx.drawImage(fr.canvas,-RZAssassinArt.anchorX,-RZAssassinArt.anchorY);
   if(e.hitFlash>0){
-   ctx.filter='brightness(0) invert(1)';
+   ctx.filter='brightness(1.55) contrast(1.10) saturate(.85)';ctx.globalCompositeOperation='screen';
    ctx.globalAlpha=opacity*.75*clamp(e.hitFlash/.22,0,1);
    ctx.drawImage(fr.canvas,-RZAssassinArt.anchorX,-RZAssassinArt.anchorY);
-   ctx.filter='none';ctx.globalAlpha=opacity;
+   ctx.filter='none';ctx.globalCompositeOperation='source-over';ctx.globalAlpha=opacity;
   }
- }else{
-  ctx.fillStyle='#172d37';ctx.fillRect(-21,-196,42,180);
-  ctx.fillStyle='#d8d3bc';ctx.beginPath();ctx.ellipse(0,-217,19,26,0,0,Math.PI*2);ctx.fill();
- }
+ } // No geometric dummy assassin during art loading.
  ctx.restore();
 }
 
@@ -7229,9 +7221,7 @@ function hurtEnemy(e,dmg,poise,specialKind=''){
  // same confirmed contact. A fatal special hit gets one as well.
  const specialContact=!!specialKind||!!p.dashSmash||!!p.counterBoost||
   !!p.airAttack||p.airKickPhase==='dive';
- // Red Hood already has the original painted 8-frame hit-explosion overlay.
- // Don't stamp the legacy geometric-looking contact FX over its hit sprite.
- if(e.type!=='intruder')spawnBasicContactFx(e,p.moveName||'jab',dmg>=70||e.type==='boss'||e.type==='elite');
+ // Every enemy now uses the existing 4x2, 8-frame painted hit atlas. No old contact shape.
  if(e.hp>0||specialContact)spawnEnemyHitBitmap(e,dmg,specialContact);
  if(e.hp<=0){playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e)}
  else if(Math.random()<.62)playCombatVoice('enemyHurt',e);
@@ -7330,7 +7320,7 @@ function hurtEnemy(e,dmg,poise,specialKind=''){
    if(e.hp>0)e.pendingFall=true;
   }
   hitStop=Math.max(hitStop,.12);screenShake=Math.max(screenShake,19);
-  if(e.type!=='intruder')fxBurst(e.x,e.y-118,'gold',specialStats('dashspeed').visual,true);
+  /* Additional generic overlay removed; unique 8F impact remains. */
   // The dash blast is fired once at the contact beat, not once per victim.
  }
  const basicContact=p.attack>0&&!p.dashSmash&&!p.counterBoost&&!p.airAttack&&!p.riposteStrikeTarget;
@@ -7725,9 +7715,7 @@ function drawBasicContactFx(f){
  const progress=clamp((f.age-f.delay)/f.duration,0,.999999);
  const atlas=BASIC_HIT_FIVE.image,painted=BASIC_HIT_FIVE.available&&atlas.complete;
  if(f.paintedOnly&&!painted)return; // Never substitute the generic burst for red hood.
- const fallback=PARRY_COUNTER_ART.image;
- const backup=img.burst_gold||img.burst_red||img.burst_blue;
- if(!painted&&(!fallback?.complete||!fallback.naturalWidth)&&(!backup?.complete||!backup.naturalWidth))return;
+ if(!painted)return; // Never swap a contact frame for a mismatched fallback.
  const elapsed=f.age-f.delay,w=f.width*1.35;
  ctx.save();
  ctx.translate(f.x+f.vx*elapsed,f.y+f.vy*elapsed);
@@ -7741,11 +7729,6 @@ function drawBasicContactFx(f){
   const sw=atlas.naturalWidth/8,sh=atlas.naturalHeight/5,h=w*(sh/sw)*.98;
   ctx.drawImage(atlas,frame*sw,(f.variant%5)*sh,sw,sh,-w*.52,-h*.5,w,h);
   BASIC_HIT_FIVE.drawn++;
- }else if(fallback?.complete&&fallback.naturalWidth){
-  const sw=fallback.naturalWidth/4,sh=fallback.naturalHeight/2,h=w*(sh/sw)*.75;
-  ctx.drawImage(fallback,(frame%4)*sw,Math.floor(frame/4)*sh,sw,sh,-w*.42,-h*.5,w,h);
- }else if(backup?.complete&&backup.naturalWidth){
-  ctx.drawImage(backup,-w*.40,-w*.40,w*.80,w*.80);
  }
  ctx.restore();
 }
@@ -7802,10 +7785,7 @@ function heelLandingShockwave(powered=false){
  screenShake=Math.max(screenShake,powered?25:20);
  hitStop=Math.max(hitStop,powered?.115:.080);
  spawnGroundSlamFx(p.x,p.y,skill.visual,'hero');
- // Keep a subtle accent behind the wide hand-painted ground-smash sequence.
- spawnModBitmap('gold',p.x,p.y-36,skill.visual*.45,
-  'brightness(1.45) saturate(1.2)',.30);
- if(fx.at(-1)?.kind==='modBitmap')fx.at(-1).specialAttackFx=true;
+ // Original ground-slam bitmap supplies the full impact.
  playImpactSound('counter',powered?1.35:1.08);
  /* New V6 explosion is played once on the heel landing beat. */
  vibrateImpact('slam',true);
@@ -7828,7 +7808,7 @@ function heelLandingShockwave(powered=false){
    if(!enemy.dead)enemy.pendingFall=true;
   }
   enemy.reactionDir=push;
-  if(enemy.type!=='intruder')fxBurst(enemy.x,enemy.y-96,'red',powered?1.55:1.25,true);
+  /* Additional generic overlay removed; unique 8F impact remains. */
  }
  // A jump with no ATTACK or a heel-slam whiff must not slow the game.
  if(powered&&impacted.length)triggerSpecialContactSlowMo('jump',impacted[0]);
@@ -7868,7 +7848,7 @@ function applyForwardSpecialSplash(kind,impactX,impactY,directTargets,fullDamage
    if(!enemy.dead)enemy.pendingFall=true;
   }
   enemy.reactionDir=face;
-  if(enemy.type!=='intruder')fxBurst(enemy.x,enemy.y-110,dash?'blue':'gold',.78+rank*.08,true);
+  /* Additional generic overlay removed; unique 8F impact remains. */
   affected++;
  }
  return affected;
@@ -7908,9 +7888,7 @@ function attackCheck(){
   e.reactionDir=p.facing;
   hitStop=Math.max(hitStop,.22);screenShake=Math.max(screenShake,30);
   screenTint=Math.max(screenTint,.55);
-  if(e.type!=='intruder')fxBurst(e.x,e.y-125,'gold',skill.visual,true);
-  spawnModBitmap('gold',e.x,e.y-133,skill.visual*.75,'brightness(1.6) saturate(1.4)',.35);
-   if(fx.at(-1)?.kind==='modBitmap')fx.at(-1).specialAttackFx=true;
+  // Keep only dedicated parry-counter explosion and painted victim hit.
   floatText('CRUSH COUNTER!',e.x,e.y-220,'#ffe098');
   // The counter recording was played at the initial button input. Keep
   // true-hit VFX and haptics here without repeating the slide a second time.
@@ -7973,7 +7951,7 @@ function attackCheck(){
   // Drive victims down rather than launch them away from the heel.
   if(e.type!=='boss'){e.vz=-240;e.z=Math.max(0,e.z);e.pendingFall=true}
   hitStop=Math.max(hitStop,.11);screenShake=Math.max(screenShake,19);
-  if(e.type!=='intruder')fxBurst(e.x,e.y-40,'gold',1.75,true);
+  /* Additional generic overlay removed; unique 8F impact remains. */
  }
  const priorHealHp=p.hp;
  p.hp=clamp(p.hp+dmg*modRank('leech')*.02,0,p.maxHp);
@@ -8091,7 +8069,21 @@ function enemyAttack(e){
  p.dashSmash=false;p.dashFollowWindow=0;
  p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteWindow=0;p.riposteTarget=null;
  playCombatVoice(p.hp<=0?'heroDeath':'heroHurt');p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)startDeathCinematic()}
-function fxBurst(x,y,color='red',scale=1,specialAttackFx=false){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8),specialAttackFx})}
+function fxBurst(x,y,color='red',scale=1,specialAttackFx=false){
+ if(fx.length>=90)fx.splice(0,fx.length-75);
+ fx.push({kind:'genericBurstBitmap',x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.2,.2),specialAttackFx});
+}
+function drawGenericBurstBitmap(f){
+ const im=Z_ENEMY_BITMAP_ART.hit.image;
+ if(!im.complete||im.naturalWidth!==2048||im.naturalHeight!==1024)return;
+ const u=clamp(1-f.life/f.maxLife,0,.999999),frame=Math.min(7,Math.floor(u*8));
+ const w=clamp(145*f.scale,75,430);
+ ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.rotation||0);
+ ctx.globalAlpha=u>.86?clamp((1-u)/.14,0,1):.86;
+ ctx.filter=f.color==='blue'?'hue-rotate(155deg) saturate(1.2)':f.color==='gold'?'hue-rotate(26deg) saturate(1.15)':'none';
+ ctx.drawImage(im,(frame%4)*512,Math.floor(frame/4)*512,512,512,-w/2,-w/2,w,w);
+ ctx.restore();
+}
 // Two independently authored 4x2 RGBA images. Each 512x512 cell is padded
 // on every side: drawImage only ever samples one complete cell, not its neighbors.
 const Z_ENEMY_BITMAP_ART={
@@ -9330,7 +9322,7 @@ function drawRightAdvanceSign(){
 // The top-center minimap and "SEOUL 199X / progress" overlay no longer draw.
 function drawTravelMeter(){}
 
-function ellipseShadow(x,y,s=1,alpha=.36){ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle='#01040b';ctx.beginPath();ctx.ellipse(x,y,49*s,11*s,0,0,Math.PI*2);ctx.fill();ctx.restore()}
+function ellipseShadow(x,y,s=1,alpha=.36){const tex=Z_INTRUDER_SHADOW_BITMAP;if(!tex?.width||alpha<=0)return;const w=112*s,h=28*s;ctx.save();ctx.globalAlpha=clamp(alpha*1.35,0,1);ctx.drawImage(tex,x-w/2,y-h*.56,w,h);ctx.restore()}
 // HIGGSFIELD RIOT GUARD — seven complete eight-frame bitmap actions.
 // Keep the original embedded guard available with ?shield=old for A/B QA.
 const USE_HF_SHIELD=!/(?:[?&])shield=old(?:&|$)/.test(window.location?.search||'');
@@ -9402,10 +9394,10 @@ function drawRiotGuard(e,x,y,z){
   const scale=.75;
   ctx.drawImage(current,-RIOT_CW*scale/2,-RIOT_CH*scale,RIOT_CW*scale,RIOT_CH*scale);
   if(e.hitFlash>0){
-   ctx.filter='brightness(0) invert(1)';
+   ctx.filter='brightness(1.55) contrast(1.10) saturate(.85)';ctx.globalCompositeOperation='screen';
    ctx.globalAlpha=alpha*.75*clamp(e.hitFlash/.22,0,1);
    ctx.drawImage(current,-RIOT_CW*scale/2,-RIOT_CH*scale,RIOT_CW*scale,RIOT_CH*scale);
-   ctx.filter='none';ctx.globalAlpha=alpha;
+   ctx.filter='none';ctx.globalCompositeOperation='source-over';ctx.globalAlpha=alpha;
   }
  }else{
   // Only shown while initial eight-frame art streams in.
@@ -9448,10 +9440,10 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
  ctx.drawImage(picture,-w/2,-h+bob,w,h);
  if(a.hitFlash>0){
   const originalOpacity=ctx.globalAlpha;
-  ctx.filter='brightness(0) invert(1)';
+  ctx.filter='brightness(1.55) contrast(1.10) saturate(.85)';ctx.globalCompositeOperation='screen';
   ctx.globalAlpha=originalOpacity*.75*clamp(a.hitFlash/.22,0,1);
   ctx.drawImage(picture,-w/2,-h+bob,w,h);
-  ctx.filter='none';ctx.globalAlpha=originalOpacity;
+  ctx.filter='none';ctx.globalCompositeOperation='source-over';ctx.globalAlpha=originalOpacity;
  }
  if(isP){const swing=p.attack>0?(1-p.attack/p.attackDuration):0;const offsetX=29,offsetY=-120;ctx.save();ctx.translate(offsetX,offsetY);ctx.rotate(p.attack>0?(-.85+2.2*swing):-.88);const weapon=img['pipe_charged'];if(p.weapon>0&&weapon.complete)ctx.drawImage(weapon,-12,-18,150,38);ctx.restore();}
  // No vector rectangle on damage: only the original bitmap silhouette flashes.
@@ -9574,6 +9566,7 @@ function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);
  if(f.kind==='dashPierceSprite'){drawDashPierceSprite(f);continue;}
   if(f.kind==='parryCounterSprite'){drawParryCounterSprite(f);continue;}
   if(f.kind==='dashTrailSprite'){drawDashTrailSprite(f);continue;}
+ if(f.kind==='genericBurstBitmap'){drawGenericBurstBitmap(f);continue;}
  if(f.kind==='groundSlamSprite'){
   if(!drawGroundSlamSprite(f)){
    // Existing painted bitmap fallback while the new resource is unavailable.
