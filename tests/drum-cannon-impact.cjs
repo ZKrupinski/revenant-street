@@ -53,8 +53,8 @@ for(const entry of ['index.html','play-fixed-20261102.html']){
   'accepted normal attack triggers sound at BUTTON INPUT, not after animation');
  assert(input.includes("playImpactSound('counter',1.35)"),
   'accepted parry follow-up plays metal counter immediately at button press');
- assert(input.includes('p.riposteChaseWarmup=.10'),
-  'post-parry chase has shortened, still-visible windup');
+ assert(input.includes('p.riposteChaseWarmup=.32'),
+  'original cinematic airborne chase timing stays intact; sound itself plays on button press');
  assert(!onHit.includes("playImpactSound('counter',1.35)"),
   'confirmed follow-up hits retain rumble without playing a second delayed counter sound');
  assert(input.includes("p._dashExplosionPlayed=playImpactSound('counter',1.22)"),
