@@ -3588,7 +3588,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 <script src="./assets/alpha10/sprites7.js"></script>
 <script>window.RZ_ASSETS.street=window.RZ_BG;window.RZ_ASSETS.street_pano=window.RZ_BG;delete window.RZ_BG;</script>
 <script src="./assets/assassin-b.js"></script>
-<script src="./assets/elite-ironmask.js?v=newhood-special-1f83b64-v2"></script>
+<script src="./assets/elite-ironmask.js?v=ironmask-recoil-fx-v3-20261103"></script>
 <script src="./assets/boss-hunter.js?v=fe00bed9"></script>
 <script src="./assets/attacks-20.js?v=923cd5b7"></script>
 <script src="./assets/voice/voice-engine.js?v=20261103-enemyonly-v4"></script>
@@ -5477,6 +5477,10 @@ function drawModEnergy(layer='all',selection=null){
  // opponent. Each module keeps its own 8-frame PNG and lifetime.
  for(const e of enemies){
   if(e.dead||e.x<left||e.x>right)continue;
+  // Iron Mask should not have semi-transparent, pulsing status sprites
+  // orbiting its body during idle or recoil. Real elemental status damage
+  // and direct contact VFX remain active.
+  if(e.type==='elite')continue;
   const active=Z_ENEMY_STATUS_VFX.filter(s=>e[s.status]>0);
   for(let i=0;i<active.length;i++){
    const state=active[i],rank=Math.min(6,e[state.power]||1);
@@ -6797,8 +6801,8 @@ function hurtEnemy(e,dmg,poise){
   e.poise<e.maxPoise*.90&&
   dmg<85&&!p.counterBoost&&!p.dashSmash&&!p.airAttack;
  if(ironSpecialArmor){
-  e.hitFlash=Math.max(e.hitFlash,.17);
-  fxBurst(e.x,e.y-118,'red',.75);
+  // Contact is already visible at the arm: no small, flickering body orb.
+  e.hitFlash=Math.max(e.hitFlash,.07);
   floatText('-'+Math.round(dmg),e.x+18,e.y-155,'#ffecc6');
   p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
   // Do not replace the painted charge/rush/impact poses with hit reactions.
@@ -7223,11 +7227,16 @@ function spawnBasicContactFx(enemy,move,critical=false){
  const upper=move==='uppercut'||move==='rising_elbow';
  const bodyY=low?65:head||upper?155:kick?103:elbow?125:133;
  // Put the main blast beyond the victim's center toward the hero's attack direction.
- const x=enemy.x+dir*Math.min(54,Math.max(24,bodyHalfX(enemy)*.48));
- const y=enemy.y-Math.max(0,enemy.z||0)-bodyY;
+ // Large Iron Mask: a clear impact just OUTSIDE the shoulder/fist outline.
+ // No small, displaced stamps layered across the translucent middle of his body.
+ const eliteContact=enemy.type==='elite';
+ const x=enemy.x+dir*(eliteContact?137:Math.min(54,Math.max(24,bodyHalfX(enemy)*.48)));
+ const y=enemy.y-Math.max(0,enemy.z||0)-(eliteContact?clamp(bodyY,98,149):bodyY);
  const power=(kick||elbow||head?1.08:move==='jab'?.90:1)*(critical?1.13:1);
  const angles=[-.2,.10,-.43,.40,-.06],lengths=[.9,1.04,1.27,1.18,1.03];
- const count=Math.min(room,critical?2:Math.random()<.70?2:1);
+ // Iron Mask uses a single strong impact at the contact location, not
+ // multiple ghostly flashes stamped at slightly different body positions.
+ const count=Math.min(room,eliteContact?1:critical?2:Math.random()<.70?2:1);
  for(let i=0;i<count;i++){
   const variant=randomHitVariant(enemy),main=i===0;
   // Show all eight bitmap cells long enough to be legible in fast combat.
@@ -7235,9 +7244,9 @@ function spawnBasicContactFx(enemy,move,critical=false){
   fx.push({kind:'basicHitSprite',x:x+rnd(-7,7)+(main?0:dir*20),
    y:y+rnd(-10,10)+(main?0:rnd(-23,21)),dir:-dir,
    vx:dir*(main?rnd(22,52):rnd(42,90)),vy:rnd(-52,42),
-   width:(main?rnd(228,262):rnd(105,128))*power*lengths[variant],
+   width:(main?rnd(228,262):rnd(105,128))*power*lengths[variant]*(eliteContact?1.18:1),
    rotation:angles[variant]+rnd(-.12,.12),alpha:main?1:rnd(.68,.88),
-   variant,contactEnemy:enemy,paintedOnly:enemy.type==='intruder',delay,duration,age:0,life:duration+delay,maxLife:duration+delay});
+   eliteContact,variant,contactEnemy:enemy,paintedOnly:enemy.type==='intruder',delay,duration,age:0,life:duration+delay,maxLife:duration+delay});
  }
  return true;
 }
@@ -7278,8 +7287,8 @@ function drawBasicContactFx(f){
  ctx.translate(f.x+f.vx*elapsed,f.y+f.vy*elapsed);
  ctx.scale(f.dir,1);ctx.rotate(f.rotation);
  // Screen-blend and brighten the ORIGINAL raster art: no vector geometry.
- ctx.globalCompositeOperation='screen';
- ctx.filter='brightness(2.1) contrast(1.13) saturate(1.10)';
+ ctx.globalCompositeOperation=f.eliteContact?'source-over':'screen';
+ ctx.filter=f.eliteContact?'brightness(1.45) contrast(1.08)':'brightness(2.1) contrast(1.13) saturate(1.10)';
  ctx.globalAlpha=f.alpha*(progress<.72?1:Math.max(0,(1-progress)/.28));
  const frame=Math.min(7,Math.floor(progress*8));
  if(painted){
@@ -7980,7 +7989,8 @@ function updateEliteAI(e,dt,dx,dy,dist){
    e.eliteRush=.58;e.eliteRushFace=e.face;
    e.eliteSpecialElapsed=0;e.eliteSpecialDuration=1.04;e.eliteSpecialPlaying=true;
    e.spriteKey='';e.spriteTime=0;
-   fxBurst(e.x,e.y-140,'red',1.8);
+   // The 8-frame crimson-special atlas has its own charge artwork.
+   // Do not add a detached translucent burst to the armored torso.
    playCombatVoice('enemyShout',e);
   }
   return true;
@@ -8001,7 +8011,8 @@ function updateEliteAI(e,dt,dx,dy,dist){
    e.windupDuration=e.windup;
    e.eliteSpecialRecover=Math.max(.7,(e.eliteSpecialDuration||1.04)-(e.eliteSpecialElapsed||0)+.15);
    e.cooldown=1.2;
-   spawnGroundSlamFx(e.x+e.face*35,e.y,1.20,'elite');
+   // Strong, grounded impact in front of the FEET, not a weak floating halo.
+   spawnGroundSlamFx(e.x+e.face*82,e.y,1.46,'elite');
    screenShake=Math.max(screenShake,13);
   }
   return true;
@@ -8016,7 +8027,7 @@ function updateEliteAI(e,dt,dx,dy,dist){
   e.cooldown=Math.max(e.cooldown,1.0);
   e.spriteKey='';e.spriteTime=0;
   floatText('CRIMSON EXECUTION!',e.x,e.y-245,'#ff697e');
-  fxBurst(e.x,e.y-147,'red',1.2);
+  // Charge art is the telegraph; no disconnected torso effect.
   return true;
  }
  return false;
