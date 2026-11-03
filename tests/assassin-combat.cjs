@@ -533,9 +533,12 @@ test('elite overdrive at critical health and independent sprite module',()=>{
  new vm.Script(art);
  vm.runInContext(art,world);
  const enemy={...e,dead:false,z:0,reactionTime:0,proneTime:0,riseTime:0,eliteTell:.5,eliteRush:0};
+ // Physical knockback takes precedence over charge/idle visuals.
+ assert.equal(world.RZElite.move(enemy,()=> 'idle'),'hit');
+ enemy.knockVX=0;enemy.pendingFall=false;enemy.z=0;
  assert.equal(world.RZElite.move(enemy,()=> 'idle'),'charge');
  enemy.eliteTell=0;enemy.dead=true;enemy.z=20;
- assert.equal(world.RZElite.move(enemy,()=> 'idle'),'hitFly');
+ assert.equal(world.RZElite.move(enemy,()=> 'idle'),'death','death art wins over airborne recoil');
 });
 test('Frame Lab displays the eight original Iron Mask painted animations, not recolored assassin art',()=>{
  const lab=fs.readFileSync(path.join(__dirname,'../z-frame-lab.html'),'utf8');
