@@ -21,7 +21,7 @@ const rules=[
  'const footAnchor=height*.8',
  "spawnGroundSlamFx(p.x,p.y,skill.visual,'hero')",
  "if(kind==='slam')spawnGroundSlamFx(b.x,b.y,1.55,'boss')",
- "spawnGroundSlamFx(e.x+e.face*35,e.y,1.20,'elite')",
+ "spawnGroundSlamFx(e.x+e.face*82,e.y,1.46,'elite')",
  "spawnGroundSlamFx(e.x,e.y,1.40,'elite')",
  "if(f.kind==='groundSlamSprite')",
  "['지면강타 8프레임 비트맵',()=>ensureBitmapDecoded(GROUND_SLAM_ART.image)]"
