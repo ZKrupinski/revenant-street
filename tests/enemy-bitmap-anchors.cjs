@@ -55,20 +55,24 @@ for(const [type,[hitSize,deathSize]] of Object.entries(expected)){
  assert.equal(death.x,650,'ground X pinned '+type);
  assert.equal(death.footY,580,'death ignores airborne Z '+type);
  assert.equal(world.spawnEnemyDeathBitmap(e),false,'no duplicate death '+type);
- const expectedTempo=[0,1,2,3,4,5,6,7,6,7];
- for(let phase=0;phase<expectedTempo.length;phase++){
-  const frame=expectedTempo[phase];
-  death.age=(phase+.25)/expectedTempo.length*death.maxLife;
+ const frameAt=[ // All eight 512px cells, then moving ash tail
+  [.020,0],[.088,1],[.165,2],[.245,3],[.355,4],
+  [.460,5],[.585,6],[.710,7],[.860,6],[1.060,7],[1.240,6]
+ ];
+ for(const [elapsed,frame] of frameAt){
+  death.firstBurstAge=elapsed; // Independent of the corpse disappearance age.
+  death.age=death.maxLife*.12;
   draws.length=0;
   world.drawEnemyBitmapFx(death);
   assert.equal(draws.length,1,'one frame for '+type+' frame '+frame);
   const d=draws[0];
   assert.deepEqual(d.slice(1,5),[(frame%4)*512,Math.floor(frame/4)*512,512,512],
-   'exact cell without adjacent frame bleed '+type+':'+frame);
+   'exact cell without adjacent-frame bleed '+type+':'+frame);
   assert.equal(d[6],580-77-deathSize*422/512+Math.max(35,Math.min(60,deathSize*.10)),
-   'ash pile aligns below the currently airborne sprite feet '+type+':'+frame);
+   'ash stays anchored to moving sprite feet '+type+':'+frame);
   assert.equal(d[7],deathSize);assert.equal(d[8],deathSize);
  }
+
  // A dying body keeps moving during knockback; the VFX must FOLLOW its art,
  // not remain where HP first reached zero.
  e.renderX=735;e.renderY=552;e.z=31;
@@ -99,4 +103,4 @@ const d=fx.at(-1);draws.length=0;world.drawEnemyBitmapFx(d);
 assert(Math.abs((draws[0][5]+d.width/2)-edge.x)<=36,'edge correction limited to 36px, preserve feet');
 assert(html.includes("if(e.hp>0)spawnEnemyHitBitmap(e,dmg);"),'only living enemy takes hit burst');
 assert(html.includes('spawnEnemyDeathBitmap(e);'),'death explosion spans all enemy types');
-console.log('PASS: six enemy sizes, 10-step death cadence through original 8 cells, sprite-follow anchors, alpha crop safety');
+console.log('PASS: six enemy sizes, uninterrupted 8-frame explosion plus animated tail, sprite-follow anchors, alpha crop safety');
