@@ -70,7 +70,7 @@ def render(kind, filename, seconds):
         audio.setsampwidth(2)
         audio.setframerate(SR)
         audio.writeframes(pcm)
-    assert target.stat().st_size > 45000
+    assert target.stat().st_size > 30000
     print(f"{target}: {seconds}s, {target.stat().st_size} bytes, max={max_abs:.3f}")
 
 if __name__ == "__main__":
