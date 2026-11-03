@@ -396,7 +396,7 @@ test('new HUD distinguishes live squad from unspawned remaining wave enemies',()
  assert(node('enemyCount').textContent.includes('첫 무리 출현 전'),'new wave must not claim a nonexistent squad was defeated');
  assert(node('enemyStatus').textContent.includes('다음 적 무리 대기'),'new wave waits without writing advance instructions');
  assert(html.includes('function drawRightAdvanceSign(){')&&
-  html.includes('drawOffscreenEnemyIndicator();drawRightAdvanceSign();'),
+  html.includes('drawOffscreenEnemyIndicator();if(typeof drawRightAdvanceSign==='function')drawRightAdvanceSign();'),
   'stage-clear guidance must use the existing bitmap arrow instead of a text popup');
  assert(!html.includes("ctx.fillText(`SEOUL 199X /")&&
   !html.includes('drawTravelMeter();drawOffscreenEnemyIndicator();'),
