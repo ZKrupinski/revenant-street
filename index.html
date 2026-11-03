@@ -7984,6 +7984,11 @@ const Z_ENEMY_FX_SIZES=Object.freeze({
 // In the rendered death atlas, the ash pile touches source Y=421..422.
 // Hold that ground line constant through all 8 cells as residue rises.
 const Z_DEATH_FOOT_SOURCE_Y=422/512;
+// A little faster than the actor fade's former 8 equal holds: finish the
+// painted 8-cell death motion at 80% of its disappearance window, then cycle
+// only the two faint, evaporating tail cells (6,7) until the body vanishes.
+// Original sheet, crop, scale, sprite foot anchor and 100% VFX opacity stay.
+const Z_DEATH_FRAME_SEQUENCE=Object.freeze([0,1,2,3,4,5,6,7,6,7]);
 // The painted death sequence follows the SAME disappearance clock used by
 // updateEnemies, including the delay before actors begin fading.
 // Boss: 2.7 s hold + 1/.58 s fade. Others: .72 s hold + 1/.74 s fade.
@@ -8063,7 +8068,10 @@ function drawEnemyBitmapFx(effect){
  const image=(hit?Z_ENEMY_BITMAP_ART.hit:Z_ENEMY_BITMAP_ART.death).image;
  if(!image.complete||image.naturalWidth!==2048||image.naturalHeight!==1024)return;
  const progress=clamp((effect.age||0)/effect.maxLife,0,.99999);
- const frame=Math.min(7,Math.floor(progress*8)),w=effect.width;
+ const frame=hit?Math.min(7,Math.floor(progress*8)):
+  Z_DEATH_FRAME_SEQUENCE[Math.min(Z_DEATH_FRAME_SEQUENCE.length-1,
+   Math.floor(progress*Z_DEATH_FRAME_SEQUENCE.length))];
+ const w=effect.width;
  if(!hit&&effect.followSpriteFoot&&effect.deadEnemy){
   // Match drawActor(): use the SMOOTHED character location and its current
   // airborne Z, not the stale position captured on the killing blow.
@@ -8093,7 +8101,7 @@ function drawEnemyBitmapFx(effect){
  ctx.restore();
 }
 window.__zEnemyBitmapFxStatus=()=>({
- version:'enemy-death-synced-to-character-fade-8f-v4',
+ version:'enemy-death-faster-evaporation-8f-v5',
  hit:Z_ENEMY_BITMAP_ART.hit.image.complete&&Z_ENEMY_BITMAP_ART.hit.image.naturalWidth===2048,
  death:Z_ENEMY_BITMAP_ART.death.image.complete&&Z_ENEMY_BITMAP_ART.death.image.naturalWidth===2048,
  frames:8,columns:4,rows:2,cell:512,deathFootSourceY:422,
