@@ -86,9 +86,13 @@ function draw(e,x,y,z,api){
   const dx=-CW*scale*.5,dy=-FOOT*scale;
   ctx.drawImage(source.image,(idx%4)*CW,Math.floor(idx/4)*CH,CW,CH,
     dx,dy,CW*scale,CH*scale);
-  // Hit feedback is provided by the separate full-opacity painted contact
-  // sprites. Never overlay a semi-transparent duplicate of the entire Iron Mask
-  // body: it flashes like a ghost during idle/special transitions.
+  // The prior extra ghost pose is still disabled. A brief white flash samples
+  // only the CURRENT painted atlas cell on a confirmed hit, never idle art.
+  if(e.hitFlashFx>0&&window.__zDrawSpriteHitFlash){
+   window.__zDrawSpriteHitFlash(source.image,
+    (idx%4)*CW,Math.floor(idx/4)*CH,CW,CH,
+    dx,dy,CW*scale,CH*scale,e,alpha);
+  }
  }else{
   // Deliberately do NOT briefly draw the old bright casual elite.
   ctx.fillStyle='#121c23';ctx.fillRect(-24,-204,48,191);
