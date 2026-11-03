@@ -3982,7 +3982,8 @@ body{position:fixed;inset:0;touch-action:manipulation}
 
 <style id="z-hud-style-effects-grid-and-direction-overlay-v8">
 /* HUD: approved sparse bitmap composition — HP, lightweight STYLE EFFECTS,
-   3/4 columns of independent upgrade icons, no large backing plate. */
+   6 cells per row, maximum three rows. Overflow grows by six new columns
+   to the right without displacing the approved HP-adjacent origin. No backing plate. */
 #hud .hud-left .hud-name,
 #hud .hud-left .bar.stamina,
 #hud .hud-left .player-stats{display:none!important}
@@ -4008,16 +4009,18 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 #hud .hud-left #modStrip.mod-strip{
  display:grid!important;
- grid-template-columns:repeat(4,max-content)!important;
+ grid-template-columns:repeat(6,max-content)!important;
+ grid-template-rows:repeat(3,calc(28px * var(--z-combat-scale,1)))!important;
+ grid-auto-columns:max-content!important;
  grid-auto-flow:row!important;
  grid-auto-rows:calc(28px * var(--z-combat-scale,1))!important;
  column-gap:calc(.5px * var(--z-combat-scale,1))!important;
  row-gap:calc(2px * var(--z-combat-scale,1))!important;
- width:max-content!important;max-width:100%!important;
- max-height:calc(119px * var(--z-combat-scale,1))!important;
+ width:max-content!important;max-width:none!important;
+ max-height:calc(88px * var(--z-combat-scale,1))!important;
  padding:0!important;margin:0!important;
  background:transparent!important;border:0!important;box-shadow:none!important;
- overflow-x:hidden!important;overflow-y:hidden!important;
+ overflow-x:visible!important;overflow-y:visible!important;
  align-content:start!important;scrollbar-width:none!important;
 }
 #hud .hud-left #modStrip .mod-chip.compact{
@@ -4043,18 +4046,19 @@ body{position:fixed;inset:0;touch-action:manipulation}
  color:#ffe6a8!important;
 }
 #hud .hud-left .mod-wrap.expanded #modStrip.mod-strip{
- max-height:calc(194px * var(--z-combat-scale,1))!important;
- overflow-y:auto!important;pointer-events:auto!important;
+ max-height:calc(88px * var(--z-combat-scale,1))!important;
+ overflow-x:visible!important;overflow-y:visible!important;pointer-events:none!important;
 }
-#hud .hud-left .mod-toggle{
+#hud .hud-left .mod-toggle{display:none!important;
  padding:calc(2px * var(--z-combat-scale,1))!important;
  background:transparent!important;border:0!important;box-shadow:none!important;
  color:#ded5cb!important;text-shadow:0 1px 2px #000!important;
  font-size:calc(10px * var(--z-combat-scale,1))!important;
 }
 @container (max-width:610px){
+ /* Always six items across, even on narrow screens. Keep the top-left anchor. */
  #hud .hud-left .mod-wrap{width:min(calc(220px * var(--z-combat-scale,1)),100%)!important}
- #hud .hud-left #modStrip.mod-strip{grid-template-columns:repeat(3,max-content)!important}
+ #hud .hud-left #modStrip.mod-strip{grid-template-columns:repeat(6,max-content)!important}
 }
 /* Separate transparent bitmap-overlay canvas: arrows draw ABOVE HUD/icons,
    but stay BELOW joystick, attack buttons, and menu overlays. */
@@ -4080,7 +4084,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
         <div class="bar hp" aria-label="주인공 체력"><div class="hp-image-track"><div class="bar-fill" id="hpFill"></div></div><span id="hpText">100 / 100</span></div>
         <div class="bar stamina"><div class="bar-fill" id="staminaFill"></div><span>STAMINA</span></div>
         <div class="player-stats"><span>STYLE <b id="weaponCount">BARE FISTS</b></span><span class="mod-hud-caption" id="modName" aria-hidden="true">EFFECTS</span></div>
-        <div class="z-style-effects-caption" aria-hidden="true">/// STYLE EFFECTS</div><div class="mod-wrap" id="modWrap"><div class="mod-strip" id="modStrip" aria-label="선택한 전투 속성"><span class="empty-mod">속성 미장착</span></div><button type="button" class="mod-toggle" id="modToggle" aria-expanded="false" aria-controls="modStrip" hidden>추가 효과 보기</button></div>
+        <div class="z-style-effects-caption" aria-hidden="true">/// STYLE EFFECTS</div><div class="mod-wrap" id="modWrap"><div class="mod-strip" id="modStrip" aria-label="선택한 전투 속성"></div><button type="button" class="mod-toggle" id="modToggle" aria-expanded="false" aria-controls="modStrip" hidden>추가 효과 보기</button></div>
       </div>
       <div class="hud-center progress-hud" id="progressHud" aria-label="스테이지 진행 상황">
         <span class="chapter" id="chapter" hidden aria-hidden="true">01 / 침수된 거리</span>
@@ -9481,10 +9485,10 @@ function setModsExpanded(open){
  button.setAttribute?.('aria-expanded',String(modsExpanded));
 }
 function updateModToggle(count){
- const more=Math.max(0,count-12),button=$('modToggle');
- button.hidden=more===0;
- if(!more&&modsExpanded)setModsExpanded(false);
- button.textContent=modsExpanded?'접기 ▲':`+${more} 효과 보기`;
+ // The effects strip always extends rightward. No expand/collapse text/button.
+ const button=$('modToggle');
+ if(button){button.hidden=true;button.textContent='';button.setAttribute('aria-expanded','false')}
+ if(modsExpanded)setModsExpanded(false);
 }
 
 function updateHudThrottled(dt){
@@ -9502,8 +9506,17 @@ function updateHud(){
  const active=activeModStacks();
  const badges=active.map(({id,n,meta})=>'<span class="mod-chip compact '+id+'" title="'+meta.title+' : '+(meta.desc||meta.short)+'" aria-label="'+meta.short+' '+n+'중첩"><span class="icon">'+modIconMarkup(id)+'</span><b>x'+n+'</b></span>').join('')+
   (p.mod==='neuro'?'<span class="mod-chip compact neuro" title="NEURO · 전격과 출혈의 복합 효과" aria-label="NEURO 발동"><span class="icon">'+modIconMarkup('neuro')+'</span><b>x1</b></span>':'');
- const markup=badges||'<span class="empty-mod">효과 없음</span>';
- if(modStripCache!==markup){$('modStrip').innerHTML=markup;modStripCache=markup}
+ const markup=badges; // Empty inventory is visually empty; no placeholder.
+ if(modStripCache!==markup){
+  const strip=$('modStrip');strip.innerHTML=markup;
+  // Row-major 6 columns x 3 rows. Every 18 extra effects extend right.
+  // Do NOT reposition the existing HP-adjacent HUD anchor.
+  strip.querySelectorAll('.mod-chip').forEach((chip,i)=>{
+   chip.style.gridColumn=String(Math.floor(i/18)*6+(i%6)+1);
+   chip.style.gridRow=String(Math.floor((i%18)/6)+1);
+  });
+  modStripCache=markup;
+ }
  updateModToggle(active.length+(p.mod==='neuro'?1:0));
  $('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('hpText').textContent=`${Math.ceil(p.hp)} / ${p.maxHp}`;$('staminaFill').style.width=p.stamina+'%';$('weaponCount').textContent=p.weapon?`${p.weapon}/${p.maxWeapon}`:'BARE FISTS';$('modName').textContent='EFFECTS';$('credits').textContent=String(p.credits).padStart(4,'0');$('shardCount').textContent=String(perma.shards);if(p.hits!==lastHudCombo){$('combo').innerHTML=`${p.hits} <small>HITS</small>`;lastHudCombo=p.hits}const progress=waveEnemyTotals(),squads=SQUAD_SPOTS[wave]?.length||1;
  // Present only one numeric enemy total. Wave progress is conveyed by the
