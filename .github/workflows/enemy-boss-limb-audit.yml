@@ -1,0 +1,36 @@
+name: Project Z enemy and boss bitmap edge audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/audit-z-enemy-edges.py'
+      - '.github/workflows/enemy-boss-limb-audit.yml'
+      - 'assets/assassin-b/**'
+      - 'assets/ironmask-elite/**'
+      - 'assets/riot-shield/**'
+      - 'assets/boss-hunter/**'
+      - 'assets/enemies/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Inspect original enemy and boss eight-frame bitmap pose grids
+        run: |
+          python -m pip install -q Pillow
+          python scripts/audit-z-enemy-edges.py
+      - name: Archive source-frame clipping candidate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: z-enemy-boss-8-frame-crop-audit
+          path: enemy-edge-audit/enemy-boss-edge-audit.json
+          if-no-files-found: warn
+          retention-days: 30
