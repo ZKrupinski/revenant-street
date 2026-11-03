@@ -24,11 +24,14 @@ function enemy(type){
  return {type,dead:true,fade:1,deathAge:0,collapseAge:0,
   x:520,y:555,z:0,renderX:520,renderY:555};
 }
+const expectedDeathCadence=[0,1,2,3,4,5,6,7,6,7];
+assert(html.includes('const Z_DEATH_FRAME_SEQUENCE=Object.freeze([0,1,2,3,4,5,6,7,6,7]);'),
+ 'death effect uses 10 temporal phases drawn from exactly 8 original bitmap cells');
 function checkFrame(f,progress,expected){
  f.age=progress*f.maxLife;drawn.length=0;
  world.drawBitmap(f);
  assert.equal(drawn.length,1,'one 512px cell painted at '+progress);
- const args=drawn[0].args,frame=Math.floor(progress*8);
+ const args=drawn[0].args,frame=expectedDeathCadence[Math.min(9,Math.floor(progress*10))];
  assert.deepEqual(args.slice(1,5),[(frame%4)*512,Math.floor(frame/4)*512,512,512]);
  assert.equal(drawn[0].alpha,1,'death sprite has NO synthetic transparency fade');
  assert.equal(frame,expected);
@@ -48,20 +51,20 @@ for(const type of ['raider','elite','intruder','guard','assassin','boss']){
  assert(world.fx.includes(f),'effect is still active while body is shown: '+type);
  assert(Math.abs(f.age-atHold)<1e-8,'effect age locked to body death clock: '+type);
  const p=f.age/f.maxLife;
- checkFrame(f,p,Math.floor(p*8));
+ checkFrame(f,p,expectedDeathCadence[Math.min(9,Math.floor(p*10))]);
  // During body fade, not a single drawing is artificially faded.
  e.deathAge=hold+.5/rate;e.collapseAge=collapsing?e.deathAge:0;e.fade=.5;
  world.tickFx(.02,.02);
  assert(Math.abs(f.age-e.deathAge)<1e-8,'frame follows half-faded character: '+type);
  assert(world.fx.includes(f));
  const middle=f.age/f.maxLife;
- checkFrame(f,middle,Math.floor(middle*8));
+ checkFrame(f,middle,expectedDeathCadence[Math.min(9,Math.floor(middle*10))]);
  // Boss/normal both survive until the actor actually reaches zero opacity.
  e.deathAge=hold+.98/rate;e.collapseAge=collapsing?e.deathAge:0;e.fade=.02;
  world.tickFx(.02,.02);
  assert(world.fx.includes(f),'VFX outlives 98% of the body fade: '+type);
  const endProgress=f.age/f.maxLife;
- checkFrame(f,endProgress,Math.floor(endProgress*8));
+ checkFrame(f,endProgress,expectedDeathCadence[Math.min(9,Math.floor(endProgress*10))]);
  e.fade=0;e.deathAge=duration;e.collapseAge=collapsing?duration:0;
  world.tickFx(.02,.02);
  assert(!world.fx.includes(f),'VFX ends only when actor vanishes: '+type);
@@ -78,4 +81,4 @@ assert(html.includes("ctx.globalAlpha=hit&&progress>.81?Math.max(0,(1-progress)/
  'hit fading preserved, death opacity stays at 100%');
 assert(html.includes("f.kind==='enemyHitBitmap'?true:f.kind==='enemyDeathBitmap'?false"),
  'hit above and death behind character layering remains');
-console.log('PASS: normal/elite/boss death bitmap playback follows their own disappearance clocks, never fades as a whole');
+console.log('PASS: death uses 10 quicker timing slots over 8 original RGBA cells; synchronized lifespan and no global opacity fade');
