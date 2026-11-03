@@ -1,0 +1,39 @@
+name: Surgical enemy sprite fragment repair
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/repair-z-enemy-atlases.py'
+      - '.github/workflows/repair-enemy-bitmap-atlases.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: project-z-enemy-art-repair
+  cancel-in-progress: false
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reassemble eight-frame elite and redhood sheets from approved pixels
+        run: |
+          python -m pip install -q Pillow numpy opencv-python-headless
+          python scripts/repair-z-enemy-atlases.py
+      - name: Commit non-destructive, source-preserving repaired WebP artwork
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/ironmask-elite/*-crop-safe.webp assets/enemies/redhood-intruder/*-crop-safe.webp
+          if ! git diff --cached --quiet; then
+            git commit -m 'Art: surgically isolate ironmask and redhood broken bitmap pose fragments'
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi
