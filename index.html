@@ -3691,7 +3691,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 #hud .progress-hud .z-metal-digits{
  display:flex!important;flex-wrap:nowrap!important;align-items:center!important;
  height:calc(19px * var(--z-combat-scale,1))!important;
- gap:calc(-1px * var(--z-combat-scale,1))!important;
+ gap:0!important;
  padding:0!important;margin:0!important;background:none!important;
 }
 #hud .progress-hud .z-metal-digit{
@@ -3699,7 +3699,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
  width:calc(12.5px * var(--z-combat-scale,1))!important;
  height:calc(19px * var(--z-combat-scale,1))!important;
  padding:0!important;margin:0!important;
- background-image:url('./assets/ui/z-metal-digit-atlas-v4.png?v=metal-20261103')!important;
+ background-image:var(--z-metal-digit-v5,url('./assets/ui/z-metal-digit-atlas-v4.png?v=metal-20261103'))!important;
  background-repeat:no-repeat!important;
  background-size:1000% 100%!important;
  image-rendering:auto!important;
@@ -9117,6 +9117,63 @@ function zMetalHudNumber(id,value){
  }
  if(id==='zHudEnemyDigits')root.parentElement.classList.toggle('is-wide',text.length>2);
 }
+/* PROJECT Z: artist-approved metallic italic numeral silhouettes, raster-only. */
+const Z_METAL_FONT_SOURCE=["22aYEYbDXcDWeCVgBUhBTiBThCSiCSiCSiCRiDROHNDRNIMEQNINEQNINEQNIMFPNINFPNINFPNHOFONINGONINGONHOGNNINHNNINHNNHNIMNINIMNINILOHNJLNINJLNINJKOHNKKNINKKNHOKJOHNLJNINLJNHOLIOHNMININMINHOMHOHNNHNINNHNHONGOHONGNIONGNHPNFOHPNFOHOOFNHPOEOHPOEOHOPDOHPPDkPDjQCkQCkQCjRBkRBkRBjSChTCgUBgVBfWBeXBeXEaYIVZQIe2","22kRBiRDhREfSFdUFcUGaWGXYHVaHTbITbIScISbJRcJRbKQcKQbLPcLPbMOHERMOCISMNCJRNXSNXROWSOVSPVSPUSQUSQURRTSRTSRSSSSSSRSTRSTQSUQSUPTUPSVOTVOSWNTWNSXNSXMUWMUWLUXLUXKUYKSBBYJTBBYJSBBZIVYBIUYCHVYCHVXDGVYDGVYDFVYEFVYEEWXFEVYFDWXGDVYGCWXHBWXIBWXIDSbG2","22AGUYBCBAEVcBAEUbDADUdCADTeCADSfCACSgCACSfDACRgDABSgDABSfEABRgESNGNESMHMFRNHMFRMHNFRMHMGQNHMGQMHNGPIDCHNGPCSMHiNHiMIhNIfPIdRIbSJaTJYVJWWKUXBBJSYBBKRXBCLQXBBNOXRNWTMWULXULVWKSaKQcKPdJOfJNgJMgBINgBINfCINfCHOfCHNLFBCMDHNGNMDGNGOMDGgMEGgMEFgNEFgMFFgMFEhLGEgMGEgMGDhNFDhNFChOFChNGChNGBhOGBhQECYbBKGm2","22AHTZDAEBBSbDAETdCAFReCAGPgBAGOhBAFOiBAFOhCAFNiCAEOhDAEOhDADOhEADONFBBNEADOMINEACONIMFACONHNFACOMINFACNNIMGABONHNGABNDKBHNGOFPNHiNHiNHhNIhNIXXIXWJWVLWUMWTNVSPVSPUUOUVNUWMTXMTYLTJBNMXBFNMcNNcNNcNNbOMBbNNBHNHNNBGNHOMCGNHOMCGNGPMCFOGOMDFNHOMDEOHOMDENHOMEEiMEDjLFDjQDiRCjRCjRBjSCiSChTCgUDeVCeWBeXBdYDaZGWaPIf2","22ACgTBADfSCADeSDAEcSEAFbSEAFaTEAEaTFAEZUFADaUFADZUGACZVGACYWGACYVHABYWHABXXHABWXIXXIWXJVYJUMBMJULBMKTMBMKSMBNKRMCMLRLDMLQMCNLPMDNLOMEMMOMDNMNMENMMMFMNMLFNNLMFNNKMFNOJNFNOINGNOIMGNPHMHNPGMIMQGMBBFNEBLFmLFlMFmLEnLEmMEmLBElMBDmMBDmLCDlMCCmMCCmLDClMDBILNCEMDBHMOQETPQETORETOQFSPQFSPQFSORFRPRFRPRFQQRFQPSFQPSFPQTEQOVDWGa2","22AFPhBAEQhBADQiBACRhCACRhCACQhDABRgEABRgEABQgFRgFRgFQhFQTCMFQMKLFPNJDEEGPMbPMbONbOMcOMcNNcNMdNMCMPMcOMcOLeNLeNLfMKhLKhLKgMJhMJgNJgNIDIBINNIDRNNcMObNObNNBaNOBaNOBaNNCZNOCZNOCGMHNNDFNHNNDFNGONDFMHNNEENHNNEENGONEDNHOMFDMHONFDhNFCiMGChNGChNGBiMHBiMHBiMHBhNHBgOHBfQGBeRGBdSGBcSHCaTHDYWFFTe22","22AIRcBAHRcCAHQcDAHPeCAGPfCAGOfDAFOgDAEOgEAEOgEAEOgEADOgFADOgFADONCCDMFADNNILGADNNHMGQMIMGPNHCEBCEGPNSCGPMbONbONbONbNNcNNDLONMCONMNBPNMeMMfLLgLLhKLhKKhLKhLKgMJhMJhMJNHNMINHNNINHNNIMINNHNHNOHNHNOGNINOGNHOOGNHOOGMINPFNHOPFNHNQFMHOQENHOQENHOQDNHPQDiRDiRCjRCiSCiRBBjQCBjQCBiQDCgRDCfRECeRFCdSFCdRGBdSGDaTGIUaQCk2","22AGOhBAFOhCAEPgDAFNgEAFNgEAFNgEAENgFAENgFADOgFADNgGADNgGACOgGACNMBFBNHACNLINHACNLHNIACMLHNJACMLHNJACLCQNKNBQNLeNLdNMcNNcNNbNOaNPaNPZNQYOQYNRXNSWOSWNTVOTVNUUNVTOVTNVBSNWBSNVCRNWCQOWCQNWDPOWDOOXDOOWENOXENOXEMOXFMNYFLOXGKOYGKOYGJOZGJPXHIOZHIPYHHPYIGQYIGPYJFQYJFPZJEQaIDRaIDQbICRbICQcIBRdHBQfGJGn2","22AJRYEAHRbDAHQcDAGQeCAGPgBAFPhBAFOiBAFOhCAEOiCAEOiCAEOhDADOiDADONINDACPNHNEABPNINEABPNIMFQNHNFPNINFPNIMGPNHNGONINGONINGNOHNHNNINHNNINHMjHNgBBHNfKOdLPaNQXPPYPNbOMdNLfMKgMJiLIOEBCOLININMHOHOMHOHNNHNINNGOHONGOHONGNIONFOHOOFOHOOFOHOOEOHOOBEOHOOBENHPNCDOHOOCDjOCDjNDCkNDCjODCjNEBkNEBkMFBjNFChPECgQECfREBfSECdTEDbUEEZWDKPd22","22ACYYEACWbDADUcDAESeCAERgBAFPhBAEPiBAEOiCAEOiCADOiDADOiDADOiDACOOHNEACONINEABPNINEABOOHNFABONINFPNINFOOHNGONINGONINGNOHOGNNINHNNINHMOHNIMNINIMNHOILOHNJLiJKjJKiKKiKJjKJiLJiLJiLKgMLfMLfMMOCNNNBJBENNbONbONbNOaOOaOOaOOLHHOPFNHOPFNHOPENHPPEMIOQDNHPQDjQDiRCjRCjRCiSBjSBjSBiTBhUCfVCeWCdXCcYCbZEYaSFf2"];
+function zCreateMetallicDigitsV5(){
+ try{
+  const S='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+';
+  const out=document.createElement('canvas');
+  const cellW=142,cellH=202,maskW=54,maskH=72;
+  out.width=cellW*10;out.height=cellH;
+  const g=out.getContext('2d',{willReadFrequently:false});
+  if(!g)return false;
+  const data=g.createImageData(out.width,out.height);
+  const pix=data.data;
+  for(let d=0;d<10;d++){
+   const encoded=Z_METAL_FONT_SOURCE[d],mat=new Uint8Array(maskW*maskH);
+   let pos=0;
+   for(let y=0;y<maskH;y++){
+    let x=0,ink=0,guard=0;
+    while(x<maskW&&pos<encoded.length&&guard++<90){
+     const run=S.indexOf(encoded[pos++]);
+     if(run<0)break;
+     if(ink)mat.fill(1,y*maskW+x,Math.min((y+1)*maskW,y*maskW+x+run));
+     x+=run;ink^=1;
+    }
+   }
+   const at=(x,y)=>x>=0&&y>=0&&x<maskW&&y<maskH?mat[y*maskW+x]:0;
+   const smooth=(x,y)=>{
+    const xx=Math.floor(x),yy=Math.floor(y),dx=x-xx,dy=y-yy;
+    return at(xx,yy)*(1-dx)*(1-dy)+at(xx+1,yy)*dx*(1-dy)+
+     at(xx,yy+1)*(1-dx)*dy+at(xx+1,yy+1)*dx*dy;
+   };
+   for(let y=0;y<cellH;y++)for(let x=0;x<cellW;x++){
+    const ix=(x-5)/(cellW-10)*maskW,iy=(y-5)/(cellH-12)*maskH;
+    const a=smooth(ix,iy),shadow=smooth(ix-.65,iy-1.05);
+    const i=((d*cellW+x)+out.width*y)*4;
+    if(a<.04){
+     if(shadow-a>.22){pix[i]=23;pix[i+1]=12;pix[i+2]=24;pix[i+3]=Math.round((shadow-a)*75);}
+     continue;
+    }
+    const v=iy/maskH,n=(Math.sin((x+d*73)*15.371+y*48.213)*14537.3)%1;
+    const grit=Math.abs(n)*9-4;
+    const shine=v<.16?15:v<.6?0:v<.78?-8:0;
+    let steel=215-66*v+shine+grit;
+    if(v>.80){pix[i]=Math.max(0,Math.min(255,steel+16));pix[i+1]=Math.max(0,steel-54);pix[i+2]=Math.max(0,steel-35);}
+    else{pix[i]=Math.max(0,Math.min(255,steel));pix[i+1]=Math.max(0,Math.min(255,steel+7));pix[i+2]=Math.max(0,Math.min(255,steel+19));}
+    const highlight=smooth(ix-.42,iy-.42)<.51;
+    if(highlight&&v<.76){pix[i]=240;pix[i+1]=246;pix[i+2]=251;}
+    if(smooth(ix+.35,iy+.35)<.55&&v>.78){pix[i]=245;pix[i+1]=68;pix[i+2]=96;}
+    pix[i+3]=Math.round(Math.min(1,a*1.6)*255);
+   }
+  }
+  g.putImageData(data,0,0);
+  document.documentElement.style.setProperty('--z-metal-digit-v5',`url("${out.toDataURL('image/png')}")`);
+  window.__zMetalNumeralStatus={ready:true,source:'approved-number-silhouette',glyphs:10,resolution:'1420x202'};
+  return true;
+ }catch(e){window.__zMetalNumeralStatus={ready:false,error:String(e)};return false}
+}
+zCreateMetallicDigitsV5();
 let modStripCache='',lastHudCombo=-1,hudAccumulator=.12,modsExpanded=false;
 function setModsExpanded(open){
  modsExpanded=!!open;
