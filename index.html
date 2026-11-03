@@ -3742,7 +3742,7 @@ let intruderEntryImage=new Image();intruderEntryImage.src='./assets/enemies/redh
 // ONLY. Every subsequent combat action is rendered from this enemy's own art.
 const INTRUDER_MOTION_KEYS=['idle','run','attack','hit','death','special'];
 const intruderMotionImages=Object.fromEntries(INTRUDER_MOTION_KEYS.map(key=>{
- const image=new Image();image.src='./assets/enemies/redhood-intruder/'+(key==='death'?'death-fullbody.webp':key==='attack'?'attack-fullfist.webp':key==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':key+'.png');
+ const image=new Image();image.src='./assets/enemies/redhood-intruder/'+(key==='death'?'death-fullbody-crop-safe.webp':key==='attack'?'attack-fullfist.webp':key==='special'?'special-fullframe.webp?v=redhood-safe-eight-20261101':key+'.png');
  return [key,image];
 }));
 // Per-frame bottommost opaque pixel, measured from the original transparent
