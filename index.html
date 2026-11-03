@@ -3770,6 +3770,206 @@ body{position:fixed;inset:0;touch-action:manipulation}
 <link rel="preload" as="image" href="./assets/ui/z-wave-metal-track-v4.png?v=metal-20261103">
 <link rel="preload" as="image" href="./assets/ui/z-wave-metal-fill-v4.png?v=metal-20261103">
 <link rel="preload" as="image" href="./assets/ui/z-metal-digit-atlas-v4.png?v=metal-20261103">
+
+<style id="z-projectz-exact-reference-hud-v5">
+/* Every visible panel/metal wordmark/skull/HP decoration is a bitmap sampled from
+   the approved 28901.png artwork. Only clipping and numerical layout are CSS. */
+#hud .hud-center.progress-hud{
+ position:absolute!important;left:50%!important;right:auto!important;top:0!important;
+ transform:translateX(-50%)!important;
+ width:min(calc(475px * var(--z-combat-scale,1)),47%)!important;
+ height:calc(62.7px * var(--z-combat-scale,1))!important;
+ min-width:0!important;max-width:none!important;
+ margin:0!important;padding:0!important;border:0!important;
+ background:none!important;box-shadow:none!important;overflow:visible!important;
+ pointer-events:none!important;
+}
+#hud .progress-hud .progress-plate{
+ display:block!important;position:relative!important;
+ width:100%!important;height:100%!important;margin:0!important;padding:0!important;
+ border:0!important;box-shadow:none!important;overflow:visible!important;
+ background:url('./assets/ui/ref-wave-frame-v5.webp') center/100% 100% no-repeat!important;
+}
+#hud .progress-hud .chapter,#hud .progress-hud .wave-brand,#hud .progress-hud .wave-glyph{display:none!important}
+#hud .progress-hud .wave-chip{
+ display:block!important;position:absolute!important;
+ left:22.7%!important;top:30%!important;
+ width:auto!important;height:43%!important;
+ padding:0!important;margin:0!important;border:0!important;background:none!important;
+}
+#hud .progress-hud .z-metal-digits{
+ display:flex!important;align-items:center!important;flex-wrap:nowrap!important;
+ gap:0!important;width:max-content!important;height:100%!important;
+ padding:0!important;margin:0!important;border:0!important;background:none!important;
+}
+#hud .progress-hud .z-metal-digit{
+ display:block!important;flex:none!important;box-sizing:border-box!important;
+ width:calc(17.7px * var(--z-combat-scale,1))!important;
+ height:calc(27px * var(--z-combat-scale,1))!important;
+ margin:0!important;padding:0!important;border:0!important;
+ background-image:url('./assets/ui/ref-metal-number-atlas-v5.webp')!important;
+ background-repeat:no-repeat!important;background-size:1000% 100%!important;
+ background-position-y:center!important;image-rendering:auto!important;
+ filter:drop-shadow(0 1px 1px rgba(0,0,0,.74))!important;
+}
+#hud .progress-hud .meter-wrap{
+ position:absolute!important;left:28.0%!important;top:38.9%!important;
+ width:46.6%!important;height:30.6%!important;display:block!important;
+ padding:0!important;margin:0!important;border:0!important;
+ box-shadow:none!important;background:none!important;
+ min-width:0!important;max-width:none!important;
+}
+#hud .progress-hud .squad-progress{
+ display:block!important;position:relative!important;width:100%!important;height:100%!important;
+ padding:0!important;margin:0!important;border:0!important;
+ border-radius:0!important;box-shadow:none!important;background:none!important;
+ overflow:hidden!important;
+}
+#hud .progress-hud .squad-progress>div{
+ display:block!important;position:absolute!important;left:0!important;top:0!important;
+ height:100%!important;margin:0!important;padding:0!important;border:0!important;
+ border-radius:0!important;box-shadow:none!important;
+ background:url('./assets/ui/ref-wave-fill-cell-v5.webp') left center/
+   calc(12.2px * var(--z-combat-scale,1)) 100% repeat-x!important;
+ clip-path:polygon(0 0,100% 0,calc(100% - 5px * var(--z-combat-scale,1)) 100%,0 100%)!important;
+ transition:width .2s ease-out!important;
+}
+#hud .progress-hud .enemy-chip{
+ display:block!important;position:absolute!important;
+ left:auto!important;right:4.9%!important;top:27%!important;
+ width:auto!important;height:51%!important;
+ margin:0!important;padding:0!important;border:0!important;
+ background:none!important;box-shadow:none!important;
+}
+#hud .progress-hud .enemy-chip .z-metal-digit{
+ width:calc(20.0px * var(--z-combat-scale,1))!important;
+ height:calc(30px * var(--z-combat-scale,1))!important;
+}
+#hud .progress-hud .enemy-chip.is-wide .z-metal-digit{
+ width:calc(15px * var(--z-combat-scale,1))!important;
+ height:calc(25px * var(--z-combat-scale,1))!important;
+}
+#hud .progress-hud .z-hud-sr{
+ position:absolute!important;width:1px!important;height:1px!important;
+ overflow:hidden!important;clip-path:inset(50%)!important;
+ white-space:nowrap!important;margin:0!important;padding:0!important;border:0!important;
+}
+#hud .progress-hud .progress-caption{display:none!important}
+#hud .hud-center.progress-hud.is-boss{display:none!important}
+#hud .progress-hud .z-hud-wave-state{
+ display:block;position:absolute;top:106%;left:50%;
+ transform:translateX(-50%);width:calc(108px * var(--z-combat-scale,1));
+ height:calc(43px * var(--z-combat-scale,1));
+ background:url('./assets/ui/ref-wave-state-v5.webp') center/contain no-repeat;
+ pointer-events:none;opacity:.96;
+}
+#hud .progress-hud .z-hud-wave-state[hidden]{display:none!important}
+/* Matching protagonist HP from the lower-left area of the supplied reference. */
+#hud .hud-left{
+ position:absolute!important;left:calc(5px * var(--z-combat-scale,1))!important;
+ top:0!important;width:min(calc(302px * var(--z-combat-scale,1)),25%)!important;
+ min-width:0!important;
+}
+#hud .hud-left .bar.hp{
+ display:block!important;position:relative!important;overflow:visible!important;
+ width:calc(275px * var(--z-combat-scale,1))!important;
+ height:calc(54.9px * var(--z-combat-scale,1))!important;
+ margin:0!important;padding:0!important;border:0!important;
+ border-radius:0!important;box-shadow:none!important;
+ background:url('./assets/ui/ref-hero-hp-frame-v5.webp') center/100% 100% no-repeat!important;
+}
+#hud .bar.hp .hp-image-track{
+ display:block!important;position:absolute!important;left:26.7%!important;top:33.9%!important;
+ width:60.25%!important;height:33.1%!important;
+ margin:0!important;padding:0!important;overflow:hidden!important;background:none!important;
+}
+#hud .bar.hp .bar-fill{
+ display:block!important;position:absolute!important;left:0!important;top:0!important;
+ height:100%!important;margin:0!important;padding:0!important;border:0!important;
+ border-radius:0!important;box-shadow:none!important;
+ background:url('./assets/ui/ref-hero-hp-fill-v5.webp') left center/
+   calc(166px * var(--z-combat-scale,1)) 100% no-repeat!important;
+ clip-path:polygon(0 0,100% 0,calc(100% - 4px * var(--z-combat-scale,1)) 100%,0 100%)!important;
+ transition:width .14s ease-out!important;
+}
+#hud .bar.hp #hpText{
+ position:absolute!important;clip-path:inset(50%)!important;overflow:hidden!important;
+ width:1px!important;height:1px!important;margin:0!important;padding:0!important;
+}
+#hud .hud-left .hud-name{
+ position:absolute!important;top:calc(62px * var(--z-combat-scale,1))!important;
+ left:0!important;margin:0!important;font-size:calc(10px * var(--z-combat-scale,1))!important;
+}
+#hud .hud-left .player-mark{display:none!important}
+#hud .hud-left .bar.stamina{
+ width:calc(230px * var(--z-combat-scale,1))!important;
+ height:calc(7px * var(--z-combat-scale,1))!important;
+ margin-top:calc(88px * var(--z-combat-scale,1))!important;
+}
+#hud .hud-left .player-stats,#hud .hud-left .mod-wrap{max-width:calc(244px * var(--z-combat-scale,1))!important}
+/* Boss HP from original source lower-right, including metal skull + BOSS wordmark. */
+#stageWrap .boss-hud{
+ position:absolute!important;z-index:5!important;
+ left:50%!important;right:auto!important;top:calc(62px * var(--z-combat-scale,1))!important;
+ transform:translateX(-50%)!important;
+ width:min(calc(650px * var(--z-combat-scale,1)),70%)!important;
+ max-width:none!important;height:auto!important;aspect-ratio:978/125!important;
+ padding:0!important;margin:0!important;border:0!important;
+ border-radius:0!important;box-shadow:none!important;overflow:visible!important;
+ pointer-events:none!important;
+ background:url('./assets/ui/ref-boss-hp-frame-v5.webp') center/100% 100% no-repeat!important;
+}
+#stageWrap .boss-hud[hidden]{display:none!important}
+#stageWrap .boss-hud .boss-title{
+ position:absolute!important;width:1px!important;height:1px!important;
+ overflow:hidden!important;clip-path:inset(50%)!important;
+ margin:0!important;padding:0!important;border:0!important;
+}
+#stageWrap .boss-hud .boss-track{
+ position:absolute!important;left:20.9%!important;top:36.2%!important;
+ width:72.4%!important;height:37.9%!important;
+ margin:0!important;padding:0!important;border:0!important;
+ border-radius:0!important;box-shadow:none!important;background:none!important;
+ overflow:hidden!important;
+}
+#stageWrap .boss-hud #bossFill{
+ display:block!important;position:absolute!important;left:0!important;top:0!important;
+ height:100%!important;margin:0!important;padding:0!important;border:0!important;
+ border-radius:0!important;box-shadow:none!important;
+ background:url('./assets/ui/ref-boss-hp-fill-v5.webp') left center/
+   calc(471px * var(--z-combat-scale,1)) 100% no-repeat!important;
+ clip-path:polygon(0 0,100% 0,calc(100% - 5px * var(--z-combat-scale,1)) 100%,0 100%)!important;
+ transition:width .14s ease-out!important;
+}
+@container (max-width:800px){
+ #hud .hud-center.progress-hud{width:min(calc(475px * var(--z-combat-scale,1)),48%)!important}
+ #hud .hud-left .bar.hp{width:calc(254px * var(--z-combat-scale,1))!important;height:calc(50.6px * var(--z-combat-scale,1))!important}
+ #hud .bar.hp .bar-fill{background-size:calc(153px * var(--z-combat-scale,1)) 100%!important}
+ #hud .hud-left .hud-name{top:calc(56px * var(--z-combat-scale,1))!important}
+ #hud .hud-left .bar.stamina{margin-top:calc(80px * var(--z-combat-scale,1))!important}
+ #stageWrap .boss-hud{width:min(calc(650px * var(--z-combat-scale,1)),74%)!important}
+}
+@container (max-width:610px){
+ #hud .hud-center.progress-hud{width:min(calc(475px * var(--z-combat-scale,1)),50%)!important}
+ #hud .progress-hud .z-metal-digit{width:calc(15px * var(--z-combat-scale,1))!important;height:calc(24px * var(--z-combat-scale,1))!important}
+ #hud .progress-hud .enemy-chip .z-metal-digit{width:calc(16px * var(--z-combat-scale,1))!important;height:calc(26px * var(--z-combat-scale,1))!important}
+ #hud .hud-left .bar.hp{width:calc(227px * var(--z-combat-scale,1))!important;height:calc(45.3px * var(--z-combat-scale,1))!important}
+ #hud .bar.hp .bar-fill{background-size:calc(137px * var(--z-combat-scale,1)) 100%!important}
+ #hud .hud-left .hud-name{top:calc(50px * var(--z-combat-scale,1))!important}
+ #hud .hud-left .bar.stamina{margin-top:calc(70px * var(--z-combat-scale,1))!important}
+ #stageWrap .boss-hud{top:calc(50px * var(--z-combat-scale,1))!important}
+}
+</style>
+<link rel="preload" as="image" href="./assets/ui/ref-wave-frame-v5.webp">
+<link rel="preload" as="image" href="./assets/ui/ref-wave-fill-cell-v5.webp">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-number-atlas-v5.webp">
+<link rel="preload" as="image" href="./assets/ui/ref-hero-hp-frame-v5.webp">
+<link rel="preload" as="image" href="./assets/ui/ref-hero-hp-fill-v5.webp">
+<link rel="preload" as="image" href="./assets/ui/ref-boss-hp-frame-v5.webp">
+<link rel="preload" as="image" href="./assets/ui/ref-boss-hp-fill-v5.webp">
+<link rel="preload" as="image" href="./assets/ui/ref-wave-state-v5.webp">
+<link rel="preload" as="image" href="./assets/ui/ref-boss-state-v5.webp">
+<link rel="preload" as="image" href="./assets/ui/ref-warning-state-v5.webp">
 </head>
 <body>
 <div id="app">
@@ -3782,7 +3982,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
     <div class="hud" id="hud" hidden>
       <div class="hud-left">
         <div class="hud-name"><span class="player-mark">Z</span><span>REVENANT <small>Lv. <b id="level">01</b></small></span></div>
-        <div class="bar hp"><div class="bar-fill" id="hpFill"></div><span id="hpText">100 / 100</span></div>
+        <div class="bar hp" aria-label="주인공 체력"><div class="hp-image-track"><div class="bar-fill" id="hpFill"></div></div><span id="hpText">100 / 100</span></div>
         <div class="bar stamina"><div class="bar-fill" id="staminaFill"></div><span>STAMINA</span></div>
         <div class="player-stats"><span>STYLE <b id="weaponCount">BARE FISTS</b></span><span class="mod-hud-caption" id="modName" aria-hidden="true">EFFECTS</span></div>
         <div class="mod-wrap" id="modWrap"><div class="mod-strip" id="modStrip" aria-label="선택한 전투 속성"><span class="empty-mod">속성 미장착</span></div><button type="button" class="mod-toggle" id="modToggle" aria-expanded="false" aria-controls="modStrip" hidden>추가 효과 보기</button></div>
@@ -3790,7 +3990,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
       <div class="hud-center progress-hud" id="progressHud" aria-label="스테이지 진행 상황">
         <span class="chapter" id="chapter" hidden aria-hidden="true">01 / 침수된 거리</span>
         <div class="progress-plate">
-          <div class="wave-chip"><span class="wave-brand" aria-hidden="true">WAVE</span><span class="z-metal-digits" id="zHudWaveDigits" aria-hidden="true"></span></div>
+          <div class="wave-chip"><span class="z-metal-digits" id="zHudWaveDigits" aria-hidden="true"></span></div>
           <div class="meter-wrap"><div class="squad-progress" role="progressbar" aria-label="웨이브 적 처치 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="enemyProgress"><div id="enemyProgressFill"></div></div></div>
           <div class="enemy-chip" aria-hidden="true"><span class="z-metal-digits" id="zHudEnemyDigits"></span></div>
           <span class="wave-label z-hud-sr" id="waveLabel">WAVE 01</span>
@@ -3798,6 +3998,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
           <span class="kill-count z-hud-sr" id="enemyCount" aria-live="polite">00</span>
         </div>
         <span class="progress-caption" id="enemyProgressLabel" hidden>처치 진행도</span>
+        <span id="zHudWaveState" class="z-hud-wave-state" hidden aria-hidden="true"></span>
       </div>
       <div class="hud-right"><div class="currency" title="전투로 획득하는 크레딧">₩ <b id="credits">0000</b> <small style="color:#ffe68f">◆ <b id="shardCount">0</b></small></div><div class="combo" id="combo">0 <small>HITS</small></div><canvas id="combatWordHud" width="320" height="200" aria-hidden="true"></canvas><button class="small-button" id="pauseButton" aria-label="일시정지">Ⅱ</button></div>
     </div>
@@ -9192,6 +9393,13 @@ function updateHudThrottled(dt){
  hudAccumulator+=dt;if(hudAccumulator<.085)return;
  hudAccumulator%=.085;updateHud();
 }
+
+let zHudWaveStatePrevious=-1,zHudWaveStateUntil=0;
+function zHudUpdateWaveBadge(){
+ const badge=$('zHudWaveState');if(!badge)return;
+ if(wave!==zHudWaveStatePrevious){zHudWaveStatePrevious=wave;zHudWaveStateUntil=time+1.6;}
+ badge.hidden=wave===3||time>zHudWaveStateUntil;
+}
 function updateHud(){
  const active=activeModStacks();
  const badges=active.map(({id,n,meta})=>'<span class="mod-chip compact '+id+'" title="'+meta.title+' : '+(meta.desc||meta.short)+'" aria-label="'+meta.short+' '+n+'중첩"><span class="icon">'+modIconMarkup(id)+'</span><b>x'+n+'</b></span>').join('')+
@@ -9212,6 +9420,7 @@ function updateHud(){
  $('enemyCount').textContent=String(remaining).padStart(2,'0');
  zMetalHudNumber('zHudWaveDigits',String(wave).padStart(2,'0'));
  zMetalHudNumber('zHudEnemyDigits',String(remaining).padStart(2,'0'));
+ zHudUpdateWaveBadge();
  $('enemyStatus').textContent=`${String(Math.min(Math.max(squadIndex,1),squads)).padStart(2,'0')} / ${String(squads).padStart(2,'0')}`;
  $('enemyProgressLabel').textContent=completed?'웨이브 완료':waiting?'다음 무리 대기':'처치 진행도';
  const percent=progress.total?Math.round(progress.defeated/progress.total*100):0;
