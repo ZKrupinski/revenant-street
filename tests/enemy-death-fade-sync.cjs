@@ -73,12 +73,29 @@ for(const type of ['raider','elite','intruder','guard','assassin','boss']){
 {
  const e=enemy('raider');e.z=125;world.fx=[];world.spawnDeath(e);
  const f=world.fx[0];
+ // Immediately after dying, the large fireball should be visible but brief.
+ drawn.length=0;world.drawBitmap(f);
+ assert.deepEqual(drawn[0].args.slice(1,5),[0,0,512,512],
+  'initial explosion flash is rendered once at the moment of death');
+ e.deathAge+=.03;world.tickFx(.03,.03);drawn.length=0;world.drawBitmap(f);
+ assert.equal(f.age,0,'airborne collapse still waits for landing');
+ assert.equal(f.firstBurstAge,.03,'first explosion has a separate real-time clock');
+ assert.deepEqual(drawn[0].args.slice(1,5),[0,0,512,512],
+  'first flash remains visible for initial 30 ms');
+ e.deathAge+=.03;world.tickFx(.03,.03);drawn.length=0;world.drawBitmap(f);
+ assert.deepEqual(drawn[0].args.slice(1,5),[512,0,512,512],
+  '55 ms fireball immediately gives way to the second painted frame');
+ assert.equal(drawn[0].alpha,1,'no death effect fade introduced on frame switch');
+ assert.equal(f.age,0,'only the first frame uses independent time');
  for(let i=0;i<50;i++){e.deathAge+=.03;e.collapseAge=0;e.fade=1;world.tickFx(.03,.03);}
  assert.equal(f.age,0,'no premature death animation while airborne collapse timer is stopped');
  assert(world.fx.includes(f),'effect remains queued during long airborne tumble');
+ drawn.length=0;world.drawBitmap(f);
+ assert.deepEqual(drawn[0].args.slice(1,5),[512,0,512,512],
+  'large fireball does not reappear when airborne for a long time');
 }
 assert(html.includes("ctx.globalAlpha=hit&&progress>.81?Math.max(0,(1-progress)/.19):1;"),
  'hit fading preserved, death opacity stays at 100%');
 assert(html.includes("f.kind==='enemyHitBitmap'?true:f.kind==='enemyDeathBitmap'?false"),
  'hit above and death behind character layering remains');
-console.log('PASS: death uses 10 quicker timing slots over 8 original RGBA cells; synchronized lifespan and no global opacity fade');
+console.log('PASS: 55ms first fireball even airborne, remaining 8F body-fade sync, 100% sprite opacity');
