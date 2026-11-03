@@ -9256,7 +9256,7 @@ function draw(){
   ctx.restore();
   return;
  }
- drawOffscreenEnemyIndicator();drawRightAdvanceSign();
+ drawOffscreenEnemyIndicator();if(typeof drawRightAdvanceSign==='function')drawRightAdvanceSign();
 }
 const runtimePerf={fps:0,frameMs:0};
 let perfFrames=0,perfElapsed=0;
