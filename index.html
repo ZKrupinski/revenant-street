@@ -3788,7 +3788,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
  display:block!important;position:relative!important;
  width:100%!important;height:100%!important;margin:0!important;padding:0!important;
  border:0!important;box-shadow:none!important;overflow:visible!important;
- background:url('./assets/ui/ref-wave-frame-v7.png') center/100% 100% no-repeat!important;
+ background:url('./assets/ui/ref-wave-frame-v8.png') center/100% 100% no-repeat!important;
 }
 #hud .progress-hud .chapter,#hud .progress-hud .wave-brand,#hud .progress-hud .wave-glyph{display:none!important}
 #hud .progress-hud .wave-chip{
@@ -3876,7 +3876,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
  height:calc(54.9px * var(--z-combat-scale,1))!important;
  margin:0!important;padding:0!important;border:0!important;
  border-radius:0!important;box-shadow:none!important;
- background:url('./assets/ui/ref-hero-hp-frame-v7.webp') center/100% 100% no-repeat!important;
+ background:url('./assets/ui/ref-hero-hp-frame-v8.png') center/100% 100% no-repeat!important;
 }
 #hud .bar.hp .hp-image-track{
  display:block!important;position:absolute!important;left:26.7%!important;top:33.9%!important;
@@ -3960,19 +3960,19 @@ body{position:fixed;inset:0;touch-action:manipulation}
  #stageWrap .boss-hud{top:calc(50px * var(--z-combat-scale,1))!important}
 }
 </style>
-<link rel="preload" as="image" href="./assets/ui/ref-wave-frame-v7.png">
+<link rel="preload" as="image" href="./assets/ui/ref-wave-frame-v8.png">
 <link rel="preload" as="image" href="./assets/ui/ref-wave-fill-cell-v5.webp">
-<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-0-v7.png">
-<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-1-v7.png">
-<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-2-v7.png">
-<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-3-v7.png">
-<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-4-v7.png">
-<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-5-v7.png">
-<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-6-v7.png">
-<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-7-v7.png">
-<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-8-v7.png">
-<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-9-v7.png">
-<link rel="preload" as="image" href="./assets/ui/ref-hero-hp-frame-v7.webp">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-0-v8.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-1-v8.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-2-v8.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-3-v8.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-4-v8.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-5-v8.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-6-v8.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-7-v8.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-8-v8.png">
+<link rel="preload" as="image" href="./assets/ui/ref-metal-digit-9-v8.png">
+<link rel="preload" as="image" href="./assets/ui/ref-hero-hp-frame-v8.png">
 <link rel="preload" as="image" href="./assets/ui/ref-hero-hp-fill-v5.webp">
 <link rel="preload" as="image" href="./assets/ui/ref-boss-hp-frame-v5.webp">
 <link rel="preload" as="image" href="./assets/ui/ref-boss-hp-fill-v5.webp">
@@ -4066,6 +4066,95 @@ body{position:fixed;inset:0;touch-action:manipulation}
  position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
  display:block!important;z-index:6!important;pointer-events:none!important;
  border:0!important;background:none!important;object-fit:fill!important;
+}
+</style>
+
+
+<style id="z-exact-source-bitmap-hud-v8">
+/* Match the approved 28901.png metal silhouette, WAVE and HP positions.
+   Only masks and dynamic widths are CSS; all visible chrome/digits are bitmaps. */
+#hud .hud-center.progress-hud{
+ left:34%!important;right:auto!important;top:0!important;
+ transform:none!important;
+ width:min(calc(500px * var(--z-combat-scale,1)),59%)!important;
+ height:auto!important;aspect-ratio:1600 / 211!important;
+ overflow:visible!important;
+}
+#hud .progress-hud .progress-plate{
+ background:url('./assets/ui/ref-wave-frame-v8.png') center/100% 100% no-repeat!important;
+}
+#hud .progress-hud .wave-chip{
+ left:22.1%!important;top:27.5%!important;height:38%!important;
+ width:auto!important;overflow:visible!important;
+}
+#hud .progress-hud .z-metal-digits{
+ display:flex!important;gap:calc(.15px * var(--z-combat-scale,1))!important;
+ align-items:center!important;height:100%!important;
+}
+#hud .progress-hud .z-metal-digit{
+ width:calc(12.5px * var(--z-combat-scale,1))!important;
+ height:calc(20.5px * var(--z-combat-scale,1))!important;
+ background-size:100% 100%!important;
+ background-repeat:no-repeat!important;
+ image-rendering:auto!important;
+ filter:none!important;
+}
+#hud .progress-hud .enemy-chip{
+ top:31%!important;right:5.2%!important;height:43%!important;
+ width:auto!important;overflow:visible!important;
+}
+#hud .progress-hud .enemy-chip .z-metal-digit{
+ width:calc(18.7px * var(--z-combat-scale,1))!important;
+ height:calc(24.5px * var(--z-combat-scale,1))!important;
+}
+#hud .progress-hud .enemy-chip.is-wide .z-metal-digit{
+ width:calc(14px * var(--z-combat-scale,1))!important;
+ height:calc(22.5px * var(--z-combat-scale,1))!important;
+}
+#hud .progress-hud .meter-wrap{
+ left:30%!important;top:42.6%!important;
+ width:45.2%!important;height:28.3%!important;
+ background:none!important;box-shadow:none!important;
+}
+#hud .progress-hud .squad-progress{
+ overflow:hidden!important;background:none!important;
+}
+#hud .progress-hud .squad-progress>div{
+ --z-wave-shear:calc(8px * var(--z-combat-scale,1));
+ background-image:url('./assets/ui/ref-wave-fill-cell-v5.webp')!important;
+ background-position:left center!important;
+ background-size:calc(12.5px * var(--z-combat-scale,1)) 100%!important;
+ background-repeat:repeat-x!important;
+ clip-path:polygon(var(--z-wave-shear) 0,100% 0,calc(100% - var(--z-wave-shear)) 100%,0 100%)!important;
+}
+#hud .hud-left .bar.hp{
+ width:calc(258px * var(--z-combat-scale,1))!important;
+ height:auto!important;aspect-ratio:637 / 127!important;
+ background:url('./assets/ui/ref-hero-hp-frame-v8.png') center/100% 100% no-repeat!important;
+ overflow:visible!important;
+}
+#hud .bar.hp .hp-image-track{
+ left:25%!important;top:40.8%!important;
+ width:65%!important;height:34%!important;
+ overflow:hidden!important;background:none!important;
+}
+#hud .bar.hp .bar-fill{
+ --z-hp-shear:calc(8.8px * var(--z-combat-scale,1));
+ background-image:url('./assets/ui/ref-hero-hp-fill-v5.webp')!important;
+ background-position:left center!important;
+ background-size:calc(167.7px * var(--z-combat-scale,1)) 100%!important;
+ background-repeat:no-repeat!important;
+ clip-path:polygon(var(--z-hp-shear) 0,100% 0,calc(100% - var(--z-hp-shear)) 100%,0 100%)!important;
+}
+@container (max-width:610px){
+ #hud .hud-left .bar.hp{width:calc(220px * var(--z-combat-scale,1))!important}
+ #hud .bar.hp .bar-fill{background-size:calc(143px * var(--z-combat-scale,1)) 100%!important}
+}
+@container (max-width:490px){
+ #hud .hud-left .bar.hp{width:calc(145px * var(--z-combat-scale,1))!important}
+ #hud .bar.hp .bar-fill{background-size:calc(94.25px * var(--z-combat-scale,1)) 100%!important}
+ #hud .progress-hud .z-metal-digit{width:calc(10px * var(--z-combat-scale,1))!important;height:calc(17px * var(--z-combat-scale,1))!important}
+ #hud .progress-hud .enemy-chip .z-metal-digit{width:calc(14px * var(--z-combat-scale,1))!important;height:calc(21px * var(--z-combat-scale,1))!important}
 }
 </style>
 
@@ -9415,7 +9504,7 @@ function zMetalHudNumber(id,value){
  root.replaceChildren();
  for(const digit of text){
   const cell=document.createElement('span');cell.className='z-metal-digit';
-  cell.style.setProperty('background-image',`url("./assets/ui/ref-metal-digit-${digit}-v7.png")`,'important');
+  cell.style.setProperty('background-image',`url("./assets/ui/ref-metal-digit-${digit}-v8.png")`,'important');
   root.appendChild(cell);
  }
  if(id==='zHudEnemyDigits')root.parentElement.classList.toggle('is-wide',text.length>2);
