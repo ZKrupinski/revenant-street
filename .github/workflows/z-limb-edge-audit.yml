@@ -1,0 +1,32 @@
+name: Project Z protagonist sprite limb-edge audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/audit-z-limb-edges.py'
+      - '.github/workflows/z-limb-edge-audit.yml'
+      - 'assets/z-attacks-20/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Inspect 20 original 4x2 hero attack sheets, 160 animation poses
+        run: |
+          python -m pip install -q Pillow
+          python scripts/audit-z-limb-edges.py
+      - name: Preserve per-frame border warnings and original-asset repair notes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: z-original-attack-limb-edge-audit
+          path: sprite-edge-audit/hero-attack-limb-edge-audit.json
+          if-no-files-found: warn
+          retention-days: 30
