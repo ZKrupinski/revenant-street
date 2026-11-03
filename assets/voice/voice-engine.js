@@ -8,8 +8,8 @@
  // Previous protagonist gunshots and mechanical attack sounds are retired.
  // Only the existing CC0 enemy human reaction recordings remain in this engine.
  const CLIPS={
-  enemyA:'./assets/voice/hero-grunt-a.wav',
-  enemyB:'./assets/voice/hero-grunt-b.wav'
+  enemyA:'./assets/voice/z-lowlat-v9-enemyA.wav?v=zeroLeadV9',
+  enemyB:'./assets/voice/z-lowlat-v9-enemyB.wav?v=zeroLeadV9'
  };
  const buffers=Object.create(null),active=new Set(),activeShots=new Set();
  // Match the game's global SFX 70% mix; this is post-compressor and
@@ -180,11 +180,14 @@
    let pending=0;
    for(const [clip,delay,maxDuration,rateFactor,relativeGain] of steps){
     const buffer=buffers[clip];if(!buffer)continue;
-    const offset=isHero?0:sampleOnset(buffer);
+    // Already sliced to the first audible sample and validated by the PCM audit.
+   const offset=0;
     const rate=Math.max(.80,Math.min(1.14,baseRate*rateFactor));
     const duration=Math.min(maxDuration,Math.max(0,(buffer.duration-offset)/rate));
     if(!(duration>.02))continue;
-    const at=now+(isHero?0:kind==='enemyHurt'||fatal?.06:0)+delay;
+    // No 60ms artificial hold on the first enemy hurt or death clip.
+   // Later death-step offsets remain intact to preserve the designed rhythm.
+   const at=now+delay;
     const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
     source.buffer=buffer;source.playbackRate.value=rate;
     filter.type='lowpass';filter.frequency.value=isHero?7600:profile.low;
@@ -192,7 +195,7 @@
     if(high){high.type='highpass';high.frequency.value=profile.high;}
     const presence=isHero?null:context.createBiquadFilter();
     if(presence){presence.type='peaking';presence.frequency.value=1800;presence.gain.value=profile.presence;}
-    const attack=Math.min(.009,duration*.12),release=Math.min(fatal?.15:.075,duration*.38);
+    const attack=Math.min(.001,duration*.12),release=Math.min(fatal?.15:.075,duration*.38);
     const loud=volume*relativeGain;
     gain.gain.setValueAtTime(.0001,at);
     gain.gain.linearRampToValueAtTime(loud,at+attack);
