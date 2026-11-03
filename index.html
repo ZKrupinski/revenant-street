@@ -6655,6 +6655,10 @@ function startAttack(){
  if(p.riposteWindow>0&&p.riposteTarget&&!p.riposteTarget.dead){
   const target=p.riposteTarget;p.facing=target.x>=p.x?1:-1;
   p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=true;
+  // V12 parry rhythm: the successful guard keeps its dramatic slow/freeze,
+  // but pressing ATTACK to chase immediately returns the whole world, hero
+  // and parried target to real time. Only the landed counter restarts slow-mo.
+  slowMotion=0;parrySlowTarget=null;riposteCinematicTime=0;hitStop=0;
   p.riposteChaseTarget=target;p.riposteChaseTime=1.35;p.riposteChaseWarmup=.32;
   p.riposteStrikeTarget=null;p.parry=0;p.parryRecoilTime=0;
   p.parryRecoilRemaining=0;p.counterRush=0;p.counterBoost=false;
@@ -6741,6 +6745,11 @@ function dodge(fromBuffer=false){
     (p.z>2&&p.jumpActive)){
   if(!fromBuffer)p.dashBufferedUntil=performance.now()+DASH_BUFFER_MS;
   return false;
+ }
+ // The manual dash alternative after a successful parry is also full-speed.
+ // Leave an unrelated cinematic alone when the dash was not parry-related.
+ if(p.riposteWindow>0||p.riposteChasing){
+  slowMotion=0;parrySlowTarget=null;riposteCinematicTime=0;
  }
  p.dashBufferedUntil=0;
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.attackDriveRemaining=0;p.parry=0;
@@ -7478,7 +7487,8 @@ function attackCheck(){
   hurtEnemy(e,Math.min(e.hp,dmg),65+modRank('counter')*25);
   recordStyleDamage('parry',beforeHp,e);
   spawnParryCounterFx(p,e,skill.visual); // true parry follow-up contact only
-  // Only a *landed* chase punch triggers the second camera/echo/slow-motion beat.
+  // Only a *landed* chase punch brings back the full camera/echo/slow-motion beat.
+  // Keep the chase and the punch approach responsive at 1x until actual contact.
   spawnRiposteAfterimages();
   triggerCounterCamera(p.facing,clamp(665*skill.visual/1.25,590,1090));
   parryCameraTime=0;strikeCameraTime=0;
