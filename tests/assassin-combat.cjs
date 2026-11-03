@@ -3089,6 +3089,54 @@ test('counter upgrade expands actual splash and never grants a free max-HP kill'
   assert.equal(neighbor.hp<1000,rank===6,'splash radius grows around struck target');
  }
 });
+test('V14 jump and dash special strikes replay parry-style slow motion for a shorter contact-only beat',()=>{
+ // The counter remains the strongest / longest reference.
+ g.startRun();t.p.x=2600;t.p.y=570;t.p.facing=1;
+ const counter=t.makeEnemy('guard',t.p.x+80,t.p.y,1);
+ counter.hp=counter.maxHp=1200;t.setEnemies([counter]);
+ t.p.riposteStrikeTarget=counter;t.attackCheck();
+ const parrySlow=t.getSlowMotion(),parryCinematic=t.getRiposteCinematicTime();
+ assert(parrySlow>=1.48&&parryCinematic>=1.08,'unchanged counter cinematic remains the reference');
+
+ // Dash input and the dash-to-cross transition must remain normal speed.
+ g.startRun();t.setEnemies([]);t.p.x=2800;t.p.y=570;t.p.facing=1;
+ t.p.moveDX=0;t.p.stamina=100;
+ assert.equal(t.dodge(),true,'forward dash is accepted');
+ assert.equal(t.getSlowMotion(),0,'dash movement does not trigger slow');
+ t.startAttack();
+ assert.equal(t.p.dashSmash,true,'dash arms the follow-up cross');
+ assert.equal(t.getSlowMotion(),0,'cross windup remains fast and fully responsive');
+ t.attackCheck();
+ assert.equal(t.getSlowMotion(),0,'whiffed cross never triggers slow');
+ assert.equal(t.getRiposteCinematicTime(),0,'whiff does not launch any cinematic');
+ const dashVictim=t.makeEnemy('guard',t.p.x+95,t.p.y,1);
+ dashVictim.hp=dashVictim.maxHp=1400;t.setEnemies([dashVictim]);
+ t.attackCheck();
+ assert(dashVictim.hp<1400,'only confirmed damage starts the cinematic');
+ assert(Math.abs(t.getSlowMotion()-.98)<.001,'dash has the shorter 0.98s slow window');
+ assert(Math.abs(t.getRiposteCinematicTime()-.74)<.001,'dash gets a 0.74s strong cinematic core');
+ assert.equal(t.getSlowVictim(),dashVictim,'the actual struck victim shares the dramatic localized slowdown');
+ assert(t.getSlowMotion()<parrySlow&&t.getRiposteCinematicTime()<parryCinematic,
+  'dash stays shorter than parry counter, without changing counter behavior');
+
+ // The grounded jump and unpowered landing cannot auto-trigger any slow.
+ g.startRun();t.setEnemies([]);t.p.x=3200;t.p.y=570;
+ t.heelLandingShockwave(true);
+ assert.equal(t.getSlowMotion(),0,'jump special whiff never slows the game');
+ const jumpVictim=t.makeEnemy('elite',t.p.x+70,t.p.y,1);
+ jumpVictim.hp=jumpVictim.maxHp=3000;t.setEnemies([jumpVictim]);
+ t.heelLandingShockwave(false);
+ assert.equal(t.getSlowMotion(),0,'ordinary unarmed landing keeps normal time');
+ t.heelLandingShockwave(true);
+ assert(jumpVictim.hp<3000,'powered heel actually lands');
+ assert(Math.abs(t.getSlowMotion()-1.08)<.001,'jump impact slow lasts 1.08s');
+ assert(Math.abs(t.getRiposteCinematicTime()-.80)<.001,'jump strong slowdown core lasts 0.80s');
+ assert.equal(t.getSlowVictim(),jumpVictim,'heel impact victim remains the local slowed target');
+ assert(t.getSlowMotion()<parrySlow&&t.getRiposteCinematicTime()<parryCinematic,
+  'both short special finishers remain shorter than the parry counter');
+ const before=t.getSlowMotion();t.update(1/60);
+ assert(t.getSlowMotion()<before,'the added cinema uses real seconds, not slowed world time');
+});
 test('dash upgrades expand actual hit range, damage and push',()=>{
  const results=[];
  for(const rank of [0,3,6]){
