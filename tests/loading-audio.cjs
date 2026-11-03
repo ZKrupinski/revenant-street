@@ -70,13 +70,13 @@ async function combatVoices(){
  assert.equal(api.fire('normal','jab'),false,'legacy gunfire bus no longer supplies attacks');
  ctx.currentTime=.7;
  assert.equal(api.play('enemyHurt',raider,hero),true,'enemy grunt preserved on damage');
- assert.equal(clips.at(-1).buffer.clip.endsWith('hero-grunt-a.wav'),true,'actual enemy human recording');
- assert(clips.at(-1).startedAt>ctx.currentTime,'enemy reacts after hit');
+ assert.equal(clips.at(-1).buffer.clip.endsWith('z-lowlat-v9-enemyA.wav?v=zeroLeadV9'),true,'actual enemy human recording');
+ assert(clips.at(-1).startedAt===ctx.currentTime,'enemy reacts immediately with no extra 60ms scheduling hold');
  assert.equal(api.play('enemyHurt',raider,hero),false,'enemy reactions are rate limited');
  ctx.currentTime=1.3;for(const c of clips)if(c.onended){c.onended();c.onended=null}
  assert.equal(api.play('bossShout',boss,hero),true,'boss original recorded grunt preserved');
  assert(!script.includes("shotPistol:'")&&!script.includes("mechA:'"),'legacy hero audio is not in preload manifest');
- assert(html.includes('voice-engine.js?v=20261103-enemyonly-v4'),'new browser cache version');
+ assert(html.includes('voice-engine.js?v=20261103-zero-lead-v9'),'new browser cache version');
  assert(html.includes("playImpactSound('counter',1.35)"),'new parry riposte sample preserved');
  assert(html.includes("applyImpactFeedback(e,smash||p.dashSmash"),'contact-driven attack sample remains');
  assert(!html.includes("sound('attack')"),'legacy synthetic attack bleeps removed');
