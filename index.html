@@ -7984,21 +7984,20 @@ const Z_ENEMY_FX_SIZES=Object.freeze({
 // In the rendered death atlas, the ash pile touches source Y=421..422.
 // Hold that ground line constant through all 8 cells as residue rises.
 const Z_DEATH_FOOT_SOURCE_Y=422/512;
-// A little faster than the actor fade's former 8 equal holds: finish the
-// painted 8-cell death motion at 80% of its disappearance window, then cycle
-// only the two faint, evaporating tail cells (6,7) until the body vanishes.
-// Original sheet, crop, scale, sprite foot anchor and 100% VFX opacity stay.
-const Z_DEATH_FRAME_SEQUENCE=Object.freeze([0,1,2,3,4,5,6,7,6,7]);
-const Z_DEATH_FIRST_BURST_SEC=.055;
-// The very bright ignition image must never freeze for 0.2-0.4 s.
-// Its 55 ms clock is independent of the body's fade/collapse clock, so
-// even a dying airborne enemy advances immediately out of the fireball.
-// The other 9 phases still follow the character's disappearing animation.
-function zDeathBitmapFrame(effect,progress){
- const sequenceFrame=Z_DEATH_FRAME_SEQUENCE[Math.min(Z_DEATH_FRAME_SEQUENCE.length-1,
-  Math.floor(progress*Z_DEATH_FRAME_SEQUENCE.length))];
- return (effect.firstBurstAge||0)>=Z_DEATH_FIRST_BURST_SEC?
-  Math.max(1,sequenceFrame):sequenceFrame;
+// Every explosion/debris frame has its own REAL-TIME deadline (in seconds),
+// decoupled from the victim's sometimes stationary fall/collapse/fade clock.
+// Initial ignition and sparks last only 55-110 ms each. The full painted 8F
+// sequence reads in 0.80 s, then the two residual ash cells keep moving until
+// the corpse disappears. No alpha fade, canvas vector fallback or new assets.
+const Z_DEATH_BITMAP_FRAME_ENDS=Object.freeze([.055,.125,.205,.295,.405,.525,.655,.800]);
+const Z_DEATH_TAIL_STEP_SEC=.18;
+function zDeathBitmapFrame(effect){
+ const elapsed=Math.max(0,effect.firstBurstAge||0);
+ for(let i=0;i<Z_DEATH_BITMAP_FRAME_ENDS.length;i++){
+  if(elapsed<Z_DEATH_BITMAP_FRAME_ENDS[i])return i;
+ }
+ const tailAge=elapsed-Z_DEATH_BITMAP_FRAME_ENDS[7];
+ return 6+(Math.floor(tailAge/Z_DEATH_TAIL_STEP_SEC)%2);
 }
 // The painted death sequence follows the SAME disappearance clock used by
 // updateEnemies, including the delay before actors begin fading.
@@ -8080,7 +8079,7 @@ function drawEnemyBitmapFx(effect){
  if(!image.complete||image.naturalWidth!==2048||image.naturalHeight!==1024)return;
  const progress=clamp((effect.age||0)/effect.maxLife,0,.99999);
  const frame=hit?Math.min(7,Math.floor(progress*8)):
-  zDeathBitmapFrame(effect,progress);
+  zDeathBitmapFrame(effect);
  const w=effect.width;
  if(!hit&&effect.followSpriteFoot&&effect.deadEnemy){
   // Match drawActor(): use the SMOOTHED character location and its current
@@ -8111,7 +8110,7 @@ function drawEnemyBitmapFx(effect){
  ctx.restore();
 }
 window.__zEnemyBitmapFxStatus=()=>({
- version:'enemy-death-fast-first-frame-55ms-8f-v6',
+ version:'enemy-death-nonstop-all-8frames-v7',
  hit:Z_ENEMY_BITMAP_ART.hit.image.complete&&Z_ENEMY_BITMAP_ART.hit.image.naturalWidth===2048,
  death:Z_ENEMY_BITMAP_ART.death.image.complete&&Z_ENEMY_BITMAP_ART.death.image.naturalWidth===2048,
  frames:8,columns:4,rows:2,cell:512,deathFootSourceY:422,
@@ -8896,11 +8895,10 @@ function updateEffects(dt,realDt=dt){
  for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){const fxDt=f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap'?realDt:f.kind==='parrySuccess10'||f.kind==='basicHitSprite'||f.kind==='upgradeVfxSprite'||f.kind==='combatWordSprite'?realDt:f.kind==='parryCounterSprite'?realDt*.90:dt;
   f.life-=fxDt;if(f.kind==='basicHitSprite'||f.kind==='combatWordSprite')f.age+=fxDt;
   if(f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap')f.age+=fxDt;
-  if(f.kind==='enemyDeathBitmap')f.firstBurstAge=(f.firstBurstAge||0)+realDt;
+  if(f.kind==='enemyDeathBitmap')f.firstBurstAge=(f.firstBurstAge||0)+realDt; // entire 8F animation clock
   if(f.kind==='enemyDeathBitmap'&&f.deadEnemy?.dead){
-   // Override wall-clock age with the victim's CURRENT death/fade progress.
-   // Slow motion, hit-stop, airborne collapse and boss hold cannot end this
-   // effect before the character sprite fully disappears.
+   // Body progress controls ONLY VFX lifetime: independent frame clock above
+   // never stalls on frame 1, even when collapseAge pauses in mid-air.
    const progress=zEnemyDeathFadeProgress(f.deadEnemy);
    f.age=progress*f.maxLife;
    f.life=f.deadEnemy.fade>0?Math.max(.02,(1-progress)*f.maxLife):0;
