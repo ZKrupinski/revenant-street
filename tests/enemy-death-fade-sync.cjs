@@ -24,17 +24,20 @@ function enemy(type){
  return {type,dead:true,fade:1,deathAge:0,collapseAge:0,
   x:520,y:555,z:0,renderX:520,renderY:555};
 }
-const expectedDeathCadence=[0,1,2,3,4,5,6,7,6,7];
-assert(html.includes('const Z_DEATH_FRAME_SEQUENCE=Object.freeze([0,1,2,3,4,5,6,7,6,7]);'),
- 'death effect uses 10 temporal phases drawn from exactly 8 original bitmap cells');
-function checkFrame(f,progress,expected){
- f.age=progress*f.maxLife;drawn.length=0;
- world.drawBitmap(f);
- assert.equal(drawn.length,1,'one 512px cell painted at '+progress);
- const args=drawn[0].args,frame=expectedDeathCadence[Math.min(9,Math.floor(progress*10))];
+const expectedFrameEnds=[.055,.125,.205,.295,.405,.525,.655,.8];
+assert(html.includes('const Z_DEATH_BITMAP_FRAME_ENDS=Object.freeze([.055,.125,.205,.295,.405,.525,.655,.800]);'),
+ 'eight original death source cells advance on independent time deadlines');
+function expectedDeathFrame(t){
+ for(let i=0;i<expectedFrameEnds.length;i++)if(t<expectedFrameEnds[i])return i;
+ return 6+(Math.floor((t-.8)/.18)%2);
+}
+function checkFrame(f,expected=expectedDeathFrame(f.firstBurstAge||0)){
+ drawn.length=0;world.drawBitmap(f);
+ assert.equal(drawn.length,1,'one 512px sprite cell painted');
+ const args=drawn[0].args,frame=expectedDeathFrame(f.firstBurstAge||0);
  assert.deepEqual(args.slice(1,5),[(frame%4)*512,Math.floor(frame/4)*512,512,512]);
- assert.equal(drawn[0].alpha,1,'death sprite has NO synthetic transparency fade');
- assert.equal(frame,expected);
+ assert.equal(drawn[0].alpha,1,'no synthetic death opacity fade');
+ assert.equal(frame,expected,'independent VFX clock frame expected');
 }
 for(const type of ['raider','elite','intruder','guard','assassin','boss']){
  const e=enemy(type),duration=type==='boss'?2.7+1/.58:.72+1/.74;
@@ -51,51 +54,45 @@ for(const type of ['raider','elite','intruder','guard','assassin','boss']){
  assert(world.fx.includes(f),'effect is still active while body is shown: '+type);
  assert(Math.abs(f.age-atHold)<1e-8,'effect age locked to body death clock: '+type);
  const p=f.age/f.maxLife;
- checkFrame(f,p,expectedDeathCadence[Math.min(9,Math.floor(p*10))]);
+ checkFrame(f);
  // During body fade, not a single drawing is artificially faded.
  e.deathAge=hold+.5/rate;e.collapseAge=collapsing?e.deathAge:0;e.fade=.5;
  world.tickFx(.02,.02);
  assert(Math.abs(f.age-e.deathAge)<1e-8,'frame follows half-faded character: '+type);
  assert(world.fx.includes(f));
  const middle=f.age/f.maxLife;
- checkFrame(f,middle,expectedDeathCadence[Math.min(9,Math.floor(middle*10))]);
+ checkFrame(f);
  // Boss/normal both survive until the actor actually reaches zero opacity.
  e.deathAge=hold+.98/rate;e.collapseAge=collapsing?e.deathAge:0;e.fade=.02;
  world.tickFx(.02,.02);
  assert(world.fx.includes(f),'VFX outlives 98% of the body fade: '+type);
  const endProgress=f.age/f.maxLife;
- checkFrame(f,endProgress,expectedDeathCadence[Math.min(9,Math.floor(endProgress*10))]);
+ checkFrame(f);
  e.fade=0;e.deathAge=duration;e.collapseAge=collapsing?duration:0;
  world.tickFx(.02,.02);
  assert(!world.fx.includes(f),'VFX ends only when actor vanishes: '+type);
 }
-// Airborne enemies do not fade until landing: the VFX must never run ahead.
+// A long knockback MUST NOT freeze at second flame, nor accelerate body fade.
+// Every frame advances within 0.8s even while collapseAge remains zero.
 {
  const e=enemy('raider');e.z=125;world.fx=[];world.spawnDeath(e);
  const f=world.fx[0];
- // Immediately after dying, the large fireball should be visible but brief.
- drawn.length=0;world.drawBitmap(f);
- assert.deepEqual(drawn[0].args.slice(1,5),[0,0,512,512],
-  'initial explosion flash is rendered once at the moment of death');
- e.deathAge+=.03;world.tickFx(.03,.03);drawn.length=0;world.drawBitmap(f);
- assert.equal(f.age,0,'airborne collapse still waits for landing');
- assert.equal(f.firstBurstAge,.03,'first explosion has a separate real-time clock');
- assert.deepEqual(drawn[0].args.slice(1,5),[0,0,512,512],
-  'first flash remains visible for initial 30 ms');
- e.deathAge+=.03;world.tickFx(.03,.03);drawn.length=0;world.drawBitmap(f);
- assert.deepEqual(drawn[0].args.slice(1,5),[512,0,512,512],
-  '55 ms fireball immediately gives way to the second painted frame');
- assert.equal(drawn[0].alpha,1,'no death effect fade introduced on frame switch');
- assert.equal(f.age,0,'only the first frame uses independent time');
- for(let i=0;i<50;i++){e.deathAge+=.03;e.collapseAge=0;e.fade=1;world.tickFx(.03,.03);}
- assert.equal(f.age,0,'no premature death animation while airborne collapse timer is stopped');
- assert(world.fx.includes(f),'effect remains queued during long airborne tumble');
- drawn.length=0;world.drawBitmap(f);
- assert.deepEqual(drawn[0].args.slice(1,5),[512,0,512,512],
-  'large fireball does not reappear when airborne for a long time');
+ let previous=0;
+ const timeline=[[.03,0],[.08,1],[.16,2],[.24,3],[.34,4],
+  [.45,5],[.58,6],[.70,7],[.85,6],[1.03,7],[1.23,6]];
+ for(const [time,frame] of timeline){
+  const elapsed=time-previous;previous=time;e.deathAge+=elapsed;
+  e.collapseAge=0;e.fade=1;
+  world.tickFx(elapsed,elapsed);
+  assert.equal(f.age,0,'collapseAge stays stopped in mid-air');
+  assert(world.fx.includes(f),'VFX remains until body vanishes');
+  assert(Math.abs(f.firstBurstAge-time)<.00001,'independent animation clock runs in air');
+  checkFrame(f,frame);
+ }
 }
+
 assert(html.includes("ctx.globalAlpha=hit&&progress>.81?Math.max(0,(1-progress)/.19):1;"),
  'hit fading preserved, death opacity stays at 100%');
 assert(html.includes("f.kind==='enemyHitBitmap'?true:f.kind==='enemyDeathBitmap'?false"),
  'hit above and death behind character layering remains');
-console.log('PASS: 55ms first fireball even airborne, remaining 8F body-fade sync, 100% sprite opacity');
+console.log('PASS: uninterrupted 8F death sequence within 800ms even while airborne, moving ash tail until body fades');
