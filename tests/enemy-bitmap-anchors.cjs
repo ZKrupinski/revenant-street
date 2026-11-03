@@ -101,6 +101,7 @@ const edge=makeEnemy('boss',0);edge.x=5;edge.renderX=5;
 world.spawnEnemyDeathBitmap(edge);
 const d=fx.at(-1);draws.length=0;world.drawEnemyBitmapFx(d);
 assert(Math.abs((draws[0][5]+d.width/2)-edge.x)<=36,'edge correction limited to 36px, preserve feet');
-assert(html.includes("if(e.hp>0)spawnEnemyHitBitmap(e,dmg);"),'only living enemy takes hit burst');
+assert(html.includes("if(e.hp>0||specialContact)spawnEnemyHitBitmap(e,dmg,specialContact);"),
+ 'nonlethal hits always paint; lethal special blows still overlay contact before death');
 assert(html.includes('spawnEnemyDeathBitmap(e);'),'death explosion spans all enemy types');
 console.log('PASS: six enemy sizes, uninterrupted 8-frame explosion plus animated tail, sprite-follow anchors, alpha crop safety');
