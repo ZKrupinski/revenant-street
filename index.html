@@ -5524,11 +5524,11 @@ function createModImpact(e){
  const dir=p.facing<0?-1:1;
  for(const mod of ['fire','shock','bleed','ice']){
   const lv=modRank(mod);if(!lv)continue;
-  const slot=enemyFxSlot(mod,dir);
+  const slot=enemyFxSlot(mod,dir),body=enemyStatusBodyPosition(e,mod,dir);
   const scale=(mod==='shock'?1.22:mod==='fire'?1.10:1)+Math.min(5,lv-1)*.11;
   const duration=mod==='shock'?.35:mod==='ice'?.44:.41;
   attributeFx=attributeFx.filter(ef=>!(ef.target===e&&ef.mod===mod));
-  attributeFx.push({x:e.x+slot.dx,y:(e.renderY??e.y)-(e.z||0)+slot.dy,
+  attributeFx.push({x:body.x,y:body.y,
    mod,dir,target:e,life:duration,maxLife:duration,rotation:slot.rotation,scale});
  }
  if(attributeFx.length>128)attributeFx.splice(0,attributeFx.length-128);
@@ -5553,6 +5553,25 @@ const Z_ENEMY_FX_SLOTS=Object.freeze({
 function enemyFxSlot(kind,dir=1){
  const slot=Z_ENEMY_FX_SLOTS[kind]||{x:90,y:127,tilt:0};
  return {dx:slot.x*(dir<0?-1:1),dy:-slot.y,rotation:slot.tilt};
+}
+// Status-ailment art is deliberately centered over the actual enemy torso.
+// These tiny offsets keep four simultaneous 8-frame bitmaps distinguishable
+// without sending any of them toward the outer silhouette/empty air.
+// Do not alter enemyFxSlot: that artwork is for outward, directional HIT sparks.
+const Z_ENEMY_STATUS_BODY_SLOTS=Object.freeze({
+ fire:{x:18,y:-13},shock:{x:-18,y:-14},
+ bleed:{x:-15,y:14},ice:{x:16,y:13}
+});
+function enemyStatusBodyPosition(enemy,kind,dir=enemy.face||1){
+ const slot=Z_ENEMY_STATUS_BODY_SLOTS[kind]||{x:0,y:0};
+ const bodyHeight=enemy.type==='boss'?174:enemy.type==='elite'?147:
+  enemy.type==='intruder'?135:enemy.type==='guard'?122:
+  enemy.type==='assassin'?113:108;
+ const offsetScale=enemy.type==='boss'?1.27:enemy.type==='elite'?1.17:1;
+ return {
+  x:(enemy.renderX??enemy.x)+slot.x*offsetScale*(dir<0?-1:1),
+  y:(enemy.renderY??enemy.y)-(enemy.z||0)-bodyHeight+slot.y*offsetScale
+ };
 }
 
 const MOD_STATUS_STATES=[['burn','fire'],['shock','shock'],['bleed','bleed'],['freeze','ice']];
@@ -5581,8 +5600,8 @@ function drawUpgradeVfxLoop(name,x,y,width,opacity,cycle,dir=1,rotation=0){
 }
 function drawModEnergy(layer='all',selection=null){
  const left=cameraX-180,right=cameraX+W+180;
- // Show EVERY active status simultaneously, in dedicated sectors around the
- // opponent. Each module keeps its own 8-frame PNG and lifetime.
+ // Show EVERY active status simultaneously, attached to the enemy torso
+ // rather than floating outside its silhouette. Keep its 8-frame PNG and timer.
  for(const e of enemies){
   if(e.dead||e.x<left||e.x>right)continue;
   // Paint real ailments on ALL living foes, including Iron Mask and boss.
@@ -5598,19 +5617,20 @@ function drawModEnergy(layer='all',selection=null){
     (state.status==='shock'?1.76:state.status==='freeze'?1.32:1.18)*enemyScale;
    const cycle=time*(state.status==='shock'?1.9:state.status==='burn'?1.35:1.05)+
     (e.slot||0)*.13+i*.19;
-   // Four separate upper/lower quadrants. Extra spacing at 3-4 states
-   // avoids large overlapping stamps collapsing into a single body orb.
-   const spread=(active.length>=3?1.23:1.14)*(e.type==='boss'?1.10:1);
-   const upper=state.status==='shock'||state.status==='burn';
-   const x=(e.renderX??e.x)+slot.dx*spread;
-   const y=(e.renderY??e.y)-(e.z||0)+slot.dy+(upper?-20:18);
-   drawUpgradeVfxLoop(state.sprite,x,y,width,1,cycle,dir,slot.rotation);
+   // Place each large, opaque effect at the chest/abdomen, not ~120px
+   // left/right in empty air. Follow the actual rendered actor every frame.
+   const body=enemyStatusBodyPosition(e,kind,dir);
+   drawUpgradeVfxLoop(state.sprite,body.x,body.y,width,1,cycle,dir,slot.rotation);
   }
  }
  // Separate transient contact effects: no per-target suppression or rotating
  // elemental selection, and no resurrection of the old defense shield.
  for(const ef of attributeFx){
-  if(ef.x<left||ef.x>right)continue;
+  // The impact also stays attached to a recoiling/staggering enemy; after
+  // defeat, finish its brief animation at the last recorded hit position.
+  const anchor=ef.target&&!ef.target.dead?
+   enemyStatusBodyPosition(ef.target,ef.mod,ef.dir||1):{x:ef.x,y:ef.y};
+  if(anchor.x<left||anchor.x>right)continue;
   if(!zDrawInLayer(layer,selection?.attributes.has(ef)))continue;
   const sprite=Z_ELEMENT_IMPACT_SPRITES[ef.mod];
   if(!sprite)continue;
@@ -5618,8 +5638,8 @@ function drawModEnergy(layer='all',selection=null){
   const width=(130+progress*55)*ef.scale*(ef.mod==='shock'?1.82:1.28);
   const enemyScale=ef.target?.type==='boss'?1.46:
    ef.target?.type==='elite'||ef.target?.type==='intruder'?1.36:1.27;
-  // Contact flashes use source PNG alpha only, not a second fading 0-60% mask.
-  drawUpgradeVfxLoop(sprite,ef.x,ef.y,width*enemyScale,1,progress,
+  // Retain the fully opaque 8-frame bitmap and the previously enlarged size.
+  drawUpgradeVfxLoop(sprite,anchor.x,anchor.y,width*enemyScale,1,progress,
    ef.dir||1,ef.rotation||0);
  }
 }
