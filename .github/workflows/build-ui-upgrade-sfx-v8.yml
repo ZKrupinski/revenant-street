@@ -1,0 +1,49 @@
+name: Build original cybernetic UI upgrade cues
+on:
+  push:
+    paths:
+      - tools/build_ui_upgrade_sfx.py
+      - .github/workflows/build-ui-upgrade-sfx-v8.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  create-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render two short original 32kHz PCM UI signals (not combat clips)
+        run: |
+          set -euo pipefail
+          python3 tools/build_ui_upgrade_sfx.py
+      - name: Audit RIFF structure, non-silence and both independent samples
+        run: |
+          python3 - <<'PY'
+          import wave, math, struct, hashlib, pathlib
+          root=pathlib.Path('assets/sfx')
+          hashes=[]
+          for name in ['z-ui-upgrade-confirm-v8.wav','z-ui-upgrade-reroll-v8.wav']:
+              p=root/name
+              with wave.open(str(p),'rb') as w:
+                  assert w.getnchannels()==1 and w.getsampwidth()==2 and w.getframerate()==32000
+                  data=w.readframes(w.getnframes())
+              samples=struct.unpack('<'+'h'*(len(data)//2),data)
+              peak=max(abs(x) for x in samples)/32768
+              rms=math.sqrt(sum(x*x for x in samples)/len(samples))/32768
+              assert .1 < peak < .95 and rms > .015, (name,peak,rms)
+              print(name, 'peak:',round(peak,3),'rms:',round(rms,3),'bytes:',p.stat().st_size)
+              hashes.append(hashlib.sha256(data).digest())
+          assert len(set(hashes))==2
+          PY
+      - name: Publish original UI sound files
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/sfx/z-ui-upgrade-*-v8.wav
+          if ! git diff --cached --quiet; then
+            git commit -m "Audio V8: add independent audible upgrade-confirm and reroll UI WAVs"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
