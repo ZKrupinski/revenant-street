@@ -4303,14 +4303,14 @@ function prepareZCells(im,moveKey=''){
   c.clearRect(0,0,canvas.width,canvas.height);
   // Source pixels stay at 1:1, at the SAME reference origin in all eight poses.
   c.drawImage(im,sx,sy,crop.readWidth,coreHeight,crop.padLeft,crop.padTop,crop.readWidth,coreHeight);
-  if(crop.spillRight){
+  if(crop.spillRight&&!crop.maskedFrame){
    // Superman Punch pose 3: the glove extends 30-40px into the NEXT cell,
    // but that cell's lower-body art is excluded from the upper sample.
    const upper=Math.floor(coreHeight*.55);
    c.drawImage(im,sx+crop.readWidth,sy,crop.spillRight,upper,
     crop.padLeft+crop.readWidth,crop.padTop,crop.spillRight,upper);
   }
-  if(crop.spillLeft){
+  if(crop.spillLeft&&!crop.maskedFrame){
    // Grounded lunge poses have their rear boots across the LEFT grid.
    // Superman's airborne boot begins higher; sidekick pose 4 spills at
    // shoulder height. Do not pull unrelated limbs from other rows.
