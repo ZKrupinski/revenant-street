@@ -61,6 +61,9 @@ for source in FILES:
     report['motions'][source.stem]={'size':[w,h],'frame_size':[fw,fh],
                                    'warnings':notes}
     print(f"{source.stem:20s} {len(notes):2d}/8 edge-touch candidate frames",flush=True)
+    for hit in notes:
+        compact=', '.join(f"{side}:{value['ranges']}" for side,value in hit['sides'].items())
+        print(f"  frame {hit['frame']}: {compact}",flush=True)
 print('Detected',len(report['warnings']),'potential edge contacts in',report['frames_checked'],'frames',flush=True)
 # The Supermann Punch source has a real glove and rear boot in adjacent
 # cell spaces, as confirmed from the actual approved 8-frame sheet.
