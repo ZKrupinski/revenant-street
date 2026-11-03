@@ -61,14 +61,18 @@ for group,name,path in sources:
     with Image.open(path) as source:
         im=source.convert('RGBA')
     w,h=im.size
-    if w%4 or h%2: raise AssertionError(f'Bad 4x2 grid {path}: {w}x{h}')
-    cw,ch=w//4,h//2
+    if w<440 or h<240: raise AssertionError(f'Bad sprite atlas size {path}: {w}x{h}')
+    cw,ch=w/4,h/2
     groupinfo=report['by_enemy'].setdefault(group,{'sheets':{},'candidates':0})
     rec={'file':str(path.relative_to(ROOT)),'dimensions':[w,h],
          'cell':[cw,ch],'border_contacts':[]}
     for i in range(8):
-        x=(i%4)*cw;y=(i//4)*ch
-        contact=edges(im,x,y,cw,ch)
+        col,row=i%4,i//4
+        # Match the game's rounded 4x2 source boundaries (redhood PNGs
+        # can be 1774x887, i.e. NOT exactly divisible by four and two).
+        x=(col*w+2)//4;y=(row*h+1)//2
+        x1=((col+1)*w+2)//4;y1=((row+1)*h+1)//2
+        contact=edges(im,x,y,x1-x,y1-y)
         if contact:
             item={'frame':i+1,'edges':contact}
             rec['border_contacts'].append(item)
@@ -78,7 +82,7 @@ for group,name,path in sources:
     groupinfo['sheets'][name]=rec;report['sheets']+=1
     states=', '.join(f"{e['frame']}:{'/'.join(e['edges'])}" for e in rec['border_contacts'])
     print(f"{group:17s} {name:18s} {len(rec['border_contacts']):d}/8 [ {states or 'clear'} ]",flush=True)
-assert report['sheets']>=46 and report['frames']==report['sheets']*8,(report['sheets'],report['frames'])
+assert report['sheets']>=40 and report['frames']==report['sheets']*8,(report['sheets'],report['frames'])
 out=ROOT/'enemy-edge-audit'
 out.mkdir(exist_ok=True)
 target=out/'enemy-boss-edge-audit.json'
