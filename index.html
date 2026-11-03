@@ -7849,6 +7849,7 @@ function enemyAttack(e){
  p.dashSmash=false;p.dashFollowWindow=0;
  p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteWindow=0;p.riposteTarget=null;
  playCombatVoice(p.hp<=0?'heroDeath':'heroHurt');p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)startDeathCinematic()}
+function fxBurst(x,y,color='red',scale=1,specialAttackFx=false){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8),specialAttackFx})}
 // Two independently authored 4x2 RGBA images. Each 512x512 cell is padded
 // on every side: drawImage only ever samples one complete cell, not its neighbors.
 const Z_ENEMY_BITMAP_ART={
@@ -7901,7 +7902,6 @@ window.__zEnemyBitmapFxStatus=()=>({
  death:Z_ENEMY_BITMAP_ART.death.image.complete&&Z_ENEMY_BITMAP_ART.death.image.naturalWidth===2048,
  frames:8,columns:4,rows:2,cell:512
 });
-function fxBurst(x,y,color='red',scale=1,specialAttackFx=false){if(fx.length>=90)fx.splice(0,fx.length-75);fx.push({x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.8,.8),specialAttackFx})}
 function spawnParrySuccessFx(x,y,face=1){fx.push({kind:'parrySuccess10',x,y,face,life:.31,maxLife:.31})}
 function floatText(){ /* Hide character-bound damage numbers, skill and status words. */ }
 function messageUpdate(dt){if(messageTime>0){messageTime-=dt;if(messageTime<=0)$('gameMessage').classList.remove('active')}}
@@ -8678,8 +8678,9 @@ function updateEffects(dt,realDt=dt){
   heroAfterimages[i].life-=heroAfterimages[i].counterEcho?realDt*.83:dt;
   if(heroAfterimages[i].life<=0)heroAfterimages.splice(i,1);
  }
- for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){const fxDt=f.kind==='parrySuccess10'||f.kind==='basicHitSprite'||f.kind==='upgradeVfxSprite'||f.kind==='combatWordSprite'||f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap'?realDt:f.kind==='parryCounterSprite'?realDt*.90:dt;
-  f.life-=fxDt;if(f.kind==='basicHitSprite'||f.kind==='combatWordSprite'||f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap')f.age+=fxDt;
+ for(const v of attributeFx)v.life-=dt;attributeFx=attributeFx.filter(v=>v.life>0);p.bodyShakeTime=Math.max(0,(p.bodyShakeTime||0)-dt);for(const f of fx){const fxDt=f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap'?realDt:f.kind==='parrySuccess10'||f.kind==='basicHitSprite'||f.kind==='upgradeVfxSprite'||f.kind==='combatWordSprite'?realDt:f.kind==='parryCounterSprite'?realDt*.90:dt;
+  f.life-=fxDt;if(f.kind==='basicHitSprite'||f.kind==='combatWordSprite')f.age+=fxDt;
+  if(f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap')f.age+=fxDt;
   if(f.kind==='combatWordSprite'&&(f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02);if(f.kind==='dashPierceSprite'||f.kind==='parryCounterSprite'){f.age=(f.age||0)+fxDt;if((f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02)}}fx=fx.filter(f=>f.life>0);
  if(gameState==='playing'&&!fx.some(f=>f.kind==='combatWordSprite')&&zCombatWordQueue.length){
   zStartCombatWord(zCombatWordQueue.shift());
