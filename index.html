@@ -3831,7 +3831,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
  border-radius:0!important;box-shadow:none!important;
  background:url('./assets/ui/ref-wave-fill-cell-v5.webp') left center/
    calc(12.2px * var(--z-combat-scale,1)) 100% repeat-x!important;
- clip-path:polygon(0 0,100% 0,calc(100% - 5px * var(--z-combat-scale,1)) 100%,0 100%)!important;
+ clip-path:polygon(0 0,100% 0,calc(100% - 5px) 100%,0 100%)!important;
  transition:width .2s ease-out!important;
 }
 #hud .progress-hud .enemy-chip{
@@ -3889,7 +3889,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
  border-radius:0!important;box-shadow:none!important;
  background:url('./assets/ui/ref-hero-hp-fill-v5.webp') left center/
    calc(166px * var(--z-combat-scale,1)) 100% no-repeat!important;
- clip-path:polygon(0 0,100% 0,calc(100% - 4px * var(--z-combat-scale,1)) 100%,0 100%)!important;
+ clip-path:polygon(0 0,100% 0,calc(100% - 4px) 100%,0 100%)!important;
  transition:width .14s ease-out!important;
 }
 #hud .bar.hp #hpText{
@@ -3938,7 +3938,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
  border-radius:0!important;box-shadow:none!important;
  background:url('./assets/ui/ref-boss-hp-fill-v5.webp') left center/
    calc(471px * var(--z-combat-scale,1)) 100% no-repeat!important;
- clip-path:polygon(0 0,100% 0,calc(100% - 5px * var(--z-combat-scale,1)) 100%,0 100%)!important;
+ clip-path:polygon(0 0,100% 0,calc(100% - 5px) 100%,0 100%)!important;
  transition:width .14s ease-out!important;
 }
 @container (max-width:800px){
@@ -9398,7 +9398,7 @@ let zHudWaveStatePrevious=-1,zHudWaveStateUntil=0;
 function zHudUpdateWaveBadge(){
  const badge=$('zHudWaveState');if(!badge)return;
  if(wave!==zHudWaveStatePrevious){zHudWaveStatePrevious=wave;zHudWaveStateUntil=time+1.6;}
- badge.hidden=wave===3||time>zHudWaveStateUntil;
+ badge.hidden=wave!==1||time>zHudWaveStateUntil; // The reference badge says 01, never mislabel WAVE 02.
 }
 function updateHud(){
  const active=activeModStacks();
