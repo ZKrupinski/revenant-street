@@ -74,8 +74,14 @@ e.dead=true;e.z=83;e.knockVX=500;e.reactionTime=.5;
 assert.equal(iron.move(e),'death','death artwork wins even while airborne');
 assert(!code.includes("ctx.filter='brightness(0) invert(1)'"),
  'no ghostly duplicate white full-body flash during Idle or attacks');
-assert(html.includes("if(e.type==='elite')continue;"),
- 'elite has no permanent small blinking status satellites');
+assert(html.includes('const active=Z_ENEMY_STATUS_VFX.filter(s=>e[s.status]>0);'),
+ 'only genuinely active ailments may appear on an Iron Mask elite');
+assert(!html.includes("if(e.type==='elite')continue;"),
+ 'elite damage-over-time states now use the same visible status art as other mobs');
+assert(html.includes('drawUpgradeVfxLoop(state.sprite,x,y,width,1,cycle,dir,slot.rotation)'),
+ 'active elite status is opaque, with no small blinking alpha pulse');
+assert(!html.includes('const pulse=.26+.13*Math.abs'),
+ 'remove the old blinking semi-transparent satellite effect');
 assert(html.includes("spawnGroundSlamFx(e.x+e.face*82,e.y,1.46,'elite')"),
  'elite slam remains a large grounded VFX forward of its boots');
 
