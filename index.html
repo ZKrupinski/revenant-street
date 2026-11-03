@@ -4232,16 +4232,21 @@ function getZMove(){
  if(Math.hypot(p.moveDX||0,p.moveDY||0)>.18)return p.backstepping?'backwalk':p.running?'run':'walk';
  return 'idle';
 }
-// Source atlas -> eight isolated transparent canvases. All ordinary
-// actions remain strictly confined to their own 4x2 cell.
-// The validated LOCAL sidekick has a boot that extends ~18px beyond cell 6's
-// grid edge; only the two affected poses may read a tiny green-screen bleed.
-// Never apply this to remote/alternate atlases or any other action.
+// Source atlas -> eight isolated transparent canvases. Ordinary motions keep
+// exact 4x2 cell boundaries and the established planted-foot alignment.
+// The local sidekick has a documented overlapping boot at poses 5/6.
+// The local superman_punch has BOTH its flying rear boot and extended fist
+// outside pose 3's cell. Its overscan reads only the safe upper-right
+// (punch) and lower-left (boot) strips, never neighboring actors' bodies.
+// Do not change remote art, other attacks, or the hoodie alternative.
 function zCellSamplingSpec(moveKey,index,cellWidth,inset=1){
  const core=Math.max(1,Math.floor(cellWidth-2*inset));
  const reserve=moveKey==='sidekick-local'?Math.ceil(cellWidth*.09):0;
  const spill=moveKey==='sidekick-local'?(index===5?reserve:index===4?Math.min(8,reserve):0):0;
- return {canvasWidth:core+reserve,readWidth:core+spill,bleed:spill};
+ const wide=moveKey==='superman_punch-local';
+ const pad=wide?Math.ceil(cellWidth*.17):0;
+ return {canvasWidth:core+reserve+pad*2,readWidth:core+spill,bleed:spill,
+  padLeft:pad,spillLeft:wide&&index===2?pad:0,spillRight:wide&&index===2?pad:0};
 }
 function prepareZCells(im,moveKey=''){
  const cells=[],cw=im.naturalWidth/4,ch=im.naturalHeight/2;
@@ -4258,7 +4263,20 @@ function prepareZCells(im,moveKey=''){
   c.clearRect(0,0,canvas.width,canvas.height);
   // Copy all foot pixels that overflow the artwork's painted frame grid.
   // Non-overflow poses retain their original exact source rectangle.
-  c.drawImage(im,sx,sy,crop.readWidth,canvas.height,0,0,crop.readWidth,canvas.height);
+  c.drawImage(im,sx,sy,crop.readWidth,canvas.height,crop.padLeft,0,crop.readWidth,canvas.height);
+  if(crop.spillLeft&&crop.spillRight){
+   // Hero Superman Punch / pose 3, upper-right: the outstretched glove
+   // continues into the NEXT atlas cell by ~35px. No adjacent pose's
+   // lower body may enter this high-band source window.
+   const upper=Math.floor(canvas.height*.55);
+   c.drawImage(im,sx+crop.readWidth,sy,crop.spillRight,upper,
+    crop.padLeft+crop.readWidth,0,crop.spillRight,upper);
+   // The SAME pose's airborne rear boot extends into the preceding
+   // cell at the lower-left. Never borrow the prior pose's raised arm.
+   const lowerStart=Math.floor(canvas.height*.40),lower=canvas.height-lowerStart;
+   c.drawImage(im,sx-crop.spillLeft,sy+lowerStart,crop.spillLeft,lower,
+    0,lowerStart,crop.spillLeft,lower);
+  }
   const pixels=c.getImageData(0,0,canvas.width,canvas.height),d=pixels.data,w=canvas.width,h=canvas.height;
   // Sample *inside* a possible black grid stroke; corner-only detection mistakes frame lines for the background.
   const points=[];
@@ -4373,7 +4391,11 @@ function prepareZCells(im,moveKey=''){
   const right=Math.min(frameW-1,Math.max(...raw.map(r=>r.bounds.x+r.bounds.w-1))+7);
   const bottom=Math.min(frameH-1,Math.max(...raw.map(r=>r.bounds.y+r.bounds.h-1))+7);
   union.w=right-union.x+1;union.h=bottom-union.y+1;
-  const unitScale=Math.min(240/union.w,254/union.h);
+  // Preserve the physical body size when the flying pose has unusually wide
+  // full-length arms/legs: fit the extended silhouette into a larger canvas,
+  // not by shrinking the hero's torso and head on the action change.
+  const targetW=moveKey==='superman_punch-local'?320:240;
+  const unitScale=Math.min(targetW/union.w,254/union.h);
   // Hold full source resolution through matting, then retain only display-sized
   // transparent cells. A 35-sheet atlas library must not keep huge raw canvases.
   const renderW=Math.max(1,Math.round(union.w*unitScale));
@@ -4782,11 +4804,13 @@ function loadZMove(key){
  im.onload=()=>{
   try{
    const localSidekickFootFix=key==='sidekick'&&url==='./assets/z-attacks-20/sidekick.webp';
+   const localSupermanLimbFix=key==='superman_punch'&&url==='./assets/z-attacks-20/superman_punch.webp';
    let frames;
    if(Z_HOODIE_HERO)frames=prepareTransparentHeroCells(im);
    else if(key==='idle'&&url==='./assets/project-z-hero/z-idle-hair-safe.webp')frames=preparePremattedIdleCells(im);
    else if(Z_HF_ART&&(zGaitChoice==='v3'||zGaitChoice==='v4')&&(key==='walk'||key==='run'||key==='backwalk'))frames=preparePremattedGaitCells(im);
-   else frames=prepareZCells(im,localSidekickFootFix?'sidekick-local':'');
+   else frames=prepareZCells(im,localSidekickFootFix?'sidekick-local':
+    localSupermanLimbFix?'superman_punch-local':'');
    if(frames.length!==8)throw Error('Expected eight frames');
    obj.frames=frames;obj.ready=true;obj.failed=false;obj.error=null;cleanup();
   }catch(err){fail(err)}
