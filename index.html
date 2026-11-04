@@ -4159,20 +4159,21 @@ body{position:fixed;inset:0;touch-action:manipulation}
 </style>
 
 
-<style id="z-hp-wave-integrated-hud-v11">
-/* Preserve approved bitmaps, the 80% scaling, +3-degree gauge cuts, and
-   integrated frame join from v10. Only refine the numeric HUD assembly. */
+<style id="z-hp-wave-integrated-hud-v12">
+/* Preserve approved bitmap frames and all v11 layout and gauge adjustments.
+   Scale both numeral groups to 120%, including each responsive breakpoint,
+   while proportionally scaling negative kerning to avoid loose spacing. */
 #hud {
   --z-linked-hud-scale:.8;
   --z-linked-hp-source-width:calc(258px * var(--z-combat-scale,1));
   --z-linked-hp-left:calc(5px * var(--z-combat-scale,1));
   --z-hp-join-nudge:calc(10px * var(--z-combat-scale,1));
   --z-linked-hud-overlap:calc(18px * var(--z-combat-scale,1));
-  --z-wave-digit-w:calc(19.3px * var(--z-combat-scale,1));
-  --z-wave-digit-h:calc(26.5px * var(--z-combat-scale,1));
-  --z-enemy-digit-w:calc(22.8px * var(--z-combat-scale,1));
-  --z-enemy-digit-h:calc(31px * var(--z-combat-scale,1));
-  --z-enemy-digit-overlap:calc(4.2px * var(--z-combat-scale,1));
+  --z-wave-digit-w:calc(23.16px * var(--z-combat-scale,1));
+  --z-wave-digit-h:calc(31.8px * var(--z-combat-scale,1));
+  --z-enemy-digit-w:calc(27.36px * var(--z-combat-scale,1));
+  --z-enemy-digit-h:calc(37.2px * var(--z-combat-scale,1));
+  --z-enemy-digit-overlap:calc(5.04px * var(--z-combat-scale,1));
 }
 #hud .hud-left .bar.hp {
   left:var(--z-hp-join-nudge)!important;
@@ -4246,39 +4247,39 @@ body{position:fixed;inset:0;touch-action:manipulation}
 @container (max-width:610px) {
   #hud {
     --z-linked-hp-source-width:calc(220px * var(--z-combat-scale,1));
-    --z-wave-digit-w:calc(15.6px * var(--z-combat-scale,1));
-    --z-wave-digit-h:calc(23px * var(--z-combat-scale,1));
-    --z-enemy-digit-w:calc(18.6px * var(--z-combat-scale,1));
-    --z-enemy-digit-h:calc(26px * var(--z-combat-scale,1));
-    --z-enemy-digit-overlap:calc(3.6px * var(--z-combat-scale,1));
+    --z-wave-digit-w:calc(18.72px * var(--z-combat-scale,1));
+    --z-wave-digit-h:calc(27.6px * var(--z-combat-scale,1));
+    --z-enemy-digit-w:calc(22.32px * var(--z-combat-scale,1));
+    --z-enemy-digit-h:calc(31.2px * var(--z-combat-scale,1));
+    --z-enemy-digit-overlap:calc(4.32px * var(--z-combat-scale,1));
   }
 }
 @container (max-width:490px) {
   #hud {
     --z-linked-hp-source-width:calc(145px * var(--z-combat-scale,1));
-    --z-wave-digit-w:calc(12.8px * var(--z-combat-scale,1));
-    --z-wave-digit-h:calc(20px * var(--z-combat-scale,1));
-    --z-enemy-digit-w:calc(15px * var(--z-combat-scale,1));
-    --z-enemy-digit-h:calc(22px * var(--z-combat-scale,1));
-    --z-enemy-digit-overlap:calc(3px * var(--z-combat-scale,1));
+    --z-wave-digit-w:calc(15.36px * var(--z-combat-scale,1));
+    --z-wave-digit-h:calc(24px * var(--z-combat-scale,1));
+    --z-enemy-digit-w:calc(18px * var(--z-combat-scale,1));
+    --z-enemy-digit-h:calc(26.4px * var(--z-combat-scale,1));
+    --z-enemy-digit-overlap:calc(3.6px * var(--z-combat-scale,1));
   }
 }
 @container (max-width:390px) {
   #hud {
-    --z-wave-digit-w:calc(10.4px * var(--z-combat-scale,1));
-    --z-wave-digit-h:calc(18.5px * var(--z-combat-scale,1));
-    --z-enemy-digit-w:calc(13.2px * var(--z-combat-scale,1));
-    --z-enemy-digit-h:calc(20px * var(--z-combat-scale,1));
-    --z-enemy-digit-overlap:calc(2.6px * var(--z-combat-scale,1));
+    --z-wave-digit-w:calc(12.48px * var(--z-combat-scale,1));
+    --z-wave-digit-h:calc(22.2px * var(--z-combat-scale,1));
+    --z-enemy-digit-w:calc(15.84px * var(--z-combat-scale,1));
+    --z-enemy-digit-h:calc(24px * var(--z-combat-scale,1));
+    --z-enemy-digit-overlap:calc(3.12px * var(--z-combat-scale,1));
   }
 }
 @container (max-width:340px) {
   #hud {
-    --z-wave-digit-w:calc(9.1px * var(--z-combat-scale,1));
-    --z-wave-digit-h:calc(17px * var(--z-combat-scale,1));
-    --z-enemy-digit-w:calc(11.3px * var(--z-combat-scale,1));
-    --z-enemy-digit-h:calc(18px * var(--z-combat-scale,1));
-    --z-enemy-digit-overlap:calc(2.3px * var(--z-combat-scale,1));
+    --z-wave-digit-w:calc(10.92px * var(--z-combat-scale,1));
+    --z-wave-digit-h:calc(20.4px * var(--z-combat-scale,1));
+    --z-enemy-digit-w:calc(13.56px * var(--z-combat-scale,1));
+    --z-enemy-digit-h:calc(21.6px * var(--z-combat-scale,1));
+    --z-enemy-digit-overlap:calc(2.76px * var(--z-combat-scale,1));
   }
 }
 </style>
