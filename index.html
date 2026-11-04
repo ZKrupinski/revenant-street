@@ -3961,7 +3961,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 </style>
 <link rel="preload" as="image" href="./assets/ui/ref-wave-frame-v8.png">
-<link rel="preload" as="image" href="./assets/ui/ref-wave-fill-cell-v5.webp">
+<link rel="preload" as="image" href="./assets/ui/wave-energy-fill-custom-v1.webp">
 <link rel="preload" as="image" href="./assets/ui/ref-metal-digit-0-v8.png">
 <link rel="preload" as="image" href="./assets/ui/ref-metal-digit-1-v8.png">
 <link rel="preload" as="image" href="./assets/ui/ref-metal-digit-2-v8.png">
@@ -4291,6 +4291,23 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 </style>
 
+
+<style id="z-wave-custom-bitmap-fill-v17">
+/* Approved custom WAVE bitmap, distinct from the hero HP artwork.
+   Keep the existing black diagonal track drawn by the original frame,
+   and clip only the bespoke red sprite at the same +3-degree fill angle.
+   Fill artwork stays full meter width while the score moves, so the
+   slanted segments never compress as the progress percentage changes. */
+#hud .progress-hud .squad-progress>div {
+  background-image:url('./assets/ui/wave-energy-fill-custom-v1.webp')!important;
+  background-position:left center!important;
+  background-size:var(--z-wave-bitmap-full-width,calc(226px * var(--z-combat-scale,1))) 100%!important;
+  background-repeat:no-repeat!important;
+  --z-wave-shear:calc(9.2px * var(--z-combat-scale,1))!important;
+  clip-path:polygon(var(--z-wave-shear) 0,100% 0,
+    calc(100% - var(--z-wave-shear)) 100%,0 100%)!important;
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -9845,6 +9862,28 @@ function updateHudThrottled(dt){
  hudAccumulator%=.085;updateHud();
 }
 
+/* Use the unscaled content-box width to anchor each slash to the original
+   dark WAVE track. A 20%-filled meter reveals the first 20% of the complete
+   bitmap rather than squeezing the entire atlas into 20% width. */
+const zWaveBitmapMeter=$('enemyProgress');
+let zWaveBitmapLastWidth=0;
+function zSyncWaveBitmapWidth(){
+ if(!zWaveBitmapMeter)return;
+ const width=zWaveBitmapMeter.clientWidth;
+ if(width>0&&width!==zWaveBitmapLastWidth){
+  zWaveBitmapLastWidth=width;
+  zWaveBitmapMeter.style.setProperty('--z-wave-bitmap-full-width',width+'px');
+ }
+}
+if(zWaveBitmapMeter){
+ if(typeof ResizeObserver==='function'){
+  const zWaveBitmapObserver=new ResizeObserver(zSyncWaveBitmapWidth);
+  zWaveBitmapObserver.observe(zWaveBitmapMeter);
+ }else{
+  window.addEventListener('resize',zSyncWaveBitmapWidth,{passive:true});
+ }
+ zSyncWaveBitmapWidth();
+}
 let zHudWaveStatePrevious=-1,zHudWaveStateUntil=0;
 function zHudUpdateWaveBadge(){
  const badge=$('zHudWaveState');if(!badge)return;
