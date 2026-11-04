@@ -6002,7 +6002,7 @@ const MOD_META={
  ice:{icon:'❄',short:'빙결',title:'CRYO',color:'#b2efff',source:'burst_blue',filter:'hue-rotate(18deg) saturate(.8)',desc:'냉기 둔화·지속시간 강화'},
  dashrange:{icon:'➤',short:'대쉬 거리',title:'DASH EXTENDER',color:'#8deeff',desc:'대쉬 지속시간·이동거리 증가 / 중첩'},
  dashspeed:{icon:'⚡',short:'대쉬 오버드라이브',title:'대쉬 오버드라이브',color:'#ffe68b',desc:'대쉬 이동속도와 대쉬 후 공격의 피해·범위·넉백이 동시에 증가'},
- jumpheight:{icon:'✦',short:'점프 높이',title:'JUMP THRUSTER',color:'#a4e9fc',desc:'도약 높이와 공중 체공시간 증가 / 중첩'},
+ jumpheight:{icon:'✦',short:'점프 높이',title:'JUMP THRUSTER',color:'#a4e9fc',desc:'점프 높이 증가 · Lv.3에 2단 점프 해금 · Lv.4~6은 2차 도약 거리 강화'},
  jumpspeed:{icon:'»',short:'점프 오버드라이브',title:'점프 오버드라이브',color:'#b9a3ff',desc:'공중 이동속도와 점프 내려찍기 공격의 피해·범위·넉백이 동시에 증가'},
  counter:{icon:'✦',short:'패링 반격',title:'패링 후 반격 강화',color:'#ffe098',desc:'추격 반격의 주변 범위·피해·밀어내기 증가'},
  power:{icon:'💥',short:'강타',title:'POWER DRIVE',color:'#ffd48a',desc:'공격 피해 +16%/중첩'},
@@ -6129,6 +6129,17 @@ function jumpMobilityStats(heightRank=modRank('jumpheight'),speedRank=modRank('j
  const moveSpeed=Math.round(700*(1+.14*clamp(speedRank,0,MOD_LEVEL_CAP)));
  return {impulse,moveSpeed,height:Math.round(impulse*impulse/(2*1440))};
 }
+// Third JUMP THRUSTER stack unlocks the second press in midair.
+// Each further height stack extends the second jump; JUMP OVERDRIVE stacks
+// continue to raise the baseline airspeed independently.
+function doubleJumpMobilityStats(heightRank=modRank('jumpheight'),speedRank=modRank('jumpspeed')){
+ const level=clamp(heightRank,0,MOD_LEVEL_CAP),unlocked=level>=3;
+ const steps=Math.max(0,level-3),base=jumpMobilityStats(heightRank,speedRank);
+ const speedMultiplier=unlocked?1.12+.16*steps:1;
+ return {unlocked,level,speedMultiplier,
+   moveSpeed:unlocked?Math.round(base.moveSpeed*speedMultiplier):0,
+   impulse:unlocked?Math.round(base.impulse*(.82+.035*steps)):0};
+}
 function upgradeDescription(id,rank){
  if(id==='dashrange'){
   const a=dashMobilityStats(rank),b=dashMobilityStats(rank+1);
@@ -6141,12 +6152,17 @@ function upgradeDescription(id,rank){
  }
  if(id==='jumpheight'){
   const a=jumpMobilityStats(rank),b=jumpMobilityStats(rank+1);
-  return `점프 높이 ${a.height} → ${b.height}px · 도약력 ${a.impulse} → ${b.impulse}`;
+  const prev=doubleJumpMobilityStats(rank),next=doubleJumpMobilityStats(rank+1);
+  const bonus=rank===2?` · 2단 점프 해금! (이동속도 ${next.moveSpeed}px/s)`:
+    rank>=3?` · 2단 도약 속도 ${prev.moveSpeed}→${next.moveSpeed}px/s`:' · Lv.3에 2단 점프 해금';
+  return `점프 높이 ${a.height} → ${b.height}px · 도약력 ${a.impulse} → ${b.impulse}${bonus}`;
  }
  if(id==='jumpspeed'){
-  const a=jumpMobilityStats(modRank('jumpheight'),rank),b=jumpMobilityStats(modRank('jumpheight'),rank+1);
+  const height=modRank('jumpheight');
+  const a=jumpMobilityStats(height,rank),b=jumpMobilityStats(height,rank+1);
   const hit=specialStats(id,rank),next=specialStats(id,rank+1);
-  return `공중속도 ${a.moveSpeed}→${b.moveSpeed}px/s · 내려찍기 피해 ${hit.damage}→${next.damage} · 범위 ${hit.range}→${next.range} · 넉백 ${hit.push}→${next.push}`;
+  const doubleBonus=height>=3?` · 2단 점프 ${doubleJumpMobilityStats(height,rank).moveSpeed}→${doubleJumpMobilityStats(height,rank+1).moveSpeed}px/s`:'';
+  return `공중속도 ${a.moveSpeed}→${b.moveSpeed}px/s${doubleBonus} · 내려찍기 피해 ${hit.damage}→${next.damage} · 범위 ${hit.range}→${next.range} · 넉백 ${hit.push}→${next.push}`;
  }
  if(id!=='counter')return MOD_META[id].desc||'타격 효과 강화';
  const a=specialStats(id,rank),b=specialStats(id,rank+1);
@@ -7137,7 +7153,7 @@ function resetPlayer(){deathCinematic.active=false;deathCinematic.elapsed=0;
  strikeCameraTime=0;strikeCameraTarget=1;
  cameraRecenterClock=0;cameraRecenterHold=0;cameraRecenterBlend=0;
  resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p.regenAccumulated=0;p._healFxAt={};p._voiceAt=-99;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.dodgeDuration=.30;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
- p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
+ p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;p.doubleJumpUsed=false;p.doubleJumpSpeedMult=1;
  p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];combatUpgrades={charge:0,threshold:76,earned:0,lastAt:-100,rerolls:0,lastOffers:[],shown:{},offered:[]};upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.comboMoveCycle=[];p.comboMoveCursor=0;p.comboMoveCount=0;p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.dashSparkDistance=0;p.dashSparkCount=0;p.dashSparkSeq=0;p.backstepping=false;p.evadeBackstep=false;p.evadeExhausted=false;p.dashBufferedUntil=0;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.attackApproachTarget=null;p.attackApproachTime=0;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;runStats={attacks:0,hits:0,style:{jump:0,dash:0,parry:0}};runRewardClaimed=false;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 // All game UI bitmap assets must be fetched and DECODED before starting.
@@ -7799,15 +7815,39 @@ function consumeBufferedDash(){
 }
 function jump(){
  if(gameState!=='playing'||p.attack>0||p.parry>0||p.dodge>0||
-  p.z>1||p.stun>0||p.downTimer>0||p.getupTimer>0)return;
+  p.stun>0||p.downTimer>0||p.getupTimer>0)return;
+ const airborne=p.jumpActive&&p.z>1;
+ const second=doubleJumpMobilityStats();
+ if(airborne&&(!second.unlocked||p.doubleJumpUsed||p.airAttack||p.airKickPhase))return;
+ if(!airborne&&p.z>1)return;
  zCancelAttackApproach();
- // Read CURRENT held WASD, mobile stick and gamepad directions; input can
- // arrive in the very same event as jump before the next control tick.
+ // Fresh button edges from keyboard, gamepad and touch share this path.
  const ix=clamp((keys.has('d')?1:0)-(keys.has('a')?1:0)+
   analog.dx+(p.jumpPadDX||0),-1,1);
  const iy=clamp((keys.has('s')?1:0)-(keys.has('w')?1:0)+
   analog.dy+(p.jumpPadDY||0),-1,1);
  const mag=Math.hypot(ix,iy);
+ if(airborne){
+  // A second jump is allowed ONLY from JUMP THRUSTER Lv.3, once per airtime.
+  // Current stick direction overrides the first leap, neutral preserves its
+  // existing horizontal momentum rather than forcing an unrequested direction.
+  if(mag>.23){
+   p.jumpLeap=true;
+   if(Math.abs(ix)>.20)p.facing=ix>0?1:-1;
+   p.jumpLaunchX=Math.abs(ix)>.20?ix:p.facing*.78;
+   p.jumpLaunchY=iy;
+  }
+  p.doubleJumpUsed=true;p.doubleJumpSpeedMult=second.speedMultiplier;
+  p.vz=Math.max(p.vz,second.impulse);
+  p.jumpTime=0;p.jumpStartTimer=.20;p.landingTimer=0;
+  p.jumpLandingVisual=0;p.jumpLandingTriggered=false;
+  p.moveName='jumpstart';p.motionKey='';p.motionTime=0;p.animAge=0;
+  fxBurst(p.x,p.y-72,'blue',.55);
+  playActionOnset('jump');playImpactSound('parry',.85);
+  return;
+ }
+ // Original ground jump (unchanged below upgrade Lv.3).
+ p.doubleJumpUsed=false;p.doubleJumpSpeedMult=1;
  p.jumpLeap=mag>.23;
  if(p.jumpLeap&&Math.abs(ix)>.20)p.facing=ix>0?1:-1;
  p.jumpLaunchX=p.jumpLeap?(Math.abs(ix)>.20?ix:p.facing*.78):0;
@@ -7817,8 +7857,8 @@ function jump(){
  p.jumpTime=0;p.moveName='jumpstart';
  p.vz=jumpMobilityStats().impulse;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;
  p.airKickUsed=false;
- playActionOnset('jump'); // Dry transient lands on the accepted jump input.
- playImpactSound('parry',.85); // Preserve the existing full jump sound.
+ playActionOnset('jump'); // Existing first-jump response.
+ playImpactSound('parry',.85);
  /* No synthetic pitch chirp at jump start. */
 }
 function execute(target){
@@ -9054,7 +9094,8 @@ function control(dt,pad){
    }
    const glide=p.vz>0?1.08:p.z>105?1.00:.88;
    dx=p.jumpLaunchX;dy=p.jumpLaunchY;
-   speed=p.jumpLeap?(p.airAttack&&p.airKickPhase==='dive'?750:jumpMobilityStats().moveSpeed)*
+   speed=p.jumpLeap?(p.airAttack&&p.airKickPhase==='dive'?750:
+     jumpMobilityStats().moveSpeed*(p.doubleJumpUsed?(p.doubleJumpSpeedMult||1):1))*
      (p.airAttack&&p.airKickPhase==='dive'?(1+.14*modRank('jumpspeed')):1)*glide:0;
   }else if(p.airAttack){
    dx=p.airKickPhase==='charge'?0:p.facing;dy=0;
@@ -9134,6 +9175,7 @@ function control(dt,pad){
    if(powered){p.airKickPhase='recover';p.attack=.19;p.landingTimer=.30}
    else if(landed)p.landingTimer=.28;
    p.airKickUsed=false;p.airAttack=false;
+   p.doubleJumpUsed=false;p.doubleJumpSpeedMult=1; // Ground contact restores second-jump charge.
   }
  }
  p.jumpStartTimer=Math.max(0,p.jumpStartTimer-dt);
