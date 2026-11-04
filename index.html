@@ -4996,6 +4996,7 @@ function getZMove(){
  if(p.stun>0)return p.hitHeavyTimer>0?'heavyhit':'hit';
  if(p.dodge>0)return p.evadeBackstep?'dodge':'dash';
  if(p.riposteChasing)return 'run';
+ if(p.attackApproachTarget)return 'run';
  if(p.parry>0)return 'guard';
  if(p.attack>0)return p.airAttack?(p.moveName||'airkick'):(p.moveName||'jab');
  // Kick art appears only after a deliberate airborne attack press.
@@ -7137,7 +7138,7 @@ function resetPlayer(){deathCinematic.active=false;deathCinematic.elapsed=0;
  cameraRecenterClock=0;cameraRecenterHold=0;cameraRecenterBlend=0;
  resetHeroAfterimages();p.hitFlash=0;p.regenPulseClock=0;p.regenAccumulated=0;p._healFxAt={};p._voiceAt=-99;p.maxHp=100+perma.core*20;p.hp=p.maxHp;p.stamina=100;p.x=275;p.y=570;p.z=0;p.vz=0;p.facing=1;p.stun=0;p.inv=0;p.attack=0;p.parry=0;p.dodge=0;p.dodgeDuration=.30;p.weapon=0;p.maxWeapon=18;p.moveName='idle';p.moveDX=0;p.moveDY=0;p.jumpPadDX=0;p.jumpPadDY=0;
  p.jumpActive=false;p.jumpLeap=false;p.jumpLaunchX=0;p.jumpLaunchY=0;
- p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];combatUpgrades={charge:0,threshold:76,earned:0,lastAt:-100,rerolls:0,lastOffers:[],shown:{},offered:[]};upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.comboMoveCycle=[];p.comboMoveCursor=0;p.comboMoveCount=0;p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.dashSparkDistance=0;p.dashSparkCount=0;p.dashSparkSeq=0;p.backstepping=false;p.evadeBackstep=false;p.evadeExhausted=false;p.dashBufferedUntil=0;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;runStats={attacks:0,hits:0,style:{jump:0,dash:0,parry:0}};runRewardClaimed=false;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
+ p.jumpTime=0;p.jumpLandingVisual=0;p.jumpLandingTriggered=false;attributeFx=[];p.kickIdx=-1;p.punchIdx=-1;p.animAge=0;p.mod='none';p.mods=[];combatUpgrades={charge:0,threshold:76,earned:0,lastAt:-100,rerolls:0,lastOffers:[],shown:{},offered:[]};upgradeReason='wave';p.credits=0;p.hits=0;p.hitTimeout=0;p.comboIdx=0;p.comboWindow=0;p.attackQueued=false;p.recentMoves=[];p.comboMoveCycle=[];p.comboMoveCursor=0;p.comboMoveCount=0;p.running=false;p.dashFollowWindow=0;p.dashSmash=false;p.dashSparkDistance=0;p.dashSparkCount=0;p.dashSparkSeq=0;p.backstepping=false;p.evadeBackstep=false;p.evadeExhausted=false;p.dashBufferedUntil=0;p.jumpStartTimer=0;p.landingTimer=0;p.hitHeavyTimer=0;p.downTimer=0;p.getupTimer=0;p.recoveryDuration=.64;p.receivedHits=0;p.motionKey='';p.motionTime=0;p.gaitDistance=0;p.attackDriveRemaining=0;p.attackDriveTotal=0;p.attackDriveX=0;p.attackDriveY=0;p.hitDuration=.3;p.airAttack=false;p.airKickUsed=false;p.airKickPhase='';p.airKickLaunched=false;p.parryDuration=0;p.riposteWindow=0;p.riposteTarget=null;p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteChaseTime=0;p.riposteChaseWarmup=0;p.riposteRunCycle=0;p.riposteStrikeTarget=null;p.attackApproachTarget=null;p.attackApproachTime=0;p.counterRush=0;p.counterBoost=false;p.novaCooldown=0;p.bodyShakeDuration=0;p.bodyShakeTime=0;p.bodyShakePower=0;p.damageBoost=perma.servo*2;level=1;runKills=0;runStats={attacks:0,hits:0,style:{jump:0,dash:0,parry:0}};runRewardClaimed=false;p.parryRecoilTime=0;p.parryRecoilDuration=0;p.parryRecoilRemaining=0}
 let loadingRun=false;
 // All game UI bitmap assets must be fetched and DECODED before starting.
 // A separate <img> for the CSS sprite primes the same exact browser URL cache;
@@ -7565,9 +7566,32 @@ function findExecutionTarget(){
  (e.x-p.x)*p.facing<142&&Math.abs(e.y-p.y)<67)
  .sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0]||null;
 }
+// Neutral-attack auto approach. A single attack press locks the nearest
+// *already visible* living enemy, then plays real running frames until the
+// hero reaches ordinary ground-strike distance. Never teleport or auto-fire
+// at enemies that are still entering, far offscreen, or airborne.
+function zNeutralAttackInput(){
+ const ix=(keys.has('d')?1:0)-(keys.has('a')?1:0)+(analog.dx||0)+(p.jumpPadDX||0);
+ const iy=(keys.has('s')?1:0)-(keys.has('w')?1:0)+(analog.dy||0)+(p.jumpPadDY||0);
+ return Math.hypot(ix,iy)<.20&&Math.hypot(p.moveDX||0,p.moveDY||0)<.20;
+}
+function zVisibleAttackTarget(){
+ const left=cameraX+24,right=cameraX+W-24;
+ return enemies.filter(e=>!e.dead&&e.hp>0&&e.z<70&&
+   !intruderEntering(e)&&e.x>=left&&e.x<=right&&e.fade!==0)
+  .sort((a,b)=>Math.hypot((a.x-p.x), (a.y-p.y)*1.45)-
+                Math.hypot((b.x-p.x), (b.y-p.y)*1.45))[0]||null;
+}
+function zAttackApproachGap(target){
+ return Math.max(105,bodyHalfX(p)+bodyHalfX(target)+2);
+}
+function zCancelAttackApproach(){
+ p.attackApproachTarget=null;p.attackApproachTime=0;
+}
 // A fresh ATTACK press is a new action, not a request to finish rendering
 // the previous ground attack. Specials retain their committed animations.
-function startAttack(){
+function startAttack(skipAttackApproach=false){
+ if(p.attackApproachTarget&&!skipAttackApproach)return;
  if(gameState!=='playing'||p.stun>0||p.riposteChasing||(p.dodge>0&&p.dashFollowWindow<=0)||
   p.downTimer>0||p.getupTimer>0)return;
  const cancelNormal=p.attack>0&&!p.airAttack&&!p.dashSmash&&!p.counterBoost&&
@@ -7637,6 +7661,24 @@ function startAttack(){
   playImpactSound('counter',1.35);
   flash('JUST PARRY → CHASE FINISH!',.95);return;
  }
+ // Grounded neutral attack can close visible distance BEFORE its
+ // ordinary combo strike. Direct movement and committed specials still win.
+ if(!skipAttackApproach&&!cancelNormal&&p.attack<=0&&p.parry<=0&&
+    p.dodge<=0&&p.z<=2&&p.stamina>=7&&zNeutralAttackInput()){
+  const target=zVisibleAttackTarget();
+  if(target){
+   p.facing=target.x>=p.x?1:-1;
+   if(Math.abs(target.x-p.x)>zAttackApproachGap(target)+8||
+      Math.abs(target.y-p.y)>48){
+    p.attackApproachTarget=target;
+    p.attackApproachTime=2.7;
+    p.attackQueued=false;p.attack=0;p.running=true;
+    p.moveName='run';p.motionKey='';p.motionTime=0;
+    loadZMove('run');
+    return;
+   }
+  }
+ }
  const step=p.comboWindow>0?(p.comboIdx+1)%4:0;
  const move=pickComboMove(step,p.moveName,p.weapon>0);
  const isKick=Z_KICK_MOVES.has(move),cost=isKick?9:Z_HEAD_MOVES.has(move)?9:7;
@@ -7682,6 +7724,7 @@ function startAttack(){
 }
 function parry(){
  if(gameState!=='playing'||p.stun>0||p.parry>0||p.downTimer>0||p.getupTimer>0||p.stamina<7)return;
+ zCancelAttackApproach();
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.attackDriveRemaining=0;p.counterRush=0;
  p.dashSmash=false;p.dashFollowWindow=0;
  p.parryDuration=.34+perma.reflex*.035;p.parry=p.parryDuration;p.parryAnimAge=.03;
@@ -7715,6 +7758,7 @@ function dodge(fromBuffer=false){
   slowMotion=0;parrySlowTarget=null;riposteCinematicTime=0;
  }
  p.dashBufferedUntil=0;
+ zCancelAttackApproach();
  p.attack=0;p.attackQueued=false;p.airAttack=false;p.attackDriveRemaining=0;p.parry=0;
  p.dashSmash=false;p.dashFollowWindow=0;
  // Deliberate dash overrides an automatic post-parry pursuit.
@@ -7756,6 +7800,7 @@ function consumeBufferedDash(){
 function jump(){
  if(gameState!=='playing'||p.attack>0||p.parry>0||p.dodge>0||
   p.z>1||p.stun>0||p.downTimer>0||p.getupTimer>0)return;
+ zCancelAttackApproach();
  // Read CURRENT held WASD, mobile stick and gamepad directions; input can
  // arrive in the very same event as jump before the next control tick.
  const ix=clamp((keys.has('d')?1:0)-(keys.has('a')?1:0)+
@@ -8955,6 +9000,38 @@ function control(dt,pad){
    }
    p.moveDX=0;p.moveDY=0; // dedicated pursuit owns locomotion this tick
    return;
+  }
+ }
+ // Neutral ATTACK approach runs in world coordinates, not a blink or
+ // dash. Update target and lane each frame; stop at the enemy's footprint.
+ // Cancel as soon as movement input, parry/jump/dash, stun, or target loss
+ // takes precedence. Normal combat/cooldown clocks continue below.
+ if(p.attackApproachTarget){
+  const target=p.attackApproachTarget;
+  p.attackApproachTime=Math.max(0,(p.attackApproachTime||0)-dt);
+  const manual=Math.hypot(dx,dy)>.20;
+  const invalid=manual||p.stun>0||p.downTimer>0||p.getupTimer>0||
+   p.parry>0||p.dodge>0||p.z>2||p.attack>0||
+   !target||target.dead||target.hp<=0||target.z>=70||
+   intruderEntering(target)||!enemies.includes(target)||
+   target.x<cameraX-30||target.x>cameraX+W+30||
+   p.attackApproachTime<=0;
+  if(invalid){
+   zCancelAttackApproach();
+  }else{
+   const vx=target.x-p.x,vy=target.y-p.y;
+   const gap=zAttackApproachGap(target),dir=vx>=0?1:-1;
+   p.facing=dir;p.running=true;p.backstepping=false;
+   const stepX=Math.min(Math.max(0,Math.abs(vx)-gap),
+    (PLAYER_RUN_SPEED*1.30+perma.sprint*20)*dt);
+   const stepY=Math.min(Math.abs(vy),PLAYER_RUN_SPEED*.93*dt);
+   p.x=clamp(p.x+dir*stepX,64,STAGE_WIDTH-64);
+   p.y=groundY(p.y+Math.sign(vy)*stepY);
+   if(Math.abs(target.x-p.x)<=gap+9&&Math.abs(target.y-p.y)<=48){
+    zCancelAttackApproach();p.running=false;
+    p.facing=target.x>=p.x?1:-1;
+    startAttack(true);
+   }
   }
  }
  // Post-impact brace briefly suppresses movement input while taking a low step back.
