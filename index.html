@@ -4159,38 +4159,104 @@ body{position:fixed;inset:0;touch-action:manipulation}
 </style>
 
 
-<style id="z-hp-wave-connected-compact-v9">
-/* REVENANT STREET HUD v9 — retain source bitmap pixels, 80% joint-scale.
-   Both complete bitmap elements (including fill, numbers and clip geometry) 
-   are transformed as units: no new crops or sheared masks. */
+<style id="z-hp-wave-integrated-hud-v10">
+/* Retain approved original raster metal HUD at 80%.
+   Seat the hero bar into the WAVE panel: the WAVE origin is not shifted.
+   Never stretch/recrop the bitmap border or generate replacement artwork. */
 #hud {
-  --z-linked-hud-scale: .8;
-  --z-linked-hp-source-width: calc(258px * var(--z-combat-scale,1));
-  --z-linked-hp-left: calc(5px * var(--z-combat-scale,1));
-  --z-linked-hud-overlap: calc(8px * var(--z-combat-scale,1));
+  --z-linked-hud-scale:.8;
+  --z-linked-hp-source-width:calc(258px * var(--z-combat-scale,1));
+  --z-linked-hp-left:calc(5px * var(--z-combat-scale,1));
+  --z-hp-join-nudge:calc(10px * var(--z-combat-scale,1));
+  --z-linked-hud-overlap:calc(18px * var(--z-combat-scale,1));
+  --z-hud-digit-w:calc(19.3px * var(--z-combat-scale,1));
+  --z-hud-digit-h:calc(26.5px * var(--z-combat-scale,1));
+  --z-hud-digit-gap:calc(.3px * var(--z-combat-scale,1));
 }
-/* The HP head is lowered into the taller WAVE image, so the two midlines meet
-   without allowing either frame to spill off the top of the game viewport. */
 #hud .hud-left .bar.hp {
-  top: calc(5px * var(--z-combat-scale,1))!important;
-  transform: scale(var(--z-linked-hud-scale))!important;
-  transform-origin: left top!important;
+  left:var(--z-hp-join-nudge)!important;
+  top:calc(5px * var(--z-combat-scale,1))!important;
+  transform:scale(var(--z-linked-hud-scale))!important;
+  transform-origin:left top!important;
+  z-index:2!important;
 }
-/* Connect the WAVE panel's illuminated left metal point to the HP's right tip.
-   Use the *rendered* HP width, not the original unscaled box width. */
 #hud .hud-center.progress-hud {
-  left: calc(var(--z-linked-hp-left) + var(--z-linked-hp-source-width) * var(--z-linked-hud-scale) - var(--z-linked-hud-overlap))!important;
-  top: 0!important;
-  transform: scale(var(--z-linked-hud-scale))!important;
-  transform-origin: left top!important;
+  left:calc(var(--z-linked-hp-left) + var(--z-hp-join-nudge) + var(--z-linked-hp-source-width) * var(--z-linked-hud-scale) - var(--z-linked-hud-overlap))!important;
+  right:auto!important;top:0!important;
+  transform:scale(var(--z-linked-hud-scale))!important;
+  transform-origin:left top!important;
+  z-index:1!important;
 }
-/* The HP source artwork uses smaller intrinsic HUD widths on tight screens;
-   keep the WAVE junction exactly at the visible HP tip across breakpoints. */
+/* Increase the filled-edge slant by approximately 3 degrees.
+   Hero baseline: atan(8.8/17.5) => atan(10.0/17.5).
+   WAVE baseline: atan(8.0/18.7) => atan(9.2/18.7).
+   Leave the source frame artwork and fill mask geometry intact. */
+#hud .bar.hp .bar-fill{
+  --z-hp-shear:calc(10px * var(--z-combat-scale,1))!important;
+}
+#hud .progress-hud .squad-progress>div{
+  --z-wave-shear:calc(9.2px * var(--z-combat-scale,1))!important;
+}
+/* The two transparent-metal number pairs use one fixed bitmap cell size,
+   a shared visual centerline (49%) and consistent spacing. 
+   No length-dependent shrinking or dark number backplates. */
+#hud .progress-hud .wave-chip {
+  left:21.5%!important;top:29.5%!important;height:39%!important;
+  align-items:center!important;overflow:visible!important;
+}
+#hud .progress-hud .enemy-chip {
+  right:3.4%!important;top:27.5%!important;height:43%!important;
+  align-items:center!important;overflow:visible!important;
+}
+#hud .progress-hud .wave-chip .z-metal-digits,
+#hud .progress-hud .enemy-chip .z-metal-digits {
+  display:flex!important;align-items:center!important;
+  justify-content:flex-start!important;
+  gap:var(--z-hud-digit-gap)!important;
+  height:100%!important;width:max-content!important;
+  margin:0!important;padding:0!important;
+  line-height:0!important;font-size:0!important;
+  background:none!important;
+}
+#hud .progress-hud .wave-chip .z-metal-digit,
+#hud .progress-hud .enemy-chip .z-metal-digit,
+#hud .progress-hud .enemy-chip.is-wide .z-metal-digit {
+  flex:0 0 var(--z-hud-digit-w)!important;
+  width:var(--z-hud-digit-w)!important;
+  height:var(--z-hud-digit-h)!important;
+  margin:0!important;padding:0!important;
+  background-size:100% 100%!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  border:0!important;box-shadow:none!important;filter:none!important;
+}
+/* Match the existing responsive HP frame width, then keep digits
+   inside the original empty artwork rather than crossing the meter. */
 @container (max-width:610px) {
-  #hud {--z-linked-hp-source-width:calc(220px * var(--z-combat-scale,1));}
+  #hud {
+    --z-linked-hp-source-width:calc(220px * var(--z-combat-scale,1));
+    --z-hud-digit-w:calc(15.6px * var(--z-combat-scale,1));
+    --z-hud-digit-h:calc(23px * var(--z-combat-scale,1));
+  }
 }
 @container (max-width:490px) {
-  #hud {--z-linked-hp-source-width:calc(145px * var(--z-combat-scale,1));}
+  #hud {
+    --z-linked-hp-source-width:calc(145px * var(--z-combat-scale,1));
+    --z-hud-digit-w:calc(12.8px * var(--z-combat-scale,1));
+    --z-hud-digit-h:calc(20px * var(--z-combat-scale,1));
+  }
+}
+@container (max-width:390px) {
+  #hud {
+    --z-hud-digit-w:calc(10.4px * var(--z-combat-scale,1));
+    --z-hud-digit-h:calc(18.5px * var(--z-combat-scale,1));
+  }
+}
+@container (max-width:340px) {
+  #hud {
+    --z-hud-digit-w:calc(9.1px * var(--z-combat-scale,1));
+    --z-hud-digit-h:calc(17px * var(--z-combat-scale,1));
+  }
 }
 </style>
 
