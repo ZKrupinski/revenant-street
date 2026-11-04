@@ -4321,8 +4321,8 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 </style>
 
-<style id="z-wave-meter-source-alignment-v21">
-/* Precise source-artwork registration. The native WAVE frame is 1600x211:
+<style id="z-wave-meter-source-alignment-v22">
+/* Source artwork alignment accounting for alpha padding inside custom red fill. The native WAVE frame is 1600x211:
    meter X corresponds to 442..1235 in source artwork, Y to approx 81..148.
    This fixes the former inset+undersized red bar (30%,42.6%,45.2%,28.3%).
    WAVE stage numeral is placed next to native WAVE lettering using the
@@ -4333,8 +4333,8 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 #hud .progress-hud .wave-chip{
  left:23.4%!important;
- top:8%!important;
- height:58%!important;
+ top:16%!important;
+ height:50%!important;
  display:flex!important;
  align-items:flex-start!important;
  position:absolute!important;
@@ -4396,9 +4396,9 @@ body{position:fixed;inset:0;touch-action:manipulation}
    Use the frame's own diagonal cells; do not stretch the HP-like mask. */
 #hud #progressHud .progress-plate > .meter-wrap {
  left:27.65%!important;
- top:38.4%!important;
+ top:31.0%!important;
  width:49.8%!important;
- height:31.5%!important;
+ height:43.5%!important;
  min-width:0!important;
  max-width:none!important;
  margin:0!important;
@@ -4436,8 +4436,8 @@ body{position:fixed;inset:0;touch-action:manipulation}
 #hud #progressHud .progress-plate > .wave-chip{
  position:absolute!important;
  left:23.4%!important;
- top:8%!important;
- height:58%!important;
+ top:16%!important;
+ height:50%!important;
  width:auto!important;
  display:flex!important;
  align-items:flex-start!important;
@@ -4448,7 +4448,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
  height:100%!important;
  display:flex!important;
  align-items:flex-start!important;
- transform:translateY(calc(-2px * var(--z-combat-scale,1)))!important;
+ transform:none!important;
 }
 </style>
 </head>
@@ -9929,11 +9929,10 @@ function updateEffects(dt,realDt=dt){
   if(f.kind==='enemyHitBitmap'||f.kind==='enemyDeathBitmap')f.age+=fxDt;
   if(f.kind==='enemyDeathBitmap')f.firstBurstAge=(f.firstBurstAge||0)+realDt; // entire 8F animation clock
   if(f.kind==='enemyDeathBitmap'&&f.deadEnemy?.dead){
-   // Body progress controls ONLY VFX lifetime: independent frame clock above
-   // never stalls on frame 1, even when collapseAge pauses in mid-air.
-   const progress=zEnemyDeathFadeProgress(f.deadEnemy);
-   f.age=progress*f.maxLife;
-   f.life=f.deadEnemy.fade>0?Math.max(.02,(1-progress)*f.maxLife):0;
+   // Remove the effect after eight original frames, never hold invisible
+   // smoke until the long corpse disappearance timer expires.
+   if(f.firstBurstAge>=Z_DEATH_BITMAP_FRAME_ENDS[7])f.life=0;
+   else f.life=Math.max(.001,Z_DEATH_BITMAP_FRAME_ENDS[7]-f.firstBurstAge);
   }
   if(f.kind==='combatWordSprite'&&(f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02);if(f.kind==='dashPierceSprite'||f.kind==='parryCounterSprite'){f.age=(f.age||0)+fxDt;if((f.drawnFrame??-1)<7)f.life=Math.max(f.life,.02)}}fx=fx.filter(f=>f.life>0);
  if(gameState==='playing'&&!fx.some(f=>f.kind==='combatWordSprite')&&zCombatWordQueue.length){
