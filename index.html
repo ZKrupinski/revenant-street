@@ -4158,6 +4158,42 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 </style>
 
+
+<style id="z-hp-wave-connected-compact-v9">
+/* REVENANT STREET HUD v9 — retain source bitmap pixels, 80% joint-scale.
+   Both complete bitmap elements (including fill, numbers and clip geometry) 
+   are transformed as units: no new crops or sheared masks. */
+#hud {
+  --z-linked-hud-scale: .8;
+  --z-linked-hp-source-width: calc(258px * var(--z-combat-scale,1));
+  --z-linked-hp-left: calc(5px * var(--z-combat-scale,1));
+  --z-linked-hud-overlap: calc(8px * var(--z-combat-scale,1));
+}
+/* The HP head is lowered into the taller WAVE image, so the two midlines meet
+   without allowing either frame to spill off the top of the game viewport. */
+#hud .hud-left .bar.hp {
+  top: calc(5px * var(--z-combat-scale,1))!important;
+  transform: scale(var(--z-linked-hud-scale))!important;
+  transform-origin: left top!important;
+}
+/* Connect the WAVE panel's illuminated left metal point to the HP's right tip.
+   Use the *rendered* HP width, not the original unscaled box width. */
+#hud .hud-center.progress-hud {
+  left: calc(var(--z-linked-hp-left) + var(--z-linked-hp-source-width) * var(--z-linked-hud-scale) - var(--z-linked-hud-overlap))!important;
+  top: 0!important;
+  transform: scale(var(--z-linked-hud-scale))!important;
+  transform-origin: left top!important;
+}
+/* The HP source artwork uses smaller intrinsic HUD widths on tight screens;
+   keep the WAVE junction exactly at the visible HP tip across breakpoints. */
+@container (max-width:610px) {
+  #hud {--z-linked-hp-source-width:calc(220px * var(--z-combat-scale,1));}
+}
+@container (max-width:490px) {
+  #hud {--z-linked-hp-source-width:calc(145px * var(--z-combat-scale,1));}
+}
+</style>
+
 </head>
 <body>
 <div id="app">
