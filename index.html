@@ -6657,10 +6657,11 @@ function drawHeroModAura(x,y,z){
 // sidewalk/buildings in the upper half of the 720p backdrop.
 const ROAD_TOP=551,ROAD_BOTTOM=658;
 const groundY=y=>clamp(y,ROAD_TOP,ROAD_BOTTOM);
-const WAVE_GATES=[0,14200,28200,31850];
+// Six focused squads per stage instead of eleven long groups, followed by its boss.
+const WAVE_GATES=[0,7000,14350,15550];
 const SQUAD_SPOTS={
- 1:[740,1990,3260,4480,5760,7040,8320,9600,10880,12160,13480],
- 2:[14800,16120,17400,18680,19960,21240,22520,23800,25080,26360,27600]
+ 1:[740,1880,3000,4100,5250,6400],
+ 2:[7820,9000,10160,11320,12480,13650]
 };
 const SQUAD_ROSTERS={
  1:[
@@ -6703,15 +6704,18 @@ function waveEnemyTotals(){
  const current=enemies.filter(e=>!e.dead).length;
  if(wave===3)return {current,future:0,total:1,remaining:current,defeated:1-current};
  const spots=SQUAD_SPOTS[wave]||[];
- const total=spots.reduce((sum,_,j)=>sum+encounterRoster(wave,j).length+intruderSupportCount(wave,j),0);
+ // The mandatory wave boss counts as one future enemy before it spawns;
+ // afterward the boss is counted as a live enemy until defeated.
+ const bossPending=waveBossSpawned?0:1;
+ const total=spots.reduce((sum,_,j)=>sum+encounterRoster(wave,j).length+intruderSupportCount(wave,j),1);
  const future=spots.slice(squadIndex).reduce((sum,_,j)=>sum+
-  encounterRoster(wave,squadIndex+j).length+intruderSupportCount(wave,squadIndex+j),0);
+  encounterRoster(wave,squadIndex+j).length+intruderSupportCount(wave,squadIndex+j),bossPending);
  const pending=!supportTriggered&&squadIndex>0?intruderSupportCount(wave,squadIndex-1):0;
  const remaining=current+future+pending;
  return {current,future,total,remaining,defeated:Math.max(0,total-remaining)};
 }
-let squadIndex=0,enemySerial=0,lastEncounterCleared=-1,supportTriggered=true;
-const BOSS_SPAWN_X=30900;
+let squadIndex=0,enemySerial=0,lastEncounterCleared=-1,supportTriggered=true,waveBossSpawned=false;
+const BOSS_SPAWN_X=15200;
 let enemies=[],fx=[],floating=[],rain=[],particles=[],gameState='menu',wave=0,waveClearNotified=false,screenShake=0,hitStop=0,screenTint=0,slowMotion=0,parrySlowTarget=null,messageTime=0,last=0,time=0,lastGamepad=false,audio=null,mute=false,level=1,runKills=0;
 const DEATH_CINEMATIC_DURATION=2.75,DEATH_COLLAPSE_DURATION=2.15;
 const deathCinematic={elapsed:0,active:false};
@@ -7554,7 +7558,7 @@ function startRun(){cancelCombatHudEntrance();pendingHubAutoRefresh=false;resetI
  }else if(/(?:[?&])boss=preview(?:&|$)/.test(window.location?.search||'')){
   // Explicit QA shortcut: test the actual final encounter without traversing
   // ten screens. Normal gameplay and progression stay unchanged.
-  wave=2;p.x=30400;p.y=560;cameraX=clamp(p.x-450,0,STAGE_WIDTH-W);
+  wave=2;p.x=BOSS_SPAWN_X-480;p.y=560;cameraX=clamp(p.x-450,0,STAGE_WIDTH-W);
   spawnWave();flash('HUNTER / 최종 보스 미리보기',2);
  }else if(!heroEntry.active)flash('CHAPTER 01 : 침수된 거리',2);
  if(!heroEntry.active)void 0 /* prior arcade attack tone disabled */}
@@ -7619,11 +7623,32 @@ function spawnIntruderSupport(){
  for(const e of team){e.supportTeamMaxHp=teamMaxHp;e.supportTeamSize=count}
  waveClearNotified=false;return true;
 }
+function spawnWaveBoss(){
+ // Spawn exactly once after all 6 squads (and any late red-hood team) die.
+ if(gameState!=='playing'||wave<1||wave>2||waveBossSpawned||
+   squadIndex<(SQUAD_SPOTS[wave]?.length||0)||enemies.some(e=>!e.dead))return false;
+ waveBossSpawned=true;
+ const lastSquadX=SQUAD_SPOTS[wave][SQUAD_SPOTS[wave].length-1];
+ const x=clamp(Math.max(p.x+400,lastSquadX+360),p.x+300,STAGE_WIDTH-160);
+ const hunter=makeEnemy('boss',x,groundY(p.y),enemySerial++);
+ hunter.hp=hunter.maxHp=Math.round(hunter.maxHp*(wave===1?.43:.69));
+ hunter.maxPoise=Math.round(hunter.maxPoise*(wave===1?.68:.86));
+ hunter.damage=Math.round(hunter.damage*(wave===1?.73:.86));
+ hunter.speed=Math.round(hunter.speed*(wave===1?1:1.08));
+ hunter.encountered=true;hunter.renderX=x;hunter.renderY=hunter.y;
+ hunter.cooldown=1;hunter.waveBoss=true;
+ enemies.push(hunter);
+ for(const pose of ['idle','taunt','dash','slam','death'])window.RZBossHunter?.load(pose);
+ flash('WAVE '+wave+' / BOSS INBOUND',1.75);
+ screenShake=Math.max(screenShake,16);screenTint=Math.max(screenTint,.24);
+ waveClearNotified=false;lastEncounterCleared=-1;
+ return true;
+}
 function spawnWave(){
- waveClearNotified=false;wave++;squadIndex=0;supportTriggered=true;lastEncounterCleared=-1;enemies=[];
+ waveClearNotified=false;wave++;squadIndex=0;supportTriggered=true;lastEncounterCleared=-1;waveBossSpawned=false;enemies=[];
  if(wave===3){
   enemies=[makeEnemy('boss',BOSS_SPAWN_X,561,enemySerial++)];
-  squadIndex=1;
+  waveBossSpawned=true;squadIndex=1;
   for(const name of ['idle','taunt','dash','slam','death'])
    window.RZBossHunter?.load(name);
  }else spawnNextEncounter();
@@ -8956,8 +8981,8 @@ function zDeathBitmapFrame(effect){
  for(let i=0;i<Z_DEATH_BITMAP_FRAME_ENDS.length;i++){
   if(elapsed<Z_DEATH_BITMAP_FRAME_ENDS[i])return i;
  }
- const tailAge=elapsed-Z_DEATH_BITMAP_FRAME_ENDS[7];
- return 6+(Math.floor(tailAge/Z_DEATH_TAIL_STEP_SEC)%2);
+ // Play authored frames once. No looping 6/7 smoke during corpse fade.
+ return -1;
 }
 // The painted death sequence follows the SAME disappearance clock used by
 // updateEnemies, including the delay before actors begin fading.
@@ -9047,6 +9072,7 @@ function drawEnemyBitmapFx(effect){
  const progress=clamp((effect.age||0)/effect.maxLife,0,.99999);
  const frame=hit?Math.min(7,Math.floor(progress*8)):
   zDeathBitmapFrame(effect);
+ if(frame<0)return; // Death bitmap ends cleanly after the eight original frames.
  const w=effect.width;
  if(!hit&&effect.followSpriteFoot&&effect.deadEnemy){
   // Match drawActor(): use the SMOOTHED character location and its current
@@ -9077,7 +9103,7 @@ function drawEnemyBitmapFx(effect){
  ctx.restore();
 }
 window.__zEnemyBitmapFxStatus=()=>({
- version:'enemy-death-nonstop-all-8frames-v7',
+ version:'enemy-death-8f-one-shot-no-smoke-loop-v8',
  hit:Z_ENEMY_BITMAP_ART.hit.image.complete&&Z_ENEMY_BITMAP_ART.hit.image.naturalWidth===2048,
  death:Z_ENEMY_BITMAP_ART.death.image.complete&&Z_ENEMY_BITMAP_ART.death.image.naturalWidth===2048,
  frames:8,columns:4,rows:2,cell:512,deathFootSourceY:422,
@@ -9872,7 +9898,8 @@ function updateEnemies(dt,parryVictimScale=1){
  // A troop must be defeated before the next encounter can be spawned.
  const anyLiving=enemies.some(e=>!e.dead);
  if(!anyLiving&&gameState==='playing'&&wave<=2){
-  if(!spawnNextEncounter()&&squadIndex<(SQUAD_SPOTS[wave]?.length||0)){
+  if(!spawnNextEncounter()&&spawnWaveBoss())return;
+  if(!waveBossSpawned&&squadIndex<(SQUAD_SPOTS[wave]?.length||0)){
    if(lastEncounterCleared!==squadIndex){
     lastEncounterCleared=squadIndex;
     // The right advance sign replaces the phase-clear text popup.
@@ -9882,7 +9909,7 @@ function updateEnemies(dt,parryVictimScale=1){
  // Combat feats unlock upgrades, rather than fixed kill milestones.
  if(openCombatUpgrade())return;
  if(gameState==='playing'&&!enemies.some(e=>!e.dead)&&
-    (wave===3||squadIndex>=(SQUAD_SPOTS[wave]?.length||0))){
+    (wave===3||(waveBossSpawned&&squadIndex>=(SQUAD_SPOTS[wave]?.length||0)))){
   if(!waveClearNotified)waveClearNotified=true; // stage direction indicator handles prompt
   if(p.x>=WAVE_GATES[wave]){gameState='reward';if(wave<3)rewardMenu();else completeMenu()}
  }
