@@ -4321,22 +4321,23 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 </style>
 
-<style id="z-wave-number-in-panel-v20">
-/* The sole WAVE stage numeral belongs INSIDE the source metal frame,
-   immediately after the painted WAVE word and before the actual meter.
-   Raise its painted silhouette to the source word's baseline and retain
-   the 20%-larger PNG glyph from v19. No floating "WAVE 01" badge.
-   Original HP art, remaining enemy count and WAVE fill are unchanged. */
+<style id="z-wave-meter-source-alignment-v21">
+/* Precise source-artwork registration. The native WAVE frame is 1600x211:
+   meter X corresponds to 442..1235 in source artwork, Y to approx 81..148.
+   This fixes the former inset+undersized red bar (30%,42.6%,45.2%,28.3%).
+   WAVE stage numeral is placed next to native WAVE lettering using the
+   same frame coordinate system. Enemy count/HP/gauge artwork are untouched. */
 #hud{
  --z-wave-digit-w:calc(27.8px * var(--z-combat-scale,1));
  --z-wave-digit-h:calc(38.2px * var(--z-combat-scale,1));
 }
 #hud .progress-hud .wave-chip{
- left:23.8%!important;
- top:13%!important;
- height:50%!important;
+ left:23.4%!important;
+ top:8%!important;
+ height:58%!important;
  display:flex!important;
  align-items:flex-start!important;
+ position:absolute!important;
  overflow:visible!important;
 }
 #hud .progress-hud .wave-chip .z-metal-digits{
@@ -4389,6 +4390,65 @@ body{position:fixed;inset:0;touch-action:manipulation}
   --z-wave-digit-w:calc(13.2px * var(--z-combat-scale,1));
   --z-wave-digit-h:calc(23.8px * var(--z-combat-scale,1));
  }
+}
+/* Source-frame INNER gauge aperture. Keep the custom fill bitmap at the
+   unscaled full meter width even at 10% progress, to avoid warped slashes.
+   Use the frame's own diagonal cells; do not stretch the HP-like mask. */
+#hud #progressHud .progress-plate > .meter-wrap {
+ left:27.65%!important;
+ top:38.4%!important;
+ width:49.8%!important;
+ height:31.5%!important;
+ min-width:0!important;
+ max-width:none!important;
+ margin:0!important;
+ padding:0!important;
+ border:0!important;
+ background:none!important;
+ box-shadow:none!important;
+ overflow:hidden!important;
+}
+#hud #progressHud .meter-wrap > .squad-progress {
+ position:relative!important;
+ width:100%!important;
+ height:100%!important;
+ border:0!important;
+ background:transparent!important;
+ overflow:hidden!important;
+}
+#hud #progressHud .meter-wrap #enemyProgressFill{
+ position:absolute!important;
+ top:0!important;
+ left:0!important;
+ height:100%!important;
+ margin:0!important;
+ border:0!important;
+ padding:0!important;
+ background-image:url('./assets/ui/wave-energy-fill-custom-v1.webp')!important;
+ background-size:var(--z-wave-bitmap-full-width,100%) 100%!important;
+ background-position:left center!important;
+ background-repeat:no-repeat!important;
+ --z-wave-shear:calc(9.2px * var(--z-combat-scale,1))!important;
+ clip-path:polygon(var(--z-wave-shear) 0,100% 0,calc(100% - var(--z-wave-shear)) 100%,0 100%)!important;
+}
+/* Force one in-frame digit to the painted WAVE label's optical baseline;
+   percentage offsets refer to the source bitmap, not another HUD root. */
+#hud #progressHud .progress-plate > .wave-chip{
+ position:absolute!important;
+ left:23.4%!important;
+ top:8%!important;
+ height:58%!important;
+ width:auto!important;
+ display:flex!important;
+ align-items:flex-start!important;
+ overflow:visible!important;
+ transform:none!important;
+}
+#hud #progressHud #zHudWaveDigits{
+ height:100%!important;
+ display:flex!important;
+ align-items:flex-start!important;
+ transform:translateY(calc(-2px * var(--z-combat-scale,1)))!important;
 }
 </style>
 </head>
