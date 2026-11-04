@@ -3856,14 +3856,6 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 #hud .progress-hud .progress-caption{display:none!important}
 #hud .hud-center.progress-hud.is-boss{display:none!important}
-#hud .progress-hud .z-hud-wave-state{
- display:block;position:absolute;top:106%;left:50%;
- transform:translateX(-50%);width:calc(108px * var(--z-combat-scale,1));
- height:calc(43px * var(--z-combat-scale,1));
- background:url('./assets/ui/ref-wave-state-v5.webp') center/contain no-repeat;
- pointer-events:none;opacity:.96;
-}
-#hud .progress-hud .z-hud-wave-state[hidden]{display:none!important}
 /* Matching protagonist HP from the lower-left area of the supplied reference. */
 #hud .hud-left{
  position:absolute!important;left:calc(5px * var(--z-combat-scale,1))!important;
@@ -3976,7 +3968,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 <link rel="preload" as="image" href="./assets/ui/ref-hero-hp-fill-v5.webp">
 <link rel="preload" as="image" href="./assets/ui/ref-boss-hp-frame-v5.webp">
 <link rel="preload" as="image" href="./assets/ui/ref-boss-hp-fill-v5.webp">
-<link rel="preload" as="image" href="./assets/ui/ref-wave-state-v5.webp">
+
 <link rel="preload" as="image" href="./assets/ui/ref-boss-state-v5.webp">
 <link rel="preload" as="image" href="./assets/ui/ref-warning-state-v5.webp">
 
@@ -4329,18 +4321,20 @@ body{position:fixed;inset:0;touch-action:manipulation}
 }
 </style>
 
-<style id="z-wave-label-number-alignment-v19">
-/* WAVE stage index: 20% larger and raised to line up optically with
-   the painted WAVE word. Do not alter enemy count, HP, meter or HUD frames.
-   Retain fixed PNG aspect ratio and all previously approved number art. */
+<style id="z-wave-number-in-panel-v20">
+/* The sole WAVE stage numeral belongs INSIDE the source metal frame,
+   immediately after the painted WAVE word and before the actual meter.
+   Raise its painted silhouette to the source word's baseline and retain
+   the 20%-larger PNG glyph from v19. No floating "WAVE 01" badge.
+   Original HP art, remaining enemy count and WAVE fill are unchanged. */
 #hud{
  --z-wave-digit-w:calc(27.8px * var(--z-combat-scale,1));
  --z-wave-digit-h:calc(38.2px * var(--z-combat-scale,1));
 }
 #hud .progress-hud .wave-chip{
  left:23.8%!important;
- top:22.8%!important;
- height:43%!important;
+ top:13%!important;
+ height:50%!important;
  display:flex!important;
  align-items:flex-start!important;
  overflow:visible!important;
@@ -4425,7 +4419,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
           <span class="kill-count z-hud-sr" id="enemyCount" aria-live="polite">00</span>
         </div>
         <span class="progress-caption" id="enemyProgressLabel" hidden>처치 진행도</span>
-        <span id="zHudWaveState" class="z-hud-wave-state" hidden aria-hidden="true"></span>
+        
       </div>
       <div class="hud-right"><div class="currency" title="전투로 획득하는 크레딧">₩ <b id="credits">0000</b> <small style="color:#ffe68f">◆ <b id="shardCount">0</b></small></div><div class="combo" id="combo">0 <small>HITS</small></div><canvas id="combatWordHud" width="320" height="200" aria-hidden="true"></canvas><button class="small-button" id="pauseButton" aria-label="일시정지">Ⅱ</button></div>
     </div>
@@ -9974,12 +9968,6 @@ if(zWaveBitmapMeter){
  }
  zSyncWaveBitmapWidth();
 }
-let zHudWaveStatePrevious=-1,zHudWaveStateUntil=0;
-function zHudUpdateWaveBadge(){
- const badge=$('zHudWaveState');if(!badge)return;
- if(wave!==zHudWaveStatePrevious){zHudWaveStatePrevious=wave;zHudWaveStateUntil=time+1.6;}
- badge.hidden=wave!==1||time>zHudWaveStateUntil; // The reference badge says 01, never mislabel WAVE 02.
-}
 function updateHud(){
  const active=activeModStacks();
  const badges=active.map(({id,n,meta})=>'<span class="mod-chip compact '+id+'" title="'+meta.title+' : '+(meta.desc||meta.short)+'" aria-label="'+meta.short+' '+n+'중첩"><span class="icon">'+modIconMarkup(id)+'</span><b>x'+n+'</b></span>').join('')+
@@ -10009,7 +9997,6 @@ function updateHud(){
  $('enemyCount').textContent=String(remaining).padStart(2,'0');
  zMetalHudNumber('zHudWaveDigits',String(wave));
  zMetalHudNumber('zHudEnemyDigits',String(remaining).padStart(2,'0'));
- zHudUpdateWaveBadge();
  $('enemyStatus').textContent=`${String(Math.min(Math.max(squadIndex,1),squads)).padStart(2,'0')} / ${String(squads).padStart(2,'0')}`;
  $('enemyProgressLabel').textContent=completed?'웨이브 완료':waiting?'다음 무리 대기':'처치 진행도';
  const percent=progress.total?Math.round(progress.defeated/progress.total*100):0;
