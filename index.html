@@ -4308,6 +4308,26 @@ body{position:fixed;inset:0;touch-action:manipulation}
     calc(100% - var(--z-wave-shear)) 100%,0 100%)!important;
 }
 </style>
+
+<style id="z-hud-enemy-digit-optical-correction-v18">
+/* All existing counters use same fixed layout cells, but the approved
+   ref-metal-digit-1-v8.png has a ~30% taller painted silhouette than 6/0/2 etc.
+   Scale ONLY the 1 artwork (not its cell) and optical-baseline-align it.
+   This preserves the 130%-sized right counter, tight kerning, skull position
+   and responsive breakpoints; 61, 11, 10 and all other values stay stable.
+   Percent-based sizing and positioning follow each responsive cell width. */
+#hud .progress-hud .enemy-chip .z-metal-digit[data-digit="1"],
+#hud .progress-hud .enemy-chip.is-wide .z-metal-digit[data-digit="1"]{
+  background-size:78% 78%!important;
+  background-position:25% 92%!important;
+}
+/* Make the two glyph slots share their true cell/baseline positions rather
+   than inheriting any font or text alignment from a counter parent. */
+#hud .progress-hud .enemy-chip .z-metal-digits{
+  align-items:center!important;
+  line-height:0!important;
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -9781,6 +9801,7 @@ function zMetalHudNumber(id,value){
  root.replaceChildren();
  for(const digit of text){
   const cell=document.createElement('span');cell.className='z-metal-digit';
+  cell.dataset.digit=digit; // Optical normalization uses the actual original painted glyph.
   cell.style.setProperty('background-image',`url("./assets/ui/ref-metal-digit-${digit}-v8.png")`,'important');
   root.appendChild(cell);
  }
