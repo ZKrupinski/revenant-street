@@ -4328,6 +4328,75 @@ body{position:fixed;inset:0;touch-action:manipulation}
   line-height:0!important;
 }
 </style>
+
+<style id="z-wave-label-number-alignment-v19">
+/* WAVE stage index: 20% larger and raised to line up optically with
+   the painted WAVE word. Do not alter enemy count, HP, meter or HUD frames.
+   Retain fixed PNG aspect ratio and all previously approved number art. */
+#hud{
+ --z-wave-digit-w:calc(27.8px * var(--z-combat-scale,1));
+ --z-wave-digit-h:calc(38.2px * var(--z-combat-scale,1));
+}
+#hud .progress-hud .wave-chip{
+ left:23.8%!important;
+ top:22.8%!important;
+ height:43%!important;
+ display:flex!important;
+ align-items:flex-start!important;
+ overflow:visible!important;
+}
+#hud .progress-hud .wave-chip .z-metal-digits{
+ display:flex!important;
+ align-items:flex-start!important;
+ justify-content:flex-start!important;
+ gap:0!important;
+ height:100%!important;
+ width:max-content!important;
+ margin:0!important;
+ padding:0!important;
+ line-height:0!important;
+ font-size:0!important;
+ background:none!important;
+}
+#hud .progress-hud .wave-chip .z-metal-digit{
+ flex:0 0 var(--z-wave-digit-w)!important;
+ width:var(--z-wave-digit-w)!important;
+ height:var(--z-wave-digit-h)!important;
+ margin:0!important;
+ padding:0!important;
+ border:0!important;
+ box-shadow:none!important;
+ background-size:100% 100%!important;
+ background-position:center top!important;
+ background-repeat:no-repeat!important;
+ image-rendering:auto!important;
+ filter:none!important;
+}
+@container (max-width:610px){
+ #hud{
+  --z-wave-digit-w:calc(22.4px * var(--z-combat-scale,1));
+  --z-wave-digit-h:calc(33px * var(--z-combat-scale,1));
+ }
+}
+@container (max-width:490px){
+ #hud{
+  --z-wave-digit-w:calc(18.4px * var(--z-combat-scale,1));
+  --z-wave-digit-h:calc(28.6px * var(--z-combat-scale,1));
+ }
+}
+@container (max-width:390px){
+ #hud{
+  --z-wave-digit-w:calc(15px * var(--z-combat-scale,1));
+  --z-wave-digit-h:calc(26px * var(--z-combat-scale,1));
+ }
+}
+@container (max-width:340px){
+ #hud{
+  --z-wave-digit-w:calc(13.2px * var(--z-combat-scale,1));
+  --z-wave-digit-h:calc(23.8px * var(--z-combat-scale,1));
+ }
+}
+</style>
 </head>
 <body>
 <div id="app">
