@@ -4159,19 +4159,20 @@ body{position:fixed;inset:0;touch-action:manipulation}
 </style>
 
 
-<style id="z-hp-wave-integrated-hud-v10">
-/* Retain approved original raster metal HUD at 80%.
-   Seat the hero bar into the WAVE panel: the WAVE origin is not shifted.
-   Never stretch/recrop the bitmap border or generate replacement artwork. */
+<style id="z-hp-wave-integrated-hud-v11">
+/* Preserve approved bitmaps, the 80% scaling, +3-degree gauge cuts, and
+   integrated frame join from v10. Only refine the numeric HUD assembly. */
 #hud {
   --z-linked-hud-scale:.8;
   --z-linked-hp-source-width:calc(258px * var(--z-combat-scale,1));
   --z-linked-hp-left:calc(5px * var(--z-combat-scale,1));
   --z-hp-join-nudge:calc(10px * var(--z-combat-scale,1));
   --z-linked-hud-overlap:calc(18px * var(--z-combat-scale,1));
-  --z-hud-digit-w:calc(19.3px * var(--z-combat-scale,1));
-  --z-hud-digit-h:calc(26.5px * var(--z-combat-scale,1));
-  --z-hud-digit-gap:calc(.3px * var(--z-combat-scale,1));
+  --z-wave-digit-w:calc(19.3px * var(--z-combat-scale,1));
+  --z-wave-digit-h:calc(26.5px * var(--z-combat-scale,1));
+  --z-enemy-digit-w:calc(22.8px * var(--z-combat-scale,1));
+  --z-enemy-digit-h:calc(31px * var(--z-combat-scale,1));
+  --z-enemy-digit-overlap:calc(4.2px * var(--z-combat-scale,1));
 }
 #hud .hud-left .bar.hp {
   left:var(--z-hp-join-nudge)!important;
@@ -4187,75 +4188,97 @@ body{position:fixed;inset:0;touch-action:manipulation}
   transform-origin:left top!important;
   z-index:1!important;
 }
-/* Increase the filled-edge slant by approximately 3 degrees.
-   Hero baseline: atan(8.8/17.5) => atan(10.0/17.5).
-   WAVE baseline: atan(8.0/18.7) => atan(9.2/18.7).
-   Leave the source frame artwork and fill mask geometry intact. */
+/* +3 degree dynamic leading edges, without modifying the original bitmap rims. */
 #hud .bar.hp .bar-fill{
   --z-hp-shear:calc(10px * var(--z-combat-scale,1))!important;
 }
 #hud .progress-hud .squad-progress>div{
   --z-wave-shear:calc(9.2px * var(--z-combat-scale,1))!important;
 }
-/* The two transparent-metal number pairs use one fixed bitmap cell size,
-   a shared visual centerline (49%) and consistent spacing. 
-   No length-dependent shrinking or dark number backplates. */
+/* WAVE is now an unpadded number (1, 2, 3...), seated in the same
+   right-aligned visual position previously occupied by the trailing digit. */
 #hud .progress-hud .wave-chip {
-  left:21.5%!important;top:29.5%!important;height:39%!important;
-  align-items:center!important;overflow:visible!important;
+  left:23.6%!important;top:29.5%!important;height:39%!important;
+  display:flex!important;align-items:center!important;overflow:visible!important;
 }
+/* Remaining enemy count: more prominent, closer digits and 1.5% further left. */
 #hud .progress-hud .enemy-chip {
-  right:3.4%!important;top:27.5%!important;height:43%!important;
-  align-items:center!important;overflow:visible!important;
+  right:4.9%!important;top:26.8%!important;height:47%!important;
+  display:flex!important;align-items:center!important;justify-content:flex-end!important;
+  overflow:visible!important;
 }
 #hud .progress-hud .wave-chip .z-metal-digits,
 #hud .progress-hud .enemy-chip .z-metal-digits {
-  display:flex!important;align-items:center!important;
-  justify-content:flex-start!important;
-  gap:var(--z-hud-digit-gap)!important;
+  display:flex!important;align-items:center!important;justify-content:flex-start!important;
+  gap:0!important;
   height:100%!important;width:max-content!important;
   margin:0!important;padding:0!important;
-  line-height:0!important;font-size:0!important;
-  background:none!important;
+  line-height:0!important;font-size:0!important;background:none!important;
+}
+#hud .progress-hud .wave-chip .z-metal-digit {
+  flex:0 0 var(--z-wave-digit-w)!important;
+  width:var(--z-wave-digit-w)!important;
+  height:var(--z-wave-digit-h)!important;
+}
+#hud .progress-hud .enemy-chip .z-metal-digit,
+#hud .progress-hud .enemy-chip.is-wide .z-metal-digit {
+  flex:0 0 var(--z-enemy-digit-w)!important;
+  width:var(--z-enemy-digit-w)!important;
+  height:var(--z-enemy-digit-h)!important;
+}
+/* Each digit PNG has transparent padding around its slanted silhouette.
+   Negative margin trims the perceived gap while keeping glyphs uncut. */
+#hud .progress-hud .enemy-chip .z-metal-digit + .z-metal-digit,
+#hud .progress-hud .enemy-chip.is-wide .z-metal-digit + .z-metal-digit {
+  margin-left:calc(-1 * var(--z-enemy-digit-overlap))!important;
 }
 #hud .progress-hud .wave-chip .z-metal-digit,
 #hud .progress-hud .enemy-chip .z-metal-digit,
 #hud .progress-hud .enemy-chip.is-wide .z-metal-digit {
-  flex:0 0 var(--z-hud-digit-w)!important;
-  width:var(--z-hud-digit-w)!important;
-  height:var(--z-hud-digit-h)!important;
-  margin:0!important;padding:0!important;
+  margin-top:0!important;margin-right:0!important;margin-bottom:0!important;
+  padding:0!important;border:0!important;box-shadow:none!important;
   background-size:100% 100%!important;
-  background-position:center!important;
+  background-position:center center!important;
   background-repeat:no-repeat!important;
-  border:0!important;box-shadow:none!important;filter:none!important;
+  image-rendering:auto!important;filter:none!important;
 }
-/* Match the existing responsive HP frame width, then keep digits
-   inside the original empty artwork rather than crossing the meter. */
+/* Keep all count lengths within the art's number aperture on mobile. */
 @container (max-width:610px) {
   #hud {
     --z-linked-hp-source-width:calc(220px * var(--z-combat-scale,1));
-    --z-hud-digit-w:calc(15.6px * var(--z-combat-scale,1));
-    --z-hud-digit-h:calc(23px * var(--z-combat-scale,1));
+    --z-wave-digit-w:calc(15.6px * var(--z-combat-scale,1));
+    --z-wave-digit-h:calc(23px * var(--z-combat-scale,1));
+    --z-enemy-digit-w:calc(18.6px * var(--z-combat-scale,1));
+    --z-enemy-digit-h:calc(26px * var(--z-combat-scale,1));
+    --z-enemy-digit-overlap:calc(3.6px * var(--z-combat-scale,1));
   }
 }
 @container (max-width:490px) {
   #hud {
     --z-linked-hp-source-width:calc(145px * var(--z-combat-scale,1));
-    --z-hud-digit-w:calc(12.8px * var(--z-combat-scale,1));
-    --z-hud-digit-h:calc(20px * var(--z-combat-scale,1));
+    --z-wave-digit-w:calc(12.8px * var(--z-combat-scale,1));
+    --z-wave-digit-h:calc(20px * var(--z-combat-scale,1));
+    --z-enemy-digit-w:calc(15px * var(--z-combat-scale,1));
+    --z-enemy-digit-h:calc(22px * var(--z-combat-scale,1));
+    --z-enemy-digit-overlap:calc(3px * var(--z-combat-scale,1));
   }
 }
 @container (max-width:390px) {
   #hud {
-    --z-hud-digit-w:calc(10.4px * var(--z-combat-scale,1));
-    --z-hud-digit-h:calc(18.5px * var(--z-combat-scale,1));
+    --z-wave-digit-w:calc(10.4px * var(--z-combat-scale,1));
+    --z-wave-digit-h:calc(18.5px * var(--z-combat-scale,1));
+    --z-enemy-digit-w:calc(13.2px * var(--z-combat-scale,1));
+    --z-enemy-digit-h:calc(20px * var(--z-combat-scale,1));
+    --z-enemy-digit-overlap:calc(2.6px * var(--z-combat-scale,1));
   }
 }
 @container (max-width:340px) {
   #hud {
-    --z-hud-digit-w:calc(9.1px * var(--z-combat-scale,1));
-    --z-hud-digit-h:calc(17px * var(--z-combat-scale,1));
+    --z-wave-digit-w:calc(9.1px * var(--z-combat-scale,1));
+    --z-wave-digit-h:calc(17px * var(--z-combat-scale,1));
+    --z-enemy-digit-w:calc(11.3px * var(--z-combat-scale,1));
+    --z-enemy-digit-h:calc(18px * var(--z-combat-scale,1));
+    --z-enemy-digit-overlap:calc(2.3px * var(--z-combat-scale,1));
   }
 }
 </style>
@@ -9720,7 +9743,7 @@ function updateHud(){
  $('progressHud').classList.toggle('is-boss',finalWave);
  $('waveLabel').textContent=`WAVE ${String(wave).padStart(2,'0')}`;
  $('enemyCount').textContent=String(remaining).padStart(2,'0');
- zMetalHudNumber('zHudWaveDigits',String(wave).padStart(2,'0'));
+ zMetalHudNumber('zHudWaveDigits',String(wave));
  zMetalHudNumber('zHudEnemyDigits',String(remaining).padStart(2,'0'));
  zHudUpdateWaveBadge();
  $('enemyStatus').textContent=`${String(Math.min(Math.max(squadIndex,1),squads)).padStart(2,'0')} / ${String(squads).padStart(2,'0')}`;
