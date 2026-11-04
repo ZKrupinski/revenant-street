@@ -4159,7 +4159,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 </style>
 
 
-<style id="z-hp-wave-integrated-hud-v13">
+<style id="z-hp-wave-integrated-hud-v14">
 /* Preserve approved bitmap frames and all v11 layout and gauge adjustments.
    Scale both numeral groups to 120%, including each responsive breakpoint,
    while proportionally scaling negative kerning to avoid loose spacing. */
@@ -4232,6 +4232,12 @@ body{position:fixed;inset:0;touch-action:manipulation}
 #hud .progress-hud .enemy-chip .z-metal-digit + .z-metal-digit,
 #hud .progress-hud .enemy-chip.is-wide .z-metal-digit + .z-metal-digit {
   margin-left:calc(-1 * var(--z-enemy-digit-overlap))!important;
+}
+/* Nudge ONLY the tens-place glyph toward the ones-place glyph.
+   nth-last-child(2) also handles 3-digit counts without moving hundreds.
+   Use visual translation so the group width and right anchor stay fixed. */
+#hud .progress-hud .enemy-chip .z-metal-digit:nth-last-child(2) {
+  transform:translateX(calc(3px * var(--z-combat-scale,1)))!important;
 }
 #hud .progress-hud .wave-chip .z-metal-digit,
 #hud .progress-hud .enemy-chip .z-metal-digit,
