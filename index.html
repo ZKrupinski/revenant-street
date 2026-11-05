@@ -4451,6 +4451,79 @@ body{position:fixed;inset:0;touch-action:manipulation}
  transform:none!important;
 }
 </style>
+
+<style id="z-boss-hud-recut-v18">
+/* 2026-11-05: Boss bar visual regression correction.
+   Preserve the approved pixel-art frame. Scale independently of the large WAVE
+   panel, and align both the empty and filled parts to the source's TRUE aperture.
+   Source ref-boss-hp-fill-v5 has unwanted wordmark/chrome across its upper half;
+   sampling the bottom strip avoids displaying those neighboring sprite fragments. */
+#stageWrap #bossHud.boss-hud {
+  position:absolute!important;
+  z-index:5!important;
+  left:50%!important;
+  right:auto!important;
+  top:calc(66px * var(--z-combat-scale,1))!important;
+  transform:translateX(-50%)!important;
+  width:min(calc(356px * var(--z-combat-scale,1)),42%)!important;
+  max-width:none!important;
+  height:auto!important;
+  aspect-ratio:978/125!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  background-image:url('./assets/ui/ref-boss-hp-frame-v5.webp')!important;
+  background-position:center!important;
+  background-size:100% 100%!important;
+  background-repeat:no-repeat!important;
+  overflow:visible!important;
+  pointer-events:none!important;
+}
+#stageWrap #bossHud.boss-hud[hidden]{display:none!important}
+#stageWrap #bossHud.boss-hud .boss-track {
+  position:absolute!important;
+  left:16%!important;
+  top:56.7%!important;
+  width:77.5%!important;
+  height:26.5%!important;
+  margin:0!important;padding:0!important;
+  border:0!important;border-radius:0!important;
+  box-shadow:none!important;
+  background:#0e0d14!important;
+  overflow:hidden!important;
+  clip-path:polygon(1.2% 0,100% 0,98.8% 100%,0 100%)!important;
+}
+#stageWrap #bossHud.boss-hud #bossFill {
+  position:absolute!important;
+  display:block!important;
+  left:0!important;top:0!important;
+  height:100%!important;
+  margin:0!important;padding:0!important;
+  border:0!important;border-radius:0!important;
+  box-shadow:none!important;
+  background-image:url('./assets/ui/ref-boss-hp-fill-v5.webp')!important;
+  /* Keep bitmap slice spacing fixed when the HP percentage changes. */
+  background-size:calc(276px * var(--z-combat-scale,1)) 220%!important;
+  background-position:left bottom!important;
+  background-repeat:no-repeat!important;
+  clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%)!important;
+  transition:width .14s ease-out!important;
+}
+@container (max-width:800px){
+  #stageWrap #bossHud.boss-hud {
+    width:min(calc(356px * var(--z-combat-scale,1)),53%)!important;
+    top:calc(70px * var(--z-combat-scale,1))!important;
+  }
+}
+@container (max-width:610px){
+  #stageWrap #bossHud.boss-hud {
+    width:min(calc(356px * var(--z-combat-scale,1)),68%)!important;
+    top:calc(78px * var(--z-combat-scale,1))!important;
+  }
+}
+</style>
 </head>
 <body>
 <div id="app">
