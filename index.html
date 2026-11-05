@@ -5602,46 +5602,55 @@ function drawIntruderGroundShadow(x,y,z=0,opacity=1){
  ctx.drawImage(Z_INTRUDER_SHADOW_BITMAP,Math.round(x-width*.5),Math.round(y-height*.46),width,height);
  ctx.restore();
 }
-const INTRUDER_ENTRY_FRAMES=4; // Cinematic entry uses ONLY the original top-row four poses.
-// Frame 0 and frame 3 have boots that run off their source cells. Show those
-// large foreground poses with the cropped feet BELOW the viewport edge.
-// Then use the complete-boot frame 1 to shrink/fly into the road, ending in
-// the crouching landing pose 2. Never expose the chopped silhouettes mid-air.
-const INTRUDER_ENTRY_ORDER=[0,3,1,2];
-const INTRUDER_ENTRY_CROPPED_BOOTS=new Set([0,3]); // Source top-row frames with cut-off feet.
-const INTRUDER_ENTRY_REVEAL_AT=.5; // Keep BOTH cropped-boot poses below the actual screen edge.
+/* Z_INTRUDER_ENTRY_FRAME_ORDER_V3
+   Source atlas has cropped feet in top-row poses 0 and 3, and pose 2 has
+   a side-edge-clipped boot. Show those silhouettes ONLY while cut limbs are
+   beyond the bottom edge. The actual in-screen leap uses complete-boot pose 1,
+   followed by the FULL-FOOT bottom-row poses 4 and 5 for landing.
+   The dedicated combat idle atlas resumes after the entry timer completes. */
+const INTRUDER_ENTRY_HIDDEN_ORDER=[0,3];
+const INTRUDER_ENTRY_VISIBLE_ORDER=[1,4,5];
+const INTRUDER_ENTRY_REVEAL_AT=.30;
+const INTRUDER_ENTRY_LAND_AT=.84;
 function intruderEntering(e){return e.type==='intruder'&&!e.dead&&(e.entryAge||0)<(e.entryDuration||0)}
+function intruderEntryPhase(e){
+ return clamp((e.entryAge||0)/Math.max(.1,e.entryDuration||1.12),0,.99999);
+}
 function intruderEntryFrame(e){
- const duration=Math.max(.1,e.entryDuration||1.12);
- const stage=Math.min(3,Math.floor(clamp((e.entryAge||0)/duration,0,.9999)*INTRUDER_ENTRY_FRAMES));
- return INTRUDER_ENTRY_ORDER[stage];
+ const u=intruderEntryPhase(e);
+ // Both boot-truncated sprites stay attached to the bottom edge.
+ if(u<INTRUDER_ENTRY_REVEAL_AT)
+  return INTRUDER_ENTRY_HIDDEN_ORDER[u<INTRUDER_ENTRY_REVEAL_AT*.5?0:1];
+ // Fly inward with the complete top-row boot, never the clipped final pose 2.
+ if(u<.82)return INTRUDER_ENTRY_VISIBLE_ORDER[0];
+ // Finished at foot level: face around and settle in clean, complete boots.
+ return u<.92?INTRUDER_ENTRY_VISIBLE_ORDER[1]:INTRUDER_ENTRY_VISIBLE_ORDER[2];
 }
 function drawIntruderEntry(e,x,y){
  if(!intruderEntryImage.complete||!intruderEntryImage.naturalWidth)return;
- const u=clamp((e.entryAge||0)/Math.max(.1,e.entryDuration||1.12),0,1);
- const entryFrame=intruderEntryFrame(e);
- const crop=getIntruderFrameCrop(intruderEntryImage,entryFrame);
+ const u=intruderEntryPhase(e);
+ const frame=intruderEntryFrame(e);
+ const crop=getIntruderFrameCrop(intruderEntryImage,frame);
  if(!crop)return;
- // Z_INTRUDER_ENTRY_TOPMOST_20261105: the cut-boot frames (0 & 3) are never
- // allowed to rise into view. Only complete-boot frame 1 may approach the lane.
- const bootsTruncated=INTRUDER_ENTRY_CROPPED_BOOTS.has(entryFrame);
- const approach=clamp((u-INTRUDER_ENTRY_REVEAL_AT)/(1-INTRUDER_ENTRY_REVEAL_AT),0,1);
- const settle=bootsTruncated?0:approach*approach*(3-2*approach);
+ const hidden=u<INTRUDER_ENTRY_REVEAL_AT;
+ const t=clamp((u-INTRUDER_ENTRY_REVEAL_AT)/(INTRUDER_ENTRY_LAND_AT-INTRUDER_ENTRY_REVEAL_AT),0,1);
+ const settle=hidden?0:t*t*(3-2*t);
+ // Continuous scale regardless of sprite changes. Bottom-row standing poses
+ // and the next combat idle arrive at approximately the same physical height.
  const scale=1.18-.48*settle,drift=(1-u)*(1-u),side=e.entrySide||1;
- if(u>.76)drawIntruderGroundShadow(x,y,0,.60*settle);
+ if(!hidden&&u>.72)drawIntruderGroundShadow(x,y,0,.60*settle);
  ctx.save();ctx.translate(x+side*78*drift,y);
  if(side<0)ctx.scale(-1,1);
- // The camera zoom pivots at 51% of stage height. Transform the screen's
- // bottom plus a shake-aware safety overscan into world Y. This keeps
- // the *cut pixels* outside the actual canvas clip, even during impact shake
- // and combo zoom; never rely on the canvas' world-space Y alone.
+ // Screen-space safety even with camera zoom, camera shake and clipped feet.
  const zoom=clamp(cameraZoom||1,1,1.36),centerY=H*.51;
- const entryBottomOverscan=48+Math.ceil(Math.max(0,screenShake||0)*.7);
- const safeBottomWorld=centerY+(H+entryBottomOverscan-centerY)/zoom;
+ const overscan=56+Math.ceil(Math.max(0,screenShake||0)*.75);
+ const safeBottomWorld=centerY+(H+overscan-centerY)/zoom;
  const pinnedTop=safeBottomWorld-crop.sh*scale;
- // Original cell-ground reference preserved for the final crouched landing.
+ // Anchor on the original *cell* foot baseline, never on the per-pose bbox;
+ // this stops a smaller landing frame from jumping when its crop changes.
  const landingTop=y+(-crop.cellH+crop.top)*scale+8;
- const drawnTop=bootsTruncated?pinnedTop:pinnedTop+(landingTop-pinnedTop)*settle;
+ const drawnTop=hidden?pinnedTop:pinnedTop+(landingTop-pinnedTop)*settle;
+ // Source frame 2 is deliberately never sampled: its boot meets the tile edge.
  ctx.drawImage(intruderEntryImage,crop.sx,crop.sy,crop.sw,crop.sh,
   (-crop.cellW/2+crop.left)*scale,drawnTop-y,
   crop.sw*scale,crop.sh*scale);
