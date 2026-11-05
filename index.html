@@ -4977,6 +4977,28 @@ function isolateIntruderFrames(image,frames,mode){
  source.width=0;source.height=0;
  return {corrected,discarded};
 }
+// Z_REDHOOD_ENTRY_ISOLATED_CROP_V4: bake each entry atlas cell into its own alpha-safe bitmap.
+// Rendering directly from a dense 4x2 sheet can sample neighboring pixels
+// on a scaled sprite and show another pose's boot at the cell edge.
+function bakeIntruderEntryFrameBitmaps(image,cuts){
+ const pad=10;
+ for(let i=0;i<cuts.length;i++){
+  const crop=cuts[i];
+  if(crop.entryIsolated)continue;
+  const canvas=document.createElement('canvas');
+  canvas.width=crop.sw+pad*2;canvas.height=crop.sh+pad*2;
+  const g=canvas.getContext('2d');
+  g.clearRect(0,0,canvas.width,canvas.height);
+  g.drawImage(image,crop.sx,crop.sy,crop.sw,crop.sh,
+   pad,pad,crop.sw,crop.sh);
+  // Save raw border touching diagnostics before the source coords change.
+  crop.sourceBottomCropped=crop.top+crop.sh>=crop.cellH-3;
+  crop.sourceSideCropped=crop.left<=2||crop.left+crop.sw>=crop.cellW-2;
+  crop.left-=pad;crop.top-=pad;crop.sx=0;crop.sy=0;
+  crop.sw=canvas.width;crop.sh=canvas.height;
+  crop.bitmap=canvas;crop.entryIsolated=true;
+ }
+}
 function prepareIntruderSpriteCrops(){
  const diagnostic={atlases:0,frames:0,removedPixels:0,byAtlas:{},suspicious:[]};
  for(const [name,image] of [['난입',intruderEntryImage],...INTRUDER_MOTION_KEYS.map(k=>[k,intruderMotionImages[k]])]){
@@ -4984,7 +5006,16 @@ function prepareIntruderSpriteCrops(){
   if(!cuts||cuts.length!==8||cuts.some(c=>c.empty||c.sw<1||c.sh<1))
    throw Error('빨간 후드 스프라이트 '+name+'의 커팅 영역을 확인해주세요.');
   diagnostic.atlases++;
-  if(name==='난입')continue;
+  if(name==='난입'){
+   bakeIntruderEntryFrameBitmaps(image,cuts);
+   diagnostic.frames+=cuts.length;
+   diagnostic.byAtlas[name]=cuts.map((crop,i)=>({
+    frame:i+1, isolated:true,
+    sourceBottomCropped:!!crop.sourceBottomCropped,
+    sourceSideCropped:!!crop.sourceSideCropped
+   }));
+   continue;
+  }
   if(name==='hit'||name==='death'||name==='attack'||name==='special'){
    // Hit, death, full-fist attack and Crimson Dive have repaired, separated
    // original bitmap frames: never trim away restored gloves or cape.  Death crossed the row seam and extended attack fists originally
@@ -5643,7 +5674,13 @@ function drawIntruderEntry(e,x,y){
  if(side<0)ctx.scale(-1,1);
  // Screen-space safety even with camera zoom, camera shake and clipped feet.
  const zoom=clamp(cameraZoom||1,1,1.36),centerY=H*.51;
- const overscan=56+Math.ceil(Math.max(0,screenShake||0)*.75);
+ // Original poses 0 and 3 end mid-boot. Hide the *entire lower leg*,
+ // not just the last 56 screen pixels. The complete-boot pose 1 takes over
+ // while still below the viewport and rises smoothly, with no hard cut.
+ const revealProgress=clamp((u-INTRUDER_ENTRY_REVEAL_AT)/.26,0,1);
+ const easeReveal=revealProgress*revealProgress*(3-2*revealProgress);
+ const overscan=178-124*(hidden?0:easeReveal)
+   +Math.ceil(Math.max(0,screenShake||0)*.85);
  const safeBottomWorld=centerY+(H+overscan-centerY)/zoom;
  const pinnedTop=safeBottomWorld-crop.sh*scale;
  // Anchor on the original *cell* foot baseline, never on the per-pose bbox;
@@ -5651,7 +5688,9 @@ function drawIntruderEntry(e,x,y){
  const landingTop=y+(-crop.cellH+crop.top)*scale+8;
  const drawnTop=hidden?pinnedTop:pinnedTop+(landingTop-pinnedTop)*settle;
  // Source frame 2 is deliberately never sampled: its boot meets the tile edge.
- ctx.drawImage(intruderEntryImage,crop.sx,crop.sy,crop.sw,crop.sh,
+ // Draw ONLY the isolated RGBA cell; no bilinear leak from adjacent poses.
+ const source=crop.bitmap||intruderEntryImage;
+ ctx.drawImage(source,crop.sx,crop.sy,crop.sw,crop.sh,
   (-crop.cellW/2+crop.left)*scale,drawnTop-y,
   crop.sw*scale,crop.sh*scale);
  ctx.restore();
