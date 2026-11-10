@@ -1,0 +1,27 @@
+name: Project Z keyboard run and menu input QA
+on:
+  pull_request:
+    paths:
+      - index.html
+      - tests/keyboard-run-menu-input.cjs
+      - .github/workflows/keyboard-run-menu-input.yml
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - tests/keyboard-run-menu-input.cjs
+      - .github/workflows/keyboard-run-menu-input.yml
+  workflow_dispatch:
+jobs:
+  keyboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Keyboard movement and menu input regression
+        run: node tests/keyboard-run-menu-input.cjs
