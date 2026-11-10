@@ -33,6 +33,31 @@ jobs:
             jq -c 'if type=="array" then map({id,sha,ref,environment,created_at,updated_at}) else {id,html_url,status,state,build_type,source,commit,page_url,created_at,updated_at,errors,error,message} end' /tmp/pages-response.json 2>/dev/null || head -c 450 /tmp/pages-response.json
             echo
           done
+      - name: Inspect exact Pages deployment status histories
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          for id in 7671517493 7671457973 7671447949 7671239046 7570647490; do
+            echo "=== deployment ${id} ==="
+            status=$(curl -sS -o /tmp/status.json -w '%{http_code}' \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github+json' \
+              "${api}/deployments/${id}/statuses?per_page=10")
+            echo "http_status=${status}"
+            jq -c 'if type=="array" then map({state,description,environment_url,log_url,created_at,updated_at}) else {message,status} end' /tmp/status.json 2>/dev/null || head -c 300 /tmp/status.json
+            echo
+          done
+      - name: Compare published HTML and FX with current main
+        run: |
+          set -uo pipefail
+          for p in index.html assets/z-fx-webgl2.js; do
+            echo "=== ${p} ==="
+            curl -fsSL --max-time 20 "https://zkrupinski.github.io/revenant-street/${p}" -o /tmp/current || true
+            curl -fsSL --max-time 20 "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/${p}" -o /tmp/gitmain || true
+            sha256sum /tmp/current /tmp/gitmain || true
+          done
       - name: Test public page and FX module reachability
         run: |
           for address in "https://zkrupinski.github.io/revenant-street/" "https://zkrupinski.github.io/revenant-street/assets/z-fx-webgl2.js"; do
