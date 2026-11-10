@@ -7249,7 +7249,10 @@ function applyImpactFeedback(target,heavy=false,kind='punch',withAudio=true){
  target.bodyShakeDuration=heavy?.24:.18;
  target.bodyShakeTime=target.bodyShakeDuration;
  target.bodyShakePower=heavy?14:9;
- screenShake=Math.max(screenShake,heavy?24:16);
+ // Tone down ONLY the camera shake on ordinary player-to-enemy punch contacts.
+ // Special strikes, counter/parry, incoming hits, haptics and body recoil stay unchanged.
+ const basicHitShake=target!==p&&!heavy&&kind==='punch';
+ screenShake=Math.max(screenShake,basicHitShake?13.5:heavy?24:16);
  screenTint=Math.max(screenTint,heavy?.22:.105);
  hitStop=Math.max(hitStop,heavy?.105:.072);
  if(withAudio)playImpactSound(target===p?kind:'punch',heavy?1.15:1);
