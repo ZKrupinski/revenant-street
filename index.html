@@ -7270,6 +7270,11 @@ function setStatus(s){$('statusLabel').textContent=s}function flash(text,duratio
 const menuPad={titleNavPending:false,index:0,nav:0,confirm:false,back:false,armed:false,readyAt:0,neutralAt:0};
 const heldKeyboard=new Set();
 const menuBlockedKeys=new Set();
+// Remember one early confirm until the menu entrance lock releases.
+let queuedMenuConfirmTimer=null;
+function cancelQueuedMenuConfirm(){
+ if(queuedMenuConfirmTimer!==null){clearTimeout(queuedMenuConfirmTimer);queuedMenuConfirmTimer=null}
+}
 function menuReady(){return !rewardSelection&&Date.now()>=menuPad.readyAt}
 function menuButtons(){
  const menu=$('menu');
@@ -7337,7 +7342,24 @@ function hubMenuNavigate(dx,dy){
  // HUB fits inside the 16:9 game frame; never auto-scroll the entire menu.
  return target;
 }
-function menuConfirm(){if(!menuReady()){menuPad.readyAt=Math.max(menuPad.readyAt,Date.now()+250);return false;}const selected=selectMenuItem(0);if(selected){selected.click();return true}return false}
+function menuConfirm(){
+ if(rewardSelection)return false;
+ if(!menuReady()){
+  if(queuedMenuConfirmTimer!==null)return true;
+  const readyAt=menuPad.readyAt,state=gameState;
+  queuedMenuConfirmTimer=setTimeout(()=>{
+   queuedMenuConfirmTimer=null;
+   // showMenu/hideMenu cancel old requests; keep a state/ready guard too.
+   if(gameState===state&&menuPad.readyAt===readyAt&&$('overlay').classList.contains('visible'))
+    menuConfirm();
+  },Math.max(0,readyAt-Date.now())+16);
+  return true;
+ }
+ cancelQueuedMenuConfirm();
+ const selected=selectMenuItem(0);
+ if(selected){selected.click();return true}
+ return false;
+}
 function menuBack(){if(rewardSelection)return false;if(closeHubShardNotice())return true;const items=menuButtons();const back=items.find(b=>['resume','title','pauseMenu','hub'].includes(b.dataset.action));if(back){back.click();return true}return false}
 // Opening HUD motion uses individual translate so button press/joystick transforms stay intact.
 const combatHudEntranceAnimations=new Set();
@@ -7405,6 +7427,7 @@ function revealCombatHud(){
  }
 }
 function showMenu(html){
+ cancelQueuedMenuConfirm();
  cancelCombatHudEntrance();
  $('overlay').classList.remove('reward-confirming');
  $('menu').classList.remove('reward-entrance');
@@ -7430,7 +7453,7 @@ function showMenu(html){
  // A real keyboard/gamepad direction (or user focus) calls selectMenuItem().
  // innerHTML replacement creates new buttons without pad-selected state.
 }
-function hideMenu(){canvas.style.visibility='visible'; $('overlay').classList.remove('reward-confirming');$('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
+function hideMenu(){cancelQueuedMenuConfirm();canvas.style.visibility='visible'; $('overlay').classList.remove('reward-confirming');$('overlay').classList.remove('visible');$('hud').hidden=false;/* Enable dragging with mouse, pen or touch on all devices. */$('touchControls').hidden=false;}
 function titleMenu(){
  gameState='menu';setStatus('STANDBY');$('bossHud').hidden=true;$('hud').hidden=true;
  showMenu(`<img class="title-full-bi" src="./assets/ui/project-z-title-bi-20261101.webp" alt="" width="1672" height="941" decoding="async" fetchpriority="high" /><span class="title-bi-fade" aria-hidden="true"></span><div class="eyebrow">PROJECT Z — 199X, SEOUL / CHAPTER 01</div><h1 class="title-bi-accessible">REVENANT STREET</h1>
@@ -9268,8 +9291,13 @@ function pollPad(){
   const accept=upgradeConfirm;
   const neutral=!g.buttons.some(b=>b?.pressed)&&Math.abs(dx)<.2&&Math.abs(dy)<.2;
   if(!neutral)menuPad.neutralAt=Date.now();
-  if(menuReady()&&neutral&&Date.now()-menuPad.neutralAt>=250)menuPad.armed=true;
-  if(accept&&!menuPad.confirm&&menuPad.armed&&menuReady()){menuPad.armed=false;menuConfirm()}
+  // One neutral sample arms the next fresh A/B/X/Y edge. Do not lose a
+  // quick press during the menu entrance; menuConfirm queues it safely.
+  if(neutral)menuPad.armed=true;
+  if(accept&&!menuPad.confirm&&menuPad.armed){
+   menuPad.armed=false;
+   menuConfirm();
+  }
   // Carry actual controller holds to the action edge-gate so that confirming
   // with jump / guard / dash does not accidentally execute on menu close.
   padPrev.dodge=!!g.buttons[0]?.pressed;
@@ -9315,7 +9343,9 @@ function control(dt,pad){
  p.backstepping=!!(closeEnemy&&((closeEnemy.x-p.x)*p.facing)>0&&dx*p.facing<-.13);
  const stickMag=Math.hypot(analog.dx,analog.dy);
  const gamepadMag=Math.hypot(pad.dx,pad.dy);
- p.running=(stickMag>.84||gamepadMag>.92)&&p.z<=2&&p.attack<=0&&p.dodge<=0&&p.parry<=0;
+ // WASD is full digital deflection, equivalent to pushing the stick fully.
+ const keyboardRun=(keys.has('a')!==keys.has('d'))||(keys.has('w')!==keys.has('s'));
+ p.running=(keyboardRun||stickMag>.84||gamepadMag>.92)&&p.z<=2&&p.attack<=0&&p.dodge<=0&&p.parry<=0;
  const movementStartX=p.x,movementStartY=p.y;
  // Tag-chase responds to the one attack press after a successful parry.
  // Travel is real per-frame movement, never a teleport to the offscreen foe.
@@ -11289,23 +11319,20 @@ function keyDown(ev){
  const held=heldKeyboard.has(k);heldKeyboard.add(k);
  if([' ','enter','arrowup','arrowdown','arrowleft','arrowright'].includes(k))ev.preventDefault();
  if(gameState!=='playing'){
-  // Consume menu input entirely: no native focused-button click or combat fallthrough.
+  // WASD navigates menus; keyboard arrow keys mirror controller
+  // A/B/X/Y confirm buttons, including ArrowDown = A.
   if(rewardSelection||menuBlockedKeys.has(k)||ev.repeat||held)return;
-  if($('menu').classList.contains('title-dialog')&&['arrowleft','arrowup','arrowright','arrowdown'].includes(k)){
-   if(menuPad.titleNavPending)selectMenuItem(1);else menuConfirm();return;
+  if(['arrowleft','arrowup','arrowright','arrowdown','enter',' '].includes(k)){
+   menuConfirm();return;
   }
   if(gameState==='hub'){
-   if(k==='w'||k==='arrowup'){hubMenuNavigate(0,-1);return}
-   if(k==='s'||k==='arrowdown'){hubMenuNavigate(0,1);return}
+   if(k==='w'){hubMenuNavigate(0,-1);return}
+   if(k==='s'){hubMenuNavigate(0,1);return}
    if(k==='a'){hubMenuNavigate(-1,0);return}
-   if(k==='d'||k==='arrowright'){hubMenuNavigate(1,0);return}
+   if(k==='d'){hubMenuNavigate(1,0);return}
   }
   if(k==='a'||k==='w'){selectMenuItem(-1);return}
   if(k==='d'||k==='s'){selectMenuItem(1);return}
-  if(gameState==='reward'&&['arrowleft','arrowup','arrowright','arrowdown'].includes(k)){
-   menuConfirm();return;
-  }
-  if(k==='arrowleft'){menuConfirm();return}
   if((k==='escape'||k==='p')&&menuReady())menuBack();
   return;
  }
