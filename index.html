@@ -4620,9 +4620,11 @@ body{position:fixed;inset:0;touch-action:manipulation}
 })();
 </script>
 
+<script src="./assets/z-fx-webgl2.js?v=20261110-fx-v1"></script>
 <script>
 (()=>{'use strict';
-const $=id=>document.getElementById(id), canvas=$('game'),ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id), canvas=$('game');
+let ctx=canvas.getContext('2d');
 const directionArrowCanvas=$('directionArrowOverlay'),directionCtx=directionArrowCanvas.getContext('2d');
 let W=1280;const H=720;
 const stageWrap=$('stageWrap'),viewportHost=$('app');
@@ -10538,9 +10540,11 @@ function drawActor(a){if(a.dead&&a.fade<=0)return;const isP=a===p;const [sx,sy]=
   ellipseShadow(x,y,1.06,.45);
   // Draw the green healing bitmap AFTER the ground shadow but BEFORE the
   // protagonist sprite, so heal/regen/leech never cover the character.
-  drawHeroHealingOverlays();
+  if(fx.some(f=>f.kind==='healVfxSprite'&&f.life>0))
+   zDrawFxPost(()=>drawHeroHealingOverlays());
   drawHeroAfterimages();
-  drawHeroModAura(x,y,z);
+  if(modRank('haste')&&(p.attack>0||p.running||Math.abs(p.vx||0)>90))
+   zDrawFxPost(()=>drawHeroModAura(x,y,z));
   paintZ(x,y,z);
   return;
  }
@@ -10750,6 +10754,19 @@ function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);
  if(layer!=='back'&&p.dodge>0&&!p.evadeBackstep)drawDashChargeSprite(p);}
 // Combat-only text overlays are intentionally disabled; painted VFX remain layered.
 // Hybrid by default. Use ?vfx=back or ?vfx=front for the old all-one-layer views.
+// Composite each original bitmap FX layer back at the EXACT existing actor depth.
+// All world/camera transforms are copied to the isolated 2D source canvas.
+// WebGL2 only blurs the FX texture; actor sprites, backgrounds and HUD are excluded.
+const zFxPost=window.ProjectZFxShader||null;
+function zDrawFxPost(paint){
+ if(!zFxPost){paint();return}
+ const main=ctx,pass=zFxPost.begin(main,W,H);
+ if(!pass){paint();return}
+ ctx=pass;
+ try{paint()}finally{ctx=main}
+ zFxPost.finish(main);
+}
+window.__zFxShaderStatus=()=>zFxPost?.status()||{mode:'missing',enabled:false};
 const Z_VFX_MODE=/(?:\?|&)vfx=front(?:&|$)/i.test(location.search||'')?'front':
  /(?:\?|&)vfx=back(?:&|$)/i.test(location.search||'')?'back':'hybrid';
 window.__zVfxLayerStatus=()=>Z_VFX_MODE;
@@ -10777,8 +10794,8 @@ function draw(){
  drawIntruderSpecialWarnings();
  actors.sort((a,b)=>a.y-b.y);
  const vfxSelection=Z_VFX_MODE==='hybrid'?zHybridVfxForeground():null;
- if(Z_VFX_MODE==='back')drawEffects('all');
- else if(Z_VFX_MODE==='hybrid')drawEffects('back',vfxSelection);
+ if(Z_VFX_MODE==='back')zDrawFxPost(()=>drawEffects('all'));
+ else if(Z_VFX_MODE==='hybrid')zDrawFxPost(()=>drawEffects('back',vfxSelection));
  // Do not render cinematic entry with ordinary Y-sorted actors: any later
  // foreground effect would cover the ambusher's back and break the silhouette.
  // Only entering red hoods bypass depth sorting; landed enemies keep Y-depth.
@@ -10786,8 +10803,8 @@ function draw(){
   if(intruderEntering(actor))entryActors.push(actor);
   else drawActor(actor);
  }
- if(Z_VFX_MODE==='front')drawEffects('all');
- else if(Z_VFX_MODE==='hybrid')drawEffects('front',vfxSelection);
+ if(Z_VFX_MODE==='front')zDrawFxPost(()=>drawEffects('all'));
+ else if(Z_VFX_MODE==='hybrid')zDrawFxPost(()=>drawEffects('front',vfxSelection));
  // TOPMOST WORLD PASS, above status effects / impact / signature VFX.
  // UI and HUD remain independent above the canvas.
  for(const entrant of entryActors)drawActor(entrant);
@@ -10824,6 +10841,7 @@ function loop(t){
  if(perfElapsed>=1){
   runtimePerf.fps=Math.round(perfFrames/perfElapsed);
   runtimePerf.frameMs=Math.round(perfElapsed/perfFrames*10000)/10;
+  zFxPost?.performanceGuard(runtimePerf.fps);
   perfFrames=0;perfElapsed=0;
  }
  requestAnimationFrame(loop);
