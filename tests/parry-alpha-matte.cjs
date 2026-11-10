@@ -38,5 +38,5 @@ assert(/alphaReport.push\(\{frame:i\+1,\.\.\.zKeyBlackVfxCanvas/.test(html),'all
 assert(html.includes("const w=318,h=296;"),'parry on-screen size unchanged');
 assert(html.includes("const PARRY_SUCCESS_CELL_PAD=10;"),'frame overscan preserved');
 const gl=fs.readFileSync(root+'/assets/z-fx-webgl2.js','utf8');
-assert(gl.includes('const ADD = 0.30, BLOOM = 0.35, RADIUS = 10;'),'FX shaders settings unchanged');
+assert(gl.includes('const ADD = 0.30, BLOOM = 0.70, RADIUS = 14;'),'FX settings upgraded without altering parry alpha key');
 console.log('PASS: 10-frame pre-keying, black/AVIF noise removal, soft edge alpha, opaque source never drawn, parry scale/FX intensity unchanged');

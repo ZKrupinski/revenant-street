@@ -1,10 +1,10 @@
 /* Project Z FX-only WebGL2 bloom; existing sprite PNGs and actor/HUD depth are unchanged.
- * Original alpha composite + 30% ADD + 35% bloom (10 world pixels).
+ * Original alpha composite + 30% ADD + 70% bloom (14 world pixels).
  * The 2D compositor is preserved as a fallback when WebGL2 is unavailable.
  */
 (function () {
   'use strict';
-  const ADD = 0.30, BLOOM = 0.35, RADIUS = 10;
+  const ADD = 0.30, BLOOM = 0.70, RADIUS = 14;
   const params = new URLSearchParams(location.search);
   const fxOff = params.get('fx') === 'off';
   const forceAdd = params.get('fx') === 'add';

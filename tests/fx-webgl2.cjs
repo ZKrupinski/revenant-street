@@ -7,7 +7,7 @@ const root=path.resolve(__dirname,'..');
 const source=fs.readFileSync(path.join(root,'assets/z-fx-webgl2.js'),'utf8');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 new vm.Script(source,{filename:'assets/z-fx-webgl2.js'});
-assert(html.includes('./assets/z-fx-webgl2.js?v=20261110-fx-v1'),'webgl script loads before the game');
+assert(html.includes('./assets/z-fx-webgl2.js?v=20261110-fx-bloom70-v2'),'updated WebGL2 shader loads before the game with fresh cache key');
 assert(html.includes("zDrawFxPost(()=>drawEffects('back',vfxSelection))"),'background FX isolated');
 assert(html.includes("zDrawFxPost(()=>drawEffects('front',vfxSelection))"),'foreground FX isolated');
 assert(html.indexOf("zDrawFxPost(()=>drawEffects('front',vfxSelection))")<
@@ -73,7 +73,7 @@ function harness({gpu=false, query='', limited=false}={}){
  assert.equal(h.api.status().mode,'add-only');
  assert(h.events.includes('draw:main:source-over:1'),'original PNG alpha painted');
  assert(h.events.includes('draw:main:lighter:0.3'),'30% additive applied');
- assert(!h.events.includes('draw:main:lighter:0.35'),'unsupported bloom not drawn');
+ assert(!h.events.includes('draw:main:lighter:0.7'),'unsupported bloom not drawn');
 }
 {
  const h=harness({gpu:true});
@@ -82,9 +82,9 @@ function harness({gpu=false, query='', limited=false}={}){
  h.api.finish(h.main);
  const s=h.api.status();
  assert.equal(s.mode,'webgl2');
- assert.equal(s.add,.30);assert.equal(s.bloom,.35);assert.equal(s.radiusPx,10);
+ assert.equal(s.add,.30);assert.equal(s.bloom,.70);assert.equal(s.radiusPx,14);
  assert.equal(h.drawCalls(),2,'WebGL2 blur runs horizontal and vertical passes');
- assert(h.events.includes('draw:main:lighter:0.35'),'35% bloom composite applied');
+ assert(h.events.includes('draw:main:lighter:0.7'),'70% bloom composite applied');
  for(let i=0;i<4;i++)h.api.performanceGuard(20);
  assert.equal(h.api.status().scale,.25,'slow renderer lowers bloom resolution');
 }
@@ -97,4 +97,4 @@ function harness({gpu=false, query='', limited=false}={}){
  assert.equal(h.api.begin(h.main,1280,720),null,'QA opt-out preserves original renderer');
  assert.equal(h.api.status().mode,'off');
 }
-console.log('PASS: WebGL2 FX-only bloom, 30% ADD, 35% bloom, 10px radius, transform/actor depth, mobile fallback, 2-pass blur, perf guard');
+console.log('PASS: WebGL2 FX-only bloom, 30% ADD, 70% bloom, 14px radius, transform/actor depth, mobile fallback, 2-pass blur, perf guard');
