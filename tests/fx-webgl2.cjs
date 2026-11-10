@@ -7,7 +7,7 @@ const root=path.resolve(__dirname,'..');
 const source=fs.readFileSync(path.join(root,'assets/z-fx-webgl2.js'),'utf8');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 new vm.Script(source,{filename:'assets/z-fx-webgl2.js'});
-assert(html.includes('./assets/z-fx-webgl2.js?v=20261110-fx-v1'),'webgl script loads before the game');
+assert(html.includes('./assets/z-fx-webgl2.js?v=20261110-fx-bloom70-v2'),'updated WebGL2 shader loads before the game with fresh cache key');
 assert(html.includes("zDrawFxPost(()=>drawEffects('back',vfxSelection))"),'background FX isolated');
 assert(html.includes("zDrawFxPost(()=>drawEffects('front',vfxSelection))"),'foreground FX isolated');
 assert(html.indexOf("zDrawFxPost(()=>drawEffects('front',vfxSelection))")<
