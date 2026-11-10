@@ -10591,16 +10591,43 @@ function parrySuccessSourceRect(w,h,frame){
 }
 const PARRY_SUCCESS_CELL_PAD=10;
 let parrySuccessCells=null;
+let parryAlphaAudit=[];
+// The source AVIF is RGB-on-black (not transparent). It previously relied on
+// Screen blending against the already-painted world. The independent FX pass
+// is transparent, so Screen alone leaves an opaque black rectangle. Convert
+// the painted AVIF frames to real RGBA ONCE before the bloom compositor.
+function zKeyBlackVfxCanvas(g,w,h){
+ const frame=g.getImageData(0,0,w,h),d=frame.data;
+ let removed=0,soft=0,visible=0;
+ for(let i=0;i<d.length;i+=4){
+  const originalAlpha=d[i+3];
+  if(!originalAlpha)continue;
+  const peak=Math.max(d[i],d[i+1],d[i+2]);
+  // Suppress AVIF's near-black compression artifacts, then smoothly reveal
+  // colored sparks and the bright core; no rectangular matte boundary.
+  const t=Math.max(0,Math.min(1,(peak-14)/110));
+  const matte=t*t*(3-2*t);
+  const next=Math.round(originalAlpha*matte);
+  if(!next){d[i]=0;d[i+1]=0;d[i+2]=0;d[i+3]=0;removed++;}
+  else{d[i+3]=next;if(next<originalAlpha)soft++;visible++;}
+ }
+ g.putImageData(frame,0,0);
+ return {removed,soft,visible,width:w,height:h};
+}
+window.__zParryAlphaStatus=()=>({
+ ready:!!parrySuccessCells&&parrySuccessCells.length===10,
+ frames:parryAlphaAudit.map(x=>({...x}))
+});
 function prepareParrySuccessCells(){
  const source=parrySuccessImage;
  if(!source.complete||source.naturalWidth!==1536||source.naturalHeight!==1024)
   throw Error('패링 성공 원본 시트가 아직 준비되지 않았습니다');
- const pad=PARRY_SUCCESS_CELL_PAD,cells=[];
+ const pad=PARRY_SUCCESS_CELL_PAD,cells=[],alphaReport=[];
  for(let i=0;i<10;i++){
   const r=parrySuccessSourceRect(source.naturalWidth,source.naturalHeight,i);
   const cv=document.createElement('canvas');
   cv.width=r.sw+pad*2;cv.height=r.sh+pad*2;
-  const g=cv.getContext('2d');
+  const g=cv.getContext('2d',{willReadFrequently:true});
   if(!g)throw Error('패링 성공 프레임 비트맵을 만들 수 없습니다');
   // 1:1 source pixels; adjacent frames can never blend on the later zoom.
   g.imageSmoothingEnabled=false;
@@ -10613,8 +10640,12 @@ function prepareParrySuccessCells(){
    g.drawImage(source,r.sx+r.sw-1-x,r.sy,1,r.sh,pad+r.sw+x,pad,1,r.sh);
   }
   g.globalAlpha=1;
+  // Apply AFTER overscan extension so the copied edge pixels cannot carry
+  // the old opaque black AVIF matte back into the padded frame.
+  alphaReport.push({frame:i+1,...zKeyBlackVfxCanvas(g,cv.width,cv.height)});
   cells.push(cv);
  }
+ parryAlphaAudit=alphaReport;
  parrySuccessCells=cells;
  return true;
 }
@@ -10736,15 +10767,16 @@ function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);
    const w=318,h=296;
    const dir=f.face<0?-1:1;
    const cell=parrySuccessCells?.[frame]||null;
-   const edgeX=cell?w*PARRY_SUCCESS_CELL_PAD/crop.sw:0;
-   const edgeY=cell?h*PARRY_SUCCESS_CELL_PAD/crop.sh:0;
+   // No direct raw-AVIF fallback: it has an opaque black matte.
+   if(!cell)continue;
+   const edgeX=w*PARRY_SUCCESS_CELL_PAD/crop.sw;
+   const edgeY=h*PARRY_SUCCESS_CELL_PAD/crop.sh;
    const drawX=zClampVfxX(f.x,dir>0?w*.32+edgeX:w*.68+edgeX,
     dir>0?w*.68+edgeX:w*.32+edgeX);
    ctx.save();ctx.translate(drawX,f.y);ctx.scale(dir,1);
-   // Full original bitmap silhouette and blend, with safe transparent overscan.
+   // Pre-keyed transparent bitmap; Screen still works in ?fx=off comparison.
    ctx.globalCompositeOperation='screen';ctx.globalAlpha=Math.min(1,f.life/.07);
-   if(cell)ctx.drawImage(cell,-w*.32-edgeX,-h*.5-edgeY,w+edgeX*2,h+edgeY*2);
-   else ctx.drawImage(a,crop.sx,crop.sy,crop.sw,crop.sh,-w*.32,-h*.5,w,h);
+   ctx.drawImage(cell,-w*.32-edgeX,-h*.5-edgeY,w+edgeX*2,h+edgeY*2);
    ctx.restore();
   }
   continue;

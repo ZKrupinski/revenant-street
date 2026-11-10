@@ -1,0 +1,40 @@
+name: Project Z transparent FX alpha QA
+on:
+  pull_request:
+    paths:
+      - index.html
+      - assets/vfx/**
+      - tests/parry-alpha-matte.cjs
+      - scripts/audit-z-vfx-alpha.py
+      - .github/workflows/parry-alpha-qa.yml
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - assets/vfx/**
+      - tests/parry-alpha-matte.cjs
+      - scripts/audit-z-vfx-alpha.py
+      - .github/workflows/parry-alpha-qa.yml
+  workflow_dispatch:
+jobs:
+  alpha:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install image pixel auditor
+        run: python -m pip install pillow
+      - name: Test production parry alpha-key source pixels
+        run: node tests/parry-alpha-matte.cjs
+      - name: Audit all standalone combat VFX PNG sheets
+        run: python scripts/audit-z-vfx-alpha.py
+      - name: Check new FX bloom integration
+        run: node tests/fx-webgl2.cjs
