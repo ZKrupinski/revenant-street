@@ -1,0 +1,43 @@
+name: Diagnose Project Z GitHub Pages publishing
+on:
+  push:
+    branches:
+      - diagnostic/project-z-pages-20261110
+    paths:
+      - .github/workflows/pages-diagnostic.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: read
+  deployments: read
+  actions: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect Pages configuration and current deployments
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          for endpoint in "/pages" "/pages/deployments/latest" "/pages/builds/latest" "/deployments?environment=github-pages&per_page=6"; do
+            echo "=== endpoint: ${endpoint} ==="
+            code=$(curl -sS --retry 2 -o /tmp/pages-response.json -w '%{http_code}' \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "${api}${endpoint}")
+            echo "http_status=${code}"
+            jq -c 'if type=="array" then map({id,sha,ref,environment,created_at,updated_at}) else {id,html_url,status,state,build_type,source,commit,page_url,created_at,updated_at,errors,error,message} end' /tmp/pages-response.json 2>/dev/null || head -c 450 /tmp/pages-response.json
+            echo
+          done
+      - name: Test public page and FX module reachability
+        run: |
+          for address in "https://zkrupinski.github.io/revenant-street/" "https://zkrupinski.github.io/revenant-street/assets/z-fx-webgl2.js"; do
+            echo "=== ${address} ==="
+            curl -L -sS --max-time 15 -o /tmp/page-body -w 'status=%{http_code} size=%{size_download} redirect=%{redirect_url}\n' "${address}" || true
+            head -c 140 /tmp/page-body || true
+            echo
+          done
