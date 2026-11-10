@@ -1,0 +1,26 @@
+name: Project Z basic-hit camera shake regression
+on:
+  pull_request:
+    paths:
+      - index.html
+      - tests/basic-hit-camera-shake.cjs
+      - .github/workflows/basic-hit-camera-shake.yml
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - tests/basic-hit-camera-shake.cjs
+      - .github/workflows/basic-hit-camera-shake.yml
+  workflow_dispatch:
+jobs:
+  shake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/basic-hit-camera-shake.cjs
