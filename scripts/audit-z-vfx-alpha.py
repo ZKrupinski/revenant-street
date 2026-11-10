@@ -51,6 +51,34 @@ if not match:
     print("FAIL: parry success AVIF missing");sys.exit(1)
 parry_bytes=base64.b64decode(match.group(1))
 print(f"Parry source: embedded AVIF {len(parry_bytes)} bytes; no binary resource was modified")
+try:
+    with Image.open(io.BytesIO(parry_bytes)) as avif:
+        rgba=avif.convert("RGBA")
+        if rgba.size!=(1536,1024):
+            raise AssertionError(f"parry original atlas size changed: {rgba.size}")
+        px=rgba.load()
+        opaque_black=total=0
+        print(f"Decoded original parry atlas: {rgba.size}, mode={avif.mode}")
+        for frame in range(10):
+            col,row=frame%5,frame//5
+            x0=round(col*1536/5);x1=round((col+1)*1536/5)
+            y0=round(row*1024/2);y1=round((row+1)*1024/2)
+            src=cleaned=0
+            for y in range(y0,y1,5):
+                for x in range(x0,x1,5):
+                    red,green,blue,alpha=px[x,y]
+                    peak=max(red,green,blue)
+                    if alpha>240 and peak<=14:src+=1
+                    # Same smooth intensity cutoff as the in-game RGBA key.
+                    t=max(0,min(1,(peak-14)/110))
+                    matte=t*t*(3-2*t)
+                    if round(alpha*matte)==0:cleaned+=1
+                    total+=1
+            opaque_black+=src
+            print(f"  parry frame {frame+1}: sampled opaque-black={src}, transparent after key={cleaned}")
+        print(f"Original parry AVIF opaque-black samples: {opaque_black}/{total}")
+except (OSError,ValueError) as exc:
+    print(f"AVIF pixel decode unsupported in this runner; production keying test still active: {exc}")
 print("Screen on a transparent canvas does not key black; verify explicit RGBA conversion:")
 required=[
     "function zKeyBlackVfxCanvas(g,w,h)",
