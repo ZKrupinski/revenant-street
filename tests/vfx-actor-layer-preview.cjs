@@ -4,8 +4,8 @@ const root=path.resolve(__dirname,'..');
 for(const file of ['index.html','play-fixed-20261102.html']){
  const html=fs.readFileSync(path.join(root,file),'utf8');
  assert(!html.includes('function drawFloatingEffects(){'),'no floating damage numbers');
- assert(html.includes("if(Z_VFX_MODE==='back')drawEffects('all');"),'old all-back preview');
- assert(html.includes("if(Z_VFX_MODE==='front')drawEffects('all');"),'old all-front preview');
+ assert(/if\(Z_VFX_MODE==='back'\)(?:zDrawFxPost\(\(\)=>)?drawEffects\('all'\)/.test(html),'all-back preview');
+ assert(/if\(Z_VFX_MODE==='front'\)(?:zDrawFxPost\(\(\)=>)?drawEffects\('all'\)/.test(html),'all-front preview');
  assert(html.includes("drawEffects('back',vfxSelection)"),'ordinary FX render under actor sprites');
  assert(html.includes("drawEffects('front',vfxSelection)"),'signature FX render over actor sprites');
  assert(html.includes("const Z_FRONT_SPECIAL_FX=new Set(["),'signature FX whitelist');
@@ -93,7 +93,7 @@ for(const file of ['index.html','play-fixed-20261102.html']){
    clamp:(n,lo,hi)=>Math.max(lo,Math.min(hi,n)),zHybridVfxForeground(){return selection;},
    drawBackdrop(){calls.push('backdrop')},drawIntruderSpecialWarnings(){},
    drawActor(v){calls.push(v===hero?'hero':'enemy')},
-   drawEffects(layer){calls.push('vfx:'+layer)},drawFloatingEffects(){calls.push('text')},
+   drawEffects(layer){calls.push('vfx:'+layer)},zDrawFxPost(fn){fn()},drawFloatingEffects(){calls.push('text')},
    drawEnemyStatusIcons(){calls.push('icons')},syncZSprite(){},drawCombatWordHud(){calls.push('wordHUD')},
    drawTravelMeter(){},drawOffscreenEnemyIndicator(){}
   };
