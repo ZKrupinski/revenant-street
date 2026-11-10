@@ -108,7 +108,7 @@ const confirm=between('function menuConfirm(){','function menuBack(){');
  assert.equal(scope.confirm(),true,'repeat early confirm coalesces');
  now=1200;pending();
  assert.equal(clicked,1,'exactly one click delivered after entrance');
- assert.equal(scope.queuedMenuConfirmTimer,null,'timer cleared after dispatch');
+ assert.equal(vm.runInContext('queuedMenuConfirmTimer',scope),null,'timer cleared after dispatch');
 }
 {
  let now=2000,pending=null,clicked=0,canceled=0;
