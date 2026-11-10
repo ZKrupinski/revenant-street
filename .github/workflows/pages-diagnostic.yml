@@ -58,27 +58,22 @@ jobs:
             curl -fsSL --max-time 20 "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/${p}" -o /tmp/gitmain || true
             sha256sum /tmp/current /tmp/gitmain || true
           done
-      - name: Cancel exact stale Pages deployment blocking main
+      - name: Refresh Pages source without changing main branch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          # GitHub returned this exact stale deployment SHA in a 400 error.
-          stale="a09cc81332f5fdf3deda54652c9ef970f0a5dfcd"
-          endpoint="https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/deployments/${stale}/cancel"
-          code=$(curl -sS -o /tmp/stale-cancel.json -w '%{http_code}' \
-            -X POST \
+          endpoint="https://api.github.com/repos/${GITHUB_REPOSITORY}/pages"
+          code=$(curl -sS -o /tmp/pages-refresh.json -w '%{http_code}' \
+            -X PUT \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
+            -H 'Content-Type: application/json' \
+            -d '{"build_type":"legacy","source":{"branch":"main","path":"/"}}' \
             "${endpoint}")
-          echo "Stale Pages deployment ${stale} cancel HTTP ${code}"
-          jq -c '{message,status,error}' /tmp/stale-cancel.json 2>/dev/null || true
-          if [ "${code}" != "204" ] && [ "${code}" != "202" ] && [ "${code}" != "200" ]; then
-            echo "Could not clear stale Pages deployment lock."
-            exit 1
-          fi
-          sleep 2
+          echo "Pages legacy source refresh HTTP ${code}"
+          jq -c '{message,status,build_type,source}' /tmp/pages-refresh.json 2>/dev/null || true
       - name: Request one clean Pages rebuild of latest main
         env:
           GH_TOKEN: ${{ github.token }}
