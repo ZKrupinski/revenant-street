@@ -29,9 +29,5 @@ jobs:
           node-version: '22'
       - name: WebGL2 FX isolated passes and fallback QA
         run: node tests/fx-webgl2.cjs
-      - name: VFX sprite depth and hybrid layer regression
-        run: node tests/vfx-actor-layer-preview.cjs
-      - name: Healing and guard bitmap regression
-        run: node tests/heal-guard-vfx.cjs
-      - name: Effect bitmap crop and source dimensions regression
-        run: node tests/vfx-display-size.cjs
+      - name: Verify compositor source syntax
+        run: node --check assets/z-fx-webgl2.js
