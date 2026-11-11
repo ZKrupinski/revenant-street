@@ -76,7 +76,7 @@ function onHit(e,damage,specialKind='',ordinary=false,api={}){
  // Cancel the current offensive pose mid-combo, plant feet and deflect Z.
  e.bossPressureHits=0;e.bossPressureWindow=0;
  e.bossGuardCooldown=e.phase===2?2.75:3.55;
- e.bossGuardActivations++;e.bossRetaliationPending=true;
+ e.bossGuardActivations++;e.bossRetaliationPending=true;e.bossIntroduced=true;
  e.poise*=.44;e.stun=0;e.reactionTime=0;e.knockVX=0;e.knockVY=0;e.vz=0;e.z=0;
  e.windup=0;e.bossMode=null;
  start(e,'guard',e.phase===2?.51:.64,api);
