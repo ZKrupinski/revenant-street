@@ -22,12 +22,16 @@ function init(e){
  e.bossHitMask=0;e.bossCycle=0;e.bossCooldown=.30;
  e.bossIntroduced=false;e.bossPhasePending=false;
  e.bossDashDir=0;e.bossMoving=false;
+ // Boss-only anti-stunlock. Cooldowns run even while briefly stunned.
+ e.bossGuardCooldown=.80;e.bossPressureHits=0;e.bossPressureWindow=0;
+ e.bossGuardActivations=0;e.bossRetaliationPending=false;
  load('idle');load('walk');load('death');
 }
 function start(e,name,duration,api){
  e.bossMode=name;e.bossAge=0;e.bossDuration=duration;e.bossHitMask=0;
  if(name==='dash')e.bossDashDir=e.face||-1;
  if(name==='slam')api.warning(e,'붉은 충격파!', 'red');
+ if(name==='guard'){api.warning(e,'CRIMSON GUARD','red');load('taunt')}
  
  if(name==='taunt'){api.warning(e,e.phase===2?'OVERDRIVE / 폭주':'HUNTER / 붉은 집행자','red');load('taunt')}
  load(name);
@@ -38,6 +42,45 @@ function strike(e,api,range,mult){
   e.bossDamageMult=mult;e.bossBonusReach=Math.max(0,range-oldReach-64);
   api.attack(e);
  }finally{e.reach=oldReach;e.bossBonusReach=oldRange||0;e.bossDamageMult=oldPower||1}
+}
+// Called before the generic stun gate so pressure/cooldowns cannot freeze
+// forever while the player repeatedly lands normal combo punches.
+function tick(e,dt){
+ if(!useNewBoss||e.dead)return;
+ init(e);
+ e.bossGuardCooldown=Math.max(0,e.bossGuardCooldown-dt);
+ e.bossPressureWindow=Math.max(0,e.bossPressureWindow-dt);
+ if(e.bossPressureWindow===0)e.bossPressureHits=0;
+}
+// Guards reward precision: perfect ripostes and executions break the stance;
+// jump/dash signature hits also keep most of their damage and stagger.
+function onHit(e,damage,specialKind='',ordinary=false,api={}){
+ if(!useNewBoss||e.type!=='boss'||e.dead)return {guarded:false,damageScale:1,poiseScale:1};
+ init(e);
+ const perfect=specialKind==='counter'||specialKind==='execution';
+ const heavy=perfect||specialKind==='dash'||specialKind==='jump';
+ if(e.bossMode==='guard'){
+  if(perfect){
+   e.bossMode=null;e.bossAge=0;e.bossRetaliationPending=false;
+   e.bossGuardCooldown=Math.max(e.bossGuardCooldown,2.5);
+   e.bossCooldown=Math.max(e.bossCooldown,.85);
+   return {guarded:false,guardBroken:true,damageScale:1,poiseScale:1};
+  }
+  return {guarded:!heavy,damageScale:heavy?.86:.36,poiseScale:heavy?.90:.12};
+ }
+ if(!ordinary||e.groggy>0||e.bossPhasePending||e.bossGuardCooldown>0||
+    e.hp<=Math.max(100,damage*1.3))return {guarded:false,damageScale:1,poiseScale:1};
+ e.bossPressureHits=e.bossPressureWindow>0?e.bossPressureHits+1:1;
+ e.bossPressureWindow=e.phase===2?1.17:1.40;
+ if(e.bossPressureHits<(e.phase===2?2:3))return {guarded:false,damageScale:1,poiseScale:1};
+ // Cancel the current offensive pose mid-combo, plant feet and deflect Z.
+ e.bossPressureHits=0;e.bossPressureWindow=0;
+ e.bossGuardCooldown=e.phase===2?2.75:3.55;
+ e.bossGuardActivations++;e.bossRetaliationPending=true;
+ e.poise*=.44;e.stun=0;e.reactionTime=0;e.knockVX=0;e.knockVY=0;e.vz=0;e.z=0;
+ e.windup=0;e.bossMode=null;
+ start(e,'guard',e.phase===2?.51:.64,api);
+ return {guarded:true,triggered:true,damageScale:.48,poiseScale:.12};
 }
 function update(e,p,dt,api){
  if(!useNewBoss)return false;
@@ -87,6 +130,12 @@ function update(e,p,dt,api){
   if(phase>=1){
     const finished=e.bossMode;
     e.bossMode=null;e.bossAge=0;
+    if(finished==='guard'&&e.bossRetaliationPending){
+     e.bossRetaliationPending=false;e.face=p.x>=e.x?1:-1;
+     const dist=Math.abs(p.x-e.x),counter=dist>190?'dash':'slam';
+     start(e,counter,counter==='dash'?(e.phase===2?.71:.85):(e.phase===2?.90:1.10),api);
+     e.bossCooldown=0;return true;
+    }
     e.cooldown=Math.max(e.cooldown,.32);
     // Recovery after a visual taunt should not stall the first offensive
     // move for another 2s. Real dash/slam patterns get shorter but readable
@@ -112,7 +161,7 @@ function update(e,p,dt,api){
 }
 function state(e){
  if(e.dead)return 'death';
- if(e.bossMode)return e.bossMode;
+ if(e.bossMode)return e.bossMode==='guard'?'taunt':e.bossMode;
  if(e.reactionTime>0)return 'hit';
  if(e.visualMoving||e.bossMoving)return 'walk';
  if(e.windup>0||e.attackPoseTime>0)return 'idle';
@@ -121,7 +170,7 @@ function state(e){
 function frame(e,key){
  if(key==='death')return Math.min(7,Math.floor((e.deathAge||0)/.82*8));
  if(key==='hit')return Math.min(7,Math.floor((1-(e.reactionTime||0)/Math.max(.05,e.reactionDuration||.46))*8));
- if(e.bossMode===key)return Math.min(7,Math.floor((e.bossAge/Math.max(.01,e.bossDuration))*8));
+ if(e.bossMode===key||(e.bossMode==='guard'&&key==='taunt'))return Math.min(7,Math.floor((e.bossAge/Math.max(.01,e.bossDuration))*8));
  // Preserve boss speed/attack timings; slow only walk and idle pose cycling.
  if(key==='walk')return Math.floor((e.spriteDistance||0)/51)%8;
  return Math.floor((e.spriteTime||0)*6.2*.67)%8;
@@ -151,5 +200,5 @@ function draw(e,x,y,z,api){
  // Boss attack warning stays in its bitmap telegraph, never floating text.
  return true;
 }
-window.RZBossHunter={NAMES,load,init,start,update,state,frame,draw,isEnabled:()=>useNewBoss};
+window.RZBossHunter={NAMES,load,init,start,tick,onHit,update,state,frame,draw,isEnabled:()=>useNewBoss};
 })();
