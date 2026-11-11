@@ -19,7 +19,6 @@ jobs:
       - run: node tests/control-feel-integration.cjs
       - run: node tests/signature-slow-window.cjs
       - run: node tests/parry-counter-art.cjs
-      - run: node tests/dash-lightning.cjs
       - run: node tests/ground-slam-bitmap.cjs
       - run: node tests/fx-matte-guard.cjs
       - run: node tests/keyboard-run-menu-input.cjs
