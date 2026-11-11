@@ -4584,7 +4584,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 <script>window.RZ_ASSETS.street=window.RZ_BG;window.RZ_ASSETS.street_pano=window.RZ_BG;delete window.RZ_BG;</script>
 <script src="./assets/assassin-b.js"></script>
 <script src="./assets/elite-ironmask.js?v=hit-flash-on-impact-20261103"></script>
-<script src="./assets/boss-hunter.js?v=fe00bed9"></script>
+<script src="./assets/boss-hunter.js?v=20261111-guard-retaliate-v2"></script>
 <script src="./assets/attacks-20.js?v=923cd5b7"></script>
 <script src="./assets/voice/voice-engine.js?v=20261103-zero-lead-v9"></script>
 <script src="./assets/ui/z-ui-mechanical-v1.js?v=heavy-mech-ui-v1-20261103"></script>
@@ -7793,9 +7793,9 @@ function spawnWaveBoss(){
  const lastSquadX=SQUAD_SPOTS[wave][SQUAD_SPOTS[wave].length-1];
  const x=clamp(Math.max(p.x+400,lastSquadX+360),p.x+300,STAGE_WIDTH-160);
  const hunter=makeEnemy('boss',x,groundY(p.y),enemySerial++);
- hunter.hp=hunter.maxHp=Math.round(hunter.maxHp*(wave===1?.43:.69));
- hunter.maxPoise=Math.round(hunter.maxPoise*(wave===1?.68:.86));
- hunter.damage=Math.round(hunter.damage*(wave===1?.73:.86));
+ hunter.hp=hunter.maxHp=Math.round(hunter.maxHp*(wave===1?.52:.76));
+ hunter.maxPoise=Math.round(hunter.maxPoise*(wave===1?.72:.88));
+ hunter.damage=Math.round(hunter.damage*(wave===1?.78:.92));
  hunter.speed=Math.round(hunter.speed*(wave===1?1:1.08));
  hunter.encountered=true;hunter.renderX=x;hunter.renderY=hunter.y;
  hunter.cooldown=1;hunter.waveBoss=true;
@@ -7823,7 +7823,7 @@ function makeEnemy(type,x,y,index){
  // Normal enemies gain moderate health/damage each wave, unlike the boss.
  const map={raider:[84,70,128,14,40],intruder:[385,205,169,24,74],assassin:[76,68,177,16,38],
   elite:[1120,460,147,26,74],guard:[165,132,112,20,48],
-  boss:[3900,920,87,35,92]};
+  boss:[10500,1050,102,44,112]};
  const difficulty=type==='boss'?1:type==='elite'?(wave===2?1.36:1):
   type==='intruder'?(wave===2?1.24:1):wave===2?1.30:1;
  const attackGrowth=type==='boss'?1:wave===2?1.19:1;
@@ -8457,6 +8457,33 @@ function awardEnemyKill(e){
  // All enemy kills, including status damage and the final boss, get one raster dissolve.
  spawnEnemyDeathBitmap(e);
 }
+// Defensive boss rebound cancels the hero chain and pushes them away without
+// dealing free HP damage. A dash/slam counter follows a readable brace pose.
+function zBossGuardReversal(e){
+ const away=p.x>=e.x?1:-1;
+ e.face=away;
+ p.attack=0;p.attackQueued=false;p.comboWindow=0;p.hitDone=false;
+ p.attackDriveRemaining=0;p.attackDriveTotal=0;p.dashSmash=false;p.counterBoost=false;
+ p.dashFollowWindow=0;p.airAttack=false;
+ zCancelAttackApproach();delete zFeelPending.attack;
+ p.stun=Math.max(p.stun,.28);p.hitDuration=Math.max(p.hitDuration||0,.28);
+ p.hitHeavyTimer=Math.max(p.hitHeavyTimer||0,.23);
+ p.inv=Math.max(p.inv,.42);
+ p.x=clamp(p.x+away*104,55,STAGE_WIDTH-65);
+ p.motionKey='';p.motionTime=0;
+ e.knockVX=0;e.knockVY=0;
+ fxBurst(e.x+away*64,e.y-145,'red',1.6);
+ playImpactSound('parry',1.22);vibrateImpact('heavy',true);
+ hitStop=Math.max(hitStop,.075);screenShake=Math.max(screenShake,16);
+}
+// A guarded hit still advances the 55% second-phase threshold.
+function zBossDamagePhase(e){
+ if(e.type!=='boss'||e.dead||e.hp<=0||e.phase!==1||e.hp>=e.maxHp*.55)return;
+ e.phase=2;e.bossPhasePending=true;e.speed*=1.27;e.damage*=1.35;
+ e.maxPoise*=1.3;
+ flash('HUNTER — PHASE 02 / 광폭화',1.8);
+ fxBurst(e.x,e.y-100,'red',2.7);screenShake=Math.max(screenShake,20);
+}
 function hurtEnemy(e,dmg,poise,specialKind=''){
  if(e.dead||intruderEntering(e))return;
  runStats.hits++;
@@ -8465,6 +8492,10 @@ function hurtEnemy(e,dmg,poise,specialKind=''){
  // viewport restraint; regular heavy launches keep their original physics.
  e.parryScreenDir=0;e.parryScreenEdge=null;
  e.encountered=true; // A hit counts as detection even through long stun / knockback.
+ const bossGuard=e.type==='boss'&&window.RZBossHunter?.onHit?.(
+  e,dmg,specialKind,p.attack>0&&!specialKind&&!p.dashSmash&&!p.counterBoost&&!p.airAttack,
+  {warning:(b,tag,color)=>{fxBurst(b.x,b.y-156,color,1.65);playCombatVoice('bossShout',b)}});
+ dmg*=bossGuard?.damageScale??1;
  e.hp-=dmg;
  // A brief full-silhouette bitmap pulse on CONFIRMED damage, irrespective of
  // the ongoing reaction animation or its old slow-motion animation clock.
@@ -8477,7 +8508,29 @@ function hurtEnemy(e,dmg,poise,specialKind=''){
  if(e.hp>0||specialContact)spawnEnemyHitBitmap(e,dmg,specialContact);
  if(e.hp<=0){playCombatVoice(e.type==='boss'?'bossDeath':'enemyDeath',e)}
  else if(Math.random()<.62)playCombatVoice('enemyHurt',e);
- e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:(e.type==='elite'||e.type==='intruder')?.80:1),0,e.maxPoise);
+ e.poise=clamp(e.poise+poise*(1+modRank('impact')*.22)*(e.type==='boss'?.35:(e.type==='elite'||e.type==='intruder')?.80:1)*(bossGuard?.poiseScale??1),0,e.maxPoise);
+
+ // A defended ordinary combo never keeps the boss in repeated hit poses.
+ // The existing taunt sheet animates the brace; original dash/slam follows.
+ if(bossGuard?.triggered&&e.hp>0)zBossGuardReversal(e);
+ if(bossGuard?.guarded&&e.hp>0){
+  e.hitFlash=Math.max(e.hitFlash,.10);e.reactionTime=0;e.stun=0;
+  e.knockVX=0;e.knockVY=0;e.attackPoseTime=0;
+  p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
+  zBossDamagePhase(e);return;
+ }
+ // Committed boss attacks hold their original 8F poses against light combos.
+ // Damage and poise still count; strong signature hits bypass this armor.
+ const bossCommitted=e.type==='boss'&&e.hp>0&&e.groggy<=0&&
+  (e.bossMode==='dash'||e.bossMode==='slam')&&
+  !specialKind&&!p.counterBoost&&!p.dashSmash&&!p.airAttack&&
+  e.poise<e.maxPoise*.94;
+ if(bossCommitted){
+  e.hitFlash=Math.max(e.hitFlash,.09);e.reactionTime=0;e.stun=0;
+  e.knockVX=clamp(e.knockVX,-22,22);e.knockVY=clamp(e.knockVY,-8,8);
+  p.hits++;p.hitTimeout=2.2;registerComboCameraHit(e);
+  zBossDamagePhase(e);return;
+ }
 
  // The newly illustrated hooded IRON MASK must be allowed to show its special.
  // Previously EVERY regular combo hit cleared eliteTell / eliteRush / special,
@@ -8588,7 +8641,7 @@ function hurtEnemy(e,dmg,poise,specialKind=''){
   e.phase=2;e.speed*=1.15;e.specialCooldown=Math.min(e.specialCooldown,2.2);
   floatText('CRIMSON RAGE!',e.x,e.y-247,'#ff8ca0');
  }
- if(e.type==='boss'&&e.hp<e.maxHp*.55&&e.phase===1){e.phase=2;e.bossPhasePending=true;e.speed*=1.27;e.damage*=1.35;e.maxPoise*=1.3;flash('HUNTER — PHASE 02 / 광폭화',1.8);fxBurst(e.x,e.y-100,'red',2.7);screenShake=20}
+ zBossDamagePhase(e);
  if(e.hp<=0){e.dead=true;e.fade=1;e.deathAge=0;e.pendingFall=false;runKills++;awardEnemyKill(e);}}
 // Neutral jump and long leap share the same heel-slam landing.
 // One radial splash per touchdown: hits launch enemies AWAY on both sides.
@@ -10144,6 +10197,7 @@ function updateEnemies(dt,parryVictimScale=1){
     if(e.proneTime===0)e.riseTime=.67;
    }else if(e.riseTime>0)e.riseTime=Math.max(0,e.riseTime-actorDt);
   }
+  if(e.type==='boss')window.RZBossHunter?.tick?.(e,actorDt);
   e.stun=Math.max(0,e.stun-actorDt);
   e.inv=Math.max(0,e.inv-actorDt);
   e.hitFlash=Math.max(0,e.hitFlash-actorDt);
