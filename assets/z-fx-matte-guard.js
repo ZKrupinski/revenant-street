@@ -61,7 +61,7 @@ function safeSource(image){
     const k=(y*w+x)*4;
     if(!pixels.data[k+3])continue;
     const light=Math.max(pixels.data[k],pixels.data[k+1],pixels.data[k+2]);
-    const t=Math.max(0,Math.min(1,(light-12)/68));
+    const t=Math.max(0,Math.min(1,(light-30)/64));
     const alpha=t*t*(3-2*t);
     pixels.data[k+3]=Math.round(pixels.data[k+3]*alpha);
    }
