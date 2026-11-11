@@ -48,14 +48,14 @@ test('actual jump function: locked below Lv3; once per airborne; no buffer secre
  const w=harness();w.p.mods=Array(3).fill('jumpheight');w.keys.add('arrowup');w.tick('jump()');w.tick();
  w.eval('jump();p._feelFreezeUntil=zFeelTick+3');w.tick();w.tick();w.tick();assert.equal(w.p.doubleJumpUsed,false);
 });
-test('full basic jump 150px at tick22, landing tick40; quick release 82.5px',()=>{
+test('full basic jump 150px at tick22, landing tick40; quick tap keeps full-height arc',()=>{
  const w=harness();w.keys.add('arrowup');w.tick('jump()');for(let i=1;i<22;i++)w.tick();near(w.p.z,150);
  for(let i=22;i<40;i++)w.tick();near(w.p.z,0);
- const q=harness();q.tick('jump()');const profile=q.p._feelJump;near(profile.origin+q.p.vz*q.p.vz/(2*profile.g)+q.p.z,82.5);
+ const q=harness();q.tick('jump()');for(let i=1;i<22;i++)q.tick();near(q.p.z,150);assert.equal(q.p._feelJump.cut,false);
 });
 test('landing buffer starts immediately without double-jump debit',()=>{
  const w=harness();w.p.z=1;w.p.vz=-100;w.p.jumpActive=true;w.p.doubleJumpUsed=true;
- w.tick('jump()');assert(w.p.z>0||w.p.vz>0);assert.equal(w.p.doubleJumpUsed,false);assert(w.p._feelJump.cut);
+ w.tick('jump()');assert(w.p.z>0||w.p.vz>0);assert.equal(w.p.doubleJumpUsed,false);assert.equal(w.p._feelJump.cut,false);
  assert(w.window.__zControlFeel.logs().some(e=>e.source==='landing-buffer'||e.source==='direct'));
 });
 test('same-tick attack+dodge prioritizes dodge; exact cancel boundary and expiry',()=>{
@@ -105,5 +105,18 @@ test('signature FX keep original front layer, sprite sizes, full durations and b
  assert(html.includes("const duration=.29; // all 8 frames"),'dash pierce authored 8F length retained');
  assert(html.includes("const duration=source==='boss'?.52:source==='elite'?.45:.41"),'slam duration retained');
  assert(html.includes("kind:'parrySuccess10',x,y,face,life:.31,maxLife:.31"),'parry success 10F duration retained');
+});
+test('no dive camera zoom, faster parry chase and synchronized explosive report',()=>{
+ assert(html.includes("strikeCameraTime=0;p._airSlamNoZoom=true;vibrateImpact('air');"));
+ assert(html.includes("const goal=noSlamZoom?1:"),'slam locks zoom goal at 1');
+ assert(html.includes("if(strikeCameraTime>0&&!p._airSlamNoZoom)"),'slam cannot force strike camera recenter');
+ assert(html.includes("p.riposteChaseWarmup=.07"),'parry chase warmup reduced to 70ms');
+ assert(html.includes("p.attackDuration=.34;p.attack=.34"),'counter committed strike advances quicker');
+ const idx=html.indexOf("spawnParryCounterFx(p,e,skill.visual); // true parry follow-up contact only");
+ assert(idx>=0 && html.slice(idx,idx+245).includes("playImpactSound('parry',1.30)"),
+  'counter shotgun begins at bitmap explosion on confirmed contact');
+ assert(html.includes("playImpactSound('counter',1.35)"),'instant counter mechanism on ATTACK press preserved');
+ assert(html.includes('ProjectZFxMatteGuard?.safeSource(source)'),'only FX compositor checks dark matte sources');
+ assert(html.includes('z-fx-matte-guard.js?v=20261111-matte-v1'));
 });
 console.log(`${count} integration tests passed`);

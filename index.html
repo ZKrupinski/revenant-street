@@ -4621,6 +4621,7 @@ body{position:fixed;inset:0;touch-action:manipulation}
 })();
 </script>
 
+<script src="./assets/z-fx-matte-guard.js?v=20261111-matte-v1"></script>
 <script src="./assets/z-fx-webgl2.js?v=20261110-fx-bloom70-v2"></script>
 <script>
 (()=>{'use strict';
@@ -6232,7 +6233,8 @@ function updateComboCamera(dt,realDt=dt){
  const comboGoal=Math.min(1.245,base+(comboCameraLock>0?comboCameraPulse:0));
  const striking=strikeCameraTime>0,parryFocus=parryCameraTime>0,counterFocus=counterCameraTime>0;
  const baseGoal=striking?Math.max(comboGoal,strikeCameraTarget):comboGoal;
- const goal=counterFocus?counterCameraZoomGoal():parryFocus?Math.max(baseGoal,PARRY_CAMERA_ZOOM):baseGoal;
+ const noSlamZoom=!!(p._airSlamNoZoom&&(p.airAttack||p.airKickPhase||(p.landingTimer||0)>0));
+ const goal=noSlamZoom?1:counterFocus?counterCameraZoomGoal():parryFocus?Math.max(baseGoal,PARRY_CAMERA_ZOOM):baseGoal;
  // Counter camera uses real time through hitstop and the doubled slowdown.
  cameraZoom+=(goal-cameraZoom)*Math.min(1,(counterFocus||parryFocus?realDt:dt)*(counterFocus?19:parryFocus?18:striking?37:5.2));
  strikeCameraTime=Math.max(0,strikeCameraTime-dt);
@@ -6269,7 +6271,7 @@ function followComboCamera(dt,realDt=dt){
   cameraX+=(target-cameraX)*Math.min(1,realDt*14);
   return;
  }
- if(strikeCameraTime>0){const target=clamp(p.x-W*.52,0,STAGE_WIDTH-W);cameraX+=(target-cameraX)*Math.min(1,realDt*30);return;}
+ if(strikeCameraTime>0&&!p._airSlamNoZoom){const target=clamp(p.x-W*.52,0,STAGE_WIDTH-W);cameraX+=(target-cameraX)*Math.min(1,realDt*30);return;}
  zFeelCamera();
 }
 // World-space limit of the *currently visible* view, accounting for attack zoom.
@@ -8033,14 +8035,12 @@ function zFeelJumpProfile(impulse){
 function zFeelBeginJump(impulse){
  p._feelJump=zFeelJumpProfile(impulse);p.vz=p._feelJump.v;
  p._feelCoyoteUntil=0;p.jumpStartTimer=Z_FEEL.anticipationFrames/60;
- if(!zFeelHeldJump()){p._feelJump.cut=true;p.vz=Math.sqrt(2*p._feelJump.g*p._feelJump.H*Z_FEEL.minJumpRatio);}
+ // Tap and held jumps now share the same full-strength impulse.
 }
 function zFeelJumpStep(dt){
  const q=p._feelJump;
  if(!q||p.stun>0){p.z+=p.vz*dt;p.vz-=1440*dt;return;}
- if(p.vz>0&&!q.cut&&!zFeelHeldJump()){
-  p.vz=Math.min(p.vz,Math.sqrt(2*q.g*Math.max(0,q.H*Z_FEEL.minJumpRatio-(p.z-q.origin))));q.cut=true;
- }
+ // Button release never truncates the ascent; head collision can still stop a jump.
  let left=dt;
  for(let i=0;i<6&&left>1e-9;i++){
   let gravity,bound;
@@ -8213,7 +8213,7 @@ function startAttackNow(skipAttackApproach=false){
   p.airKickPhase='charge';p.airKickLaunched=false;p.attackDriveRemaining=0;
   p.hitDone=false;p.attackQueued=false;p.comboWindow=0;
   p.vz=0;p.inv=Math.max(p.inv,.14);
-  runStats.attacks++;triggerStrikeCamera('air');vibrateImpact('air');
+  runStats.attacks++;strikeCameraTime=0;p._airSlamNoZoom=true;vibrateImpact('air');
   // Responsive attack start. The later landing retains its heavier boom.
   playImpactSound('punch',.72);return;
  }
@@ -8227,7 +8227,7 @@ function startAttackNow(skipAttackApproach=false){
   // but pressing ATTACK to chase immediately returns the whole world, hero
   // and parried target to real time. Only the landed counter restarts slow-mo.
   slowMotion=0;parrySlowTarget=null;riposteCinematicTime=0;hitStop=0;
-  p.riposteChaseTarget=target;p.riposteChaseTime=1.35;p.riposteChaseWarmup=.32;
+  p.riposteChaseTarget=target;p.riposteChaseTime=1.35;p.riposteChaseWarmup=.07;
   p.riposteStrikeTarget=null;p.parry=0;p.parryRecoilTime=0;
   p.parryRecoilRemaining=0;p.counterRush=0;p.counterBoost=false;
   p.attackDriveTotal=0;p.attackDriveRemaining=0;
@@ -9105,6 +9105,7 @@ function attackCheck(){
   hurtEnemy(e,Math.min(e.hp,dmg),65+modRank('counter')*25,'counter');
   recordStyleDamage('parry',beforeHp,e);
   spawnParryCounterFx(p,e,skill.visual); // true parry follow-up contact only
+  playImpactSound('parry',1.30); // zero-lead shotgun report synchronized with painted explosion
   // Only a *landed* chase punch brings back the full camera/echo/slow-motion beat.
   // Keep the chase and the punch approach responsive at 1x until actual contact.
   spawnRiposteAfterimages();
@@ -9590,7 +9591,7 @@ function control(dt,pad){
     target.knockVX=0;target.knockVY=0;target.stun=Math.max(target.stun,.58);
     p.riposteStrikeTarget=target;p.running=false;p.counterBoost=true;
     p.moveName='superman_punch';loadZMove('superman_punch');
-    p.attackDuration=.47;p.attack=.47;p.hitDone=false;p.attackQueued=false;
+    p.attackDuration=.34;p.attack=.34;p.hitDone=false;p.attackQueued=false;
     p.attackDriveRemaining=0;p.attackDriveTotal=0;
     p.inv=Math.max(p.inv,.53);p.animAge=0;p.comboWindow=0;
     strikeCameraTime=.68;strikeCameraTarget=1.36;
@@ -9758,6 +9759,7 @@ function control(dt,pad){
  if(p.jumpLandingVisual===0&&p.z<=0)p.jumpActive=false;
  if(p.stun>0){p.jumpActive=false;p.jumpLandingVisual=0}
  p.landingTimer=Math.max(0,p.landingTimer-dt);
+ if(p.landingTimer===0&&!p.airAttack&&!p.airKickPhase)p._airSlamNoZoom=false;
  p.hitHeavyTimer=Math.max(0,p.hitHeavyTimer-dt);
  if(p.downTimer>0){p.downTimer=Math.max(0,p.downTimer-dt);
   if(p.downTimer===0){p.getupTimer=p.recoveryDuration||.64;p.stun=0;p.inv=Math.max(p.inv,p.getupTimer)}
@@ -11058,7 +11060,13 @@ function zDrawFxPost(paint){
  const main=ctx,pass=zFxPost.begin(main,W,H);
  if(!pass){paint();return}
  ctx=pass;
- try{paint()}finally{ctx=main}
+ // Check FX-only art for opaque dark mattes; keep healthy alpha artwork untouched.
+ const originalDraw=pass.drawImage;
+ pass.drawImage=function(source,...args){
+  const safe=window.ProjectZFxMatteGuard?.safeSource(source)||source;
+  return originalDraw.call(this,safe,...args);
+ };
+ try{paint()}finally{pass.drawImage=originalDraw;ctx=main}
  zFxPost.finish(main);
 }
 window.__zFxShaderStatus=()=>zFxPost?.status()||{mode:'missing',enabled:false};
