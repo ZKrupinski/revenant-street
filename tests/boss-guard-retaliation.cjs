@@ -80,10 +80,12 @@ const heroWorld={p:hero,zFeelPending:{attack:{until:300}},screenShake:0,hitStop:
  zCancelAttackApproach(){},fxBurst(){},playImpactSound(){return true},vibrateImpact(){},
  clamp:(x,a,b)=>Math.max(a,Math.min(b,x)),Math};
 vm.createContext(heroWorld);vm.runInContext(html.slice(begin,end)+'this.reverse=zBossGuardReversal;',heroWorld);
+const preRecoilX=hero.x,preRecoilDistance=Math.abs(hero.x-e.x);
 heroWorld.reverse(e);
 assert.equal(hero.hp,100,'defensive recoil pushes Z but does not deal arbitrary damage');
 assert.equal(hero.attack,0);assert.equal(hero.attackQueued,false);assert.equal(hero.attackDriveRemaining,0);
-assert(hero.x>=605,'hero is knocked back out of melee range');
+assert(Math.abs(hero.x-e.x)>preRecoilDistance+90&&Math.abs(hero.x-preRecoilX)>=100,
+ 'hero is knocked away from whichever side of the boss they occupy');
 assert(hero.stun>=.28&&hero.inv>=.42,'short, fair reaction and recovery window');
 assert(!heroWorld.zFeelPending.attack,'queued combo press cannot override boss counter');
 console.log('PASS: wave/final HP, three-hit guard, phase-2 two-hit guard, 8F brace, real slam/dash retaliation, guard-break, hero recoil, anti-stunlock');
