@@ -29,11 +29,11 @@ vm.createContext(env);
 vm.runInContext(html.slice(start,end)+'\nthis.spawn=spawnParryCounterFx;this.draw=drawParryCounterSprite;',env);
 assert.equal(env.PARRY_COUNTER_ART?.available,undefined); // lexical const stays isolated
 const hero={x:100,y:560,facing:1},enemy={x:270,y:560};
-assert.equal(env.spawn(hero,enemy),true);
+assert.equal(env.spawn(hero,enemy).kind,'parryCounterSprite');
 const fx=env.fx[0];assert.equal(fx.kind,'parryCounterSprite');
 assert.equal(fx.x,183);assert.equal(fx.y,419);assert.equal(fx.dir,1);
 assert.equal(fx.maxLife,.38,'V11 counter blast has a slightly tighter 380ms source animation');
-assert(html.includes("f.kind==='parryCounterSprite'?realDt*.90:dt"),'V11 counter uses the quicker real-time progression, independent of world slow-motion');
+assert(html.includes("f.kind==='groundSlamSprite'||f.kind==='dashPierceSprite'||f.kind==='parryCounterSprite'"),'all three signature effects use the wall clock, independent of world slow-motion');
 for(let i=0;i<8;i++){fx.age=fx.maxLife;fx.life=.04;assert.equal(env.draw(fx),true);}
 assert.equal(draws.length,8,'all 8 authored poses survive severe FPS drops');
 for(let i=0;i<8;i++){
