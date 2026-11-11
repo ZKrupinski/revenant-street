@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>REVENANT STREET — Project Z-Action</title>
+<meta name="project-z-build" content="control-feel-20261111-v1">
 <style>
 
 :root{--red:#fa334d;--red2:#ff7b6c;--text:#e9edf6;--muted:#8b92a6;--bg:#070b13;--line:rgba(255,255,255,.14)}
@@ -5738,7 +5739,7 @@ function intruderCombatFrame(e,key){
 // Hit confirmation flash is sampled from each character's ACTUAL bitmap.
 // A short white highlight of existing opaque pixels, never a procedural polygon
 // or extra explosion in empty air. Real-time fade survives hit-stop and slow-mo.
-const Z_HIT_FLASH_REAL_DURATION=.15;
+const Z_HIT_FLASH_REAL_DURATION=3/60;
 function zDrawSpriteHitFlash(image,sx,sy,sw,sh,dx,dy,dw,dh,actor,actorOpacity=1){
  const remaining=Math.max(0,actor?.hitFlashFx||0);
  if(remaining<=0||actorOpacity<=0||!image)return false;
@@ -6056,6 +6057,7 @@ function paintZ(x,y,z,externalOpacity=1){
  const fr=atlas&&atlas.ready?atlas.frames[currentZFrameIndex(key)]:(zLastGoodFrame||zArtState.idle?.frames[0]||null);
  if(fr){zLastGoodFrame=fr;captureHeroAfterimage(fr,key)}
  ctx.save();ctx.translate(x,Math.round(y-z+8));ctx.scale(p.facing<0?-1:1,1);
+ if(p.jumpActive&&p.jumpStartTimer>0){ctx.scale(1.10,.84);} // 3-frame graphic-only anticipation
  // Parry is a MOVING full-body image stance, not the default idle pose.
  // A short forward brace and sinking guard are visible even with no attacker;
  // success-only shield flash remains exclusively in enemyAttack().
@@ -6236,7 +6238,7 @@ function updateComboCamera(dt,realDt=dt){
  strikeCameraTime=Math.max(0,strikeCameraTime-dt);
  comboCameraLock=Math.max(0,comboCameraLock-dt);
  comboCameraPulse=Math.max(0,comboCameraPulse-dt*.12);
- updatePeriodicCamera(dt);
+ // Periodic recenter disabled: strict normal deadzone owns X.
  if(parryFocus)parryCameraTime=Math.max(0,parryCameraTime-realDt);
  if(counterFocus)counterCameraTime=Math.max(0,counterCameraTime-realDt);
 }
@@ -6267,12 +6269,8 @@ function followComboCamera(dt,realDt=dt){
   cameraX+=(target-cameraX)*Math.min(1,realDt*14);
   return;
  }
- const striking=strikeCameraTime>0;
- const normalX=normalCameraTargetX();
- const x=striking?p.x-W*.52:
-  normalX+((p.x-W*.5)-normalX)*cameraRecenterBlend;
- const target=clamp(x,0,STAGE_WIDTH-W);
- cameraX+=(target-cameraX)*Math.min(1,dt*(striking?30:comboCameraLock>0?22:cameraRecenterBlend>.02?10:6.5));
+ if(strikeCameraTime>0){const target=clamp(p.x-W*.52,0,STAGE_WIDTH-W);cameraX+=(target-cameraX)*Math.min(1,realDt*30);return;}
+ zFeelCamera();
 }
 // World-space limit of the *currently visible* view, accounting for attack zoom.
 // Leave enough space for the full enemy silhouette to remain on-screen.
@@ -6415,7 +6413,7 @@ function jumpMobilityStats(heightRank=modRank('jumpheight'),speedRank=modRank('j
  const impulse=670+45*clamp(heightRank,0,MOD_LEVEL_CAP)+20*(perma.lift||0);
  // Longer horizontal jumps, without changing vertical height or upgrade scaling.
  const moveSpeed=Math.round(700*(1+.14*clamp(speedRank,0,MOD_LEVEL_CAP)));
- return {impulse,moveSpeed,height:Math.round(impulse*impulse/(2*1440))};
+ return {impulse,moveSpeed,height:Math.round(150*(impulse/670)**2)};
 }
 // Third JUMP THRUSTER stack unlocks the second press in midair.
 // Each further height stack extends the second jump; JUMP OVERDRIVE stacks
@@ -7246,6 +7244,7 @@ function stopGamepadRumble(){
  try{navigator.vibrate?.(0)}catch(_){}
 }
 function applyImpactFeedback(target,heavy=false,kind='punch',withAudio=true){
+ zFeelImpact(target);
  target.bodyShakeDuration=heavy?.24:.18;
  target.bodyShakeTime=target.bodyShakeDuration;
  target.bodyShakePower=heavy?14:9;
@@ -7428,6 +7427,7 @@ function revealCombatHud(){
 }
 function showMenu(html){
  cancelQueuedMenuConfirm();
+ zFeelPending={};
  cancelCombatHudEntrance();
  $('overlay').classList.remove('reward-confirming');
  $('menu').classList.remove('reward-entrance');
@@ -7463,7 +7463,7 @@ function titleMenu(){
  $('menu').classList.add('title-dialog');$('menu').scrollTop=0;
 }
 function guideMenu(fromPause=false){if(!fromPause)gameState='menu';showMenu(`<div class="eyebrow">OPERATING MANUAL / Z MODULE</div><h2>전투 조작</h2><div class="help-grid"><div><kbd>W A S D</kbd>이동 전용 · 대각선 이동 가능</div><div><kbd>← / J / X / □</kbd>지상 연속타격 · 점프 후 새로 누르면 수직 내려차기와 착지 광역타</div><div><kbd>↑ / K / Y / △</kbd>점프 · 이동 도약 / 자동 착지 공격 없음</div><div><kbd>→ / L / B / ○</kbd>저스트 가드 (패링)</div><div><kbd>↓ / SHIFT / A / ×</kbd>전방 대쉬 · 후방 입력 시 백스텝</div><div><kbd>← / J / X</kbd>그로기 적 앞 공격 → 처형</div><div><kbd>ESC / START</kbd>일시 정지</div></div><p>캐릭터의 가로 위치(X), 바닥 깊이(Y), 공중 높이(Z)가 타격 판정을 결정합니다. 적의 <b class="key">붉은 예고 동작</b>에 맞춰 패링 성공으로 적을 멀리 날려 보낸 직후 <b class="key">공격 버튼을 한 번</b> 누르면 자동 대쉬 추격과 빈사 강타가 이어집니다. 무기 내구도 0에 도달하면 <b class="key">과부하 파괴</b>가 발생합니다.</p><div class="buttons"><button class="main-btn" data-action="start">▶ 게임 시작</button><button class="secondary-btn" data-action="title">돌아가기</button></div>`);if(fromPause){const resume=$('menu').querySelector('[data-action="start"]'),back=$('menu').querySelector('[data-action="title"]');if(resume){resume.dataset.action='resume';resume.textContent='▶ 플레이 계속'}if(back){back.dataset.action='pauseMenu';back.textContent='일시정지 메뉴로'}}}
-function resetPlayer(){deathCinematic.active=false;deathCinematic.elapsed=0;
+function resetPlayer(){zFeelReset();deathCinematic.active=false;deathCinematic.elapsed=0;
  cameraX=0;cameraZoom=1;comboCameraLock=0;parryCameraTime=0;parryCameraFacing=1;
  counterCameraTime=0;counterCameraFacing=1;counterCameraArtWidth=665;riposteCinematicTime=0;
  footstepRumbleDistance=0;lastFootstepRumbleTime=-99;hapticPriorityUntil=-99;
@@ -7945,7 +7945,230 @@ function zCancelAttackApproach(){
 }
 // A fresh ATTACK press is a new action, not a request to finish rendering
 // the previous ground attack. Specials retain their committed animations.
-function startAttack(skipAttackApproach=false){
+// PROJECT Z integrated control feel v1 — upgrades remain the source of mobility stats.
+const Z_FEEL={fps:60,coyoteTimeFrames:6,jumpBufferFrames:6,dodgeBufferFrames:5,attackBufferFrames:5,
+ accelerationFrames:6,stopFrames:4,stopDistancePixels:6,turnFrames:7,turnBrakeMultiplier:2.5,
+ jumpHeight:150,riseFrames:22,fallFrames:18,minJumpRatio:.55,anticipationFrames:3,
+ apexFrames:9,apexGravity:.5,fallGravity:1.6,deadzonePixels:160,lookAheadPixels:120,cameraFrames:22,
+ attackFrames:27,recoveryFrames:18,cancelRecoveryFrames:6,cornerCorrectionPixels:5,
+ effectPreset:'Moderate',shakePixels:11,shakeFrames:4,hitstopFrames:3,hitFxFrames:5,flashFrames:3,
+ hitAlpha:.7,debug:false};
+const Z_FEEL_PRESETS={None:{shake:0,stop:0,scale:0},Moderate:{shake:11,stop:3,scale:1},Extreme:{shake:50,stop:8,scale:2}};
+let zFeelInTick=false,zFeelTick=0,zFeelPending={},zFeelShakeUntil=0,zFeelCameraAge=0,zFeelCameraDir=0,zFeelCameraFrom=0;
+const zFeelLogs=[];
+// Optional geometry adapter. The current street has no platforms/ceilings.
+const zFeelTerrain={supported:null,correctHead:null};
+function zFeelLog(kind,source,extra={}){const e={tick:zFeelTick,kind,source,...extra};zFeelLogs.push(e);if(zFeelLogs.length>100)zFeelLogs.shift();if(Z_FEEL.debug)console.log('[Z control]',e)}
+function zFeelHeldJump(){return keys.has('arrowup')||keys.has('k')||!!padPrev.jump||touchFaceHeld.has('jump')}
+function zFeelQueue(kind){
+ if(gameState!=='playing'||heroEntry.active)return false;
+ const frames=kind==='jump'?Z_FEEL.jumpBufferFrames:kind==='dodge'?Z_FEEL.dodgeBufferFrames:Z_FEEL.attackBufferFrames;
+ // Browser edges are sampled by the next fixed tick; pad edges occur inside it.
+ const at=zFeelTick+(zFeelInTick?0:1);
+ zFeelPending[kind]={at,until:at+Math.max(1,Math.floor(frames))-1};
+ if(kind==='dodge')delete zFeelPending.attack;
+ return true;
+}
+function startAttack(skipAttackApproach=false){return skipAttackApproach?startAttackNow(true):zFeelQueue('attack')}
+function dodge(){return zFeelQueue('dodge')}
+function jump(){return zFeelQueue('jump')}
+function zFeelReset(){zFeelPending={};zFeelShakeUntil=0;zFeelCameraAge=0;
+ p._feelFreezeUntil=0;p._feelJump=null;p._feelCoyoteUntil=0;p._feelWasSupported=true;
+ p._feelVX=0;p._feelVY=0;p._feelStop=null;p._feelTurn=null;p.dashBufferedUntil=0;
+}
+function zFeelFrozen(a){return Z_FEEL.effectPreset!=='None'&&(a._feelFreezeUntil||0)>zFeelTick}
+function zFeelCanDodge(){
+ if(p.dodge>0||p.stun>0||p.downTimer>0||p.getupTimer>0||(p.z>2&&p.jumpActive))return false;
+ if(p.attack>0){
+  if(p.airAttack||p.dashSmash||p.counterBoost||p.riposteStrikeTarget||p.airKickPhase)return false;
+  const cancel=Z_FEEL.attackFrames-Z_FEEL.recoveryFrames+Z_FEEL.cancelRecoveryFrames-1;
+  return p.attackDuration-p.attack+1e-7>=p.attackDuration*cancel/Z_FEEL.attackFrames;
+ }
+ return true;
+}
+function zFeelSupportStep(){
+ if(typeof zFeelTerrain.supported!=='function')return;
+ const grounded=!!zFeelTerrain.supported(p.x,p.y,p.z);
+ if(p._feelWasSupported&&!grounded&&!p.jumpActive&&p.vz<=0)
+  p._feelCoyoteUntil=zFeelTick+Math.max(0,Z_FEEL.coyoteTimeFrames)-1;
+ if(grounded)p._feelCoyoteUntil=0;
+ p._feelWasSupported=grounded;
+}
+function zFeelConsume(){
+ zFeelSupportStep();
+ for(const k of Object.keys(zFeelPending))if(zFeelPending[k].until<zFeelTick){delete zFeelPending[k];zFeelLog(k,'expired')}
+ if(zFeelFrozen(p))return;
+ const d=zFeelPending.dodge;
+ if(d){delete zFeelPending.attack;if(zFeelCanDodge()&&dodgeNow(true)){delete zFeelPending.dodge;zFeelLog('dodge',zFeelTick-d.at>0?'buffer':'direct');}return;}
+ const j=zFeelPending.jump;
+ if(j){
+  const coyote=(p._feelCoyoteUntil||0)>=zFeelTick&&p.z>0;
+  const airborne=p.jumpActive&&p.z>1&&!coyote;
+  const fresh=zFeelTick===j.at;
+  // A buffered press may launch from ground, but never secretly spend an air charge.
+  const legalAir=airborne&&fresh&&doubleJumpMobilityStats().unlocked&&!p.doubleJumpUsed;
+  if((p.z<=0&&p.vz<=0)||coyote||legalAir){
+   const launchZ=p.z;
+   if(coyote){p.jumpActive=false;p.z=0;}
+   if(jumpNow()===true){if(coyote){p.z=launchZ;p._feelJump.origin=launchZ;}delete zFeelPending.jump;p._feelCoyoteUntil=0;
+    zFeelLog('jump',coyote?'coyote':legalAir?'double-jump':fresh?'direct':'landing-buffer');
+   }else if(coyote)p.z=launchZ;
+  }
+ }
+ const a=zFeelPending.attack;
+ if(a&&p.stun<=0&&p.downTimer<=0&&p.getupTimer<=0&&!(p.dodge>0&&p.dashFollowWindow<=0)){
+  const n=runStats.attacks,target=p.attackApproachTarget;
+  startAttackNow();
+  if(runStats.attacks!==n||p.attackApproachTarget!==target){delete zFeelPending.attack;zFeelLog('attack',zFeelTick-a.at>0?'buffer':'direct')}
+ }
+}
+function zFeelJumpProfile(impulse){
+ const ratio=impulse/670,H=Z_FEEL.jumpHeight*ratio*ratio,T=Z_FEEL.riseFrames/60*ratio;
+ const h=Math.min(T*.45,Z_FEEL.apexFrames/120),m=Z_FEEL.apexGravity;
+ const g=H/(.5*T*T-(1-m)*T*h+.5*(1-m)*h*h),v=g*(T-(1-m)*h);
+ const D=Z_FEEL.fallFrames/60*ratio,rest=D-h;
+ const fall=2*(H-.5*m*g*h*h-m*g*h*rest)/(rest*rest);
+ return {g,v,H,fall,threshold:m*g*h,origin:p.z,cut:false};
+}
+function zFeelBeginJump(impulse){
+ p._feelJump=zFeelJumpProfile(impulse);p.vz=p._feelJump.v;
+ p._feelCoyoteUntil=0;p.jumpStartTimer=Z_FEEL.anticipationFrames/60;
+ if(!zFeelHeldJump()){p._feelJump.cut=true;p.vz=Math.sqrt(2*p._feelJump.g*p._feelJump.H*Z_FEEL.minJumpRatio);}
+}
+function zFeelJumpStep(dt){
+ const q=p._feelJump;
+ if(!q||p.stun>0){p.z+=p.vz*dt;p.vz-=1440*dt;return;}
+ if(p.vz>0&&!q.cut&&!zFeelHeldJump()){
+  p.vz=Math.min(p.vz,Math.sqrt(2*q.g*Math.max(0,q.H*Z_FEEL.minJumpRatio-(p.z-q.origin))));q.cut=true;
+ }
+ let left=dt;
+ for(let i=0;i<6&&left>1e-9;i++){
+  let gravity,bound;
+  if(p.vz>1e-8){gravity=!q.cut&&p.vz<=q.threshold+1e-7?q.g*Z_FEEL.apexGravity:q.g;bound=gravity===q.g&&!q.cut?q.threshold:0;}
+  else if(!q.cut&&p.vz>-q.threshold+1e-7){gravity=q.g*Z_FEEL.apexGravity;bound=-q.threshold;}
+  else{gravity=q.fall;bound=-Infinity;}
+  const t=Math.min(left,Math.max(0,(p.vz-bound)/gravity));
+  if(t<1e-10){p.vz=bound-1e-7;continue;}
+  const oldZ=p.z;p.z+=p.vz*t-.5*gravity*t*t;p.vz-=gravity*t;left-=t;
+  // An engine adapter must sweep the full body both sideways and upward.
+  if(zFeelTerrain.correctHead&&p.z>oldZ){
+   const fix=zFeelTerrain.correctHead({x:p.x,y:p.y,fromZ:oldZ,toZ:p.z,maxPixels:Z_FEEL.cornerCorrectionPixels});
+   if(fix?.clear&&Number.isFinite(fix.dx)&&Math.abs(fix.dx)<=Z_FEEL.cornerCorrectionPixels){p.x+=fix.dx;zFeelLog('jump','corner',{pixels:fix.dx});}
+   else if(fix?.blocked){p.z=fix.z;p.vz=0;q.cut=true;}
+  }
+ }
+}
+function zFeelMove(dx,dy,speed,dt){
+ const targetX=dx*speed,targetY=dy*speed*.52;
+ const active=Math.hypot(dx,dy)>.01,oldX=p._feelVX||0,oldY=p._feelVY||0;
+ if(!active){
+  if(!p._feelStop)p._feelStop={age:0,vx:oldX,vy:oldY};
+  const s=p._feelStop,T=Z_FEEL.stopFrames/60;
+  // Preserve existing run/sprint top speed, while limiting base coast to 6px.
+  const velocity=Math.hypot(s.vx,s.vy),distance=Z_FEEL.stopDistancePixels*(1+25*(perma.sprint||0)/PLAYER_RUN_SPEED);
+  const power=Math.max(1,velocity*T/Math.max(.01,distance)-1),a=Math.min(T,s.age),b=Math.min(T,a+dt);
+  const integral=T/(power+1)*(Math.pow(1-a/T,power+1)-Math.pow(1-b/T,power+1));
+  p.x=clamp(p.x+s.vx*integral,64,STAGE_WIDTH-64);p.y=groundY(p.y+s.vy*integral);
+  s.age=b;p._feelVX=s.vx*Math.pow(1-b/T,power);p._feelVY=s.vy*Math.pow(1-b/T,power);p._feelTurn=null;return;
+ }
+ p._feelStop=null;
+ let seconds=Z_FEEL.accelerationFrames/60;
+ if(oldX*targetX+oldY*targetY<0&&!p._feelTurn)p._feelTurn={x:targetX,y:targetY};
+ const turning=p._feelTurn;
+ let vx=oldX,vy=oldY,left=dt,travelX=0,travelY=0;
+ for(let n=0;n<3&&left>1e-9;n++){
+  const brake=turning&&(vx*targetX+vy*targetY)<-1e-7;
+  const tx=brake?0:targetX,ty=brake?0:targetY;
+  const rate=brake?speed/(Z_FEEL.stopFrames/60)*Z_FEEL.turnBrakeMultiplier:
+   speed/(turning?(Z_FEEL.turnFrames-Z_FEEL.stopFrames/Z_FEEL.turnBrakeMultiplier)/60:seconds);
+  const delta=Math.hypot(tx-vx,ty-vy);
+  if(delta<1e-7){travelX+=vx*left;travelY+=vy*left;left=0;break;}
+  const step=Math.min(left,delta/rate),nx=vx+(tx-vx)*rate*step/delta,ny=vy+(ty-vy)*rate*step/delta;
+  travelX+=(vx+nx)*.5*step;travelY+=(vy+ny)*.5*step;vx=nx;vy=ny;left-=step;
+ }
+ p._feelVX=vx;p._feelVY=vy;
+ if(Math.hypot(vx-targetX,vy-targetY)<1e-6)p._feelTurn=null;
+ p.x=clamp(p.x+travelX,64,STAGE_WIDTH-64);p.y=groundY(p.y+travelY);
+}
+function zFeelImpact(target){
+ if(Z_FEEL.effectPreset==='None')return;
+ const preset=Z_FEEL_PRESETS[Z_FEEL.effectPreset]||Z_FEEL_PRESETS.Moderate;
+ const frames=clamp(Z_FEEL.effectPreset==='Extreme'?preset.stop:Z_FEEL.hitstopFrames,3,4);
+ for(const a of new Set([p,target]))if(!zFeelFrozen(a))a._feelFreezeUntil=zFeelTick+frames+(a===p?1:0);
+ zFeelShakeUntil=zFeelTick+clamp(Z_FEEL.shakeFrames,3,5);
+ target.hitFlashFx=clamp(Z_FEEL.flashFrames,2,3)/60;
+}
+function zFeelDrawContact(f){
+ const original=ctx.drawImage;
+ ctx.save();
+ ctx.drawImage=function(...args){
+  const alpha=this.globalAlpha,composite=this.globalCompositeOperation,filter=this.filter;
+  this.globalAlpha=Math.min(alpha,clamp(Z_FEEL.hitAlpha,0,.7));this.globalCompositeOperation='source-over';this.filter='none';
+  try{return original.apply(this,args);}finally{this.globalAlpha=alpha;this.globalCompositeOperation=composite;this.filter=filter;}
+ };
+ try{
+  if(f.kind==='basicHitSprite')drawBasicContactFx(f);
+  else if(f.kind==='enemyHitBitmap')drawEnemyBitmapFx(f);
+  else if(f.kind==='parryCounterSprite')drawParryCounterSprite(f);
+  else if(f.kind==='dashPierceSprite')drawDashPierceSprite(f);
+  else if(f.kind==='groundSlamSprite')drawGroundSlamSprite(f);
+ }finally{ctx.drawImage=original;ctx.restore();}
+}
+function zFeelContactFx(f){return ['basicHitSprite','enemyHitBitmap','parryCounterSprite','dashPierceSprite','groundSlamSprite'].includes(f.kind)}
+function zFeelLimitFx(){
+ const seen=new Set();
+ for(let i=fx.length-1;i>=0;i--){const f=fx[i];if(!zFeelContactFx(f))continue;
+  if(Z_FEEL.effectPreset==='None'){fx.splice(i,1);continue;}
+  if(f._feelUntil===undefined){
+   f._feelUntil=zFeelTick+clamp(Z_FEEL.hitFxFrames,4,6);f.maxLife=clamp(Z_FEEL.hitFxFrames,4,6)/60;
+   if('duration'in f)f.duration=f.maxLife;f.delay=0;
+   const enemy=f.contactEnemy,half=enemy?bodyHalfX(enemy):54;
+   // Small contact box, and all contact VFX are rendered BEHIND all actors.
+   f.width=Math.min(f.width||100,half*1.1);f.scale=Math.min(f.scale||1,.45);
+  }
+  f.life=Math.min(f.life,(f._feelUntil-zFeelTick)/60);f.age=f.maxLife-f.life;
+  f.alpha=Math.min(f.alpha??1,clamp(Z_FEEL.hitAlpha,0,.7));
+  if(f.contactEnemy){if(seen.has(f.contactEnemy)){fx.splice(i,1);continue;}seen.add(f.contactEnemy);}
+  if(f.life<=0)fx.splice(i,1);
+ }
+}
+function zFeelEndTick(){
+ zFeelLimitFx();hitStop=0; // participant-local hitstop replaces the old global pause
+ if(Z_FEEL.effectPreset==='None'){screenShake=0;for(const a of [p,...enemies]){a._feelFreezeUntil=0;a.hitFlashFx=0;}return;}
+ if(screenShake>0&&zFeelShakeUntil<=zFeelTick)zFeelShakeUntil=zFeelTick+clamp(Z_FEEL.shakeFrames,3,5);
+ screenShake=0; // no accumulated camera amplitude
+}
+function zFeelShakeOffset(cssScale=1){
+ if(Z_FEEL.effectPreset==='None'||zFeelShakeUntil<=zFeelTick)return {x:0,y:0};
+ const left=zFeelShakeUntil-zFeelTick,total=clamp(Z_FEEL.shakeFrames,3,5);
+ const amp=Math.max(0,Math.min(11,Z_FEEL.shakePixels))*Math.min(1,left/total)**2/Math.max(.001,cssScale);
+ const angle=zFeelTick*2.39996323;
+ return {x:Math.cos(angle)*amp,y:Math.sin(angle)*amp};
+}
+function zFeelCamera(){
+ const center=cameraX+W*.5,delta=p.x-center;
+ if(Math.abs(delta)<=Z_FEEL.deadzonePixels*.5)return;
+ const dir=p.facing<0?-1:1;
+ if(dir!==zFeelCameraDir){zFeelCameraDir=dir;zFeelCameraAge=0;zFeelCameraFrom=cameraX;}
+ zFeelCameraAge=Math.min(Z_FEEL.cameraFrames,zFeelCameraAge+1);
+ const t=zFeelCameraAge/Z_FEEL.cameraFrames,u=t*t*(3-2*t);
+ const target=clamp(p.x-W*.5+dir*Z_FEEL.lookAheadPixels,0,STAGE_WIDTH-W);
+ cameraX=zFeelCameraFrom+(target-zFeelCameraFrom)*u;
+}
+window.__zControlFeel={config:Z_FEEL,presets:Z_FEEL_PRESETS,terrain:zFeelTerrain,
+ logs:()=>zFeelLogs.slice(),state:()=>({tick:zFeelTick,pending:{...zFeelPending},doubleJumpUsed:p.doubleJumpUsed,
+ doubleJumpUnlocked:doubleJumpMobilityStats().unlocked,freezeFrames:Math.max(0,(p._feelFreezeUntil||0)-zFeelTick)}),
+ setPreset(name){if(!Z_FEEL_PRESETS[name])throw Error('Unknown effect preset');Z_FEEL.effectPreset=name;zFeelShakeUntil=0;for(const a of [p,...enemies]){a._feelFreezeUntil=0;a.hitFlashFx=0;}zFeelLimitFx();}};
+if(/(?:\?|&)feeldebug=1(?:&|$)/.test(location.search)){
+ const box=document.createElement('label'),select=document.createElement('select');
+ box.textContent='Effect Preset ';box.style.cssText='position:fixed;right:12px;bottom:12px;z-index:99999;background:#101820;padding:8px;color:white;font:14px sans-serif';
+ for(const name of Object.keys(Z_FEEL_PRESETS)){const option=document.createElement('option');option.value=name;option.textContent=name;select.appendChild(option);}
+ select.value=Z_FEEL.effectPreset;select.onchange=()=>window.__zControlFeel.setPreset(select.value);
+ box.appendChild(select);document.body.appendChild(box);
+}
+// END PROJECT Z integrated control feel v1
+
+function startAttackNow(skipAttackApproach=false){
  if(p.attackApproachTarget&&!skipAttackApproach)return;
  if(gameState!=='playing'||p.stun>0||p.riposteChasing||(p.dodge>0&&p.dashFollowWindow<=0)||
   p.downTimer>0||p.getupTimer>0)return;
@@ -8052,7 +8275,7 @@ function startAttack(skipAttackApproach=false){
  const durations={jab:.31,cross:.37,hook:.41,uppercut:.44,backfist:.39,hammerfist:.50,spinning_elbow:.52,rising_elbow:.42,superman_punch:.56,shovel_hook:.41,frontkick:.48,lowkick:.40,roundkick:.54,axe_kick:.59,sidekick:.48,spinning_heel:.57,crescent_kick:.53,diagonal_airkick:.58,rising_headbutt:.45,forward_headbutt:.40};
  // Faster eight-frame attacks; repeated presses can interrupt the rendering
  // immediately, while held attack loops a little before recovery finishes.
- p.attackDuration=Math.max(.23,(durations[move]||.40)*.80/(1+modRank('haste')*.075));
+ p.attackDuration=Z_FEEL.attackFrames/60/(1+modRank('haste')*.075); // preserve HASTE scaling
  const advance={jab:23,cross:43,hook:31,uppercut:22,backfist:29,hammerfist:46,
   spinning_elbow:53,rising_elbow:30,superman_punch:100,shovel_hook:34,
   frontkick:45,lowkick:32,roundkick:48,axe_kick:37,sidekick:66,
@@ -8099,8 +8322,8 @@ function parry(){
 // Real-time dash input buffer. A tap during the tail of the previous dash,
 // hit-reaction, or a landing must not be discarded forever by edge-triggered
 // keyboard/pad/touch listeners. Only one buffered dash can be pending.
-const DASH_BUFFER_MS=520;
-function dodge(fromBuffer=false){
+const DASH_BUFFER_MS=5/60*1000;
+function dodgeNow(fromBuffer=false){
  if(gameState!=='playing')return false;
  if(p.dodge>0||p.stun>0||p.downTimer>0||p.getupTimer>0||
     (p.z>2&&p.jumpActive)){
@@ -8144,15 +8367,8 @@ function dodge(fromBuffer=false){
  void 0 /* prior arcade attack tone disabled */;void 0 /* previous mechanical cue disabled */;
  return true;
 }
-function consumeBufferedDash(){
- const until=p.dashBufferedUntil||0;
- if(!until)return false;
- if(gameState!=='playing'||performance.now()>until){p.dashBufferedUntil=0;return false}
- // Preserve the queued tap through recovery; do not require another press.
- if(p.dodge>0||p.stun>0||p.downTimer>0||p.getupTimer>0||(p.z>2&&p.jumpActive))return false;
- return dodge(true);
-}
-function jump(){
+function consumeBufferedDash(){return false} // unified frame buffer owns dash input
+function jumpNow(){
  if(gameState!=='playing'||p.attack>0||p.parry>0||p.dodge>0||
   p.stun>0||p.downTimer>0||p.getupTimer>0)return;
  const airborne=p.jumpActive&&p.z>1;
@@ -8183,7 +8399,7 @@ function jump(){
   p.moveName='jumpstart';p.motionKey='';p.motionTime=0;p.animAge=0;
   fxBurst(p.x,p.y-72,'blue',.55);
   playActionOnset('jump');playImpactSound('parry',.85);
-  return;
+  zFeelBeginJump(second.impulse);return true;
  }
  // Original ground jump (unchanged below upgrade Lv.3).
  p.doubleJumpUsed=false;p.doubleJumpSpeedMult=1;
@@ -8194,10 +8410,11 @@ function jump(){
  p.jumpActive=true;p.jumpLandingTriggered=false;p.jumpLandingVisual=0;
  p.dashSmash=false;p.dashFollowWindow=0;
  p.jumpTime=0;p.moveName='jumpstart';
- p.vz=jumpMobilityStats().impulse;p.z=2;p.jumpStartTimer=.23;p.landingTimer=0;
+ p.vz=jumpMobilityStats().impulse;p.z=0;p.jumpStartTimer=.23;p.landingTimer=0;
  p.airKickUsed=false;
  playActionOnset('jump'); // Existing first-jump response.
  playImpactSound('parry',.85);
+ zFeelBeginJump(jumpMobilityStats().impulse);return true;
  /* No synthetic pitch chirp at jump start. */
 }
 function execute(target){
@@ -8235,7 +8452,7 @@ function hurtEnemy(e,dmg,poise,specialKind=''){
  e.hp-=dmg;
  // A brief full-silhouette bitmap pulse on CONFIRMED damage, irrespective of
  // the ongoing reaction animation or its old slow-motion animation clock.
- if(dmg>0)e.hitFlashFx=Z_HIT_FLASH_REAL_DURATION;
+ if(dmg>0){e.hitFlashFx=Z_HIT_FLASH_REAL_DURATION;zFeelImpact(e);}
  // Layer painted victim impacts over the signature attack animation at the
  // same confirmed contact. A fatal special hit gets one as well.
  const specialContact=!!specialKind||!!p.dashSmash||!!p.counterBoost||
@@ -8740,8 +8957,8 @@ function drawBasicContactFx(f){
  ctx.translate(f.x+f.vx*elapsed,f.y+f.vy*elapsed);
  ctx.scale(f.dir,1);ctx.rotate(f.rotation);
  // Screen-blend and brighten the ORIGINAL raster art: no vector geometry.
- ctx.globalCompositeOperation=f.eliteContact?'source-over':'screen';
- ctx.filter=f.eliteContact?'brightness(1.45) contrast(1.08)':'brightness(2.1) contrast(1.13) saturate(1.10)';
+ ctx.globalCompositeOperation='source-over';
+ ctx.filter='none';
  ctx.globalAlpha=f.alpha*(progress<.72?1:Math.max(0,(1-progress)/.28));
  const frame=Math.min(7,Math.floor(progress*8));
  if(painted){
@@ -9087,7 +9304,7 @@ function enemyAttack(e){
  }
  p.dashSmash=false;p.dashFollowWindow=0;
  p.riposteChasing=false;p.riposteChaseTarget=null;p.riposteStrikeTarget=null;p.riposteWindow=0;p.riposteTarget=null;
- playCombatVoice(p.hp<=0?'heroDeath':'heroHurt');p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)startDeathCinematic()}
+ playCombatVoice(p.hp<=0?'heroDeath':'heroHurt');p.stamina=clamp(p.stamina-20,0,100);applyImpactFeedback(p,heavy,heavy?'heavy':'punch');zFeelImpact(e);screenShake=Math.max(screenShake,e.type==='boss'?25:eliteCleave?23:13);screenTint=Math.max(screenTint,eliteCleave?.48:.37);p.x=clamp(p.x+e.face*30,55,STAGE_WIDTH-65);floatText('-'+Math.round(damageTaken),p.x,p.y-180,'#ff6d83');fxBurst(p.x,p.y-124,'red',1.1);sound('hurt');if(p.hp<=0)startDeathCinematic()}
 function fxBurst(x,y,color='red',scale=1,specialAttackFx=false){
  if(fx.length>=90)fx.splice(0,fx.length-75);
  fx.push({kind:'genericBurstBitmap',x,y,color,scale,life:.31,maxLife:.31,rotation:rnd(-.2,.2),specialAttackFx});
@@ -9250,7 +9467,7 @@ function drawEnemyBitmapFx(effect){
  ctx.save();ctx.globalCompositeOperation='source-over';
  // Death never receives a global opacity fade: only its authored 8 RGBA
  // frames change. It disappears on the exact tick the actor does.
- ctx.globalAlpha=hit&&progress>.81?Math.max(0,(1-progress)/.19):1;
+ ctx.globalAlpha=hit?Math.min(.7,effect.alpha??.7)*(progress>.81?Math.max(0,(1-progress)/.19):1):1;
  // Strict cell coordinates, with original transparent overscan untouched.
  ctx.drawImage(image,(frame%4)*512,Math.floor(frame/4)*512,512,512,
    drawX-w*.5,topY,w,w);
@@ -9448,8 +9665,13 @@ function control(dt,pad){
    dx=p.airKickPhase==='charge'?0:p.facing;dy=0;
    speed=p.airKickPhase==='charge'?0:330;
   }
+  const ordinary=p.dodge<=0&&p.counterRush<=0&&p.attack<=0&&!p.jumpActive&&!p.airAttack&&p.parry<=0&&!p.attackApproachTarget;
+  if(ordinary)zFeelMove(dx,dy,speed,dt);
+  else{p._feelVX=0;p._feelVY=0;p._feelStop=null;p._feelTurn=null;
   p.x=clamp(p.x+dx*speed*dt,64,STAGE_WIDTH-64);
   p.y=groundY(p.y+dy*speed*.52*dt);
+  }
+
   if(p.attack>0&&p.attackDriveRemaining>0&&!p.airAttack&&p.counterRush<=0){
    const phase=1-p.attack/Math.max(.001,p.attackDuration);
    if(phase<.80){
@@ -9505,8 +9727,7 @@ function control(dt,pad){
  if(p.z>0||p.vz>0){
   if(p.jumpActive)p.jumpTime+=dt;
   const charging=p.airAttack&&p.airKickPhase==='charge';
-  if(!charging){p.z+=p.vz*dt;
-   p.vz-=(p.airKickPhase==='dive'?1950:1440)*dt}
+  if(!charging){if(p.airKickPhase==='dive'){p.z+=p.vz*dt;p.vz-=1950*dt;}else zFeelJumpStep(dt);}
   // No pre-landing invisible auto hit: all damage belongs to actual heel
   // contact with the floor after explicit ATTACK.
   if(p.z<=0){
@@ -9523,6 +9744,10 @@ function control(dt,pad){
    else if(landed)p.landingTimer=.28;
    p.airKickUsed=false;p.airAttack=false;
    p.doubleJumpUsed=false;p.doubleJumpSpeedMult=1; // Ground contact restores second-jump charge.
+   p._feelJump=null;p._feelCoyoteUntil=0;
+   if(!powered&&p.stun<=0&&zFeelPending.jump&&zFeelPending.jump.until>=zFeelTick){
+    p.jumpActive=false;zFeelConsume(); // same-tick landing launch; no second integration
+   }
   }
  }
  p.jumpStartTimer=Math.max(0,p.jumpStartTimer-dt);
@@ -9566,7 +9791,7 @@ function control(dt,pad){
  // Holding attack before jumping never starts a free dive; in the air,
  // only a newly pressed attack event can call startAttack().
  const wantsCombo=p.attackQueued||(!p.jumpActive&&p.z<=0&&(keys.has('arrowleft')||keys.has('j')||padPrev.attack));
- const canCombo=p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0;
+ const canCombo=!zFeelPending.dodge&&p.stun<=0&&p.dodge<=0&&p.parry<=0&&p.downTimer<=0&&p.getupTimer<=0;
  // A held ATTACK loops early, without a dead beat at the end of each pose.
  // A new press already transitions immediately inside startAttack().
  // Do not interrupt dash finishers, dive slams or parry-chase strikes.
@@ -9827,6 +10052,7 @@ function updateEnemies(dt,parryVictimScale=1){
  // AI scans only nearby encounters rather than the whole 12,800 px street.
  const nearbyEnemies=enemies.filter(e=>!e.dead&&Math.abs(e.x-p.x)<1150);
  for(const e of enemies){
+  if(zFeelFrozen(e))continue;
   // Parried target: local clock is slower than the already slowed world.
   const actorDt=e===parrySlowTarget?dt*parryVictimScale:dt;
   if(intruderEntering(e)){
@@ -10263,6 +10489,7 @@ function updateHud(){
   $('bossPhase').textContent=String(activeBoss.phase).padStart(2,'0');
  } }
 function update(dt){
+ zFeelTick++;zFeelInTick=true;
  // Real-clock entrance freezes controls, AI and hitboxes while real stage
  // scenery is revealed; all eight painted bitmap poses play only once.
  // A reward/pause/death menu can supersede the opening without delaying
@@ -10306,7 +10533,8 @@ function update(dt){
 const pad=pollPad();
 syncExternalStickVisual(pad);
 if(gameState==='reward'&&rewardSelection){updateRewardSelection(dt);return}
-if(gameState!=='playing')return;
+if(gameState!=='playing'){zFeelPending={};return;}
+ zFeelConsume();
  // Time domains: background, generic FX and ordinary foes slow to 24%.
  // Hero actions run at 13.9% real speed; parried victim at 7.7%.
  // The ten-frame parry flash and camera response alone use real time so they
@@ -10319,8 +10547,7 @@ if(gameState!=='playing')return;
  slowMotion=Math.max(0,slowMotion-dt);
  if(slowMotion<=0)parrySlowTarget=null;
  time+=worldDt;messageUpdate(worldDt);updateEffects(worldDt,dt);updateComboCamera(worldDt,dt);
- if(hitStop>0){hitStop=Math.max(0,hitStop-dt);followComboCamera(worldDt,dt);updateHudThrottled(dt);return}
- control(heroDt,pad);followComboCamera(worldDt,dt);updateEnemies(worldDt,targetScale);updateHudThrottled(dt);$('hint').hidden=true; /* old text bubble replaced by animated bitmap arrow */}
+ if(!zFeelFrozen(p))control(heroDt,pad);followComboCamera(worldDt,dt);updateEnemies(worldDt,targetScale);updateHudThrottled(dt);$('hint').hidden=true; /* old text bubble replaced by animated bitmap arrow */}
 // Cache photographic depth treatment once per loaded panorama. Ground stays original.
 const backdropDepthCache=new WeakMap();
 function depthBackdrop(bg){
@@ -10747,7 +10974,7 @@ function zHybridVfxForeground(){
 function zDrawInLayer(layer,isFront){
  return layer==='all'||(layer==='front')===!!isFront;
 }
-function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);const left=cameraX-820,right=cameraX+W+820;const hitOverlays=[];for(const f of fx){if(f.x<left||f.x>right)continue;
+function drawEffects(layer='all',selection=null){drawModEnergy(layer,selection);const left=cameraX-820,right=cameraX+W+820;const hitOverlays=[];for(const f of fx){if(zFeelContactFx(f))continue;if(f.x<left||f.x>right)continue;
  // Hit flashes always cover the struck character; dying ash always appears beneath actors.
  const front=f.kind==='enemyHitBitmap'?true:f.kind==='enemyDeathBitmap'?false:
   (zIsSignatureVfx(f)||!!selection?.fx.has(f));
@@ -10844,8 +11071,8 @@ function draw(){
  ctx.save();
  // Only the full-screen camera offset is softened by 15%; gamepad rumble,
  // actor hit reactions, sound, hitstop, and effect timers remain unchanged.
- if(screenShake>0){const cameraShake=screenShake*.85;
-  ctx.translate(rnd(-cameraShake,cameraShake),rnd(-cameraShake*.65,cameraShake*.65));}
+ const shake=zFeelShakeOffset(canvas.getBoundingClientRect().width/W);
+ ctx.translate(shake.x,shake.y);
  const zoom=clamp(cameraZoom,1,1.36);
  if(zoom>1.0001){const px=W*.52,py=H*.51;
   ctx.translate(px,py);ctx.scale(zoom,zoom);ctx.translate(-px,-py);
@@ -10864,6 +11091,8 @@ function draw(){
  // Do not render cinematic entry with ordinary Y-sorted actors: any later
  // foreground effect would cover the ambusher's back and break the silhouette.
  // Only entering red hoods bypass depth sorting; landed enemies keep Y-depth.
+ // Restrained contact sprites bypass ADD/Bloom and all render behind actors.
+ for(const f of fx)if(zFeelContactFx(f))zFeelDrawContact(f);
  for(const actor of actors){
   if(intruderEntering(actor))entryActors.push(actor);
   else drawActor(actor);
@@ -10898,10 +11127,12 @@ function draw(){
  drawOffscreenEnemyIndicator();if(typeof drawRightAdvanceSign==='function')drawRightAdvanceSign();
 }
 const runtimePerf={fps:0,frameMs:0};
-let perfFrames=0,perfElapsed=0;
+let perfFrames=0,perfElapsed=0,zFixedAccumulator=0;
 function loop(t){
  const elapsed=(t-last)/1000||.016,dt=Math.min(elapsed,.05);
- last=t;update(dt);draw();
+ last=t;zFixedAccumulator+=dt;
+ while(zFixedAccumulator+1e-9>=1/60){update(1/60);zFeelEndTick();zFeelInTick=false;zFixedAccumulator-=1/60;}
+ draw();
  perfFrames++;perfElapsed+=elapsed;
  if(perfElapsed>=1){
   runtimePerf.fps=Math.round(perfFrames/perfElapsed);
@@ -11487,3 +11718,4 @@ canvas.style.visibility='hidden';syncGameViewport();titleMenu();requestAnimation
 <script src="./assets/industrial-combat-bgm.js?v=20261102-bgm-mix-plus"></script>
 </body>
 </html>
+

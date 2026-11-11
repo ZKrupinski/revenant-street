@@ -1,0 +1,26 @@
+name: Project Z control feel and upgrade compatibility
+on:
+  push:
+    branches: [main]
+    paths: [index.html, tests/control-feel-integration.cjs, .github/workflows/control-feel.yml]
+  pull_request:
+    paths: [index.html, tests/control-feel-integration.cjs, .github/workflows/control-feel.yml]
+  workflow_dispatch:
+jobs:
+  control-feel:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/control-feel-integration.cjs
+      - run: node tests/keyboard-run-menu-input.cjs
+      - run: node tests/basic-hit-camera-shake.cjs
+      - name: Browser keyboard and upgrade integration
+        run: |
+          npm install --prefix "$RUNNER_TEMP/z-browser" playwright
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/z-http.log 2>&1 &
+          NODE_PATH="$RUNNER_TEMP/z-browser/node_modules" node tests/control-feel-browser.cjs
