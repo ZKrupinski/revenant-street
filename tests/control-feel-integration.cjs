@@ -87,4 +87,23 @@ test('contact effect limit, duration, None, preset clamp',()=>{
  w.window.__zControlFeel.setPreset('Extreme');w.zFeelImpact(enemy);assert(w.window.__zControlFeel.state().freezeFrames<=5);
  w.window.__zControlFeel.setPreset('None');assert.equal(w.zFeelFrozen(w.p),false);
 });
+test('signature FX keep original front layer, sprite sizes, full durations and bloom',()=>{
+ const w=harness();
+ const signatures=['parrySuccess10','parryCounterSprite','groundSlamSprite','dashPierceSprite'];
+ const cases=signatures.map(kind=>({kind,width:760,scale:1.25,life:.38,maxLife:.38,age:0,alpha:1}));
+ const specialHit={kind:'enemyHitBitmap',specialContact:true,contactEnemy:{},width:320,life:.25,maxLife:.25,age:0,alpha:1};
+ for(const f of [...cases,specialHit]){assert.equal(w.zFeelContactFx(f),false, f.kind+' excluded from subdued contact limiter');w.fx.push(f);}
+ w.zFeelLimitFx();
+ for(const f of cases){near(f.life,.38);near(f.maxLife,.38);near(f.width,760);near(f.scale,1.25);near(f.alpha,1);}
+ near(specialHit.width,320);near(specialHit.life,.25);near(specialHit.alpha,1);
+ w.window.__zControlFeel.setPreset('None');
+ assert.equal(w.fx.length,5,'presets cannot erase signature VFX');
+ const front=section('const Z_FRONT_SPECIAL_FX=new Set([','function zHybridVfxForeground()');
+ for(const kind of signatures)assert(front.includes("'"+kind+"'"),kind+' uses front-of-actor pass');
+ assert(html.includes("if(zFeelContactFx(f))continue"),'only ordinary contact FX skip original FX compositor');
+ assert(html.includes("const duration=.38; // VFX timing V11"),'parry counter authored 8F length retained');
+ assert(html.includes("const duration=.29; // all 8 frames"),'dash pierce authored 8F length retained');
+ assert(html.includes("const duration=source==='boss'?.52:source==='elite'?.45:.41"),'slam duration retained');
+ assert(html.includes("kind:'parrySuccess10',x,y,face,life:.31,maxLife:.31"),'parry success 10F duration retained');
+});
 console.log(`${count} integration tests passed`);

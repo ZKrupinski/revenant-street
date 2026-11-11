@@ -8114,7 +8114,10 @@ function zFeelDrawContact(f){
   else if(f.kind==='groundSlamSprite')drawGroundSlamSprite(f);
  }finally{ctx.drawImage=original;ctx.restore();}
 }
-function zFeelContactFx(f){return ['basicHitSprite','enemyHitBitmap','parryCounterSprite','dashPierceSprite','groundSlamSprite'].includes(f.kind)}
+// Only ordinary contact sparks receive the short, subdued hit-feedback treatment.
+// Signature attack sprite sheets (and their special victim impacts) must retain
+// authored size, all frames, front-of-actor ordering and the WebGL ADD/Bloom pass.
+function zFeelContactFx(f){return f.kind==='basicHitSprite'||(f.kind==='enemyHitBitmap'&&!f.specialContact)}
 function zFeelLimitFx(){
  const seen=new Set();
  for(let i=fx.length-1;i>=0;i--){const f=fx[i];if(!zFeelContactFx(f))continue;
