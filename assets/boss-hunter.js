@@ -90,7 +90,7 @@ function update(e,p,dt,api){
  e.bossCooldown=Math.max(0,e.bossCooldown-dt);
  e.bossMoving=false;
  if(e.bossPhasePending){
-  e.bossPhasePending=false;
+  e.bossPhasePending=false;e.bossRetaliationPending=false;
   start(e,'taunt',.72,api);e.bossCooldown=.17;
   return true;
  }
