@@ -8138,6 +8138,13 @@ function zFeelEndTick(){
  if(screenShake>0&&zFeelShakeUntil<=zFeelTick)zFeelShakeUntil=zFeelTick+clamp(Z_FEEL.shakeFrames,3,5);
  screenShake=0; // no accumulated camera amplitude
 }
+function zFeelShakeOffset(cssScale=1){
+ if(Z_FEEL.effectPreset==='None'||zFeelShakeUntil<=zFeelTick)return {x:0,y:0};
+ const left=zFeelShakeUntil-zFeelTick,total=clamp(Z_FEEL.shakeFrames,3,5);
+ const amp=Math.max(0,Math.min(11,Z_FEEL.shakePixels))*Math.min(1,left/total)**2/Math.max(.001,cssScale);
+ const angle=zFeelTick*2.39996323;
+ return {x:Math.cos(angle)*amp,y:Math.sin(angle)*amp};
+}
 function zFeelCamera(){
  const center=cameraX+W*.5,delta=p.x-center;
  if(Math.abs(delta)<=Z_FEEL.deadzonePixels*.5)return;
@@ -11064,13 +11071,8 @@ function draw(){
  ctx.save();
  // Only the full-screen camera offset is softened by 15%; gamepad rumble,
  // actor hit reactions, sound, hitstop, and effect timers remain unchanged.
- if(Z_FEEL.effectPreset!=='None'&&zFeelShakeUntil>zFeelTick){
-  const left=zFeelShakeUntil-zFeelTick,total=clamp(Z_FEEL.shakeFrames,3,5);
-  const cssScale=Math.max(.001,canvas.getBoundingClientRect().width/W);
-  const amp=Math.min(11,Z_FEEL.shakePixels)*(left/total)**2/cssScale;
-  const angle=zFeelTick*2.39996323;
-  ctx.translate(Math.cos(angle)*amp,Math.sin(angle)*amp);
- }
+ const shake=zFeelShakeOffset(canvas.getBoundingClientRect().width/W);
+ ctx.translate(shake.x,shake.y);
  const zoom=clamp(cameraZoom,1,1.36);
  if(zoom>1.0001){const px=W*.52,py=H*.51;
   ctx.translate(px,py);ctx.scale(zoom,zoom);ctx.translate(-px,-py);
